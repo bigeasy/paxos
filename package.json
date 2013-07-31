@@ -1,0 +1,33 @@
+{
+    "name":         "paxos",
+    "version":      "0.0.0",
+    "description":  "Paxos for JavaScript",
+    "url":          "http://bigeasy.github.com/paxos",
+    "author":       "Alan Gutierrez <alan@prettyrobots.com>",
+    "keywords": [
+        "paxos", "database", "database", "network", "consensus"
+    ],
+    "contributors": [
+        {
+            "name":   "Demarius Chrite",
+            "email":  "chrite.demarius@gmail.com",
+            "web":    "https://github.com/demarius"
+        }
+    ],
+    "devDependencies": {
+        "proof": "0.0.33"
+    },
+    "scripts": {
+        "test": "proof platform win32 && proof test */*/*.t.js || t/test"
+    },
+    "homepage": "https://github.com/bigeasy/paxos",
+    "bugs": "https://github.com/bigeasy/paxos/issues",
+    "licenses": [{
+        "type": "MIT",
+        "url": "http://github.com/bigeasy/paxos/raw/master/LICENSE"
+    }],
+    "repository": {
+        "type": "git",
+        "url": "http://github.com/bigeasy/paxos.git"
+    }
+}
