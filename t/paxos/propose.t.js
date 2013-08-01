@@ -11,6 +11,6 @@ require('proof')(1, function (equal, say) {
 
     paxos = paxos(messages)
 
-    equal(paxos, messages[3], 'match')
+    equal(paxos, messages[0], 'match')
     say(paxos)
 })
