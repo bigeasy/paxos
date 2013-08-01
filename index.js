@@ -28,25 +28,25 @@ Proposer.prototype.send = function (proposal) {
             this._promised.push(i)
         } else if(req.message === 'NOT PROMISED') {
             this.value = req.value
-            this.proposal = req.value
+            if (req.value !== null) this.proposal = req.value
         } else {
             this.proposal_num = req.highest_proposal_num + 1
             this.value = req.value
         }
     }
-    if (this._promised.length > (this._acceptors.length / 2)) {
-        //If we have promises from the majority of acceptors,
+    if (this._promised.length >= (this._acceptors.length / 2)) {
+        //If we have promises from at least half the acceptors,
         //finish the proposal.
         this.propose()
     }
 }
 
 Proposer.prototype.propose = function () {
-    for (var i in this._promised) {
-        this.value = this._acceptors[i].accept(this.proposal, this.id)
-        this._promised.splice(i, 1)
+    this._promised.forEach(function (i) {
+        this.value = this._acceptors[i].accept( { value: this.proposal, sender: this.id } )
         this.proposal_num += 1
-    }
+    }, this)
+    this._promisd = []
 }
 
 function Acceptor (n, id) {
@@ -55,12 +55,15 @@ function Acceptor (n, id) {
     this.message = null
     this.learners = []
     this.promised = null
+    this.locked = false
 }
 
 Acceptor.prototype.prep = function (request) {
-    if (n > this.highest_proposal_num && this.message == null) {
+    if (request.proposal_num > this.highest_proposal_num && !this.locked) {
         this.highest_proposal_num = request.proposal_num
         this.promised = request.sender
+        console.log(this.id + ' promised ' + request.sender)
+        this.locked = true
 
         return {
             message: 'PROMISED'
@@ -99,6 +102,10 @@ Acceptor.prototype.accept = function (request) {
 
 }
 
+Acceptor.prototype.unlock = function () {
+    this.locked = false
+}
+
 Acceptor.prototype.addLearner = function (learner) {
     this.learners.push(learner)
 }
@@ -120,7 +127,9 @@ Acceptor.prototype._set = function (request) {
 }
 
 
-exports.paxos = function (messages) {
+exports.proposer = Proposer
+exports.acceptor = Acceptor
+    /*
     var proposer = new Proposer(1, 100), acceptor = new Acceptor(0, 1)
     var proposer2 = new Proposer(2, 200), acceptor2 = new Acceptor(0, 2)
     proposer.addAcceptors( [ acceptor, acceptor2 ] )
@@ -134,4 +143,4 @@ exports.paxos = function (messages) {
     })
 
     return acceptor2.message
-}
+    */
