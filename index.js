@@ -19,7 +19,11 @@ Proposer.prototype.send = function (proposal) {
     this.proposal = proposal
 
     for (i = 0; i < this._acceptors.length; i++) {
-        var req = this._acceptors[i].prep(this.proposal_num, proposal, this.id)
+        var req = this._acceptors[i].prep({
+            proposal_num: this.proposal_num,
+            sender: this.id
+        })
+
         if (req.message === 'PROMISED') {
             this._promised.push(i)
         } else if(req.message === 'NOT PROMISED') {
@@ -53,16 +57,16 @@ function Acceptor (n, id) {
     this.promised = null
 }
 
-Acceptor.prototype.prep = function (n, value, sender) {
+Acceptor.prototype.prep = function (request) {
     if (n > this.highest_proposal_num && this.message == null) {
-        this.highest_proposal_num = n
-        this.promised = sender
+        this.highest_proposal_num = request.proposal_num
+        this.promised = request.sender
 
         return {
             message: 'PROMISED'
         }
 
-    } else if (n > this.highest_proposal_num) {
+    } else if (request.proposal_num > this.highest_proposal_num) {
         // send a not-so-success-y response
         // that includes this.highest_proposal
         // and the current accepted message
@@ -80,15 +84,15 @@ Acceptor.prototype.prep = function (n, value, sender) {
     }
 }
 
-Acceptor.prototype.accept = function (value, sender) {
+Acceptor.prototype.accept = function (request) {
     //  ensure this is the sender we promised to wait for.
     //  Possible that another proposer could hijack our
     //  proposal number somehow
-    if (this.promised == sender) {
-        console.log(this.id + ' accepted ' + value)
-        this.message = value
-        this._send(value)
-        return value
+    if (this.promised == request.sender) {
+        console.log(this.id + ' accepted ' + request.value)
+        this.message = request.value
+        this._send(request.value)
+        return request.value
     } else {
         return this.message
     }
@@ -101,15 +105,18 @@ Acceptor.prototype.addLearner = function (learner) {
 
 Acceptor.prototype._send = function (value) {
     this.learners.forEach(function (learner) {
-        learner._set(value, this.highest_proposal_num)
+        learner._set({
+            value: value,
+            proposal_num: this.highest_proposal_num
+        })
     }, this)
 }
 
-Acceptor.prototype._set = function (value, n) {
-    console.log(this.id + ' accepted ' + value)
+Acceptor.prototype._set = function (request) {
+    console.log(this.id + ' accepted ' + request.value)
     this.promised = null
-    this.message = value
-    this.highest_proposal_num = n
+    this.message = request.value
+    this.highest_proposal_num = request.highest_proposal_num
 }
 
 
