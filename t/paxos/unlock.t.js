@@ -1,4 +1,4 @@
-#!/usr/bin/env/ node
+#!/usr/bin/env node
 
 require('proof')(2, function (equal, say) {
     var paxos = require('../..')
@@ -13,9 +13,8 @@ require('proof')(2, function (equal, say) {
         proposers[i].send(messages[i])
     }
     acceptor1.unlock()
-    acceptor2.unlock()
     proposers[2].send('whoops')
 
-    equal(acceptor1.message, 'whoops', 'first unlocked')
-    equal(acceptor2.message, 'whoops', 'second unlocked')
+    equal(acceptor1.message, messages[0], 'first unlocked')
+    equal(acceptor2.message, messages[0], 'second locked')
 })

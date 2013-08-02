@@ -19,29 +19,36 @@ Proposer.prototype.send = function (proposal) {
     this.proposal = proposal
 
     for (i = 0; i < this._acceptors.length; i++) {
+    // Send a 'prepare' request to all acceptors.
         var req = this._acceptors[i].prep({
             proposal_num: this.proposal_num,
             sender: this.id
         })
 
         if (req.message === 'PROMISED') {
+        // If we get a promise back, record the index so we can
+        // send an 'accept' request later.
             this._promised.push(i)
-        } else if(req.message === 'NOT PROMISED') {
+        } else if (req.message === 'NOT PROMISED') {
+        // A value is already decided, so save it.
             this.value = req.value
             if (req.value !== null) this.proposal = req.value
         } else {
+        // Rejection - the acceptor has seen a higher proposal
+        // number. Keep the value, we can try again.
             this.proposal_num = req.highest_proposal_num + 1
             this.value = req.value
         }
     }
-    if (this._promised.length >= (this._acceptors.length / 2)) {
-        //If we have promises from at least half the acceptors,
-        //finish the proposal.
+    if (this._promised.length > (this._acceptors.length / 2)) {
+        // If we have promises the majority of acceptors,
+        // finish the proposal.
         this.propose()
     }
 }
 
 Proposer.prototype.propose = function () {
+    // Send an 'accept' request to each promised acceptor
     this._promised.forEach(function (i) {
         this.value = this._acceptors[i].accept( { value: this.proposal, sender: this.id } )
         this.proposal_num += 1
@@ -60,6 +67,7 @@ function Acceptor (n, id) {
 
 Acceptor.prototype.prep = function (request) {
     if (request.proposal_num > this.highest_proposal_num && !this.locked) {
+        // This is the highest we've seen. Promise it.
         this.highest_proposal_num = request.proposal_num
         this.promised = request.sender
         console.log(this.id + ' promised ' + request.sender)
@@ -85,6 +93,7 @@ Acceptor.prototype.prep = function (request) {
             value: this.message
         }
     }
+
 }
 
 Acceptor.prototype.accept = function (request) {
@@ -102,14 +111,20 @@ Acceptor.prototype.accept = function (request) {
 
 }
 
-Acceptor.prototype.unlock = function () {
+Acceptor.prototype.unlock = function (who) {
+    // We might want to run again.
     this.locked = false
+    if (who && who === 'all') {
+        this.learners.forEach(function (learner) {
+            learner.unlock()
+        })
+    }
 }
 
 Acceptor.prototype.addLearners = function (learners) {
     learners.forEach(function (learner) {
         this.learners.push(learner)
-    })
+    }, this)
 }
 
 Acceptor.prototype._send = function (value) {
@@ -131,18 +146,3 @@ Acceptor.prototype._set = function (request) {
 
 exports.proposer = Proposer
 exports.acceptor = Acceptor
-    /*
-    var proposer = new Proposer(1, 100), acceptor = new Acceptor(0, 1)
-    var proposer2 = new Proposer(2, 200), acceptor2 = new Acceptor(0, 2)
-    proposer.addAcceptors( [ acceptor, acceptor2 ] )
-    proposer2.addAcceptors( [ acceptor, acceptor2 ] )
-
-    acceptor.addLearner(acceptor2)
-
-    messages.forEach(function (message) {
-        proposer2.send(message)
-        proposer.send(message)
-    })
-
-    return acceptor2.message
-    */

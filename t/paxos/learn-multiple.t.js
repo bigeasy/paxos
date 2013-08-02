@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-require('proof')(1, function (equal, say) {
+require('proof')(5, function (equal, say) {
     var paxos = require('../..')
       var messages = [
           "the soup",
@@ -19,5 +19,7 @@ require('proof')(1, function (equal, say) {
       proposer.addAcceptors([ acceptor ])
       proposer.send(messages[0])
 
-      equal(learners[4].message, messages[0], 'match')
+      for (var i = 0; i < 5; i++) {
+          equal(learners[i].message, messages[0], 'match')
+      }
 })
