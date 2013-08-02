@@ -46,7 +46,7 @@ Proposer.prototype.propose = function () {
         this.value = this._acceptors[i].accept( { value: this.proposal, sender: this.id } )
         this.proposal_num += 1
     }, this)
-    this._promisd = []
+    this._promised = []
 }
 
 function Acceptor (n, id) {
@@ -106,8 +106,10 @@ Acceptor.prototype.unlock = function () {
     this.locked = false
 }
 
-Acceptor.prototype.addLearner = function (learner) {
-    this.learners.push(learner)
+Acceptor.prototype.addLearners = function (learners) {
+    learners.forEach(function (learner) {
+        this.learners.push(learner)
+    })
 }
 
 Acceptor.prototype._send = function (value) {

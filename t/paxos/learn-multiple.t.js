@@ -10,13 +10,14 @@ require('proof')(1, function (equal, say) {
       ]
       var proposer = new paxos.proposer(1, 10)
       var acceptor = new paxos.acceptor(0, 20)
-      var learner = new paxos.acceptor(0, 4)
+      var learners = []
 
+      for (var i = 0; i < 5; i++) {
+          learners.push(new paxos.acceptor(0,i))
+      }
+      acceptor.addLearners(learners)
       proposer.addAcceptors([ acceptor ])
-
-      acceptor.addLearners( [ learner ] )
-
       proposer.send(messages[0])
 
-      equal(learner.message, messages[0], 'match')
+      equal(learners[4].message, messages[0], 'match')
 })
