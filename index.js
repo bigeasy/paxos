@@ -19,30 +19,41 @@ Proposer.prototype.send = function (proposal) {
     this.proposal = proposal
 
     for (i = 0; i < this._acceptors.length; i++) {
-        var req = this._acceptors[i].prep(this.proposal_num, proposal, this.id)
+    // Send a 'prepare' request to all acceptors.
+        var req = this._acceptors[i].prep({
+            proposal_num: this.proposal_num,
+            sender: this.id
+        })
+
         if (req.message === 'PROMISED') {
+        // If we get a promise back, record the index so we can
+        // send an 'accept' request later.
             this._promised.push(i)
-        } else if(req.message === 'NOT PROMISED') {
+        } else if (req.message === 'NOT PROMISED') {
+        // A value is already decided, so save it.
             this.value = req.value
-            this.proposal = req.value
+            if (req.value !== null) this.proposal = req.value
         } else {
+        // Rejection - the acceptor has seen a higher proposal
+        // number. Keep the value, we can try again.
             this.proposal_num = req.highest_proposal_num + 1
             this.value = req.value
         }
     }
     if (this._promised.length > (this._acceptors.length / 2)) {
-        //If we have promises from the majority of acceptors,
-        //finish the proposal.
+        // If we have promises the majority of acceptors,
+        // finish the proposal.
         this.propose()
     }
 }
 
 Proposer.prototype.propose = function () {
-    for (var i in this._promised) {
-        this.value = this._acceptors[i].accept(this.proposal, this.id)
-        this._promised.splice(i, 1)
+    // Send an 'accept' request to each promised acceptor
+    this._promised.forEach(function (i) {
+        this.value = this._acceptors[i].accept( { value: this.proposal, sender: this.id } )
         this.proposal_num += 1
-    }
+    }, this)
+    this._promised = []
 }
 
 function Acceptor (n, id) {
@@ -51,18 +62,22 @@ function Acceptor (n, id) {
     this.message = null
     this.learners = []
     this.promised = null
+    this.locked = false
 }
 
-Acceptor.prototype.prep = function (n, value, sender) {
-    if (n > this.highest_proposal_num && this.message == null) {
-        this.highest_proposal_num = n
-        this.promised = sender
+Acceptor.prototype.prep = function (request) {
+    if (request.proposal_num > this.highest_proposal_num && !this.locked) {
+        // This is the highest we've seen. Promise it.
+        this.highest_proposal_num = request.proposal_num
+        this.promised = request.sender
+        console.log(this.id + ' promised ' + request.sender)
+        this.locked = true
 
         return {
             message: 'PROMISED'
         }
 
-    } else if (n > this.highest_proposal_num) {
+    } else if (request.proposal_num > this.highest_proposal_num) {
         // send a not-so-success-y response
         // that includes this.highest_proposal
         // and the current accepted message
@@ -78,53 +93,56 @@ Acceptor.prototype.prep = function (n, value, sender) {
             value: this.message
         }
     }
+
 }
 
-Acceptor.prototype.accept = function (value, sender) {
+Acceptor.prototype.accept = function (request) {
     //  ensure this is the sender we promised to wait for.
     //  Possible that another proposer could hijack our
     //  proposal number somehow
-    if (this.promised == sender) {
-        console.log(this.id + ' accepted ' + value)
-        this.message = value
-        this._send(value)
-        return value
+    if (this.promised == request.sender) {
+        console.log(this.id + ' accepted ' + request.value)
+        this.message = request.value
+        this._send(request.value)
+        return request.value
     } else {
         return this.message
     }
 
 }
 
-Acceptor.prototype.addLearner = function (learner) {
-    this.learners.push(learner)
+Acceptor.prototype.unlock = function (who) {
+    // We might want to run again.
+    this.locked = false
+    if (who && who === 'all') {
+        this.learners.forEach(function (learner) {
+            learner.unlock()
+        })
+    }
+}
+
+Acceptor.prototype.addLearners = function (learners) {
+    learners.forEach(function (learner) {
+        this.learners.push(learner)
+    }, this)
 }
 
 Acceptor.prototype._send = function (value) {
     this.learners.forEach(function (learner) {
-        learner._set(value, this.highest_proposal_num)
+        learner._set({
+            value: value,
+            proposal_num: this.highest_proposal_num
+        })
     }, this)
 }
 
-Acceptor.prototype._set = function (value, n) {
-    console.log(this.id + ' accepted ' + value)
+Acceptor.prototype._set = function (request) {
+    console.log(this.id + ' accepted ' + request.value)
     this.promised = null
-    this.message = value
-    this.highest_proposal_num = n
+    this.message = request.value
+    this.highest_proposal_num = request.highest_proposal_num
 }
 
 
-exports.paxos = function (messages) {
-    var proposer = new Proposer(1, 100), acceptor = new Acceptor(0, 1)
-    var proposer2 = new Proposer(2, 200), acceptor2 = new Acceptor(0, 2)
-    proposer.addAcceptors( [ acceptor, acceptor2 ] )
-    proposer2.addAcceptors( [ acceptor, acceptor2 ] )
-
-    acceptor.addLearner(acceptor2)
-
-    messages.forEach(function (message) {
-        proposer2.send(message)
-        proposer.send(message)
-    })
-
-    return acceptor2.message
-}
+exports.proposer = Proposer
+exports.acceptor = Acceptor
