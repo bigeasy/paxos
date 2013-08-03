@@ -1,33 +1,40 @@
 {
     "name":         "paxos",
     "version":      "0.0.0",
-    "description":  "Paxos for JavaScript",
+    "description":  "A Multi-Paxos implementation in pure JavaScript.",
     "url":          "http://bigeasy.github.com/paxos",
     "author":       "Alan Gutierrez <alan@prettyrobots.com>",
-    "keywords": [
-        "paxos", "database", "database", "network", "consensus"
+    "homepage":     "https://github.com/bigeasy/paxos",
+    "bugs":         "https://github.com/bigeasy/paxos/issues",
+    "keywords":
+    [
+                    "paxos", "database", "database", "network", "consensus",
+                    "atomic", "broadcast", "multi-paxos", "queue", "fifo"
     ],
-    "contributors": [
+    "contributors":
+    [
         {
-            "name":   "Demarius Chrite",
-            "email":  "chrite.demarius@gmail.com",
-            "web":    "https://github.com/demarius"
+                    "name":   "Demarius Chrite",
+                    "email":  "chrite.demarius@gmail.com",
+                    "web":    "https://github.com/demarius"
         }
     ],
-    "devDependencies": {
-        "proof": "0.0.33"
+    "devDependencies":
+    {
+                    "proof": "0.0.33"
     },
-    "scripts": {
-        "test": "proof platform win32 && proof test */*/*.t.js || t/test"
+    "scripts":
+    {
+                    "test": "proof platform win32 && proof test */*/*.t.js || t/test"
     },
-    "homepage": "https://github.com/bigeasy/paxos",
-    "bugs": "https://github.com/bigeasy/paxos/issues",
-    "licenses": [{
-        "type": "MIT",
-        "url": "http://github.com/bigeasy/paxos/raw/master/LICENSE"
+    "licenses":
+    [{
+                    "type": "MIT",
+                    "url": "http://github.com/bigeasy/paxos/raw/master/LICENSE"
     }],
-    "repository": {
-        "type": "git",
-        "url": "http://github.com/bigeasy/paxos.git"
+    "repository":
+    {
+                    "type": "git",
+                    "url": "http://github.com/bigeasy/paxos.git"
     }
 }
