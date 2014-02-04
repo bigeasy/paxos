@@ -38,3 +38,38 @@ accepted values to one learner. As long as there is an algorithm in place to
 choose a new leader for the cluster of learners and notify the acceptors, rounds
 can continue as soon as that leader has stored the output of the last round and
 the other learners can be updated as the next round continues.
+
+Storage is handled by acceptors, the number of which is always at or below a
+pre-determined amount (i.e. adding new acceptors mid-process is not possible in 
+libpaxos). This restriction makes sense to me because adding a new
+client/learner or proposer only requires configuring that new node or, at most,
+that node and one other; adding an acceptor means all other acceptors and
+possibly some proposers will have to be updated. However, this does not mean a
+failing acceptor can't be swapped out; as long as the working number of
+acceptors does not rise beyond the amount at start, the algorithm should work as
+expected. Each acceptor has a unique identifier between 0 and N-1 where N =
+number of acceptors *at start*. Thus, a proposer doesn't need to be able to tell
+which acceptors are currently active before sending a proposal, although
+obviously it would know which ones are up/down based on responses received.
+Still, conceivably a failed acceptor could be replaced at any point with a new
+acceptor using the same identifier and participate in the next round*** of
+proposals.
+
+I'm assuming, because this makes the most sense to me (but, isn't that what an
+assumption is?), all proposals or proposed messages are sent through UDP and
+that promises are TCP connections. So, a client with a message to broadcast
+would send it through UDP to the nearest or most practical or only proposer, who
+would then begin firing UDP numeric proposals to the acceptors. Once an acceptor
+makes a promise to that proposer, the proposer sends the message via TCP. if the
+acceptor receives a higher numeric proposal before the message comes through,
+the TCP connection is broken. This is better than sending a response  back to
+the proposer because the proposer's behavior should continue in the same manner
+whether an acceptor goes down or not. It doesn't matter *why* the connection
+broke; it did, which means back to sending proposals.
+
+
+***It's unclear, with so many sources, what the exact terminology is. I like the
+word 'round' to describe the period in which proposals are sent/promises are
+made, with each round ending in a decision being made about the next state. I
+use 'process' to describe a series of rounds, with a clear start and end -
+ending the process means shutting every node down, reconfiguring, whatever.
