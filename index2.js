@@ -1,5 +1,4 @@
 
-
 function Node (id) { // :: Int -> Node
   this.id = id
   this.acceptors = []
@@ -9,7 +8,7 @@ function Node (id) { // :: Int -> Node
   this.roles = []
 }
 
-function Cluster (nodes) {
+function Cluster (nodes) { // :: [Node] -> Cluster
   this.nodes = nodes
   this.learners = []
   this.acceptors = []
@@ -18,9 +17,9 @@ function Cluster (nodes) {
     nodes.ForEach(function (node, _, __) {
      if (node.roles.indexOf('Learner') > -1) {
       this.learners.push(node.id)
-     } else if (nodes.roles..indexOf('Acceptor') > -1) {
+     } else if (nodes.roles.indexOf('Acceptor') > -1) {
       this.acceptors.push(node.id)
-     } else if (nodes.roles..indexOf('Proposer') > -1) {
+     } else if (nodes.roles.indexOf('Proposer') > -1) {
       this.proposers.push(node.id)
      }
     })
@@ -28,17 +27,17 @@ function Cluster (nodes) {
 }
 
 
-function initializeProposer (node, cluster, initProposal) {
+function initializeProposer (node, cluster, initProposal) { // :: Node -> Cluster -> [Char] ->
   node.roles.push('Proposer')
   node.propose = function (proposal) {}
   if (initProposal) { node.propose(initProposal) }
 }
 
-function initializeAcceptor (node, cluster) {
+function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
   node.roles.push('Acceptor')
   // Sync stateLog with acceptors in cluster
 }
 
-function initializeLearner (node, cluster) {
+function initializeLearner (node, cluster) { // :: Node -> Cluster ->
   node.roles.push('Learner')
 }
