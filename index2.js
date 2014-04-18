@@ -6,6 +6,7 @@ function Node (id) { // :: Int -> Node
   this.value = null
   this.stateLog = []
   this.roles = []
+  this.quorum = null
 }
 
 function Cluster (nodes) { // :: [Node] -> Cluster
@@ -29,8 +30,42 @@ function Cluster (nodes) { // :: [Node] -> Cluster
 
 function initializeProposer (node, cluster, initProposal) { // :: Node -> Cluster -> [Char] ->
   node.roles.push('Proposer')
-  node.propose = function (proposal) {}
-  if (initProposal) { node.propose(initProposal) }
+  node.proposal_id = null
+  node.last_id = null
+  node.promises = null
+  node.next_proposal_num = 1
+  node.setProposal = function (proposal) {
+    if (node.proposal == null) {
+      node.proposal = proposal
+    }
+  }
+  if (initProposal) { node.setProposal(initProposal) }
+
+  node.prepare = function () {
+    node.promises = []
+    node.proposal_id = generateProposalID()
+    node.next_proposal_num += 1
+  }
+
+  node.receivePromise = function (from, proposal_id, last_accepted_id, last_value) {
+    if (proposal_id != node.proposal_id || (node.promises.indexOf(from) > -1)) {
+      return
+    }
+
+    node.promises.push(from)
+
+    if  (last_accepted_id > node.last_id) {
+      node.last_id = last_accepted_id
+      if (last_value) { node.proposal = last_value }
+    }
+
+    if (node.promises.length == node.quorom) {
+      if (node.proposal) {
+        //send accept request
+      }
+    }
+  }
+
 }
 
 function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
@@ -41,3 +76,5 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
 function initializeLearner (node, cluster) { // :: Node -> Cluster ->
   node.roles.push('Learner')
 }
+
+function generateProposalID () {}
