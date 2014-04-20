@@ -30,10 +30,10 @@ function Cluster (nodes) { // :: [Node] -> Cluster
 
 function initializeProposer (node, cluster, initProposal) { // :: Node -> Cluster -> [Char] ->
   node.roles.push('Proposer')
-  node.proposal_id = null
-  node.last_id = null
+  node.proposalId = null
+  node.lastId = null
   node.promises = null
-  node.next_proposal_num = 1
+  node.nextProposalNum = 1
   node.setProposal = function (proposal) {
     if (node.proposal == null) {
       node.proposal = proposal
@@ -43,20 +43,20 @@ function initializeProposer (node, cluster, initProposal) { // :: Node -> Cluste
 
   node.prepare = function () {
     node.promises = []
-    node.proposal_id = generateProposalID()
-    node.next_proposal_num += 1
+    node.proposalId = generateProposalID()
+    node.nextProposalNum += 1
   }
 
-  node.receivePromise = function (from, proposal_id, last_accepted_id, last_value) {
-    if (proposal_id != node.proposal_id || (node.promises.indexOf(from) > -1)) {
+  node.receivePromise = function (from, proposalId, lastAcceptedId, lastValue) {
+    if (proposalId != node.proposalId || (node.promises.indexOf(from) > -1)) {
       return
     }
 
     node.promises.push(from)
 
-    if  (last_accepted_id > node.last_id) {
-      node.last_id = last_accepted_id
-      if (last_value) { node.proposal = last_value }
+    if  (lastAcceptedId > node.lastId) {
+      node.lastId = last_acceptedId
+      if (lastValue) { node.proposal = lastValue }
     }
 
     if (node.promises.length == node.quorom) {
