@@ -1,4 +1,3 @@
-
 function Node (id) { // :: Int -> Node
   this.id = id
   this.acceptors = []
@@ -77,4 +76,4 @@ function initializeLearner (node, cluster) { // :: Node -> Cluster ->
   node.roles.push('Learner')
 }
 
-function generateProposalID () {}
+function generateProposalID () {} // each proposal ID must be unique across all nodes.
