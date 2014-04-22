@@ -65,6 +65,8 @@ function initializeProposer (node, cluster, initProposal) { // :: Node -> Cluste
     }
   }
 
+  // Needs to parse cluster information/join cluster, alert acceptors
+
 }
 
 function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
