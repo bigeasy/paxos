@@ -1,4 +1,4 @@
-function Node (id) { // :: Int -> Node
+function Node (id, generateProposalId) { // :: Int -> Node
   this.id = id
   this.acceptors = []
   this.proposal = null
@@ -6,6 +6,7 @@ function Node (id) { // :: Int -> Node
   this.stateLog = []
   this.roles = []
   this.quorum = null
+  this.generateProposalId = generateProposalId
 }
 
 function Cluster (nodes) { // :: [Node] -> Cluster
@@ -42,7 +43,6 @@ function initializeProposer (node, cluster, initProposal) { // :: Node -> Cluste
 
   node.prepare = function () {
     node.promises = []
-    node.proposalId = generateProposalID()
     node.nextProposalNum += 1
   }
 
@@ -77,5 +77,3 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
 function initializeLearner (node, cluster) { // :: Node -> Cluster ->
   node.roles.push('Learner')
 }
-
-function generateProposalID () {} // each proposal ID must be unique across all nodes.
