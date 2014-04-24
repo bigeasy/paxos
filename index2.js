@@ -72,6 +72,26 @@ function initializeProposer (node, cluster, initProposal) { // :: Node -> Cluste
 function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
   node.roles.push('Acceptor')
   // Sync stateLog with acceptors in cluster
+  node.promisedId = null
+  node.acceptedId = null
+
+  node.receivePrepare = function (from, proposalId) {
+    if (proposalID == node.promisedId) {
+      // send prepare message to other acceptors
+    } else if (proposalId > node.promisedId) {
+      node.promisedId = proposalId
+      // send prepare
+    }
+  }
+
+  node.receiveAcceptRequest = function (from, proposalId, proposal) {
+    if (proposalId >= node.promisedId) {
+      node.promisedId = proposalId
+      node.acceptedId = proposalId
+      node.value = proposal
+      // alert other nodes that a value is accepted
+    }
+  }
 }
 
 function initializeLearner (node, cluster) { // :: Node -> Cluster ->
