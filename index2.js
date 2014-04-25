@@ -1,4 +1,4 @@
-function Node (id, generateProposalId) { // :: Int -> Node
+function Node (id, generateProposalId) { // :: Int -> (Int) -> Node
   this.id = id
   this.acceptors = []
   this.proposal = null
