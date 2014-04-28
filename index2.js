@@ -1,9 +1,9 @@
 function Node (id, generateProposalId) { // :: Int -> (Int) -> Node
   this.id = id
-  this.acceptors = []
+  this.acceptors = {}
   this.proposal = null
   this.value = null
-  this.stateLog = []
+  this.stateLog = {}
   this.roles = []
   this.quorum = null
   this.generateProposalId = generateProposalId
@@ -95,5 +95,22 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
 }
 
 function initializeLearner (node, cluster) { // :: Node -> Cluster ->
+  node.finalValue = null
+  node.proposals = {}
   node.roles.push('Learner')
+  node.receiveAccept = function (from, proposalId, acceptedValue) {
+    if (node.finalValue != null) {
+      return
+    }
+
+    var last = node.acceptors[from]
+
+    if (last > proposalId) { return }
+
+    node.acceptors[from] = proposalId
+
+    if (last) {
+      oldProposal = node.proposals[last]
+    }
+  }
 }
