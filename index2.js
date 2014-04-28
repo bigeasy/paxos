@@ -1,6 +1,6 @@
 function Node (id, generateProposalId) { // :: Int -> (Int) -> Node
   this.id = id
-  this.acceptors = {}
+  this.acceptors = {} // Address/ID -> last proposal
   this.proposal = null
   this.value = null
   this.stateLog = {}
@@ -95,9 +95,12 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
 }
 
 function initializeLearner (node, cluster) { // :: Node -> Cluster ->
-  node.finalValue = null
-  node.proposals = {}
   node.roles.push('Learner')
+  node.finalValue = null
+  node.finalProposalId = null
+
+  node.proposals = {} // proposal ID -> [accept count, retain count, value]
+
   node.receiveAccept = function (from, proposalId, acceptedValue) {
     if (node.finalValue != null) {
       return
@@ -111,6 +114,17 @@ function initializeLearner (node, cluster) { // :: Node -> Cluster ->
 
     if (last) {
       oldProposal = node.proposals[last]
+      oldProposal[1] -= 1
+      if (oldProposal[1] == 0) { delete node.propoals[last] }
+    }
+
+    if (node.proposals[proposalId] == null) {
+      node.proposals[proposalId] = [1, 1, acceptedValue]
+    }
+
+    if (node.proposals[proposalId][0] == node.quorum) { // round over
+      node.finalValue = acceptedValue
+      node.finalProposalId = proposalId
     }
   }
 }
