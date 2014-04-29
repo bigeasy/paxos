@@ -1,5 +1,6 @@
-function Node (id, generateProposalId) { // :: Int -> (Int) -> Node
+function Node (id, address, generateProposalId) { // :: Int -> (Int) -> Node
   this.id = id
+  this.address = address
   this.acceptors = {} // Address/ID -> last proposal
   this.proposal = null
   this.value = null
@@ -10,18 +11,17 @@ function Node (id, generateProposalId) { // :: Int -> (Int) -> Node
 }
 
 function Cluster (nodes) { // :: [Node] -> Cluster
-  this.nodes = nodes
-  this.learners = []
-  this.acceptors = []
-  this.proposers = []
+  this.learners = {}
+  this.acceptors = {}
+  this.proposers = {}
   if (nodes) {
     nodes.ForEach(function (node, _, __) {
      if (node.roles.indexOf('Learner') > -1) {
-      this.learners.push(node.id)
+       this.learners[node.id] = node.address
      } else if (nodes.roles.indexOf('Acceptor') > -1) {
-      this.acceptors.push(node.id)
+       this.acceptors[node.id] = node.address
      } else if (nodes.roles.indexOf('Proposer') > -1) {
-      this.proposers.push(node.id)
+       this.proposers[node.id] = node.address
      }
     })
   }
