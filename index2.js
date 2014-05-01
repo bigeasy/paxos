@@ -1,4 +1,4 @@
-function Node (id, address, generateProposalId) { // :: Int -> (Int) -> Node
+function Node (id, address, generateProposalId) { // :: Int -> Int -> (Int) -> Node
   this.id = id
   this.address = address
   this.acceptors = {} // Address/ID -> last proposal
@@ -28,7 +28,7 @@ function Cluster (nodes) { // :: [Node] -> Cluster
 }
 
 
-function initializeProposer (node, cluster, initProposal) { // :: Node -> Cluster -> [Char] ->
+function initializeProposer (node, cluster, initProposal) { // :: Node -> Cluster -> a ->
   node.roles.push('Proposer')
   node.proposalId = null
   node.lastId = null
@@ -46,7 +46,7 @@ function initializeProposer (node, cluster, initProposal) { // :: Node -> Cluste
     node.nextProposalNum += 1
   }
 
-  node.receivePromise = function (from, proposalId, lastAcceptedId, lastValue) {
+  node.receivePromise = function (from, proposalId, lastAcceptedId, lastValue) { // :: Int -> Int -> Int -> a ->
     if (proposalId != node.proposalId || (node.promises.indexOf(from) > -1)) {
       return
     }
@@ -84,7 +84,7 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
     }
   }
 
-  node.receiveAcceptRequest = function (from, proposalId, proposal) {
+  node.receiveAcceptRequest = function (from, proposalId, proposal) { // :: Int -> Int -> a ->
     if (proposalId >= node.promisedId) {
       node.promisedId = proposalId
       node.acceptedId = proposalId
@@ -101,7 +101,7 @@ function initializeLearner (node, cluster) { // :: Node -> Cluster ->
 
   node.proposals = {} // proposal ID -> [accept count, retain count, value]
 
-  node.receiveAccept = function (from, proposalId, acceptedValue) {
+  node.receiveAccept = function (from, proposalId, acceptedValue) { // :: Int -> Int -> a ->
     if (node.finalValue != null) {
       return
     }
