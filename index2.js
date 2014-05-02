@@ -29,7 +29,11 @@ function Cluster (nodes) { // :: [Node] -> Cluster
      }
     })
 
-    this.quorum = Math.ceil(Object.keys(this.acceptors).length / 2)
+    if (this.acceptors.length % 2 == 0) {
+      this.quorum = this.acceptors.length / 2 + 1
+    } else {
+      this.quorum = Math.ceil(Object.keys(this.acceptors).length / 2)
+    }
     nodes.ForEach(function (node, _, _) {
       node.quorum = this.quorum
     }, this)
