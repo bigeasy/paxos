@@ -8,6 +8,9 @@ function Node (id, address, generateProposalId) { // :: Int -> Int -> (Int) -> N
   this.roles = []
   this.quorum = null
   this.generateProposalId = generateProposalId
+  this.changeQuorum = function (size) { // :: Int ->
+    this.quorum = size
+  }
 }
 
 function Cluster (nodes) { // :: [Node] -> Cluster
@@ -16,6 +19,7 @@ function Cluster (nodes) { // :: [Node] -> Cluster
   this.proposers = {}
   if (nodes) {
     nodes.ForEach(function (node, _, __) {
+      node.quorom
      if (node.roles.indexOf('Learner') > -1) {
        this.learners[node.id] = node.address
      } else if (nodes.roles.indexOf('Acceptor') > -1) {
@@ -24,6 +28,11 @@ function Cluster (nodes) { // :: [Node] -> Cluster
        this.proposers[node.id] = node.address
      }
     })
+
+    this.quorum = Math.ceil(Object.keys(this.acceptors).length / 2)
+    nodes.ForEach(function (node, _, _) {
+      node.quorum = this.quorum
+    }, this)
   }
 }
 
