@@ -45,11 +45,12 @@ function initializeProposer (node, cluster, initProposal) { // :: Node -> Cluste
   node.roles.push('Proposer')
   node.proposalId = null
   node.lastId = null
-  node.promises = null
+  node.promises = []
   node.nextProposalNum = 1
-  node.setProposal = function (proposal) {
-    if (node.proposal == null) {
+  node.setProposal = function (proposal, proposalId) {
+    if ((node.proposal == null) || (proposalId !== node.proposalId)) {
       node.proposal = proposal
+      node.proposalId = proposalId
     }
   }
   if (initProposal) { node.setProposal(initProposal) }
