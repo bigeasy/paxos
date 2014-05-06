@@ -19,16 +19,17 @@ function Cluster (nodes) { // :: [Node] -> Cluster
   this.proposers = {}
   if (nodes) {
     nodes.ForEach(function (node, _, __) {
-      node.quorom
-     if (node.roles.indexOf('Learner') > -1) {
+      if (node.roles.indexOf('Learner') > -1) {
        this.learners[node.id] = node.address
-     } else if (nodes.roles.indexOf('Acceptor') > -1) {
+      } else if (nodes.roles.indexOf('Acceptor') > -1) {
        this.acceptors[node.id] = node.address
-     } else if (nodes.roles.indexOf('Proposer') > -1) {
+      } else if (nodes.roles.indexOf('Proposer') > -1) {
        this.proposers[node.id] = node.address
-     }
+      }
     })
+  }
 
+  this.setQuorum = function () {
     if (this.acceptors.length % 2 == 0) {
       this.quorum = this.acceptors.length / 2 + 1
     } else {
@@ -36,7 +37,7 @@ function Cluster (nodes) { // :: [Node] -> Cluster
     }
     nodes.ForEach(function (node, _, _) {
       node.quorum = this.quorum
-    }, this)
+    }, this)()
   }
 }
 
