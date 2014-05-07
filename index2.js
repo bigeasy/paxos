@@ -1,4 +1,5 @@
 function Node (id, address, generateProposalId) { // :: Int -> Int -> (Int) -> Node
+  this.io = require('socket.io')
   this.id = id
   this.address = address
   this.acceptors = {} // Address/ID -> last proposal
