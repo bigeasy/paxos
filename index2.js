@@ -1,4 +1,5 @@
 function Node (id, address, generateProposalId) { // :: Int -> Int -> (Int) -> Node
+  this.io = require('socket.io')
   this.id = id
   this.address = address
   this.acceptors = {} // Address/ID -> last proposal
@@ -62,13 +63,15 @@ function initializeProposer (node, cluster, initProposal) { // :: Node -> Cluste
   }
 
   node.receivePromise = function (from, proposalId, lastAcceptedId, lastValue) { // :: Int -> Int -> Int -> a ->
-    if (proposalId != node.proposalId || (node.promises.indexOf(from) > -1)) {
+    if (proposalId != node.proposalId || (node.promises.indexOf(from) < 0)) {
       return
     }
 
-    node.promises.push(from)
+    if (node.promises.indexOf(from) < 0) {
+      node.promises.push(from)
+    }
 
-    if  (lastAcceptedId > node.lastId) {
+    if (lastAcceptedId > node.lastId) {
       node.lastId = last_acceptedId
       if (lastValue) { node.proposal = lastValue }
     }
