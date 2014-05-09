@@ -90,9 +90,8 @@ function initializeProposer (node, cluster, initProposal) { // :: Node -> Cluste
   }
 
   cluster.addNode(node)
-  // Needs to parse cluster information/join cluster, alert acceptors
+  cluster.setQuorum()
   // TODO: copy acceptors/addresses from cluster
-
 }
 
 function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
@@ -118,6 +117,8 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
       // alert other nodes that a value is accepted
     }
   }
+  cluster.addNode(node)
+  cluster.setQuorum()
 }
 
 function initializeLearner (node, cluster) { // :: Node -> Cluster ->
@@ -153,4 +154,6 @@ function initializeLearner (node, cluster) { // :: Node -> Cluster ->
       node.finalProposalId = proposalId
     }
   }
+  cluster.addNode(node)
+  cluster.setQuorum()
 }
