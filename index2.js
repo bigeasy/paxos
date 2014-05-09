@@ -20,14 +20,8 @@ function Cluster (nodes) { // :: [Node] -> Cluster
   this.proposers = {}
   if (nodes) {
     nodes.ForEach(function (node, _, __) {
-      if (node.roles.indexOf('Learner') > -1) {
-       this.learners[node.id] = node.address
-      } else if (nodes.roles.indexOf('Acceptor') > -1) {
-       this.acceptors[node.id] = node.address
-      } else if (nodes.roles.indexOf('Proposer') > -1) {
-       this.proposers[node.id] = node.address
-      }
-    })
+      this.addNode(node)
+    }, this)
   }
 
   this.setQuorum = function () {
@@ -39,6 +33,18 @@ function Cluster (nodes) { // :: [Node] -> Cluster
     nodes.ForEach(function (node, _, _) {
       node.quorum = this.quorum
     }, this)()
+  }
+
+  this.addNode = function (node) {
+    if (node.roles.indexOf('Learner') > -1) {
+     this.learners[node.id] = node.address
+    }
+    if (nodes.roles.indexOf('Acceptor') > -1) {
+     this.acceptors[node.id] = node.address
+    }
+    if (nodes.roles.indexOf('Proposer') > -1) {
+     this.proposers[node.id] = node.address
+    }
   }
 }
 
@@ -83,6 +89,7 @@ function initializeProposer (node, cluster, initProposal) { // :: Node -> Cluste
     }
   }
 
+  cluster.addNode(node)
   // Needs to parse cluster information/join cluster, alert acceptors
   // TODO: copy acceptors/addresses from cluster
 
