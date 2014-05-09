@@ -2,7 +2,7 @@ function Node (id, address, generateProposalId) { // :: Int -> Int -> (Int) -> N
   this.io = require('socket.io')
   this.id = id
   this.address = address
-  this.acceptors = {} // Address/ID -> last proposal
+  this.acceptors = {} // ID -> [address, last proposal]
   this.proposal = null
   this.value = null
   this.stateLog = {}
@@ -20,14 +20,8 @@ function Cluster (nodes) { // :: [Node] -> Cluster
   this.proposers = {}
   if (nodes) {
     nodes.ForEach(function (node, _, __) {
-      if (node.roles.indexOf('Learner') > -1) {
-       this.learners[node.id] = node.address
-      } else if (nodes.roles.indexOf('Acceptor') > -1) {
-       this.acceptors[node.id] = node.address
-      } else if (nodes.roles.indexOf('Proposer') > -1) {
-       this.proposers[node.id] = node.address
-      }
-    })
+      this.addNode(node)
+    }, this)
   }
 
   this.setQuorum = function () {
@@ -39,6 +33,21 @@ function Cluster (nodes) { // :: [Node] -> Cluster
     nodes.ForEach(function (node, _, _) {
       node.quorum = this.quorum
     }, this)()
+  }
+
+  this.addNode = function (node) {
+    if (node.roles.indexOf('Learner') > -1) {
+     this.learners[node.id] = node.address
+    }
+    if (node.roles.indexOf('Acceptor') > -1) {
+     this.acceptors[node.id] = node.address
+    }
+    if (node.roles.indexOf('Proposer') > -1) {
+     this.proposers[node.id] = node.address
+    }
+    for (var id in cluster.acceptors) {
+      node.acceptors[id] = [cluster.acceptors[id], null]
+    }
   }
 }
 
@@ -83,9 +92,8 @@ function initializeProposer (node, cluster, initProposal) { // :: Node -> Cluste
     }
   }
 
-  // Needs to parse cluster information/join cluster, alert acceptors
-  // TODO: copy acceptors/addresses from cluster
-
+  cluster.addNode(node)
+  cluster.setQuorum()
 }
 
 function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
@@ -111,6 +119,8 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
       // alert other nodes that a value is accepted
     }
   }
+  cluster.addNode(node)
+  cluster.setQuorum()
 }
 
 function initializeLearner (node, cluster) { // :: Node -> Cluster ->
@@ -146,4 +156,6 @@ function initializeLearner (node, cluster) { // :: Node -> Cluster ->
       node.finalProposalId = proposalId
     }
   }
+  cluster.addNode(node)
+  cluster.setQuorum()
 }
