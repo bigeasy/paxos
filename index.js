@@ -1,163 +1,161 @@
-function Proposer (n, id, round) {
-    this.id = id
-    this.round = round
-    this.proposal_num = n
-    this.proposal = null
-    this._promised = []
-    this._acceptors = []
-    this.prepared = 0
-    this.messages = {}
-    this.proposal_queue = []
+function Node (id, address, generateProposalId) { // :: Int -> Int -> (Int) -> Node
+  this.io = require('socket.io')
+  this.id = id
+  this.address = address
+  this.acceptors = {} // ID -> [address, last proposal]
+  this.proposal = null
+  this.value = null
+  this.stateLog = {}
+  this.roles = []
+  this.quorum = null
+  this.generateProposalId = generateProposalId
+  this.changeQuorum = function (size) { // :: Int ->
+    this.quorum = size
+  }
 }
 
-Proposer.prototype.addAcceptors = function (acceptors) {
-    acceptors.forEach(function (acceptor) {
-        this._acceptors.push(acceptor)
+function Cluster (nodes) { // :: [Node] -> Cluster
+  this.learners = {}
+  this.acceptors = {}
+  this.proposers = {}
+  if (nodes) {
+    nodes.ForEach(function (node, _, __) {
+      this.addNode(node)
     }, this)
-}
+  }
 
-Proposer.prototype.send = function (proposal) {
-    var i
-    this.proposal = proposal
-
-    for (i = 0; i < this._acceptors.length; i++) {
-    // Send a 'prepare' request to all acceptors.
-        var req = this._acceptors[i].prep({
-            proposal_num: this.proposal_num,
-            sender: this.id,
-            round: this.round
-        })
-
-        if (req.message === 'PROMISED') {
-        // If we get a promise back, record the index so we can
-        // send an 'accept' request later.
-            this._promised.push(i)
-        } else if (req.message === 'NOT PROMISED') {
-        // Rejection - the acceptor has seen a higher proposal
-        // number.
-            this.proposal_num = req.highest_proposal_num + 1
-        } else if (req.message === 'INVALID ROUND') {
-        // Round already finished, somehow we are behind.
-            this.round = req.round
-            this.highest_proposal_num = req.highest_proposal_num
-        } else {
-        // Uh oh. Why are we here?
-            throw new Error
-        }
-    }
-    if (this._promised.length > (this._acceptors.length / 2)) {
-        // If we have promises from the majority of acceptors,
-        // finish the proposal.
-        this.propose()
-    }
-}
-
-Proposer.prototype.propose = function () {
-    // Send an 'accept' request to each promised acceptor
-    this._promised.forEach(function (i) {
-        this.value = this._acceptors[i].accept( { value: this.proposal, sender: this.id } )
-    }, this)
-    this._promised = []
-    this.proposal_num = 0
-    this.round += 1
-}
-
-function Acceptor (n, id, round) {
-    this.id = id
-    this.highest_proposal_num = n
-    this.messages = {}
-    this.learners = []
-    this.promised = null
-    this.locked = false
-    this.round = round
-}
-
-Acceptor.prototype.prep = function (request) {
-    if (request.proposal_num > this.highest_proposal_num &&
-        this.round === request.round) {
-        // This is the highest we've seen. Promise it.
-        this.highest_proposal_num = request.proposal_num
-        this.promised = request.sender
-        console.log(this.id + ' promised ' + request.sender)
-
-        return {
-            message: 'PROMISED'
-        }
-
-    } else if (request.proposal_num > this.highest_proposal_num) {
-        // send a not-so-success-y response
-        // that includes this.highest_proposal
-        return {
-            message: 'NOT PROMISED',
-            highest_proposal_num: this.highest_proposal_num
-        }
+  this.setQuorum = function () {
+    if (this.acceptors.length % 2 == 0) {
+      this.quorum = this.acceptors.length / 2 + 1
     } else {
-        // round numbers don't match - this acceptor has
-        // already accepted a value and sent to learner
-        return  {
-            message: 'INVALID ROUND',
-            round: this.round,
-            highest_proposal_num: this.highest_proposal_num
-        }
+      this.quorum = Math.ceil(Object.keys(this.acceptors).length / 2)
     }
-}
+    nodes.ForEach(function (node, _, _) {
+      node.quorum = this.quorum
+    }, this)()
+  }
 
-Acceptor.prototype.accept = function (request) {
-    //  ensure this is the sender we promised to wait for.
-    //  Possible that another proposer could hijack our
-    //  proposal number somehow
-    if (this.promised === request.sender) {
-        console.log(this.id + ' accepted ' + request.value)
-        this.messages['' + this.round] = request.value
-        this._send( { round: this.round, value: request.value } )
-        return request.value
+  this.addNode = function (node) {
+    if (node.roles.indexOf('Learner') > -1) {
+     this.learners[node.id] = node.address
     }
-
-    return false
+    if (node.roles.indexOf('Acceptor') > -1) {
+     this.acceptors[node.id] = node.address
+    }
+    if (node.roles.indexOf('Proposer') > -1) {
+     this.proposers[node.id] = node.address
+    }
+    for (var id in cluster.acceptors) {
+      node.acceptors[id] = [cluster.acceptors[id], null]
+    }
+  }
 }
 
 
-Acceptor.prototype.addLearners = function (learners) {
-    learners.forEach(function (learner) {
-        this.learners.push(learner)
-    }, this)
-}
+function initializeProposer (node, cluster, initProposal) { // :: Node -> Cluster -> a ->
+  node.roles.push('Proposer')
+  node.proposalId = null
+  node.lastId = null
+  node.promises = []
+  node.nextProposalNum = 1
+  node.setProposal = function (proposal, proposalId) {
+    if ((node.proposal == null) || (proposalId !== node.proposalId)) {
+      node.proposal = proposal
+      node.proposalId = proposalId
+    }
+  }
+  if (initProposal) { node.setProposal(initProposal) }
 
-Acceptor.prototype._send = function (value) {
-    this.learners.forEach(function (learner) {
-        learner.add({
-            value: value,
-            round: this.round
-        })
-    }, this)
-    this.round += 1
-}
+  node.prepare = function () {
+    node.promises = []
+    node.nextProposalNum += 1
+  }
 
-function Learner (round, acceptors) {
-    this.acceptors = acceptors
-    this.round = round
-    this.accepted = {}
-    this.messages = {}
-}
-
-Learner.prototype.add = function (req) {
-    if (req.round === this.round) {
-        this.accepted['' + req.value] = this.accepted['' + req.value] + 1 || 1
-    } else {
-        console.log('An acceptor is out of sync.')
-        throw new Error //this shouldn't happen, ever.
+  node.receivePromise = function (from, proposalId, lastAcceptedId, lastValue) { // :: Int -> Int -> Int -> a ->
+    if (proposalId != node.proposalId || (node.promises.indexOf(from) < 0)) {
+      return
     }
 
-    if (this.acccepted['' + req.value] > (this.acceptors.length / 2)) {
-        this.messages['' + this.round] = req.value
-        this.round += 1
+    if (node.promises.indexOf(from) < 0) {
+      node.promises.push(from)
     }
+
+    if (lastAcceptedId > node.lastId) {
+      node.lastId = last_acceptedId
+      if (lastValue) { node.proposal = lastValue }
+    }
+
+    if (node.promises.length == node.quorom) {
+      if (node.proposal) {
+        //send accept request
+      }
+    }
+  }
+
+  cluster.addNode(node)
+  cluster.setQuorum()
 }
 
-Learner.prototype.get = function (round) {
-    return this.messages['' + round]
+function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
+  node.roles.push('Acceptor')
+  // Sync stateLog with acceptors in cluster
+  node.promisedId = null
+  node.acceptedId = null
+
+  node.receivePrepare = function (from, proposalId) {
+    if (proposalID == node.promisedId) {
+      // send prepare message to other acceptors
+    } else if (proposalId > node.promisedId) {
+      node.promisedId = proposalId
+      // send prepare
+    }
+  }
+
+  node.receiveAcceptRequest = function (from, proposalId, proposal) { // :: Int -> Int -> a ->
+    if (proposalId >= node.promisedId) {
+      node.promisedId = proposalId
+      node.acceptedId = proposalId
+      node.value = proposal
+      // alert other nodes that a value is accepted
+    }
+  }
+  cluster.addNode(node)
+  cluster.setQuorum()
 }
 
-exports.proposer = Proposer
-exports.acceptor = Acceptor
-exports.learner = Learner
+function initializeLearner (node, cluster) { // :: Node -> Cluster ->
+  node.roles.push('Learner')
+  node.finalValue = null
+  node.finalProposalId = null
+
+  node.proposals = {} // proposal ID -> [accept count, retain count, value]
+
+  node.receiveAccept = function (from, proposalId, acceptedValue) { // :: Int -> Int -> a ->
+    if (node.finalValue != null) {
+      return
+    }
+
+    var last = node.acceptors[from]
+
+    if (last > proposalId) { return }
+
+    node.acceptors[from] = proposalId
+
+    if (last) {
+      oldProposal = node.proposals[last]
+      oldProposal[1] -= 1
+      if (oldProposal[1] == 0) { delete node.propoals[last] }
+    }
+
+    if (node.proposals[proposalId] == null) {
+      node.proposals[proposalId] = [1, 1, acceptedValue]
+    }
+
+    if (node.proposals[proposalId][0] == node.quorum) { // round over
+      node.finalValue = acceptedValue
+      node.finalProposalId = proposalId
+    }
+  }
+  cluster.addNode(node)
+  cluster.setQuorum()
+}
