@@ -1,7 +1,10 @@
-function Node (id, address, generateProposalId) { // :: Int -> Int -> (Int) -> Node
-  this.io = require('socket.io')
+var dgram = require('dgram')
+
+function Node (id, address, port, generateProposalId) { // :: Int -> Int -> (Int) -> Node
+  this.socket = dgram.createSocket('udp4')
   this.id = id
   this.address = address
+  this.port = port
   this.acceptors = {} // ID -> [address, last proposal]
   this.proposal = null
   this.value = null
@@ -55,6 +58,15 @@ function initializeProposer (node, cluster, initProposal) { // :: Node -> Cluste
   node.lastId = null
   node.promises = []
   node.nextProposalNum = 1
+
+  node.socket.bind(node.port, node.address)
+  node.socket.on("message", function (message, rinfo) {
+    message = JSON.parse(message.toString())
+    if (message.type == "promise") {
+      node.receivePromise(message.address, message.proposalId, message.lastAcceptedId, message.lastValue)
+    }
+  })
+
   node.setProposal = function (proposal, proposalId) {
     if ((node.proposal == null) || (proposalId !== node.proposalId)) {
       node.proposal = proposal
@@ -84,7 +96,12 @@ function initializeProposer (node, cluster, initProposal) { // :: Node -> Cluste
 
     if (node.promises.length == node.quorom) {
       if (node.proposal) {
-        //send accept request
+        acceptReq = new Buffer(JSON.stringify({
+          type: "accept",
+          proposalId: proposalId,
+          proposal: node.proposal,
+        }))
+        node.socket.send(acceptReq, 0, from[0], from[1])
       }
     }
   }
