@@ -9,9 +9,6 @@ function Node (id, address, generateProposalId) { // :: Int -> Int -> (Int) -> N
   this.roles = []
   this.quorum = null
   this.generateProposalId = generateProposalId
-  this.changeQuorum = function (size) { // :: Int ->
-    this.quorum = size
-  }
 }
 
 function Cluster (nodes) { // :: [Node] -> Cluster
