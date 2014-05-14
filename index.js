@@ -63,7 +63,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
   node.socket.on("message", function (message, rinfo) {
     message = JSON.parse(message.toString())
     if (message.type == "promise") {
-      node.receivePromise(message.address, message.proposalId, message.lastAcceptedId, message.lastValue)
+      node.receivePromise(message.id, message.proposalId, message.lastAcceptedId, message.lastValue)
     } else if (message.type == "proposal") {
       node.setProposal(message.proposal, message.proposalId)
     } else if (message.type == "NAK") {
@@ -89,9 +89,15 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
       return
     }
 
+    if (node.acceptors[from] == null) {
+      // we don't know this acceptor
+      // TODO: query known acceptors
+      return
+    }
+
     if (node.promises.indexOf(from) < 0) {
       node.promises.push(from)
-    }
+    } else { return }
 
     if (lastAcceptedId > node.lastId) {
       node.lastId = last_acceptedId
@@ -157,16 +163,14 @@ function initializeLearner (node, cluster) { // :: Node -> Cluster ->
       return
     }
 
-    var last = node.acceptors[from]
-
-    if (last > proposalId) { return }
-
-    node.acceptors[from] = proposalId
-
+    var last = node.acceptors[from][1]
     if (last) {
+      if (last > proposalId) { return }
+      node.acceptors[from][1] = proposalId
+
       oldProposal = node.proposals[last]
       oldProposal[1] -= 1
-      if (oldProposal[1] == 0) { delete node.propoals[last] }
+      if (oldProposal[1] == 0) { delete node.proposals[last] }
     }
 
     if (node.proposals[proposalId] == null) {
