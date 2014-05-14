@@ -5,7 +5,7 @@ function Node (id, address, port, generateProposalId) { // :: Int -> Int -> (Int
   this.id = id
   this.address = address
   this.port = port
-  this.acceptors = {} // ID -> [address, last proposal]
+  this.acceptors = {} // ID -> [[port, address], last proposal]
   this.proposal = null
   this.value = null
   this.stateLog = {}
@@ -37,13 +37,13 @@ function Cluster (nodes) { // :: [Node] -> Cluster
 
   this.addNode = function (node) {
     if (node.roles.indexOf('Learner') > -1) {
-     this.learners[node.id] = node.address
+     this.learners[node.id] = [node.port, node.address]
     }
     if (node.roles.indexOf('Acceptor') > -1) {
-     this.acceptors[node.id] = node.address
+     this.acceptors[node.id] = [node.port, node.address]
     }
     if (node.roles.indexOf('Proposer') > -1) {
-     this.proposers[node.id] = node.address
+     this.proposers[node.id] = [node.port, node.address]
     }
     for (var id in cluster.acceptors) {
       node.acceptors[id] = [cluster.acceptors[id], null]
@@ -52,7 +52,7 @@ function Cluster (nodes) { // :: [Node] -> Cluster
 }
 
 
-function initializeProposer (node, cluster, initProposal) { // :: Node -> Cluster -> a ->
+function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
   node.roles.push('Proposer')
   node.proposalId = null
   node.lastId = null
@@ -64,6 +64,11 @@ function initializeProposer (node, cluster, initProposal) { // :: Node -> Cluste
     message = JSON.parse(message.toString())
     if (message.type == "promise") {
       node.receivePromise(message.address, message.proposalId, message.lastAcceptedId, message.lastValue)
+    } else if (message.type == "proposal") {
+      node.setProposal(message.proposal, message.proposalId)
+    } else if (message.type == "NAK") {
+      node.prepare()
+    } else if (message.type == "accepted") {
     }
   })
 
@@ -73,7 +78,6 @@ function initializeProposer (node, cluster, initProposal) { // :: Node -> Cluste
       node.proposalId = proposalId
     }
   }
-  if (initProposal) { node.setProposal(initProposal) }
 
   node.prepare = function () {
     node.promises = []
@@ -98,10 +102,12 @@ function initializeProposer (node, cluster, initProposal) { // :: Node -> Cluste
       if (node.proposal) {
         acceptReq = new Buffer(JSON.stringify({
           type: "accept",
-          proposalId: proposalId,
+          proposalId: node.proposalId,
           proposal: node.proposal,
         }))
-        node.socket.send(acceptReq, 0, from[0], from[1])
+        for (var acceptor in node.acceptors) {
+          node.socket.send(acceptReq, 0, node.acceptors[acceptor][0][0], node.acceptors[acceptor][0][1])
+        }
       }
     }
   }
@@ -118,7 +124,6 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
 
   node.receivePrepare = function (from, proposalId) {
     if (proposalID == node.promisedId) {
-      // send prepare message to other acceptors
     } else if (proposalId > node.promisedId) {
       node.promisedId = proposalId
       // send prepare
@@ -126,13 +131,16 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
   }
 
   node.receiveAcceptRequest = function (from, proposalId, proposal) { // :: Int -> Int -> a ->
-    if (proposalId >= node.promisedId) {
+    if (proposalId == node.promisedId) {
       node.promisedId = proposalId
       node.acceptedId = proposalId
       node.value = proposal
       // alert other nodes that a value is accepted
     }
   }
+
+  node.sendPromise = function () {} // TODO
+
   cluster.addNode(node)
   cluster.setQuorum()
 }
