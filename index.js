@@ -65,18 +65,21 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     if (message.type == "promise") {
       node.receivePromise(message.id, message.proposalId, message.lastAcceptedId, message.lastValue)
     } else if (message.type == "proposal") {
-      node.setProposal(message.proposal, message.proposalId)
+      node.setProposal(message.proposal)
     } else if (message.type == "NAK") {
       node.prepare()
     } else if (message.type == "accepted") {
+      node.recieveAccept()
     }
   })
 
   node.setProposal = function (proposal, proposalId) {
-    if ((node.proposal == null) || (proposalId !== node.proposalId)) {
-      node.proposal = proposal
-      node.proposalId = proposalId
-    }
+    node.proposal = proposal
+    node.proposalId = node.generateProposalId()
+  }
+
+  node.propose = function () {
+    // TODO: create and send proposal to all acceptors
   }
 
   node.prepare = function () {
@@ -97,7 +100,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
 
     if (node.promises.indexOf(from) < 0) {
       node.promises.push(from)
-    } else { return }
+    } else { return } // we have already received a promise. Something is probably wrong.
 
     if (lastAcceptedId > node.lastId) {
       node.lastId = last_acceptedId
@@ -117,6 +120,8 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
       }
     }
   }
+
+  node.receiveAccept = function () {} //TODO
 
   cluster.addNode(node)
   cluster.setQuorum()
