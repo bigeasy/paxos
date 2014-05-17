@@ -12,6 +12,11 @@ function Node (id, address, port, generateProposalId) { // :: Int -> Int -> (Int
   this.roles = []
   this.quorum = null
   this.generateProposalId = generateProposalId
+  this.broadcastToAcceptors = function (message) {
+    for (var acceptor in this.acceptors) {
+      this.socket.send(message, 0, this.acceptors[acceptor][0][0], this.acceptors[acceptors][0][1])
+    }
+  }
 }
 
 function Cluster (nodes) { // :: [Node] -> Cluster
@@ -70,6 +75,8 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
       node.prepare()
     } else if (message.type == "accepted") {
       node.recieveAccept()
+    } else if (message.type == "known") {
+      // message notifying this node that a specified acceptor is known
     }
   })
 
