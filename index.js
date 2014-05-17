@@ -12,7 +12,7 @@ function Node (id, address, port, generateProposalId) { // :: Int -> Int -> (Int
   this.roles = []
   this.quorum = null
   this.generateProposalId = generateProposalId
-  this.broadcastToAcceptors = function (message) {
+  this.sendToAcceptors = function (message) {
     for (var acceptor in this.acceptors) {
       this.socket.send(message, 0, this.acceptors[acceptor][0][0], this.acceptors[acceptors][0][1])
     }
@@ -102,6 +102,11 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     if (node.acceptors[from] == null) {
       // we don't know this acceptor
       // TODO: query known acceptors
+      identReq = new Buffer(JSON.stringify({
+        type: "identify",
+        address: from
+      }))
+      node.sendToAcceptors(identReq)
       return
     }
 
