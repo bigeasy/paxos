@@ -63,6 +63,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
   node.lastId = null
   node.promises = []
   node.nextProposalNum = 1
+  node.waiting = []
 
   node.socket.bind(node.port, node.address)
   node.socket.on("message", function (message, rinfo) {
@@ -77,6 +78,8 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
       node.recieveAccept()
     } else if (message.type == "known") {
       // message notifying this node that a specified acceptor is known
+      node.acceptors[message.nodeId] = [[message.nodePort, message.nodeAddress], message.nodeLastProposal]
+      // TODO: check node.waiting for address, log promise if present
     }
   })
 
@@ -107,6 +110,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
         address: from
       }))
       node.sendToAcceptors(identReq)
+      node.waiting.push(from)
       return
     }
 
