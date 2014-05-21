@@ -63,6 +63,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
   node.lastId = null
   node.promises = []
   node.nextProposalNum = 1
+  node.waiting = []
 
   node.socket.bind(node.port, node.address)
   node.socket.on("message", function (message, rinfo) {
@@ -76,7 +77,12 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     } else if (message.type == "accepted") {
       node.recieveAccept()
     } else if (message.type == "known") {
-      // message notifying this node that a specified acceptor is known
+      node.acceptors[message.nodeId] = [[message.nodePort, message.nodeAddress], message.nodeLastProposal]
+      var index = node.waiting.indexOf(message.nodeId)
+      if (index > -1) {
+        node.promises.push(message.nodeId)
+        node.waiting.splice(index, 1)
+      }
     }
   })
 
@@ -85,8 +91,14 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     node.proposalId = node.generateProposalId()
   }
 
-  node.propose = function () {
-    // TODO: create and send proposal to all acceptors
+  node.sendPrepare = function () {
+    var proposal = new Buffer(JSON.stringify({
+      type: "prepare",
+      address: node.address,
+      nodeId: node.id,
+      proposalNum: node.proposalNum
+    }))
+    node.sendToAcceptors(proposal)
   }
 
   node.prepare = function () {
@@ -100,13 +112,12 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     }
 
     if (node.acceptors[from] == null) {
-      // we don't know this acceptor
-      // TODO: query known acceptors
-      identReq = new Buffer(JSON.stringify({
+      var identReq = new Buffer(JSON.stringify({
         type: "identify",
         address: from
       }))
       node.sendToAcceptors(identReq)
+      node.waiting.push(from)
       return
     }
 
