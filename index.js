@@ -77,7 +77,6 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     } else if (message.type == "accepted") {
       node.recieveAccept()
     } else if (message.type == "known") {
-      // message notifying this node that a specified acceptor is known
       node.acceptors[message.nodeId] = [[message.nodePort, message.nodeAddress], message.nodeLastProposal]
       var index = node.waiting.indexOf(message.nodeId)
       if (index > -1) {
@@ -113,8 +112,6 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     }
 
     if (node.acceptors[from] == null) {
-      // we don't know this acceptor
-      // TODO: query known acceptors
       var identReq = new Buffer(JSON.stringify({
         type: "identify",
         address: from
