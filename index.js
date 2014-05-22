@@ -65,7 +65,6 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
   node.nextProposalNum = 1
   node.waiting = []
 
-  node.socket.bind(node.port, node.address)
   node.socket.on("message", function (message, rinfo) {
     message = JSON.parse(message.toString())
     if (message.type == "promise") {
@@ -85,6 +84,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
       }
     }
   })
+  node.socket.bind(node.port, node.address)
 
   node.setProposal = function (proposal, proposalId) {
     node.proposal = proposal
@@ -156,11 +156,15 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
   node.promisedId = null
   node.acceptedId = null
 
+  node.socket.on("message", function (message, rinfo) {
+  // message types: prepare, accept
+  })
+
   node.receivePrepare = function (from, proposalId) {
     if (proposalID == node.promisedId) {
     } else if (proposalId > node.promisedId) {
       node.promisedId = proposalId
-      // send prepare
+      node.sendPromise()
     }
   }
 
