@@ -60,7 +60,7 @@ function Cluster (nodes) { // :: [Node] -> Cluster
 function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
   node.roles.push('Proposer')
   node.proposalId = null
-  node.lastId = null
+  node.lastAcceptedId = null
   node.promises = []
   node.nextProposalNum = 1
   node.waiting = []
@@ -125,8 +125,8 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
       node.promises.push(from)
     } else { return } // we have already received a promise. Something is probably wrong.
 
-    if (lastAcceptedId > node.lastId) {
-      node.lastId = last_acceptedId
+    if (lastAcceptedId > node.lastAcceptedId) {
+      node.lastAcceptedId = last_acceptedId
       if (lastValue) { node.proposal = lastValue }
     }
 
