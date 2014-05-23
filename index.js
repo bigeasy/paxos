@@ -8,7 +8,6 @@ function Node (id, address, port, generateProposalId) { // :: Int -> Int -> (Int
   this.acceptors = {} // ID -> [[port, address], last proposal]
   this.proposal = null
   this.value = null
-  this.stateLog = {}
   this.roles = []
   this.quorum = null
   this.generateProposalId = generateProposalId
@@ -152,6 +151,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
 
 function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
   node.roles.push('Acceptor')
+  node.stateLog = {}
   // Sync stateLog with acceptors in cluster
   node.promisedId = null
   node.acceptedId = null
@@ -160,11 +160,11 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
   // message types: prepare, accept
   })
 
-  node.receivePrepare = function (from, proposalId) {
+  node.receivePrepare = function (from, port, address, proposalId) {
     if (proposalID == node.promisedId) {
     } else if (proposalId > node.promisedId) {
       node.promisedId = proposalId
-      node.sendPromise()
+      node.sendPromise(port, address)
     }
   }
 
@@ -186,6 +186,7 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
 function initializeLearner (node, cluster) { // :: Node -> Cluster ->
   node.roles.push('Learner')
   node.finalValue = null
+  node.stateLog = {}
   node.finalProposalId = null
 
   node.proposals = {} // proposal ID -> [accept count, retain count, value]
