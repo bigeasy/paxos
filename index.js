@@ -8,7 +8,6 @@ function Node (id, address, port, generateProposalId) { // :: Int -> Int -> (Int
   this.acceptors = {} // ID -> [[port, address], last proposal]
   this.proposal = null
   this.value = null
-  this.stateLog = {}
   this.roles = []
   this.quorum = null
   this.generateProposalId = generateProposalId
@@ -60,7 +59,7 @@ function Cluster (nodes) { // :: [Node] -> Cluster
 function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
   node.roles.push('Proposer')
   node.proposalId = null
-  node.lastId = null
+  node.lastAcceptedId = null
   node.promises = []
   node.nextProposalNum = 1
   node.waiting = []
@@ -125,8 +124,8 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
       node.promises.push(from)
     } else { return } // we have already received a promise. Something is probably wrong.
 
-    if (lastAcceptedId > node.lastId) {
-      node.lastId = last_acceptedId
+    if (lastAcceptedId > node.lastAcceptedId) {
+      node.lastAcceptedId = last_acceptedId
       if (lastValue) { node.proposal = lastValue }
     }
 
@@ -152,6 +151,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
 
 function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
   node.roles.push('Acceptor')
+  node.stateLog = {}
   // Sync stateLog with acceptors in cluster
   node.promisedId = null
   node.acceptedId = null
@@ -160,11 +160,11 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
   // message types: prepare, accept
   })
 
-  node.receivePrepare = function (from, proposalId) {
+  node.receivePrepare = function (from, port, address, proposalId) {
     if (proposalID == node.promisedId) {
     } else if (proposalId > node.promisedId) {
       node.promisedId = proposalId
-      node.sendPromise()
+      node.sendPromise(port, address)
     }
   }
 
@@ -186,6 +186,7 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
 function initializeLearner (node, cluster) { // :: Node -> Cluster ->
   node.roles.push('Learner')
   node.finalValue = null
+  node.stateLog = {}
   node.finalProposalId = null
 
   node.proposals = {} // proposal ID -> [accept count, retain count, value]
