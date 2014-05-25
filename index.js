@@ -1,7 +1,7 @@
 var dgram = require('dgram')
 
-function Node (id, address, port, generateProposalId) { // :: Int -> Int -> (Int) -> Node
-  this.socket = dgram.createSocket('udp4')
+function Node (id, address, port, socket, generateProposalId) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
+  this.socket = socket
   this.id = id
   this.address = address
   this.port = port
@@ -84,6 +84,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     }
   })
   node.socket.bind(node.port, node.address)
+  // (create and bind socket outside?
 
   node.setProposal = function (proposal, proposalId) {
     node.proposal = proposal
@@ -143,7 +144,9 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     }
   }
 
-  node.receiveAccept = function () {} //TODO
+  node.receiveAccept = function () {
+    // notify learners
+  } //TODO
 
   cluster.addNode(node)
   cluster.setQuorum()
@@ -174,6 +177,7 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
       node.acceptedId = proposalId
       node.value = proposal
       // alert other nodes that a value is accepted
+      // update state log.
     }
   }
 
