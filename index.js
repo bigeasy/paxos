@@ -95,8 +95,9 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
         var proposal = new Buffer(JSON.stringify({
             type: "prepare",
             address: node.address,
+            port: node.port,
             nodeId: node.id,
-            proposalNum: node.proposalNum
+            proposalId: node.proposalId
         }))
         node.sendToAcceptors(proposal)
     }
@@ -144,7 +145,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
         }
     }
 
-    node.receiveAccept = function () {
+    node.receiveAccept = function (from, proposalId, proposal) {
         // notify learners
     } //TODO
 
@@ -161,9 +162,16 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
 
     node.socket.on("message", function (message, rinfo) {
     // message types: prepare, accept
+        if (message.type == "prepare") {
+            node.receivePrepare(message.port, message.address, message.proposalId)
+        } else if (message.type == "accept") {
+            node.receiveAcceptRequest(message.proposalId, message.proposal)
+        } else if (message.type == "identify") {
+            // send back 'known' if address belongs to known acceptor
+        }
     })
 
-    node.receivePrepare = function (from, port, address, proposalId) {
+    node.receivePrepare = function (port, address, proposalId) {
         if (proposalID == node.promisedId) {
         } else if (proposalId > node.promisedId) {
             node.promisedId = proposalId
@@ -171,7 +179,7 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
         }
     }
 
-    node.receiveAcceptRequest = function (from, proposalId, proposal) { // :: Int -> Int -> a ->
+    node.receiveAcceptRequest = function (proposalId, proposal) { // :: Int -> Int -> a ->
         if (proposalId == node.promisedId) {
             node.promisedId = proposalId
             node.acceptedId = proposalId
