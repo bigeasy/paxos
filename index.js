@@ -159,6 +159,7 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
     // Sync stateLog with acceptors in cluster
     node.promisedId = null
     node.acceptedId = null
+    node.lastAccepted = null
 
     node.socket.on("message", function (message, rinfo) {
     // message types: prepare, accept
@@ -189,7 +190,14 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
         }
     }
 
-    node.sendPromise = function () {} // TODO
+    node.sendPromise = function (port, address) {
+        var promise = new Buffer(JSON.stringify({
+            type: "promise",
+            proposalId: node.promisedId,
+            lastValue: node.lastAccepted
+        }))
+        node.socket.send(promise, 0, port, address)
+    }
 
     cluster.addNode(node)
     cluster.setQuorum()
