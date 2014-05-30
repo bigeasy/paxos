@@ -1,5 +1,11 @@
 var dgram = require('dgram')
 
+function Messenger () {
+//object to deal with networking.
+//will contain a dgram socket.
+//each node will own one messenger object.
+}
+
 function Node (id, address, port, socket, generateProposalId) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
     this.socket = socket
     this.id = id
@@ -107,7 +113,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
         node.nextProposalNum += 1
     }
 
-    node.receivePromise = function (from, proposalId, lastAcceptedId, lastValue) { // :: Int -> Int -> Int -> a ->
+    node.receivePromise = function (from, proposalId, lastValue) { // :: Int -> Int -> Int -> a ->
         if (proposalId != node.proposalId || (node.promises.indexOf(from) < 0)) {
             return
         }
