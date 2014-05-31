@@ -1,13 +1,22 @@
 var dgram = require('dgram')
 
-function Messenger () {
+function Messenger (port, address) {
 //object to deal with networking.
 //will contain a dgram socket.
 //each node will own one messenger object.
+    this.socket = dgram.createSocket("udp4")
+    this.socket.bind(port, address)
+    this.sendAcceptRequest = function () {
+    }
+    this.sendToAcceptors = function (message) {
+        for (var acceptor in this.acceptors) {
+            this.socket.send(message, 0, this.acceptors[acceptor][0][0], this.acceptors[acceptors][0][1])
+        }
+    }
 }
 
-function Node (id, address, port, socket, generateProposalId) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
-    this.socket = socket
+function Node (id, address, port, generateProposalId) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
+    this.messenger = new Messenger(port, address)
     this.id = id
     this.address = address
     this.port = port
@@ -17,11 +26,6 @@ function Node (id, address, port, socket, generateProposalId) { // :: Int -> Int
     this.roles = []
     this.quorum = null
     this.generateProposalId = generateProposalId
-    this.sendToAcceptors = function (message) {
-        for (var acceptor in this.acceptors) {
-            this.socket.send(message, 0, this.acceptors[acceptor][0][0], this.acceptors[acceptors][0][1])
-        }
-    }
 }
 
 function Cluster (nodes) { // :: [Node] -> Cluster
@@ -105,7 +109,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
             nodeId: node.id,
             proposalId: node.proposalId
         }))
-        node.sendToAcceptors(proposal)
+        node.messenger.sendToAcceptors(proposal)
     }
 
     node.prepare = function () {
@@ -123,7 +127,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
                 type: "identify",
                 address: from
             }))
-            node.sendToAcceptors(identReq)
+            node.messenger.sendToAcceptors(identReq)
             node.waiting.push(from)
             return
         }
