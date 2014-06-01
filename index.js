@@ -1,12 +1,17 @@
 var dgram = require('dgram')
 
-function Messenger (port, address) {
+function Messenger (node, port, address) {
 //object to deal with networking.
 //will contain a dgram socket.
 //each node will own one messenger object.
+    this.node = node
     this.socket = dgram.createSocket("udp4")
     this.socket.bind(port, address)
     this.sendAcceptRequest = function () {
+    }
+    this.sendPromise = function () {
+    }
+    this.sendProposal = function () {
     }
     this.sendToAcceptors = function (message) {
         for (var acceptor in this.acceptors) {
@@ -16,7 +21,6 @@ function Messenger (port, address) {
 }
 
 function Node (id, address, port, generateProposalId) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
-    this.messenger = new Messenger(port, address)
     this.id = id
     this.address = address
     this.port = port
@@ -26,6 +30,7 @@ function Node (id, address, port, generateProposalId) { // :: Int -> Int -> Int 
     this.roles = []
     this.quorum = null
     this.generateProposalId = generateProposalId
+    this.messenger = new Messenger(this, port, address)
 }
 
 function Cluster (nodes) { // :: [Node] -> Cluster
