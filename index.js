@@ -8,15 +8,15 @@ function Messenger (node, port, address) {
     this.socket = dgram.createSocket("udp4")
     this.socket.bind(port, address)
     this.sendAcceptRequest = function () {
-        for (var acceptor in node.acceptors) {
+        for (var acceptor in this.node.acceptors) {
             this.socket.send(acceptReq, 0, node.acceptors[acceptor][0][0], node.acceptors[acceptor][0][1])
         }
     }
     this.sendPromise = function () {
         var promise = new Buffer(JSON.stringify({
             type: "promise",
-            proposalId: node.promisedId,
-            lastValue: node.lastAccepted
+            proposalId: this.node.promisedId,
+            lastValue: this.node.lastAccepted
         }))
         this.socket.send(promise, 0, port, address)
     }
@@ -25,15 +25,15 @@ function Messenger (node, port, address) {
     this.sendPrepare = function () {
         var proposal = new Buffer(JSON.stringify({
             type: "prepare",
-            address: node.address,
-            port: node.port,
-            nodeId: node.id,
-            proposalId: node.proposalId
+            address: this.node.address,
+            port: this.node.port,
+            nodeId: this.node.id,
+            proposalId: this.node.proposalId
         }))
         this.sendToAcceptors(proposal)
     }
     this.sendToAcceptors = function (message) {
-        for (var acceptor in this.acceptors) {
+        for (var acceptor in this.node.acceptors) {
             this.socket.send(message, 0, this.acceptors[acceptor][0][0], this.acceptors[acceptors][0][1])
         }
     }
