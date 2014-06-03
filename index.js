@@ -37,6 +37,11 @@ function Messenger (node, port, address) {
             this.socket.send(message, 0, this.acceptors[acceptor][0][0], this.acceptors[acceptors][0][1])
         }
     }
+    this.sendToLearners= function (message) {
+        for (var learner in this.node.learners) {
+            this.socket.send(message, 0, this.node.learners[learner][0][0], this.node.learners[learner][0][1])
+        }
+    }
 }
 
 function Node (id, address, port, generateProposalId) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
@@ -181,6 +186,8 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
     node.promisedId = null
     node.acceptedId = null
     node.lastAccepted = null
+    node.learners = cluster.learners
+
 
     node.socket.on("message", function (message, rinfo) {
     // message types: prepare, accept
