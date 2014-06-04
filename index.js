@@ -37,10 +37,45 @@ function Messenger (node, port, address) {
             this.socket.send(message, 0, this.acceptors[acceptor][0][0], this.acceptors[acceptors][0][1])
         }
     }
-    this.sendToLearners= function (message) {
+    this.sendToLearners = function (message) {
         for (var learner in this.node.learners) {
             this.socket.send(message, 0, this.node.learners[learner][0][0], this.node.learners[learner][0][1])
         }
+    }
+
+    this.setMessageHandlers = function (role) {
+      if (role == "Proposer") {
+        this.socket.on("message", function (message, rinfo) {
+            message = JSON.parse(message.toString())
+            if (message.type == "promise") {
+                this.node.receivePromise(message.id, message.proposalId, message.lastAcceptedId, message.lastValue)
+            } else if (message.type == "proposal") {
+                this.node.setProposal(message.proposal)
+            } else if (message.type == "NAK") {
+                this.node.prepare()
+            } else if (message.type == "accepted") {
+                this.node.recieveAccept()
+            } else if (message.type == "known") {
+                this.node.acceptors[message.nodeId] = [[message.nodePort, message.nodeAddress], message.nodeLastProposal]
+                var index = this.node.waiting.indexOf(message.nodeId)
+                if (index > -1) {
+                    this.node.promises.push(message.nodeId)
+                    this.node.waiting.splice(index, 1)
+                }
+            }
+        })
+      } else if (role == "Acceptor") {
+        this.socket.on("message", function (message, rinfo) {
+        // message types: prepare, accept
+            if (message.type == "prepare") {
+                node.receivePrepare(message.port, message.address, message.proposalId)
+            } else if (message.type == "accept") {
+                node.receiveAcceptRequest(message.proposalId, message.proposal)
+            } else if (message.type == "identify") {
+                // send back 'known' if address belongs to known acceptor
+            }
+        })
+      }
     }
 }
 
@@ -102,28 +137,8 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     node.promises = []
     node.nextProposalNum = 1
     node.waiting = []
+    node.messenger.setMessageHandlers('Proposer')
 
-    node.socket.on("message", function (message, rinfo) {
-        message = JSON.parse(message.toString())
-        if (message.type == "promise") {
-            node.receivePromise(message.id, message.proposalId, message.lastAcceptedId, message.lastValue)
-        } else if (message.type == "proposal") {
-            node.setProposal(message.proposal)
-        } else if (message.type == "NAK") {
-            node.prepare()
-        } else if (message.type == "accepted") {
-            node.recieveAccept()
-        } else if (message.type == "known") {
-            node.acceptors[message.nodeId] = [[message.nodePort, message.nodeAddress], message.nodeLastProposal]
-            var index = node.waiting.indexOf(message.nodeId)
-            if (index > -1) {
-                node.promises.push(message.nodeId)
-                node.waiting.splice(index, 1)
-            }
-        }
-    })
-    node.socket.bind(node.port, node.address)
-    // (create and bind socket outside?
 
     node.setProposal = function (proposal, proposalId) {
         node.proposal = proposal
@@ -187,18 +202,7 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
     node.acceptedId = null
     node.lastAccepted = null
     node.learners = cluster.learners
-
-
-    node.socket.on("message", function (message, rinfo) {
-    // message types: prepare, accept
-        if (message.type == "prepare") {
-            node.receivePrepare(message.port, message.address, message.proposalId)
-        } else if (message.type == "accept") {
-            node.receiveAcceptRequest(message.proposalId, message.proposal)
-        } else if (message.type == "identify") {
-            // send back 'known' if address belongs to known acceptor
-        }
-    })
+    node.messenger.setMessageHandlers('Acceptor')
 
     node.receivePrepare = function (port, address, proposalId) {
         if (proposalID == node.promisedId) {
