@@ -43,38 +43,39 @@ function Messenger (node, port, address) {
         }
     }
 
-    if (this.node.roles.indexOf("Proposer") > -1) {
-      this.socket.on("message", function (message, rinfo) {
-          message = JSON.parse(message.toString())
-          if (message.type == "promise") {
-              this.node.receivePromise(message.id, message.proposalId, message.lastAcceptedId, message.lastValue)
-          } else if (message.type == "proposal") {
-              this.node.setProposal(message.proposal)
-          } else if (message.type == "NAK") {
-              this.node.prepare()
-          } else if (message.type == "accepted") {
-              this.node.recieveAccept()
-          } else if (message.type == "known") {
-              this.node.acceptors[message.nodeId] = [[message.nodePort, message.nodeAddress], message.nodeLastProposal]
-              var index = this.node.waiting.indexOf(message.nodeId)
-              if (index > -1) {
-                  this.node.promises.push(message.nodeId)
-                  this.node.waiting.splice(index, 1)
-              }
-          }
-      })
-    }
-    if (this.node.roles.indexOf("Acceptor") > -1) {
-      this.socket.on("message", function (message, rinfo) {
-      // message types: prepare, accept
-          if (message.type == "prepare") {
-              node.receivePrepare(message.port, message.address, message.proposalId)
-          } else if (message.type == "accept") {
-              node.receiveAcceptRequest(message.proposalId, message.proposal)
-          } else if (message.type == "identify") {
-              // send back 'known' if address belongs to known acceptor
-          }
-      })
+    this.setMessageHandlers = function (role) {
+      if (role == "Proposer") {
+        this.socket.on("message", function (message, rinfo) {
+            message = JSON.parse(message.toString())
+            if (message.type == "promise") {
+                this.node.receivePromise(message.id, message.proposalId, message.lastAcceptedId, message.lastValue)
+            } else if (message.type == "proposal") {
+                this.node.setProposal(message.proposal)
+            } else if (message.type == "NAK") {
+                this.node.prepare()
+            } else if (message.type == "accepted") {
+                this.node.recieveAccept()
+            } else if (message.type == "known") {
+                this.node.acceptors[message.nodeId] = [[message.nodePort, message.nodeAddress], message.nodeLastProposal]
+                var index = this.node.waiting.indexOf(message.nodeId)
+                if (index > -1) {
+                    this.node.promises.push(message.nodeId)
+                    this.node.waiting.splice(index, 1)
+                }
+            }
+        })
+      } else if (role == "Acceptor") {
+        this.socket.on("message", function (message, rinfo) {
+        // message types: prepare, accept
+            if (message.type == "prepare") {
+                node.receivePrepare(message.port, message.address, message.proposalId)
+            } else if (message.type == "accept") {
+                node.receiveAcceptRequest(message.proposalId, message.proposal)
+            } else if (message.type == "identify") {
+                // send back 'known' if address belongs to known acceptor
+            }
+        })
+      }
     }
 }
 
@@ -136,6 +137,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     node.promises = []
     node.nextProposalNum = 1
     node.waiting = []
+    node.messenger.setMessageHandlers('Proposer')
 
 
     node.setProposal = function (proposal, proposalId) {
@@ -200,8 +202,7 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
     node.acceptedId = null
     node.lastAccepted = null
     node.learners = cluster.learners
-
-
+    node.messenger.setMessageHandlers('Acceptor')
 
     node.receivePrepare = function (port, address, proposalId) {
         if (proposalID == node.promisedId) {
