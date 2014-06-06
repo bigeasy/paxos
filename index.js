@@ -20,8 +20,6 @@ function Messenger (node, port, address) {
         }))
         this.socket.send(promise, 0, port, address)
     }
-    this.sendProposal = function () {
-    }
     this.sendPrepare = function () {
         var proposal = new Buffer(JSON.stringify({
             type: "prepare",
