@@ -74,6 +74,7 @@ function Messenger (node, port, address) {
             }
         })
       }
+      //TODO: set handlers for learners
     }
 }
 
@@ -186,6 +187,14 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
 
     node.receiveAccept = function (from, proposalId, proposal) {
         // notify learners
+        accepted = new Buffer(JSON.stringify({
+            type: "accepted",
+            proposalId: proposalId,
+            value: proposal,
+            from: from
+        }))
+        node.messenger.sendToLearners(accepted)
+
     } //TODO
 
     cluster.addNode(node)
