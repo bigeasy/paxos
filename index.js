@@ -66,13 +66,19 @@ function Messenger (node, port, address) {
         this.socket.on("message", function (message, rinfo) {
         // message types: prepare, accept
             if (message.type == "prepare") {
-                node.receivePrepare(message.port, message.address, message.proposalId)
+                this.node.receivePrepare(message.port, message.address, message.proposalId)
             } else if (message.type == "accept") {
-                node.receiveAcceptRequest(message.proposalId, message.proposal)
+                this.node.receiveAcceptRequest(message.proposalId, message.proposal)
             } else if (message.type == "identify") {
                 // send back 'known' if address belongs to known acceptor
             }
         })
+      } else if (role == "Learner") {
+        this.socket.on("message", function (message, rinfo) {
+            if (message.type == "accepted") {
+                this.node.receiveAccept(message)
+            }
+        }
       }
     }
 }
@@ -186,6 +192,14 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
 
     node.receiveAccept = function (from, proposalId, proposal) {
         // notify learners
+        accepted = new Buffer(JSON.stringify({
+            type: "accepted",
+            proposalId: proposalId,
+            value: proposal,
+            from: from
+        }))
+        node.messenger.sendToLearners(accepted)
+
     } //TODO
 
     cluster.addNode(node)
