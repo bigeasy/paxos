@@ -68,7 +68,7 @@ function Messenger (node, port, address) {
             if (message.type == "prepare") {
                 this.node.receivePrepare(message.port, message.address, message.proposalId)
             } else if (message.type == "accept") {
-                this.node.receiveAcceptRequest(message.proposalId, message.proposal)
+                this.node.receiveAcceptRequest(message.proposalId, message.value)
             } else if (message.type == "identify") {
                 // send back 'known' if address belongs to known acceptor
             }
@@ -76,7 +76,7 @@ function Messenger (node, port, address) {
       } else if (role == "Learner") {
         this.socket.on("message", function (message, rinfo) {
             if (message.type == "accepted") {
-                this.node.receiveAccept(message)
+                this.node.receiveAccept(message.from, message.proposalId, message.proposal)
             }
         }
       }
