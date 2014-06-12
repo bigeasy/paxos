@@ -68,7 +68,7 @@ function Messenger (node, port, address) {
             if (message.type == "prepare") {
                 this.node.receivePrepare(message.port, message.address, message.proposalId)
             } else if (message.type == "accept") {
-                this.node.receiveAcceptRequest(message.proposalId, message.proposal)
+                this.node.receiveAcceptRequest(message.proposalId, message.value)
             } else if (message.type == "identify") {
                 // send back 'known' if address belongs to known acceptor
             }
@@ -76,14 +76,14 @@ function Messenger (node, port, address) {
       } else if (role == "Learner") {
         this.socket.on("message", function (message, rinfo) {
             if (message.type == "accepted") {
-                this.node.receiveAccept(message)
+                this.node.receiveAccept(message.from, message.proposalId, message.value)
             }
         }
       }
     }
 }
 
-function Node (id, address, port, generateProposalId) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
+function Node (id, address, port, generateProposalId, currentRound) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
     this.id = id
     this.address = address
     this.port = port
@@ -94,6 +94,11 @@ function Node (id, address, port, generateProposalId) { // :: Int -> Int -> Int 
     this.quorum = null
     this.generateProposalId = generateProposalId
     this.messenger = new Messenger(this, port, address)
+    if (currentRound) {
+        this.round = currentRound
+    } else {
+        this.round = 1
+    }
 }
 
 function Cluster (nodes) { // :: [Node] -> Cluster
@@ -152,6 +157,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     node.prepare = function () {
         node.promises = []
         node.nextProposalNum += 1
+        node.round += 1
     }
 
     node.receivePromise = function (from, proposalId, lastValue) { // :: Int -> Int -> Int -> a ->
@@ -199,6 +205,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
             from: from
         }))
         node.messenger.sendToLearners(accepted)
+        node.prepare()
 
     } //TODO
 
