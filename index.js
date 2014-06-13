@@ -149,15 +149,16 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     node.messenger.setMessageHandlers('Proposer')
 
 
-    node.setProposal = function (proposal, proposalId) {
+    node.startProposal = function (proposal) {
+        node.promises = []
         node.proposal = proposal
         node.proposalId = node.generateProposalId()
+        node.prepare()
     }
 
     node.prepare = function () {
-        node.promises = []
         node.nextProposalNum += 1
-        node.round += 1
+        node.messenger.sendPrepare(prepareReq)
     }
 
     node.receivePromise = function (from, proposalId, lastValue) { // :: Int -> Int -> Int -> a ->
@@ -207,7 +208,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
         node.messenger.sendToLearners(accepted)
         node.prepare()
 
-    } //TODO
+    }
 
     cluster.addNode(node)
     cluster.setQuorum()
