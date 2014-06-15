@@ -8,7 +8,7 @@ function Messenger (node, port, address) {
     this.port = port
     this.address = address
     this.socket = dgram.createSocket("udp4")
-    this.socket.bind(port, address)
+    this.socket.bind(address, port)
     this.sendAcceptRequest = function () {
         acceptReq = new Buffer(JSON.stringify({
             type: "accept",
@@ -140,9 +140,11 @@ function Cluster (nodes) { // :: [Node] -> Cluster
         } else {
             this.quorum = Math.ceil(Object.keys(this.acceptors).length / 2)
         }
-        nodes.ForEach(function (node, _, _) {
-            node.quorum = this.quorum
-        }, this)()
+        if (nodes) {
+          nodes.ForEach(function (node, _, _) {
+              node.quorum = this.quorum
+          }, this)()
+        }
     }
 
     this.addNode = function (node) {
@@ -301,3 +303,10 @@ function initializeLearner (node, cluster) { // :: Node -> Cluster ->
     cluster.addNode(node)
     cluster.setQuorum()
 }
+
+exports.Messenger = Messenger
+exports.Node = Node
+exports.initializeProposer = initializeProposer
+exports.initializeAcceptor = initializeAcceptor
+exports.initializeLearner = initializeLearner
+exports.Cluster = Cluster
