@@ -5,9 +5,18 @@ function Messenger (node, port, address) {
 //will contain a dgram socket.
 //each node will own one messenger object.
     this.node = node
+    this.port = port
+    this.address = address
     this.socket = dgram.createSocket("udp4")
     this.socket.bind(port, address)
     this.sendAcceptRequest = function () {
+        acceptReq = new Buffer(JSON.stringify({
+            type: "accept",
+            proposalId: this.node.proposalId,
+            proposal: this.node.proposal,
+            address: this.address,
+            port: this.port
+        }))
         for (var acceptor in this.node.acceptors) {
             this.socket.send(acceptReq, 0, node.acceptors[acceptor][0][0], node.acceptors[acceptor][0][1])
         }
@@ -16,7 +25,9 @@ function Messenger (node, port, address) {
         var promise = new Buffer(JSON.stringify({
             type: "promise",
             proposalId: this.node.promisedId,
-            lastValue: this.node.lastAccepted
+            lastValue: this.node.lastAccepted,
+            address: this.address,
+            port: this.port
         }))
         this.socket.send(promise, 0, port, address)
     }
@@ -29,6 +40,14 @@ function Messenger (node, port, address) {
             proposalId: this.node.proposalId
         }))
         this.sendToAcceptors(proposal)
+    }
+    this.sendNACK = function(address, port) {
+        var nack = new Buffer(JSON.stringify({
+            type: "NACK",
+            address: this.address,
+            port: this.port
+        }))
+        this.socket.send(nack, 0, port, address)
     }
     this.sendToAcceptors = function (message) {
         for (var acceptor in this.node.acceptors) {
@@ -60,10 +79,13 @@ function Messenger (node, port, address) {
                     this.node.promises.push(message.nodeId)
                     this.node.waiting.splice(index, 1)
                 }
+            } else if (message.type == "NACK") {
+                // increment proposal number and try again
             }
         })
       } else if (role == "Acceptor") {
         this.socket.on("message", function (message, rinfo) {
+            message = JSON.parse(message.toString())
         // message types: prepare, accept
             if (message.type == "prepare") {
                 this.node.receivePrepare(message.port, message.address, message.proposalId)
@@ -75,10 +97,11 @@ function Messenger (node, port, address) {
         })
       } else if (role == "Learner") {
         this.socket.on("message", function (message, rinfo) {
+            message = JSON.parse(message.toString())
             if (message.type == "accepted") {
                 this.node.receiveAccept(message.from, message.proposalId, message.value)
             }
-        }
+        })
       }
     }
 }
@@ -149,15 +172,16 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     node.messenger.setMessageHandlers('Proposer')
 
 
-    node.setProposal = function (proposal, proposalId) {
+    node.startProposal = function (proposal) {
+        node.promises = []
         node.proposal = proposal
         node.proposalId = node.generateProposalId()
+        node.prepare()
     }
 
     node.prepare = function () {
-        node.promises = []
         node.nextProposalNum += 1
-        node.round += 1
+        node.messenger.sendPrepare(prepareReq)
     }
 
     node.receivePromise = function (from, proposalId, lastValue) { // :: Int -> Int -> Int -> a ->
@@ -186,12 +210,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
 
         if (node.promises.length == node.quorom) {
             if (node.proposal) {
-                acceptReq = new Buffer(JSON.stringify({
-                    type: "accept",
-                    proposalId: node.proposalId,
-                    proposal: node.proposal,
-                }))
-                node.messenger.sendAcceptRequest(acceptReq)
+                node.messenger.sendAcceptRequest()
             }
         }
     }
@@ -207,7 +226,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
         node.messenger.sendToLearners(accepted)
         node.prepare()
 
-    } //TODO
+    }
 
     cluster.addNode(node)
     cluster.setQuorum()
@@ -231,13 +250,15 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
         }
     }
 
-    node.receiveAcceptRequest = function (proposalId, proposal) { // :: Int -> Int -> a ->
+    node.receiveAcceptRequest = function (address, port, proposalId, proposal) { // :: Int -> Int -> a ->
         if (proposalId == node.promisedId) {
             node.promisedId = proposalId
             node.acceptedId = proposalId
             node.value = proposal
             // alert other nodes that a value is accepted
             // update state log.
+        } else {
+            node.messenger.sendNACK(from)
         }
     }
 
