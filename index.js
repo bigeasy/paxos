@@ -8,7 +8,7 @@ function Messenger (node, port, address) {
     this.port = port
     this.address = address
     this.socket = dgram.createSocket("udp4")
-    this.socket.bind(port, address)
+    this.socket.bind(address, port)
     this.sendAcceptRequest = function () {
         acceptReq = new Buffer(JSON.stringify({
             type: "accept",
@@ -49,6 +49,18 @@ function Messenger (node, port, address) {
         }))
         this.socket.send(nack, 0, port, address)
     }
+    this.sendIdentRequest = function(from) {
+        var identReq = new Buffer(JSON.stringify({
+            type: "identify",
+            unknownAddress: from
+            address: this.address,
+            port: this.port
+        }))
+        sendToAcceptors(identReq)
+        node.waiting.push(from)
+        // TODO: send port, address of unknown node
+    }
+
     this.sendToAcceptors = function (message) {
         for (var acceptor in this.node.acceptors) {
             this.socket.send(message, 0, this.acceptors[acceptor][0][0], this.acceptors[acceptors][0][1])
@@ -93,6 +105,10 @@ function Messenger (node, port, address) {
                 this.node.receiveAcceptRequest(message.proposalId, message.value)
             } else if (message.type == "identify") {
                 // send back 'known' if address belongs to known acceptor
+                if (this.node.knownNode(message.whatever) {
+                } else if {
+                    // send some kind of bad message
+                }
             }
         })
       } else if (role == "Learner") {
@@ -129,9 +145,9 @@ function Cluster (nodes) { // :: [Node] -> Cluster
     this.acceptors = {}
     this.proposers = {}
     if (nodes) {
-        nodes.ForEach(function (node, _, __) {
+        for (var node in nodes) {
             this.addNode(node)
-        }, this)
+        }
     }
 
     this.setQuorum = function () {
@@ -140,9 +156,11 @@ function Cluster (nodes) { // :: [Node] -> Cluster
         } else {
             this.quorum = Math.ceil(Object.keys(this.acceptors).length / 2)
         }
-        nodes.ForEach(function (node, _, _) {
-            node.quorum = this.quorum
-        }, this)()
+        if (nodes) {
+          for (var node in nodes) {
+              node.quorum = this.quorum
+          }
+        }
     }
 
     this.addNode = function (node) {
@@ -155,8 +173,8 @@ function Cluster (nodes) { // :: [Node] -> Cluster
         if (node.roles.indexOf('Proposer') > -1) {
          this.proposers[node.id] = [node.port, node.address]
         }
-        for (var id in cluster.acceptors) {
-            node.acceptors[id] = [cluster.acceptors[id], null]
+        for (var id in this.acceptors) {
+            node.acceptors[id] = [this.acceptors[id], null]
         }
     }
 }
@@ -190,12 +208,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
         }
 
         if (node.acceptors[from] == null) {
-            var identReq = new Buffer(JSON.stringify({
-                type: "identify",
-                address: from
-            }))
-            node.messenger.sendToAcceptors(identReq)
-            node.waiting.push(from)
+            node.messenger.sendIdentRequest(from)
             return
         }
 
@@ -228,8 +241,10 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
 
     }
 
-    cluster.addNode(node)
-    cluster.setQuorum()
+    if (cluster) {
+      cluster.addNode(node)
+      cluster.setQuorum()
+    }
 }
 
 function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
@@ -262,8 +277,14 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
         }
     }
 
-    cluster.addNode(node)
-    cluster.setQuorum()
+    node.knownNode = function (stuff) {
+        // TODO
+    }
+
+    if (cluster) {
+      cluster.addNode(node)
+      cluster.setQuorum()
+    }
 }
 
 function initializeLearner (node, cluster) { // :: Node -> Cluster ->
@@ -298,6 +319,15 @@ function initializeLearner (node, cluster) { // :: Node -> Cluster ->
             node.finalProposalId = proposalId
         }
     }
-    cluster.addNode(node)
-    cluster.setQuorum()
+    if (cluster) {
+      cluster.addNode(node)
+      cluster.setQuorum()
+    }
 }
+
+exports.Messenger = Messenger
+exports.Node = Node
+exports.initializeProposer = initializeProposer
+exports.initializeAcceptor = initializeAcceptor
+exports.initializeLearner = initializeLearner
+exports.Cluster = Cluster
