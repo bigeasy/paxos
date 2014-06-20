@@ -9,15 +9,17 @@ require('proof')(1, function(ok) {
 
     var cluster = new paxos.Cluster(nodes)
 
-    for (var i=0; i<6; i++) {
+    for (var i=0; i<15; i++) {
         nodes[i] = new paxos.Node(i, '127.0.0.1', 80+i, generateProposalId, 1)
-        if (i < 2) {
+        if (i < 5) {
             paxos.initializeProposer(nodes[i], cluster)
-        } else if (i < 3) {
+        }
+
+        if (i < 10) {
             paxos.initializeLearner(nodes[i], cluster)
         } else {
             paxos.initializeAcceptor(nodes[i], cluster)
         }
     }
-    ok(cluster.quorum, 2)
+    ok(cluster.quorum, 3)
 })

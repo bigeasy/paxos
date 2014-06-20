@@ -52,7 +52,7 @@ function Messenger (node, port, address) {
     this.sendIdentRequest = function(from) {
         var identReq = new Buffer(JSON.stringify({
             type: "identify",
-            unknownAddress: from
+            unknownAddress: from,
             address: this.address,
             port: this.port
         }))
@@ -105,8 +105,8 @@ function Messenger (node, port, address) {
                 this.node.receiveAcceptRequest(message.proposalId, message.value)
             } else if (message.type == "identify") {
                 // send back 'known' if address belongs to known acceptor
-                if (this.node.knownNode(message.whatever) {
-                } else if {
+                if (this.node.knownNode(message.whatever)) {
+                } else {
                     // send some kind of bad message
                 }
             }
