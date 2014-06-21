@@ -4,8 +4,6 @@ http://stackoverflow.com/questions/5850487/questions-about-paxos-implementation/
 
 - stateLog format: round number as key, returns object with time, value, current leader
 
-- write tests to ensure algorithm is sound.
-
 - figure out what to do after a round ends. Currently notifying all learners; should notify all nodes? use proposal ID + round number to distinguish? Not sure if all nodes need to know but telling them all *probably* won't hurt...?
 
 - figure out how to implement a round system
