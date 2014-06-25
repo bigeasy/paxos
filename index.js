@@ -30,6 +30,7 @@ function Messenger (node, port, address) {
             port: this.port
         }))
         this.socket.send(promise, 0, port, address)
+        console.log("promise sent")
     }
     this.sendPrepare = function () {
         var proposal = new Buffer(JSON.stringify({
@@ -62,8 +63,11 @@ function Messenger (node, port, address) {
     }
 
     this.sendToAcceptors = function (message) {
+        console.log(this.node.acceptors)
         for (var acceptor in this.node.acceptors) {
-            this.socket.send(message, 0, this.acceptors[acceptor][0][0], this.acceptors[acceptors][0][1])
+            console.log(acceptor)
+            this.socket.send(message, 0, this.acceptors[acceptor][0][0], this.acceptors[acceptor][0][1])
+            console.log("sent message to " + this.acceptors[acceptor])
         }
     }
     this.sendToLearners = function (message) {
@@ -97,9 +101,12 @@ function Messenger (node, port, address) {
         })
       } else if (role == "Acceptor") {
         this.socket.on("message", function (message, rinfo) {
+            console.log("received message")
             message = JSON.parse(message.toString())
+            console.log(message)
         // message types: prepare, accept
             if (message.type == "prepare") {
+                console.log("prepare received")
                 this.node.receivePrepare(message.port, message.address, message.proposalId)
             } else if (message.type == "accept") {
                 this.node.receiveAcceptRequest(message.proposalId, message.value)
@@ -168,14 +175,18 @@ function Cluster (nodes) { // :: [Node] -> Cluster
          this.learners[node.id] = [node.port, node.address]
         }
         if (node.roles.indexOf('Acceptor') > -1) {
-         this.acceptors[node.id] = [node.port, node.address]
+            this.acceptors[node.id] = [node.port, node.address]
+            for (var proposer in this.proposers) {
+                // let proposers know a new acceptor has been defined
+            }
         }
         if (node.roles.indexOf('Proposer') > -1) {
-         this.proposers[node.id] = [node.port, node.address]
+            this.proposers[node.id] = [node.port, node.address]
         }
         for (var id in this.acceptors) {
             node.acceptors[id] = [this.acceptors[id], null]
         }
+        console.log(node.acceptors)
     }
 }
 
@@ -199,7 +210,8 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
 
     node.prepare = function () {
         node.nextProposalNum += 1
-        node.messenger.sendPrepare(prepareReq)
+        node.messenger.sendPrepare()
+        console.log("prepare sent")
     }
 
     node.receivePromise = function (from, proposalId, lastValue) { // :: Int -> Int -> Int -> a ->
