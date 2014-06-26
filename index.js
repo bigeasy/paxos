@@ -62,10 +62,21 @@ function Messenger (node, port, address) {
         // TODO: send port, address of unknown node
     }
 
+    this.notifyProposers = function (proposers, messageType) {
+        var message = new Buffer(JSON.stringify({
+            type: messageType,
+            id: this.node.id,
+            address: this.address,
+            port: this.port
+        }))
+
+        for (var proposer in proposers) {
+            this.socket.send(message, 0, proposers[proposer][0][0], proposers[proposer][0][1])
+        }
+    }
+
     this.sendToAcceptors = function (message) {
-        console.log(this.node.acceptors)
         for (var acceptor in this.node.acceptors) {
-            console.log(acceptor)
             this.socket.send(message, 0, this.acceptors[acceptor][0][0], this.acceptors[acceptor][0][1])
             console.log("sent message to " + this.acceptors[acceptor])
         }
@@ -176,9 +187,7 @@ function Cluster (nodes) { // :: [Node] -> Cluster
         }
         if (node.roles.indexOf('Acceptor') > -1) {
             this.acceptors[node.id] = [node.port, node.address]
-            for (var proposer in this.proposers) {
-                // let proposers know a new acceptor has been defined
-            }
+            node.messenger.notifyProposers(this.proposers, "new acceptor")
         }
         if (node.roles.indexOf('Proposer') > -1) {
             this.proposers[node.id] = [node.port, node.address]
@@ -186,7 +195,6 @@ function Cluster (nodes) { // :: [Node] -> Cluster
         for (var id in this.acceptors) {
             node.acceptors[id] = [this.acceptors[id], null]
         }
-        console.log(node.acceptors)
     }
 }
 
