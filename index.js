@@ -8,7 +8,7 @@ function Messenger (node, port, address) {
     this.port = port
     this.address = address
     this.socket = dgram.createSocket("udp4")
-    this.socket.bind(address, port)
+    this.socket.bind(port, address)
     this.sendAcceptRequest = function () {
         acceptReq = new Buffer(JSON.stringify({
             type: "accept",
@@ -71,7 +71,7 @@ function Messenger (node, port, address) {
         }))
 
         for (var proposer in proposers) {
-            this.socket.send(message, 0, proposers[proposer][0][0], proposers[proposer][0][1])
+            this.socket.send(message, 0, message.length, proposers[proposer][0], proposers[proposer][1])
         }
     }
 
