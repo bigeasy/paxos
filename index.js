@@ -18,7 +18,7 @@ function Messenger (node, port, address) {
             port: this.port
         }))
         for (var acceptor in this.node.acceptors) {
-            this.socket.send(acceptReq, 0, node.acceptors[acceptor][0][0], node.acceptors[acceptor][0][1])
+            this.socket.send(acceptReq, 0, message.length, node.acceptors[acceptor][0][0], node.acceptors[acceptor][0][1])
         }
     }
     this.sendPromise = function () {
@@ -29,7 +29,7 @@ function Messenger (node, port, address) {
             address: this.address,
             port: this.port
         }))
-        this.socket.send(promise, 0, port, address)
+        this.socket.send(promise, 0, promise.length, port, address)
         console.log("promise sent")
     }
     this.sendPrepare = function () {
@@ -48,7 +48,7 @@ function Messenger (node, port, address) {
             address: this.address,
             port: this.port
         }))
-        this.socket.send(nack, 0, port, address)
+        this.socket.send(nack, 0, nack.length, port, address)
     }
     this.sendIdentRequest = function(from) {
         var identReq = new Buffer(JSON.stringify({
@@ -77,13 +77,13 @@ function Messenger (node, port, address) {
 
     this.sendToAcceptors = function (message) {
         for (var acceptor in this.node.acceptors) {
-            this.socket.send(message, 0, this.acceptors[acceptor][0][0], this.acceptors[acceptor][0][1])
+            this.socket.send(message, 0, message.length, this.acceptors[acceptor][0][0], this.acceptors[acceptor][0][1])
             console.log("sent message to " + this.acceptors[acceptor])
         }
     }
     this.sendToLearners = function (message) {
         for (var learner in this.node.learners) {
-            this.socket.send(message, 0, this.node.learners[learner][0][0], this.node.learners[learner][0][1])
+            this.socket.send(message, 0, message.length, this.node.learners[learner][0][0], this.node.learners[learner][0][1])
         }
     }
 
