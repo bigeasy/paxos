@@ -19,7 +19,7 @@ for (var i=0; i<15; i++) {
     } else {
         paxos.initializeAcceptor(nodes[i], cluster)
     }
-    console.log(80+i)
+    console.log(1024+i)
 }
 
 nodes[2].startProposal("jump")
