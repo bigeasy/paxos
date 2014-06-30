@@ -59,7 +59,6 @@ function Messenger (node, port, address) {
         }))
         sendToAcceptors(identReq)
         node.waiting.push(from)
-        // TODO: send port, address of unknown node
     }
 
     this.notifyProposers = function (proposers, messageType) {
@@ -100,14 +99,16 @@ function Messenger (node, port, address) {
             } else if (message.type == "accepted") {
                 this.node.recieveAccept()
             } else if (message.type == "known") {
-                this.node.acceptors[message.nodeId] = [[message.nodePort, message.nodeAddress], message.nodeLastProposal]
+                this.node.acceptors[message.nodeId] = [[message.nodePort, message.nodeAddress], null]
                 var index = this.node.waiting.indexOf(message.nodeId)
                 if (index > -1) {
                     this.node.promises.push(message.nodeId)
                     this.node.waiting.splice(index, 1)
                 }
             } else if (message.type == "NACK") {
-                // increment proposal number and try again
+                this.node.proposalId = this.node.generateProposalId(message.highestProposalNum)
+                this.node.nextProposalNum = this.node.proposalId + 1
+                this.node.prepare()
             }
         })
       } else if (role == "Acceptor") {
@@ -123,9 +124,8 @@ function Messenger (node, port, address) {
                 this.node.receiveAcceptRequest(message.proposalId, message.value)
             } else if (message.type == "identify") {
                 // send back 'known' if address belongs to known acceptor
-                if (this.node.knownNode(message.whatever)) {
-                } else {
-                    // send some kind of bad message
+                if (this.node.knownNode(message.unknownAddress)) {
+                    // get an ID for this node
                 }
             }
         })
@@ -249,7 +249,6 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     }
 
     node.receiveAccept = function (from, proposalId, proposal) {
-        // notify learners
         accepted = new Buffer(JSON.stringify({
             type: "accepted",
             proposalId: proposalId,
@@ -290,6 +289,15 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
             node.promisedId = proposalId
             node.acceptedId = proposalId
             node.value = proposal
+            var message = new Buffer(JSON.stringify({
+                type: "accepted",
+                value: proposal,
+                address: address,
+                port: port,
+                proposalId: ProposalId
+            }))
+            node.messenger.sendToAcceptors(message)
+            node.messenger.sendToLearners(message)
             // alert other nodes that a value is accepted
             // update state log.
         } else {
