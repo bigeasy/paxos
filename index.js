@@ -296,11 +296,11 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
                 address: address,
                 port: port,
                 proposalId: ProposalId
-            }))
+            })
             node.messenger.sendToAcceptors(message)
             node.messenger.sendToLearners(message)
-            // alert other nodes that a value is accepted
             // update state log.
+            node.stateLog[node.currentRound] = {time: Date.now(), value: proposal, leader: {address: address, port: port}}
         } else {
             node.messenger.sendNACK(from)
         }
