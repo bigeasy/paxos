@@ -9,65 +9,68 @@ function Messenger (node, port, address) {
     this.address = address
     this.socket = dgram.createSocket("udp4")
     this.socket.bind(port, address)
+    this.createMessage = function (obj) {
+        return new Buffer(JSON.stringify(obj))
+    }
     this.sendAcceptRequest = function () {
-        acceptReq = new Buffer(JSON.stringify({
+        acceptReq = this.createMessage({
             type: "accept",
             proposalId: this.node.proposalId,
             proposal: this.node.proposal,
             address: this.address,
             port: this.port
-        }))
+        })
         for (var acceptor in this.node.acceptors) {
             this.socket.send(acceptReq, 0, message.length, node.acceptors[acceptor][0][0], node.acceptors[acceptor][0][1])
         }
     }
     this.sendPromise = function () {
-        var promise = new Buffer(JSON.stringify({
+        var promise = this.createMessage({
             type: "promise",
             proposalId: this.node.promisedId,
             lastValue: this.node.lastAccepted,
             address: this.address,
             port: this.port
-        }))
+        })
         this.socket.send(promise, 0, promise.length, port, address)
         console.log("promise sent")
     }
     this.sendPrepare = function () {
-        var proposal = new Buffer(JSON.stringify({
+        var proposal = this.createMessage({
             type: "prepare",
             address: this.node.address,
             port: this.node.port,
             nodeId: this.node.id,
             proposalId: this.node.proposalId
-        }))
+        })
         this.sendToAcceptors(proposal)
     }
     this.sendNACK = function(address, port) {
-        var nack = new Buffer(JSON.stringify({
+        var nack = this.createMessage({
             type: "NACK",
             address: this.address,
             port: this.port
-        }))
+        })
         this.socket.send(nack, 0, nack.length, port, address)
     }
     this.sendIdentRequest = function(from) {
-        var identReq = new Buffer(JSON.stringify({
+        var identReq = this.createMessage({
             type: "identify",
-            unknownAddress: from,
+            nodeInfo: from,
             address: this.address,
             port: this.port
-        }))
+        })
         sendToAcceptors(identReq)
         node.waiting.push(from)
     }
 
     this.notifyProposers = function (proposers, messageType) {
-        var message = new Buffer(JSON.stringify({
+        var message = createMessage({
             type: messageType,
             id: this.node.id,
             address: this.address,
             port: this.port
-        }))
+        })
 
         for (var proposer in proposers) {
             this.socket.send(message, 0, message.length, proposers[proposer][0], proposers[proposer][1])
@@ -91,7 +94,7 @@ function Messenger (node, port, address) {
         this.socket.on("message", function (message, rinfo) {
             message = JSON.parse(message.toString())
             if (message.type == "promise") {
-                this.node.receivePromise(message.id, message.proposalId, message.lastAcceptedId, message.lastValue)
+                this.node.receivePromise(message.id, message.address, message.proposalId, message.lastAcceptedId, message.lastValue)
             } else if (message.type == "proposal") {
                 this.node.setProposal(message.proposal)
             } else if (message.type == "NAK") {
@@ -123,9 +126,8 @@ function Messenger (node, port, address) {
             } else if (message.type == "accept") {
                 this.node.receiveAcceptRequest(message.proposalId, message.value)
             } else if (message.type == "identify") {
-                // send back 'known' if address belongs to known acceptor
-                if (this.node.knownNode(message.unknownAddress)) {
-                    // get an ID for this node
+                if (this.node.knownNode(message.nodeInfo)) {
+                    // send back 'known' if address belongs to known acceptor
                 }
             }
         })
@@ -222,13 +224,13 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
         console.log("prepare sent")
     }
 
-    node.receivePromise = function (from, proposalId, lastValue) { // :: Int -> Int -> Int -> a ->
+    node.receivePromise = function (fromId, fromAddress, proposalId, lastValue) { // :: Int -> Int -> Int -> a ->
         if (proposalId != node.proposalId || (node.promises.indexOf(from) < 0)) {
             return
         }
 
         if (node.acceptors[from] == null) {
-            node.messenger.sendIdentRequest(from)
+            node.messenger.sendIdentRequest([fromId, fromAddress])
             return
         }
 
@@ -249,13 +251,12 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     }
 
     node.receiveAccept = function (from, proposalId, proposal) {
-        accepted = new Buffer(JSON.stringify({
+        node.messenger.sendToLearners(node.messenger.createMessage({
             type: "accepted",
             proposalId: proposalId,
             value: proposal,
             from: from
         }))
-        node.messenger.sendToLearners(accepted)
         node.prepare()
 
     }
@@ -289,24 +290,24 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
             node.promisedId = proposalId
             node.acceptedId = proposalId
             node.value = proposal
-            var message = new Buffer(JSON.stringify({
+            var message = node.messenger.createMessage({
                 type: "accepted",
                 value: proposal,
                 address: address,
                 port: port,
                 proposalId: ProposalId
-            }))
+            })
             node.messenger.sendToAcceptors(message)
             node.messenger.sendToLearners(message)
-            // alert other nodes that a value is accepted
             // update state log.
+            node.stateLog[node.currentRound] = {time: Date.now(), value: proposal, leader: {address: address, port: port}}
         } else {
             node.messenger.sendNACK(from)
         }
     }
 
-    node.knownNode = function (stuff) {
-        // TODO
+    node.knownNode = function (info) {
+        return (node.acceptors[from[0]][0] == from[1])
     }
 
     if (cluster) {
