@@ -24,13 +24,15 @@ function Messenger (node, port, address) {
             this.socket.send(acceptReq, 0, message.length, node.acceptors[acceptor][0][0], node.acceptors[acceptor][0][1])
         }
     }
-    this.sendPromise = function () {
+    this.sendPromise = function (port, address) {
         var promise = this.createMessage({
             type: "promise",
             proposalId: this.node.promisedId,
             lastValue: this.node.lastAccepted,
+            lastAcceptedId: this.node.lastAcceptedId,
             address: this.address,
-            port: this.port
+            port: this.port,
+            id: this.node.id
         })
         this.socket.send(promise, 0, promise.length, port, address)
         console.log("promise sent")
@@ -60,16 +62,14 @@ function Messenger (node, port, address) {
             address: this.address,
             port: this.port
         })
-        sendToAcceptors(identReq)
+        this.sendToAcceptors(identReq)
         node.waiting.push(from)
     }
 
-    this.notifyProposers = function (proposers, messageType) {
-        var message = createMessage({
+    this.notifyProposers = function (proposers, messageType, info) {
+        var message = this.createMessage({
             type: messageType,
-            id: this.node.id,
-            address: this.address,
-            port: this.port
+            info: info
         })
 
         for (var proposer in proposers) {
@@ -78,9 +78,13 @@ function Messenger (node, port, address) {
     }
 
     this.sendToAcceptors = function (message) {
+        if (JSON.stringify(this.node.acceptors) == "{}") {
+            this.node.pendingMessage = message
+            return
+        }
         for (var acceptor in this.node.acceptors) {
-            this.socket.send(message, 0, message.length, this.acceptors[acceptor][0][0], this.acceptors[acceptor][0][1])
-            console.log("sent message to " + this.acceptors[acceptor])
+            this.socket.send(message, 0, message.length, this.node.acceptors[acceptor][0][0], this.node.acceptors[acceptor][0][1])
+            console.log("sent message to " + this.node.acceptors[acceptor])
         }
     }
     this.sendToLearners = function (message) {
@@ -89,44 +93,43 @@ function Messenger (node, port, address) {
         }
     }
 
-    this.setMessageHandlers = function (role) {
+    this.setMessageHandlers = function (node, role) {
       if (role == "Proposer") {
         this.socket.on("message", function (message, rinfo) {
             message = JSON.parse(message.toString())
             if (message.type == "promise") {
-                this.node.receivePromise(message.id, message.address, message.proposalId, message.lastAcceptedId, message.lastValue)
+                node.receivePromise(message.id, message.address, message.proposalId, message.lastValue, message.lastAcceptedId)
             } else if (message.type == "proposal") {
-                this.node.setProposal(message.proposal)
+                node.setProposal(message.proposal)
             } else if (message.type == "NAK") {
-                this.node.prepare()
+                node.prepare()
             } else if (message.type == "accepted") {
-                this.node.recieveAccept()
+                node.recieveAccept()
             } else if (message.type == "known") {
-                this.node.acceptors[message.nodeId] = [[message.nodePort, message.nodeAddress], null]
+                node.acceptors[message.nodeId] = [[message.nodePort, message.nodeAddress], null]
                 var index = this.node.waiting.indexOf(message.nodeId)
                 if (index > -1) {
-                    this.node.promises.push(message.nodeId)
-                    this.node.waiting.splice(index, 1)
+                    node.promises.push(message.nodeId)
+                    node.waiting.splice(index, 1)
                 }
             } else if (message.type == "NACK") {
-                this.node.proposalId = this.node.generateProposalId(message.highestProposalNum)
-                this.node.nextProposalNum = this.node.proposalId + 1
-                this.node.prepare()
+                node.proposalId = this.node.generateProposalId(message.highestProposalNum)
+                node.nextProposalNum = this.node.proposalId + 1
+                node.prepare()
+            } else if (message.type == "new acceptor") {
+                console.log('new acceptor')
+                node.acceptors[message.nodeId] = [message.info, null]
             }
         })
       } else if (role == "Acceptor") {
         this.socket.on("message", function (message, rinfo) {
-            console.log("received message")
             message = JSON.parse(message.toString())
-            console.log(message)
-        // message types: prepare, accept
             if (message.type == "prepare") {
-                console.log("prepare received")
-                this.node.receivePrepare(message.port, message.address, message.proposalId)
+                node.receivePrepare(message.port, message.address, message.proposalId)
             } else if (message.type == "accept") {
-                this.node.receiveAcceptRequest(message.proposalId, message.value)
+                node.receiveAcceptRequest(message.proposalId, message.value)
             } else if (message.type == "identify") {
-                if (this.node.knownNode(message.nodeInfo)) {
+                if (node.knownNode(message.nodeInfo)) {
                     // send back 'known' if address belongs to known acceptor
                 }
             }
@@ -135,7 +138,7 @@ function Messenger (node, port, address) {
         this.socket.on("message", function (message, rinfo) {
             message = JSON.parse(message.toString())
             if (message.type == "accepted") {
-                this.node.receiveAccept(message.from, message.proposalId, message.value)
+                node.receiveAccept(message.from, message.proposalId, message.value)
             }
         })
       }
@@ -189,7 +192,7 @@ function Cluster (nodes) { // :: [Node] -> Cluster
         }
         if (node.roles.indexOf('Acceptor') > -1) {
             this.acceptors[node.id] = [node.port, node.address]
-            node.messenger.notifyProposers(this.proposers, "new acceptor")
+            node.messenger.notifyProposers(this.proposers, "new acceptor", {nodeId: node.id, info: this.acceptors[node.id]})
         }
         if (node.roles.indexOf('Proposer') > -1) {
             this.proposers[node.id] = [node.port, node.address]
@@ -208,7 +211,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     node.promises = []
     node.nextProposalNum = 1
     node.waiting = []
-    node.messenger.setMessageHandlers('Proposer')
+    node.messenger.setMessageHandlers(node, 'Proposer')
 
 
     node.startProposal = function (proposal) {
@@ -224,26 +227,28 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
         console.log("prepare sent")
     }
 
-    node.receivePromise = function (fromId, fromAddress, proposalId, lastValue) { // :: Int -> Int -> Int -> a ->
-        if (proposalId != node.proposalId || (node.promises.indexOf(from) < 0)) {
+    node.receivePromise = function (fromId, fromAddress, proposalId, lastValue, lastAcceptedId) { // :: Int -> Int -> Int -> a ->
+        console.log('received promise from ' + fromId)
+        if (proposalId != node.proposalId) {
             return
         }
 
-        if (node.acceptors[from] == null) {
+        if (node.acceptors[fromId] == null) {
             node.messenger.sendIdentRequest([fromId, fromAddress])
             return
         }
 
-        if (node.promises.indexOf(from) < 0) {
-            node.promises.push(from)
+        if (node.promises.indexOf(fromId) < 0) {
+            node.promises.push(fromId)
         } else { return } // we have already received a promise. Something is probably wrong.
 
         if (lastAcceptedId > node.lastAcceptedId) {
-            node.lastAcceptedId = last_acceptedId
+            node.lastAcceptedId = lastAcceptedId
             if (lastValue) { node.proposal = lastValue }
         }
 
-        if (node.promises.length == node.quorom) {
+        if (node.promises.length >= node.quorom) {
+            console.log('quorum')
             if (node.proposal) {
                 node.messenger.sendAcceptRequest()
             }
@@ -275,10 +280,10 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
     node.acceptedId = null
     node.lastAccepted = null
     node.learners = cluster.learners
-    node.messenger.setMessageHandlers('Acceptor')
+    node.messenger.setMessageHandlers(node, 'Acceptor')
 
     node.receivePrepare = function (port, address, proposalId) {
-        if (proposalID == node.promisedId) {
+        if (proposalId == node.promisedId) {
         } else if (proposalId > node.promisedId) {
             node.promisedId = proposalId
             node.messenger.sendPromise(port, address)
@@ -299,8 +304,8 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
             })
             node.messenger.sendToAcceptors(message)
             node.messenger.sendToLearners(message)
-            // update state log.
             node.stateLog[node.currentRound] = {time: Date.now(), value: proposal, leader: {address: address, port: port}}
+            console.log(node.stateLog)
         } else {
             node.messenger.sendNACK(from)
         }
