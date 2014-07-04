@@ -35,7 +35,6 @@ function Messenger (node, port, address) {
             id: this.node.id
         })
         this.socket.send(promise, 0, promise.length, port, address)
-        console.log("promise sent")
     }
     this.sendPrepare = function () {
         var proposal = this.createMessage({
@@ -64,6 +63,17 @@ function Messenger (node, port, address) {
         })
         this.sendToAcceptors(identReq)
         node.waiting.push(from)
+    }
+
+    this.sendPrevious = function (port, address, proposalId, proposal) {
+        var prevAccepted = this.createMessage({
+            type: proposal ? "accepted" : "promised",
+            address: this.address,
+            port: this.port,
+            proposalId: proposalId,
+            proposal: proposal
+        })
+        this.socket.send(prevAccepted, 0, prevAccepted.length, port, address)
     }
 
     this.notifyProposers = function (proposers, messageType, info) {
@@ -158,7 +168,7 @@ function Node (id, address, port, generateProposalId, currentRound) { // :: Int 
     if (currentRound) {
         this.currentRound = currentRound
     } else {
-        this.round = 1
+        this.currentRound = 1
     }
 }
 
@@ -216,14 +226,17 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     node.startProposal = function (proposal) {
         node.promises = []
         node.proposal = proposal
-        node.proposalId = node.generateProposalId()
+        if (node.proposalId) {
+            node.proposalId = node.generateProposalId(node.proposalId)
+        } else {
+          node.proposalId = node.generateProposalId()
+        }
         node.prepare()
     }
 
     node.prepare = function () {
-        node.nextProposalNum += 1
+        node.nextProposalNum = node.proposalId + 1
         node.messenger.sendPrepare()
-        console.log("prepare sent")
     }
 
     node.receivePromise = function (fromId, fromAddress, proposalId, lastValue, lastAcceptedId) { // :: Int -> Int -> Int -> a ->
@@ -242,12 +255,10 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
 
         if (lastAcceptedId > node.lastAcceptedId) {
             node.lastAcceptedId = lastAcceptedId
-            console.log(lastAcceptedId)
             if (lastValue) { node.proposal = lastValue }
         }
 
         if (node.promises.length >= node.quorum) {
-            console.log('quorum')
             if (node.proposal) {
                 node.messenger.sendAcceptRequest()
             }
@@ -261,8 +272,9 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
             value: proposal,
             from: from
         }))
-        node.prepare()
+    }
 
+    node.receivePrevious = function (from, proposalId) {
     }
 
     if (cluster) {
@@ -283,9 +295,12 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
 
     node.receivePrepare = function (port, address, proposalId) {
         if (proposalId == node.promisedId) {
+            return
         } else if (proposalId > node.promisedId) {
             node.promisedId = proposalId
             node.messenger.sendPromise(port, address)
+        } else {
+            node.messenger.sendPrevious(port, address, proposalId)
         }
     }
 
@@ -303,8 +318,9 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
             })
             node.messenger.sendToAcceptors(message)
             node.messenger.sendToLearners(message)
-            node.stateLog[node.currentRound] = {time: Date.now(), value: proposal, leader: {address: address, port: port}}
-            console.log(node.stateLog)
+            node.stateLog[Date.now()] = {round: node.currentRound, value: proposal, leader: {address: address, port: port}}
+        } else if (proposalId < node.promisedId) {
+            node.messenger.sendPrevious(port, address, proposalId, proposal)
         } else {
             node.messenger.sendNACK(address, port)
         }
@@ -350,6 +366,7 @@ function initializeLearner (node, cluster) { // :: Node -> Cluster ->
         if (node.proposals[proposalId][0] == node.quorum) { // round over
             node.finalValue = acceptedValue
             node.finalProposalId = proposalId
+            console.log(node.finalValue)
         }
     }
     if (cluster) {
