@@ -9,6 +9,9 @@ function Messenger (node, port, address) {
     this.address = address
     this.socket = dgram.createSocket("udp4")
     this.socket.bind(port, address)
+    this.close = function () {
+        this.socket.close()
+    }
     this.createMessage = function (obj) {
         return new Buffer(JSON.stringify(obj))
     }
@@ -113,7 +116,7 @@ function Messenger (node, port, address) {
             } else if (message.type == "NAK") {
                 node.prepare()
             } else if (message.type == "accepted") {
-                node.recieveAccept()
+                node.receiveAccept()
             } else if (message.type == "known") {
                 node.acceptors[message.nodeId] = [[message.nodePort, message.nodeAddress], null]
                 var index = this.node.waiting.indexOf(message.nodeId)
@@ -169,6 +172,10 @@ function Node (id, address, port, generateProposalId, currentRound) { // :: Int 
         this.currentRound = currentRound
     } else {
         this.currentRound = 1
+    }
+    this.end = function () {
+        this.messenger.close()
+        // should probably persist stateLog here
     }
 }
 
@@ -319,6 +326,7 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
             node.messenger.sendToAcceptors(message)
             node.messenger.sendToLearners(message)
             node.stateLog[Date.now()] = {round: node.currentRound, value: proposal, leader: {address: address, port: port}}
+            console.log(node.stateLog)
         } else if (proposalId < node.promisedId) {
             node.messenger.sendPrevious(port, address, proposalId, proposal)
         } else {
