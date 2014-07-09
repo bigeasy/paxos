@@ -1,4 +1,5 @@
-require('proof')(1, function(ok) {
+#!/usr/bin/env node
+require('proof')(1, function(equal) {
     var paxos = require('../../index.js')
     var nodes = []
 
@@ -21,5 +22,5 @@ require('proof')(1, function(ok) {
             paxos.initializeAcceptor(nodes[i], cluster)
         }
     }
-    ok(cluster.quorum, 3)
+    equal(cluster.quorum, 3, 'quorum is 3')
 })
