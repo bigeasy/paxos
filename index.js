@@ -49,11 +49,12 @@ function Messenger (node, port, address) {
         })
         this.sendToAcceptors(proposal)
     }
-    this.sendNACK = function(address, port) {
+    this.sendNACK = function(address, port, promise) {
         var nack = this.createMessage({
             type: "NACK",
             address: this.address,
-            port: this.port
+            port: this.port,
+            highestProposalNum: promise
         })
         this.socket.send(nack, 0, nack.length, port, address)
     }
@@ -330,7 +331,7 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
         } else if (proposalId < node.promisedId) {
             node.messenger.sendPrevious(port, address, proposalId, proposal)
         } else {
-            node.messenger.sendNACK(address, port)
+            node.messenger.sendNACK(address, port, node.promisedId)
         }
     }
 
