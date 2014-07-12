@@ -10,3 +10,5 @@ http://stackoverflow.com/questions/5850487/questions-about-paxos-implementation/
 - figure out how to implement a round system
 
 - don't forget. Node processes not root - port 1024 & up
+
+- figure out how to make proof work with network code.

@@ -49,11 +49,12 @@ function Messenger (node, port, address) {
         })
         this.sendToAcceptors(proposal)
     }
-    this.sendNACK = function(address, port) {
+    this.sendNACK = function(address, port, promise) {
         var nack = this.createMessage({
             type: "NACK",
             address: this.address,
-            port: this.port
+            port: this.port,
+            highestProposalNum: promise
         })
         this.socket.send(nack, 0, nack.length, port, address)
     }
@@ -113,8 +114,6 @@ function Messenger (node, port, address) {
                 node.receivePromise(message.id, message.address, message.proposalId, message.lastValue, message.lastAcceptedId)
             } else if (message.type == "proposal") {
                 node.setProposal(message.proposal)
-            } else if (message.type == "NAK") {
-                node.prepare()
             } else if (message.type == "accepted") {
                 node.receiveAccept()
             } else if (message.type == "known") {
@@ -326,11 +325,11 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
             node.messenger.sendToAcceptors(message)
             node.messenger.sendToLearners(message)
             node.stateLog[Date.now()] = {round: node.currentRound, value: proposal, leader: {address: address, port: port}}
-            console.log(node.stateLog)
+            console.log(proposal)
         } else if (proposalId < node.promisedId) {
             node.messenger.sendPrevious(port, address, proposalId, proposal)
         } else {
-            node.messenger.sendNACK(address, port)
+            node.messenger.sendNACK(address, port, node.promisedId)
         }
     }
 

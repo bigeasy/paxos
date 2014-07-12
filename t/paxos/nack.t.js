@@ -10,17 +10,20 @@ require('proof')(1, function(equal) {
 
     var cluster = new paxos.Cluster(nodes)
 
-    for (var i=0; i<15; i++) {
+    for (var i=0; i<5; i++) {
         nodes[i] = new paxos.Node(i, '127.0.0.1', 80+i, generateProposalId, 1)
-        if (i < 5) {
+        if (i < 1) {
             paxos.initializeProposer(nodes[i], cluster)
-        }
-
-        if (i < 10) {
-            paxos.initializeLearner(nodes[i], cluster)
         } else {
             paxos.initializeAcceptor(nodes[i], cluster)
         }
+
+        if (i == 2) {
+            nodes[i].promisedId = 20
+            nodes[0].startProposal("jump")
+        }
     }
-    equal(cluster.quorum, 3, 'quorum is 3')
+
+
+    equal(nodes[0].proposalId, 21, 'NACK received') // TODO: ask Alan how to do the thing
 })
