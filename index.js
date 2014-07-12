@@ -229,13 +229,16 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     node.messenger.setMessageHandlers(node, 'Proposer')
 
 
-    node.startProposal = function (proposal) {
+    node.startProposal = function (proposal, callback) {
         node.promises = []
         node.proposal = proposal
         if (node.proposalId) {
             node.proposalId = node.generateProposalId(node.proposalId)
         } else {
           node.proposalId = node.generateProposalId()
+        }
+        if (callback) {
+            node.callback = callback
         }
         node.prepare()
     }
@@ -278,6 +281,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
             value: proposal,
             from: from
         }))
+        node.callback()
     }
 
     node.receivePrevious = function (from, proposalId) {
@@ -289,7 +293,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     }
 }
 
-function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
+function initializeAcceptor (node, cluster, callback) { // :: Node -> Cluster ->
     node.roles.push('Acceptor')
     node.stateLog = {}
     // Sync stateLog with acceptors in cluster
@@ -298,6 +302,7 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
     node.lastAccepted = null
     node.learners = cluster.learners
     node.messenger.setMessageHandlers(node, 'Acceptor')
+    if (callback) { node.callback = callback }
 
     node.receivePrepare = function (port, address, proposalId) {
         if (proposalId == node.promisedId) {
@@ -326,6 +331,7 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
             node.messenger.sendToLearners(message)
             node.stateLog[Date.now()] = {round: node.currentRound, value: proposal, leader: {address: address, port: port}}
             console.log(proposal)
+            node.callback()
         } else if (proposalId < node.promisedId) {
             node.messenger.sendPrevious(port, address, proposalId, proposal)
         } else {
@@ -343,11 +349,12 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
     }
 }
 
-function initializeLearner (node, cluster) { // :: Node -> Cluster ->
+function initializeLearner (node, cluster, callback) { // :: Node -> Cluster ->
     node.roles.push('Learner')
     node.finalValue = null
     node.stateLog = {}
     node.finalProposalId = null
+    if (callback) { node.callback = callback }
 
     node.proposals = {} // proposal ID -> [accept count, retain count, value]
 

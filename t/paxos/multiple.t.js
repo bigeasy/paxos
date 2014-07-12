@@ -30,6 +30,6 @@ require('proof')(1, function(equal) {
           }
       }
   }
+    equal(nodes[3].value, "sit")
 
-  equal(nodes[3].value, "sit")
 })
