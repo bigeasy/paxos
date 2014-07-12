@@ -114,8 +114,6 @@ function Messenger (node, port, address) {
                 node.receivePromise(message.id, message.address, message.proposalId, message.lastValue, message.lastAcceptedId)
             } else if (message.type == "proposal") {
                 node.setProposal(message.proposal)
-            } else if (message.type == "NAK") {
-                node.prepare()
             } else if (message.type == "accepted") {
                 node.receiveAccept()
             } else if (message.type == "known") {
@@ -327,7 +325,7 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
             node.messenger.sendToAcceptors(message)
             node.messenger.sendToLearners(message)
             node.stateLog[Date.now()] = {round: node.currentRound, value: proposal, leader: {address: address, port: port}}
-            console.log(node.stateLog)
+            console.log(proposal)
         } else if (proposalId < node.promisedId) {
             node.messenger.sendPrevious(port, address, proposalId, proposal)
         } else {

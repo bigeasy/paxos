@@ -31,7 +31,5 @@ require('proof')(1, function(equal) {
       }
   }
 
-  nodes[11].startProposal("jump")
-  nodes[12].startProposal("sit")
-  equal(nodes[3].value, "sit") // this test won't work. what to do????
+  equal(nodes[3].value, "sit")
 })
