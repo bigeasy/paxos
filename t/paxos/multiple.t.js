@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-require('proof')(1, function(equal) {
+require('proof')(1, function(step) {
   var paxos = require('../../index.js')
   var nodes = []
 
@@ -22,7 +22,7 @@ require('proof')(1, function(equal) {
       } else {
           paxos.initializeProposer(nodes[i], cluster)
           if (i == 12) {
-              nodes[i].startProposal("sit")
+              nodes[i].startProposal("sit", step())
           } else if (i == 13) {
               nodes[i].startProposal("jump")
           } else if (i == 14) {
@@ -30,6 +30,7 @@ require('proof')(1, function(equal) {
           }
       }
   }
+}, function (equal) {
+    console.log("here")
     equal(nodes[3].value, "sit")
-
 })

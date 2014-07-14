@@ -330,8 +330,10 @@ function initializeAcceptor (node, cluster, callback) { // :: Node -> Cluster ->
             node.messenger.sendToAcceptors(message)
             node.messenger.sendToLearners(message)
             node.stateLog[Date.now()] = {round: node.currentRound, value: proposal, leader: {address: address, port: port}}
-            console.log(proposal)
-            node.callback()
+            //console.log(proposal)
+            if (node.callback) {
+              node.callback()
+            }
         } else if (proposalId < node.promisedId) {
             node.messenger.sendPrevious(port, address, proposalId, proposal)
         } else {
