@@ -16,7 +16,7 @@ function Messenger (node, port, address) {
         return new Buffer(JSON.stringify(obj))
     }
     this.sendAcceptRequest = function () {
-        acceptReq = this.createMessage({
+        var acceptReq = this.createMessage({
             type: "accept",
             proposalId: this.node.proposalId,
             proposal: this.node.proposal,
@@ -24,7 +24,7 @@ function Messenger (node, port, address) {
             port: this.port
         })
         for (var acceptor in this.node.acceptors) {
-            this.socket.send(acceptReq, 0, acceptReq.length, node.acceptors[acceptor][0][0], node.acceptors[acceptor][0][1])
+            this.socket.send(acceptReq, 0, acceptReq.length, this.node.acceptors[acceptor][0][0], this.node.acceptors[acceptor][0][1])
         }
     }
     this.sendPromise = function (port, address) {
@@ -105,6 +105,9 @@ function Messenger (node, port, address) {
             this.socket.send(message, 0, message.length, this.node.learners[learner][0], this.node.learners[learner][1])
         }
     }
+    this.send = function (message, address, port) {
+        this.socket.send(message, 0, message.length, port, address)
+    }
 
     this.setMessageHandlers = function (node, role) {
       if (role == "Proposer") {
@@ -115,7 +118,7 @@ function Messenger (node, port, address) {
             } else if (message.type == "proposal") {
                 node.setProposal(message.proposal)
             } else if (message.type == "accepted") {
-                node.receiveAccept()
+                node.receiveAccept(message.from, message.proposalId, message.value)
             } else if (message.type == "known") {
                 node.acceptors[message.nodeId] = [[message.nodePort, message.nodeAddress], null]
                 var index = this.node.waiting.indexOf(message.nodeId)
@@ -128,7 +131,6 @@ function Messenger (node, port, address) {
                 node.nextProposalNum = this.node.proposalId + 1
                 node.prepare()
             } else if (message.type == "new acceptor") {
-                console.log('new acceptor')
                 node.acceptors[message.nodeId] = [message.info, null]
             }
         })
@@ -149,7 +151,7 @@ function Messenger (node, port, address) {
         this.socket.on("message", function (message, rinfo) {
             message = JSON.parse(message.toString())
             if (message.type == "accepted") {
-                node.receiveAccept(message.from, message.proposalId, message.value)
+                node.receiveAccept(message.from, message.proposalId, message.proposal)
             }
         })
       }
@@ -182,11 +184,6 @@ function Cluster (nodes) { // :: [Node] -> Cluster
     this.learners = {}
     this.acceptors = {}
     this.proposers = {}
-    if (nodes) {
-        for (var node in nodes) {
-            this.addNode(node)
-        }
-    }
 
     this.setQuorum = function () {
         if (this.acceptors.length % 2 == 0) {
@@ -202,18 +199,25 @@ function Cluster (nodes) { // :: [Node] -> Cluster
     }
 
     this.addNode = function (node) {
-        if (node.roles.indexOf('Learner') > -1) {
-         this.learners[node.id] = [node.port, node.address]
+        if (node.roles) {
+            if (node.roles.indexOf('Learner') > -1) {
+             this.learners[node.id] = [node.port, node.address]
+            }
+            if (node.roles.indexOf('Acceptor') > -1) {
+                this.acceptors[node.id] = [node.port, node.address]
+                node.messenger.notifyProposers(this.proposers, "new acceptor", {nodeId: node.id, info: this.acceptors[node.id]})
+            }
+            if (node.roles.indexOf('Proposer') > -1) {
+                this.proposers[node.id] = [node.port, node.address]
+            }
+            for (var id in this.acceptors) {
+                node.acceptors[id] = [this.acceptors[id], null]
+            }
         }
-        if (node.roles.indexOf('Acceptor') > -1) {
-            this.acceptors[node.id] = [node.port, node.address]
-            node.messenger.notifyProposers(this.proposers, "new acceptor", {nodeId: node.id, info: this.acceptors[node.id]})
-        }
-        if (node.roles.indexOf('Proposer') > -1) {
-            this.proposers[node.id] = [node.port, node.address]
-        }
-        for (var id in this.acceptors) {
-            node.acceptors[id] = [this.acceptors[id], null]
+    }
+    if (nodes) {
+        for (var node in nodes) {
+            this.addNode(node)
         }
     }
 }
@@ -275,13 +279,16 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     }
 
     node.receiveAccept = function (from, proposalId, proposal) {
+        if (node.callback) {
+            console.log('reached callback')
+            node.callback(proposal)
+        }
         node.messenger.sendToLearners(node.messenger.createMessage({
             type: "accepted",
             proposalId: proposalId,
             value: proposal,
             from: from
         }))
-        node.callback()
     }
 
     node.receivePrevious = function (from, proposalId) {
@@ -316,6 +323,7 @@ function initializeAcceptor (node, cluster, callback) { // :: Node -> Cluster ->
     }
 
     node.receiveAcceptRequest = function (address, port, proposalId, proposal) { // :: Int -> Int -> a ->
+        console.log('accepted')
         if (proposalId == node.promisedId) {
             node.promisedId = proposalId
             node.acceptedId = proposalId
@@ -329,10 +337,10 @@ function initializeAcceptor (node, cluster, callback) { // :: Node -> Cluster ->
             })
             node.messenger.sendToAcceptors(message)
             node.messenger.sendToLearners(message)
+            node.messenger.send(message, address, port)
             node.stateLog[Date.now()] = {round: node.currentRound, value: proposal, leader: {address: address, port: port}}
-            //console.log(proposal)
             if (node.callback) {
-              node.callback()
+                node.callback()
             }
         } else if (proposalId < node.promisedId) {
             node.messenger.sendPrevious(port, address, proposalId, proposal)

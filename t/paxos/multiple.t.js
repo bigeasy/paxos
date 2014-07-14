@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 
-require('proof')(1, function(step) {
+require('proof')(1, function (step) {
   var paxos = require('../../index.js')
-  var nodes = []
 
   var generateProposalId = function (n) {
       if (n) return n+1;
       return 1;
   }
 
+  var nodes = []
   var cluster = new paxos.Cluster(nodes)
 
   for (var i=0; i<15; i++) {
@@ -30,7 +30,6 @@ require('proof')(1, function(step) {
           }
       }
   }
-}, function (equal) {
-    console.log("here")
-    equal(nodes[3].value, "sit")
+}, function (body, equal) {
+    equal(body, "sit")
 })
