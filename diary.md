@@ -11,4 +11,4 @@ http://stackoverflow.com/questions/5850487/questions-about-paxos-implementation/
 
 - don't forget. Node processes not root - port 1024 & up
 
-- use step to make proof work with network code.
+- need to figure out how to pass arguments around in proof. and read step.
