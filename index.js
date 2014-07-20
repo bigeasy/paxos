@@ -127,9 +127,7 @@ function Messenger (node, port, address) {
                     node.waiting.splice(index, 1)
                 }
             } else if (message.type == "NACK") {
-                node.proposalId = this.node.generateProposalId(message.highestProposalNum)
-                node.nextProposalNum = this.node.proposalId + 1
-                node.prepare()
+                node.prepare(true, message.highestProposalNum)
             } else if (message.type == "new acceptor") {
                 node.acceptors[message.nodeId] = [message.info, null]
             }
@@ -236,19 +234,20 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     node.startProposal = function (proposal, callback) {
         node.promises = []
         node.proposal = proposal
-        if (node.proposalId) {
-            node.proposalId = node.generateProposalId(node.proposalId)
-        } else {
-          node.proposalId = node.generateProposalId()
-        }
         if (callback) {
             node.callback = callback
         }
-        node.prepare()
+        node.prepare(false)
     }
 
-    node.prepare = function () {
-        node.nextProposalNum = node.proposalId + 1
+    node.prepare = function (nack, seed) {
+        if (nack) {
+            node.callback({
+                event: "NACK",
+                newProposalId: node.proposalId
+            })
+        }
+        node.proposalId = seed ? node.generateProposalId(seed) : node.generateProposalId()
         node.messenger.sendPrepare()
     }
 
