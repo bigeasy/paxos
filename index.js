@@ -241,13 +241,13 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     }
 
     node.prepare = function (nack, seed) {
+        node.proposalId = seed ? node.generateProposalId(seed) : node.generateProposalId()
         if (nack) {
             node.callback({
                 event: "NACK",
                 newProposalId: node.proposalId
             })
         }
-        node.proposalId = seed ? node.generateProposalId(seed) : node.generateProposalId()
         node.messenger.sendPrepare()
     }
 
