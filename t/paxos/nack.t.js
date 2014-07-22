@@ -1,7 +1,11 @@
 #!/usr/bin/env node
-require('proof')(1, function(equal) {
+
+var nodes = []
+require('proof')(1, function (step) {
+    // send NACK
     var paxos = require('../../index.js')
-    var nodes = []
+    var socket = require('dgram').createSocket("udp4")
+    socket.bind(1024, '0.0.0.0')
 
     var generateProposalId = function (n) {
         if (n) return n+1;
@@ -10,20 +14,17 @@ require('proof')(1, function(equal) {
 
     var cluster = new paxos.Cluster(nodes)
 
-    for (var i=0; i<5; i++) {
-        nodes[i] = new paxos.Node(i, '127.0.0.1', 80+i, generateProposalId, 1)
-        if (i < 1) {
-            paxos.initializeProposer(nodes[i], cluster)
-        } else {
-            paxos.initializeAcceptor(nodes[i], cluster)
-        }
+    nodes[0] = new paxos.Node(1, '0.0.0.0', 1025, generateProposalId, 1)
+    paxos.initializeProposer(nodes[0], cluster)
+    nodes[0].startProposal("test", step())
 
-        if (i == 2) {
-            nodes[i].promisedId = 20
-            nodes[0].startProposal("jump")
-        }
-    }
-
-
-    equal(nodes[0].proposalId, 21, 'NACK received') // TODO: ask Alan how to do the thing
+    var nack = new Buffer(JSON.stringify({
+        type: "NACK",
+        address: '0.0.0.0',
+        port: 1026,
+        highestProposalNum: 2
+    }))
+    socket.send(nack, 0, nack.length, 1025, '0.0.0.0')
+}, function (body, equal) {
+    equal(body.newProposalId, 3, "proposal ID raised")
 })
