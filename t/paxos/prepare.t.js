@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-require('proof')(2, function(equal) {
+
+require('proof')(1, function(step) {
   var paxos = require('../../index.js')
   var nodes = []
 
@@ -23,7 +24,8 @@ require('proof')(2, function(equal) {
       }
   }
 
-  nodes[11].startProposal("jump")
-  equal(nodes[0].value, "jump")
-  equal(nodes[1].value, nodes[4].value)
+  nodes[11].startProposal("jump", step())
+}, function (body, equal) {
+    console.log(body)
+    equal(body.proposal, "jump")
 })
