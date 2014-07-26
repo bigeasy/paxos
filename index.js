@@ -233,6 +233,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
 
     node.startProposal = function (proposal, callback) {
         node.promises = []
+        node.accepts = []
         node.proposal = proposal
         if (callback) {
             node.callback = callback
@@ -280,17 +281,22 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     }
 
     node.receiveAccept = function (from, proposalId, proposal) {
-        node.callback({
-            eventType: "accept",
-            proposal: proposal,
-            proposalId: proposalId
-        })
-        node.messenger.sendToLearners(node.messenger.createMessage({
-            type: "accepted",
-            proposalId: proposalId,
-            value: proposal,
-            from: from
-        }))
+        if (node.accepts.indexOf(from) < 0) {
+            node.accepts.push(from)
+        }
+        if (node.accepts.length >= node.quorum) {
+            node.callback({
+                eventType: "accept",
+                proposal: proposal,
+                proposalId: proposalId
+            })
+            node.messenger.sendToLearners(node.messenger.createMessage({
+                type: "accepted",
+                proposalId: proposalId,
+                value: proposal,
+                from: from
+            }))
+        }
     }
 
     node.receivePrevious = function (from, proposalId) {
