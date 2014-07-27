@@ -229,6 +229,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     node.nextProposalNum = 1
     node.waiting = []
     node.messenger.setMessageHandlers(node, 'Proposer')
+    node.leader = null
 
 
     node.startProposal = function (proposal, callback) {
@@ -240,7 +241,11 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
         } else {
             node.callback = function (body) { console.log(body) }
         }
-        node.prepare(false)
+        if (node.leader) {
+            node.messenger.sendAcceptRequest()
+        } else {
+          node.prepare(false)
+        }
     }
 
     node.prepare = function (nack, seed) {
@@ -296,6 +301,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
                 value: proposal,
                 from: from
             }))
+            node.leader = true
         }
     }
 
@@ -335,7 +341,7 @@ function initializeAcceptor (node, cluster, callback) { // :: Node -> Cluster ->
     }
 
     node.receiveAcceptRequest = function (address, port, proposalId, proposal) { // :: Int -> Int -> a ->
-        if (proposalId == node.promisedId) {
+        if (proposalId == node.promisedId || address == node.leaderAddress) {
             node.promisedId = proposalId
             node.acceptedId = proposalId
             node.value = proposal
@@ -355,6 +361,7 @@ function initializeAcceptor (node, cluster, callback) { // :: Node -> Cluster ->
                 proposal: proposal,
                 proposalId: proposalId
             })
+            node.leaderAddress = address
         } else if (proposalId < node.promisedId) {
             node.messenger.sendPrevious(port, address, proposalId, proposal)
         } else {
