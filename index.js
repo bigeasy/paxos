@@ -322,6 +322,7 @@ function initializeAcceptor (node, cluster, callback) { // :: Node -> Cluster ->
     node.acceptedId = null
     node.lastAccepted = null
     node.learners = cluster.learners
+    node.leader = null
     node.messenger.setMessageHandlers(node, 'Acceptor')
     if (callback) {
         node.callback = callback
@@ -341,7 +342,7 @@ function initializeAcceptor (node, cluster, callback) { // :: Node -> Cluster ->
     }
 
     node.receiveAcceptRequest = function (address, port, proposalId, proposal) { // :: Int -> Int -> a ->
-        if (proposalId == node.promisedId || address == node.leaderAddress) {
+        if (proposalId == node.promisedId || (address == node.leader[0] && port == node.leader[1])) {
             node.promisedId = proposalId
             node.acceptedId = proposalId
             node.value = proposal
@@ -361,7 +362,7 @@ function initializeAcceptor (node, cluster, callback) { // :: Node -> Cluster ->
                 proposal: proposal,
                 proposalId: proposalId
             })
-            node.leaderAddress = address
+            node.leader = [address, port]
         } else if (proposalId < node.promisedId) {
             node.messenger.sendPrevious(port, address, proposalId, proposal)
         } else {
