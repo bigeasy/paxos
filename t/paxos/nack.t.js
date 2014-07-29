@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-var nodes = []
 require('proof')(1, function (step) {
     // send NACK
+    var nodes = []
     var paxos = require('../../index.js')
     var socket = require('dgram').createSocket("udp4")
     socket.bind(1024, '0.0.0.0')
