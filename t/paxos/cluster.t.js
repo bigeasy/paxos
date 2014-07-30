@@ -11,7 +11,7 @@ require('proof')(1, function(equal) {
     var cluster = new paxos.Cluster(nodes)
 
     for (var i=0; i<15; i++) {
-        nodes[i] = new paxos.Node(i, '127.0.0.1', 80+i, generateProposalId, 1)
+        nodes[i] = new paxos.Node(i, '127.0.0.1', 1024+i, generateProposalId, 1)
         if (i < 5) {
             paxos.initializeProposer(nodes[i], cluster)
         }

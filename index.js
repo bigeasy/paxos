@@ -293,7 +293,8 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
             node.callback({
                 eventType: "accept",
                 proposal: proposal,
-                proposalId: proposalId
+                proposalId: proposalId,
+                leader: [node.address, node.port]
             })
             node.messenger.sendToLearners(node.messenger.createMessage({
                 type: "accepted",
@@ -356,13 +357,14 @@ function initializeAcceptor (node, cluster, callback) { // :: Node -> Cluster ->
             node.messenger.sendToAcceptors(message)
             node.messenger.sendToLearners(message)
             node.messenger.send(message, address, port)
-            node.stateLog[Date.now()] = {round: node.currentRound, value: proposal, leader: {address: address, port: port}}
+            node.leader = [address, port]
+            node.stateLog[Date.now()] = {round: node.currentRound, value: proposal, leader: node.leader}
             node.callback({
                 eventType: "accepted",
                 proposal: proposal,
-                proposalId: proposalId
+                proposalId: proposalId,
+                leader: node.leader
             })
-            node.leader = [address, port]
         } else if (proposalId < node.promisedId) {
             node.messenger.sendPrevious(port, address, proposalId, proposal)
         } else {
