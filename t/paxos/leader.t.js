@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-require('proof')(1, function(equal) {
+require('proof')(1, function(step) {
     var paxos = require('../../index.js')
     var nodes = []
 
@@ -11,7 +11,7 @@ require('proof')(1, function(equal) {
     var cluster = new paxos.Cluster(nodes)
 
     for (var i=0; i<15; i++) {
-        nodes[i] = new paxos.Node(i, '127.0.0.1', 1024+i, generateProposalId, 1)
+        nodes[i] = new paxos.Node(i, '0.0.0.0', 1024+i, generateProposalId, 1)
         if (i < 5) {
             paxos.initializeProposer(nodes[i], cluster)
         }
@@ -22,5 +22,8 @@ require('proof')(1, function(equal) {
             paxos.initializeAcceptor(nodes[i], cluster)
         }
     }
-    equal(cluster.quorum, 3, 'quorum is 3')
+    nodes[0].startProposal("test", step())
+}, function (body, equal) {
+    console.log(body)
+    equal(body.leader, ['0.0.0.0', 1025], "leader selected")
 })

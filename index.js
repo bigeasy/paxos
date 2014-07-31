@@ -293,7 +293,8 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
             node.callback({
                 eventType: "accept",
                 proposal: proposal,
-                proposalId: proposalId
+                proposalId: proposalId,
+                leader: [node.address, node.port]
             })
             node.messenger.sendToLearners(node.messenger.createMessage({
                 type: "accepted",
@@ -322,6 +323,7 @@ function initializeAcceptor (node, cluster, callback) { // :: Node -> Cluster ->
     node.acceptedId = null
     node.lastAccepted = null
     node.learners = cluster.learners
+    node.leader = null
     node.messenger.setMessageHandlers(node, 'Acceptor')
     if (callback) {
         node.callback = callback
@@ -341,7 +343,7 @@ function initializeAcceptor (node, cluster, callback) { // :: Node -> Cluster ->
     }
 
     node.receiveAcceptRequest = function (address, port, proposalId, proposal) { // :: Int -> Int -> a ->
-        if (proposalId == node.promisedId || address == node.leaderAddress) {
+        if (proposalId == node.promisedId || (address == node.leader[0] && port == node.leader[1])) {
             node.promisedId = proposalId
             node.acceptedId = proposalId
             node.value = proposal
@@ -355,13 +357,14 @@ function initializeAcceptor (node, cluster, callback) { // :: Node -> Cluster ->
             node.messenger.sendToAcceptors(message)
             node.messenger.sendToLearners(message)
             node.messenger.send(message, address, port)
-            node.stateLog[Date.now()] = {round: node.currentRound, value: proposal, leader: {address: address, port: port}}
+            node.leader = [address, port]
+            node.stateLog[Date.now()] = {round: node.currentRound, value: proposal, leader: node.leader}
             node.callback({
                 eventType: "accepted",
                 proposal: proposal,
-                proposalId: proposalId
+                proposalId: proposalId,
+                leader: node.leader
             })
-            node.leaderAddress = address
         } else if (proposalId < node.promisedId) {
             node.messenger.sendPrevious(port, address, proposalId, proposal)
         } else {
