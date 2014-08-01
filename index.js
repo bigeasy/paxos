@@ -92,7 +92,7 @@ function Messenger (node, port, address) {
     }
 
     this.sendToAcceptors = function (message) {
-        if (JSON.stringify(this.node.acceptors) == "{}") {
+        if (!Object.keys(this.node.acceptors).length) {
             this.node.pendingMessage = message
             return
         }
@@ -100,11 +100,13 @@ function Messenger (node, port, address) {
             this.socket.send(message, 0, message.length, this.node.acceptors[acceptor][0][0], this.node.acceptors[acceptor][0][1])
         }
     }
+
     this.sendToLearners = function (message) {
         for (var learner in this.node.learners) {
             this.socket.send(message, 0, message.length, this.node.learners[learner][0], this.node.learners[learner][1])
         }
     }
+
     this.send = function (message, address, port) {
         this.socket.send(message, 0, message.length, port, address)
     }
@@ -244,7 +246,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
         if (node.leader) {
             node.messenger.sendAcceptRequest()
         } else {
-          node.prepare(false)
+            node.prepare(false)
         }
     }
 
