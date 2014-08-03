@@ -158,6 +158,17 @@ function Messenger (node, port, address) {
     }
 }
 
+function initializeFromFile (filepath, cluster) {
+    var params = require(filepath)
+    var node = new Node(params.id, params.address, params.port, params.generateProposalId, params.currentRound)
+    for (var role in params.roles) {
+        if (role == 'Learner') initializeLearner(node, cluster)
+        if (role == 'Proposer') initializeProposer(node, cluster)
+        if (role == 'Acceptor') initializeAcceptor(node, cluster)
+    }
+    return node
+}
+
 function Node (id, address, port, generateProposalId, currentRound) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
     this.id = id
     this.address = address
@@ -427,6 +438,7 @@ function initializeLearner (node, cluster, callback) { // :: Node -> Cluster ->
       cluster.setQuorum()
     }
 }
+
 
 exports.Messenger = Messenger
 exports.Node = Node
