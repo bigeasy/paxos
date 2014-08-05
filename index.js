@@ -158,9 +158,9 @@ function Messenger (node, port, address) {
     }
 }
 
-function initializeFromFile (filepath, cluster) {
+function initializeFromFile (filepath, cluster, generateProposalId) {
     var params = require(filepath)
-    var node = new Node(params.id, params.address, params.port, params.generateProposalId, params.currentRound)
+    var node = new Node(params.id, params.address, params.port, generateProposalId, params.currentRound)
     for (var role in params.roles) {
         if (role == 'Learner') initializeLearner(node, cluster)
         if (role == 'Proposer') initializeProposer(node, cluster)
@@ -446,3 +446,4 @@ exports.initializeProposer = initializeProposer
 exports.initializeAcceptor = initializeAcceptor
 exports.initializeLearner = initializeLearner
 exports.Cluster = Cluster
+exports.initializeFromFile = initializeFromFile
