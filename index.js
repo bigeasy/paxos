@@ -169,7 +169,7 @@ function initializeFromFile (filepath, cluster, generateProposalId) {
     return node
 }
 
-function Node (id, address, port, generateProposalId, currentRound) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
+function Node (id, address, port, generateProposalId, currentRound, nodes) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
     this.id = id
     this.address = address
     this.port = port
@@ -178,6 +178,9 @@ function Node (id, address, port, generateProposalId, currentRound) { // :: Int 
     this.value = null
     this.roles = []
     this.quorum = null
+    this.learners = []
+    this.acceptors = []
+    this.proposers = []
     this.generateProposalId = generateProposalId
     this.messenger = new Messenger(this, port, address)
     if (currentRound) {
@@ -188,6 +191,21 @@ function Node (id, address, port, generateProposalId, currentRound) { // :: Int 
     this.end = function () {
         this.messenger.close()
         // should probably persist stateLog here
+    }
+    this.addNode = function (node) {
+        if (node.role == 'Learner') {
+         this.learners.push([node.port, node.address])
+        }
+        if (node.role == 'Acceptor') {
+            this.acceptors.push([node.port, node.address])
+        }
+        if (node.role == 'Proposer') {
+            this.proposers[node.id] = [node.port, node.address]
+        }
+}
+
+    if (nodes) {
+        nodes.forEach(this.addNode(node))
     }
 }
 
