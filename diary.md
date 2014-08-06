@@ -13,5 +13,5 @@ http://stackoverflow.com/questions/5850487/questions-about-paxos-implementation/
 
 - TODO:
     load from config file
-    remove Cluster object?
+    remove Cluster object? or give each node a cluster object to store instance info
     send ident requests whenever a new node is initialized
