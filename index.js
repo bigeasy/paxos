@@ -92,7 +92,7 @@ function Messenger (node, port, address) {
     }
 
     this.sendToAcceptors = function (message) {
-        if (JSON.stringify(this.node.acceptors) == "{}") {
+        if (!Object.keys(this.node.acceptors).length) {
             this.node.pendingMessage = message
             return
         }
@@ -100,11 +100,13 @@ function Messenger (node, port, address) {
             this.socket.send(message, 0, message.length, this.node.acceptors[acceptor][0][0], this.node.acceptors[acceptor][0][1])
         }
     }
+
     this.sendToLearners = function (message) {
         for (var learner in this.node.learners) {
             this.socket.send(message, 0, message.length, this.node.learners[learner][0], this.node.learners[learner][1])
         }
     }
+
     this.send = function (message, address, port) {
         this.socket.send(message, 0, message.length, port, address)
     }
@@ -156,7 +158,20 @@ function Messenger (node, port, address) {
     }
 }
 
-function Node (id, address, port, generateProposalId, currentRound) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
+function initializeFromFile (filepath, generateProposalId, callback) {
+    var params = require(filepath)
+    var node = new Node(params.id, params.address, params.port, generateProposalId, params.currentRound, params.nodes)
+    for (var role in params.roles) {
+        if (role == 'Learner') initializeLearner(node)
+        if (role == 'Proposer') initializeProposer(node)
+        if (role == 'Acceptor') initializeAcceptor(node)
+    }
+
+    node.setCallback(callback)
+    return node
+}
+
+function Node (id, address, port, generateProposalId, currentRound, nodes) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
     this.id = id
     this.address = address
     this.port = port
@@ -165,6 +180,9 @@ function Node (id, address, port, generateProposalId, currentRound) { // :: Int 
     this.value = null
     this.roles = []
     this.quorum = null
+    this.learners = []
+    this.acceptors = []
+    this.proposers = []
     this.generateProposalId = generateProposalId
     this.messenger = new Messenger(this, port, address)
     if (currentRound) {
@@ -176,9 +194,30 @@ function Node (id, address, port, generateProposalId, currentRound) { // :: Int 
         this.messenger.close()
         // should probably persist stateLog here
     }
+    this.addNode = function (node) {
+        if (node.role == 'Learner') {
+         this.learners.push([node.port, node.address])
+        }
+        if (node.role == 'Acceptor') {
+            this.acceptors.push([node.port, node.address])
+        }
+        if (node.role == 'Proposer') {
+            this.proposers.push([node.port, node.address])
+        }
+    }
+
+    if (nodes) {
+        nodes.forEach(this.addNode(node))
+    }
+
+    this.setCallback = function (func) {
+	this.callback = func
+    }
+
 }
 
 function Cluster (nodes) { // :: [Node] -> Cluster
+// for "non-networked" instances
     this.learners = {}
     this.acceptors = {}
     this.proposers = {}
@@ -238,13 +277,13 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
         node.proposal = proposal
         if (callback) {
             node.callback = callback
-        } else {
+        } else if (!node.callback) {
             node.callback = function (body) { console.log(body) }
         }
         if (node.leader) {
             node.messenger.sendAcceptRequest()
         } else {
-          node.prepare(false)
+            node.prepare(false)
         }
     }
 
@@ -315,7 +354,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     }
 }
 
-function initializeAcceptor (node, cluster, callback) { // :: Node -> Cluster ->
+function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
     node.roles.push('Acceptor')
     node.stateLog = {}
     // Sync stateLog with acceptors in cluster
@@ -325,9 +364,7 @@ function initializeAcceptor (node, cluster, callback) { // :: Node -> Cluster ->
     node.learners = cluster.learners
     node.leader = null
     node.messenger.setMessageHandlers(node, 'Acceptor')
-    if (callback) {
-        node.callback = callback
-    } else {
+    if (!node.callback) {
         node.callback = function (body) { console.log(body) }
     }
 
@@ -388,8 +425,8 @@ function initializeLearner (node, cluster, callback) { // :: Node -> Cluster ->
     node.stateLog = {}
     node.finalProposalId = null
     if (callback) {
-    node.callback = callback
-    } else {
+	node.callback = callback
+    } else if (!node.callback) {
         node.callback = function (body) { console.log(body) }
     }
 
@@ -417,7 +454,6 @@ function initializeLearner (node, cluster, callback) { // :: Node -> Cluster ->
         if (node.proposals[proposalId][0] == node.quorum) { // round over
             node.finalValue = acceptedValue
             node.finalProposalId = proposalId
-            console.log(node.finalValue)
         }
     }
     if (cluster) {
@@ -426,9 +462,11 @@ function initializeLearner (node, cluster, callback) { // :: Node -> Cluster ->
     }
 }
 
+
 exports.Messenger = Messenger
 exports.Node = Node
 exports.initializeProposer = initializeProposer
 exports.initializeAcceptor = initializeAcceptor
 exports.initializeLearner = initializeLearner
 exports.Cluster = Cluster
+exports.initializeFromFile = initializeFromFile

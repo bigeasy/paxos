@@ -10,3 +10,8 @@ http://stackoverflow.com/questions/5850487/questions-about-paxos-implementation/
 - figure out how to implement a round system (not sure if this belongs *here*?)
 
 - don't forget. Node processes not root - port 1024 & up
+
+- TODO:
+    load from config file
+    remove Cluster object? or give each node a cluster object to store instance info
+    send ident requests whenever a new node is initialized
