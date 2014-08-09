@@ -107,6 +107,12 @@ function Messenger (node, port, address) {
         }
     }
 
+    this.sendToProposers = function (message) {
+        for (var proposer in this.node.proposers) {
+            this.socket.send(message, 0, message.length, this.node.proposers[proposer][0], this.node.proposers[proposer][1])
+        }
+    }
+
     this.send = function (message, address, port) {
         this.socket.send(message, 0, message.length, port, address)
     }
@@ -350,6 +356,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     }
 
     node.receivePrevious = function (from, proposalId) {
+        node.prepare(true, proposalId)
     }
 
     if (cluster) {
@@ -397,7 +404,7 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
             })
             node.messenger.sendToAcceptors(message)
             node.messenger.sendToLearners(message)
-            node.messenger.send(message, address, port)
+            node.messenger.sendToProposers(message)
             node.leader = [address, port]
             node.stateLog[Date.now()] = {round: node.currentRound, value: proposal, leader: node.leader}
             node.callback({
@@ -411,6 +418,9 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
         } else {
             node.messenger.sendNACK(address, port, node.promisedId)
         }
+    }
+
+    node.endRound = function () {
     }
 
     node.knownNode = function (info) {
