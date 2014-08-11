@@ -107,6 +107,12 @@ function Messenger (node, port, address) {
         }
     }
 
+    this.sendToProposers = function (message) {
+        for (var proposer in this.node.proposers) {
+            this.socket.send(message, 0, message.length, this.node.proposers[proposer][0], this.node.proposers[proposer][1])
+        }
+    }
+
     this.send = function (message, address, port) {
         this.socket.send(message, 0, message.length, port, address)
     }
@@ -160,21 +166,25 @@ function Messenger (node, port, address) {
 
 function initializeFromFile (filepath, generateProposalId, callback) {
     var params = require(filepath)
-    var node = new Node(params.id, params.address, params.port, generateProposalId, params.currentRound, params.nodes)
+    params.generateProposalId = generateProposalId
+    var node = new Node(params)
     for (var role in params.roles) {
         if (role == 'Learner') initializeLearner(node)
         if (role == 'Proposer') initializeProposer(node)
         if (role == 'Acceptor') initializeAcceptor(node)
     }
 
-    node.setCallback(callback)
+    if (callback) {
+      node.setCallback(callback)
+    }
     return node
 }
 
-function Node (id, address, port, generateProposalId, currentRound, nodes) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
-    this.id = id
-    this.address = address
-    this.port = port
+function Node (params) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
+    // ID, address, port, generateProposalId, currentRound, nodes
+    this.id = params.id
+    this.address = params.address
+    this.port = params.port
     this.acceptors = {} // ID -> [[port, address], last proposal]
     this.proposal = null
     this.value = null
@@ -183,10 +193,10 @@ function Node (id, address, port, generateProposalId, currentRound, nodes) { // 
     this.learners = []
     this.acceptors = []
     this.proposers = []
-    this.generateProposalId = generateProposalId
-    this.messenger = new Messenger(this, port, address)
-    if (currentRound) {
-        this.currentRound = currentRound
+    this.generateProposalId = params.generateProposalId
+    this.messenger = new Messenger(this, params.port, params.address)
+    if (params.currentRound) {
+        this.currentRound = params.currentRound
     } else {
         this.currentRound = 1
     }
@@ -206,8 +216,8 @@ function Node (id, address, port, generateProposalId, currentRound, nodes) { // 
         }
     }
 
-    if (nodes) {
-        nodes.forEach(this.addNode(node))
+    if (params.nodes) {
+        params.nodes.forEach(this.addNode(node))
     }
 
     this.setCallback = function (func) {
@@ -346,6 +356,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     }
 
     node.receivePrevious = function (from, proposalId) {
+        node.prepare(true, proposalId)
     }
 
     if (cluster) {
@@ -393,7 +404,7 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
             })
             node.messenger.sendToAcceptors(message)
             node.messenger.sendToLearners(message)
-            node.messenger.send(message, address, port)
+            node.messenger.sendToProposers(message)
             node.leader = [address, port]
             node.stateLog[Date.now()] = {round: node.currentRound, value: proposal, leader: node.leader}
             node.callback({
@@ -407,6 +418,9 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
         } else {
             node.messenger.sendNACK(address, port, node.promisedId)
         }
+    }
+
+    node.endRound = function () {
     }
 
     node.knownNode = function (info) {
