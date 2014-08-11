@@ -12,7 +12,13 @@ require('proof')(1, function (step) {
   var cluster = new paxos.Cluster(nodes)
 
   for (var i=0; i<15; i++) {
-      nodes[i] = new paxos.Node(i, '0.0.0.0', 1024+i, generateProposalId, 1)
+      nodes[i] = new paxos.Node({
+          id: i,
+          address: '127.0.0.1',
+          port: 1024+i,
+          generateProposalId: generateProposalId,
+          currentRound: 1
+      })
       if (i < 5) {
           paxos.initializeAcceptor(nodes[i], cluster)
       }
