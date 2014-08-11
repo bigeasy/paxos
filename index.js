@@ -224,6 +224,12 @@ function Node (params) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
 	this.callback = func
     }
 
+    this.joinInstance = function () {
+    // should only be called by one of the initializing functions.
+    // alerts other nodes of this node's type, port, and address.
+    // needs to be able to join mid-instance.
+    }
+
 }
 
 function Cluster (nodes) { // :: [Node] -> Cluster
@@ -420,10 +426,7 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
         }
     }
 
-    node.endRound = function () {
-    }
-
-    node.knownNode = function (info) {
+    node.knownNode = function (from) {
         return (node.acceptors[from[0]][0] == from[1])
     }
 
