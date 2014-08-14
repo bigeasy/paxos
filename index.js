@@ -113,7 +113,7 @@ function Messenger (node, port, address) {
         }
     }
 
-    this.notifyJoin = function(nodes) {
+    this.notifyJoin = function () {
         var message = this.createMessage({
             type: "join",
             port: this.address,
@@ -121,9 +121,14 @@ function Messenger (node, port, address) {
             role: this.node.roles[0],
             id: this.id
         })
+        var nodes = this.node.acceptors.concat(this.node.proposers)
         for (var i = 0; i < nodes.length; i++) {
             this.socket.send(message, 0, message.length, nodes[i].port, nodes[i].address)
         }
+    }
+
+    this.sendInstance = function () {
+        // respond to joins with round info
     }
 
     this.send = function (message, address, port) {
@@ -139,6 +144,7 @@ function Messenger (node, port, address) {
                     address: message.address
                 })
             }
+            // need to sendInstance()
         })
         if (role == "Proposer") {
             this.socket.on("message", function (message, rinfo) {
@@ -207,11 +213,13 @@ function Node (params) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
     this.id = params.id
     this.address = params.address
     this.port = params.port
-    this.acceptors = {} // ID -> [[port, address], last proposal]
     this.proposal = null
     this.value = null
+    this.lastValue = null
+    this.lastRound = null
     this.roles = []
     this.quorum = null
+    this.currentStatus = "idle"
     this.learners = []
     this.acceptors = []
     this.proposers = []
@@ -222,6 +230,15 @@ function Node (params) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
     } else {
         this.currentRound = 1
     }
+    node.startInstance = function () {
+        currentRound += 1
+        this.messenger.notifyJoin()
+    }
+
+    node.receiveInstance = function (info) {
+        if (info.currentRound > node.currentRound)
+    }
+
     this.end = function () {
         this.messenger.close()
         // should probably persist stateLog here
@@ -245,14 +262,6 @@ function Node (params) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
     this.setCallback = function (func) {
 	this.callback = func
     }
-
-    this.joinInstance = function (nodes) {
-    // should only be called by one of the initializing functions.
-    // alerts other nodes of this node's type, port, and address.
-    // needs to be able to join mid-instance.
-        if (nodes) this.messenger.notifyJoin(nodes)
-    }
-
 }
 
 function Cluster (nodes) { // :: [Node] -> Cluster
@@ -303,6 +312,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     node.roles.push('Proposer')
     node.proposalId = null
     node.lastAcceptedId = null
+    node.history = {}
     node.promises = []
     node.nextProposalNum = 1
     node.waiting = []
@@ -314,6 +324,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
         node.promises = []
         node.accepts = []
         node.proposal = proposal
+        node.currentStatus = "proposal"
         if (callback) {
             node.callback = callback
         } else if (!node.callback) {
@@ -409,6 +420,7 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
     if (!node.callback) {
         node.callback = function (body) { console.log(body) }
     }
+
 
     node.receivePrepare = function (port, address, proposalId) {
         if (proposalId == node.promisedId) {
