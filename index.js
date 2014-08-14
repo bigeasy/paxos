@@ -118,7 +118,7 @@ function Messenger (node, port, address) {
             type: "join",
             port: this.address,
             address: this.port,
-            role: this.roles[0],
+            role: this.node.roles[0],
             id: this.id
         })
         for (var i = 0; i < nodes.length; i++) {
@@ -250,7 +250,7 @@ function Node (params) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
     // should only be called by one of the initializing functions.
     // alerts other nodes of this node's type, port, and address.
     // needs to be able to join mid-instance.
-        this.messenger.notifyJoin(nodes)
+        if (nodes) this.messenger.notifyJoin(nodes)
     }
 
 }
@@ -389,11 +389,11 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     }
 
     if (cluster) {
-      cluster.addNode(node)
-      cluster.setQuorum()
+        cluster.addNode(node)
+        cluster.setQuorum()
+    } else {
+        node.joinInstance()
     }
-
-    node.joinInstance()
 }
 
 function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
@@ -456,10 +456,11 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
     }
 
     if (cluster) {
-      cluster.addNode(node)
-      cluster.setQuorum()
+        cluster.addNode(node)
+        cluster.setQuorum()
+    } else {
+        node.joinInstance()
     }
-    node.joinInstance()
 }
 
 function initializeLearner (node, cluster, callback) { // :: Node -> Cluster ->
@@ -500,10 +501,11 @@ function initializeLearner (node, cluster, callback) { // :: Node -> Cluster ->
         }
     }
     if (cluster) {
-      cluster.addNode(node)
-      cluster.setQuorum()
+        cluster.addNode(node)
+        cluster.setQuorum()
+    } else {
+        node.joinInstance()
     }
-    node.joinInstance()
 }
 
 
