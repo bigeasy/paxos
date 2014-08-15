@@ -102,24 +102,33 @@ function Messenger (node, port, address) {
     }
 
     this.sendToLearners = function (message) {
+        if (!Object.keys(this.node.learners).length) {
+            this.node.pendingMessage = message
+            return
+        }
         for (var learner in this.node.learners) {
             this.socket.send(message, 0, message.length, this.node.learners[learner][0], this.node.learners[learner][1])
         }
     }
 
     this.sendToProposers = function (message) {
+        if (!Object.keys(this.node.proposers).length) {
+            this.node.pendingMessage = message
+            return
+        }
         for (var proposer in this.node.proposers) {
             this.socket.send(message, 0, message.length, this.node.proposers[proposer][0], this.node.proposers[proposer][1])
         }
     }
 
-    this.notifyJoin = function () {
+    this.notifyJoin = function (currentRound) {
         var message = this.createMessage({
             type: "join",
             port: this.address,
             address: this.port,
             role: this.node.roles[0],
             id: this.id
+            currentRound: currentRound
         })
         var nodes = this.node.acceptors.concat(this.node.proposers)
         for (var i = 0; i < nodes.length; i++) {
@@ -127,24 +136,21 @@ function Messenger (node, port, address) {
         }
     }
 
-    this.sendInstance = function () {
+    this.sendInstance = function (instance, port, address) {
         // respond to joins with round info
-    }
-
-    this.send = function (message, address, port) {
+        var message = this.createMessage({
+            instance: instance
+            port: this.port,
+            address: this.address
+        })
         this.socket.send(message, 0, message.length, port, address)
     }
 
     this.setMessageHandlers = function (node, role) {
         this.socket.on("message", function (message, rinfo) {
             if (message.type == "join") {
-                node.addNode({
-                    role: message.role,
-                    port: message.port,
-                    address: message.address
-                })
+                node.receiveJoin(message)
             }
-            // need to sendInstance()
         })
         if (role == "Proposer") {
             this.socket.on("message", function (message, rinfo) {
@@ -231,18 +237,39 @@ function Node (params) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
         this.currentRound = 1
     }
     node.startInstance = function () {
-        currentRound += 1
-        this.messenger.notifyJoin()
+        this.messenger.notifyJoin(currentRound)
     }
 
     node.receiveInstance = function (info) {
-        if (info.currentRound > node.currentRound)
+        if (info.currentRound > node.currentRound) {
+            node.currentRound = info.currentRound
+        }
     }
 
     this.end = function () {
         this.messenger.close()
         // should probably persist stateLog here
     }
+
+    node.receiveJoin = function (info) {
+        var instance = {}
+        instance.lastValue = node.lastValue
+        instance.currentStatus = node.currentStatus
+
+        node.addNode({
+            role: info.role,
+            port: info.port,
+            address: info.address
+        })
+
+        if (info.currentRound > node.currentRound) {
+            node.currentRound = info.currentRound
+        }
+        instance.currentRound = node.currentRound
+
+        node.messenger.sendInstance(instance, info.port, info.address)
+    }
+
     this.addNode = function (node) {
         if (node.role == 'Learner') {
          this.learners.push([node.port, node.address])
@@ -385,7 +412,8 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
                 proposalId: proposalId,
                 leader: [node.address, node.port]
             })
-            node.messenger.sendToLearners(node.messenger.createMessage({
+
+            node.messenger.sendToAcceptors(node.messenger.createMessage({
                 type: "accepted",
                 proposalId: proposalId,
                 value: proposal,
@@ -447,9 +475,13 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
             })
             node.messenger.sendToAcceptors(message)
             node.messenger.sendToLearners(message)
-            node.messenger.sendToProposers(message)
             node.leader = [address, port]
-            node.stateLog[Date.now()] = {round: node.currentRound, value: proposal, leader: node.leader}
+            node.stateLog[Date.now()] = {
+                round: node.currentRound,
+                value: proposal,
+                leader: node.leader,
+                proposalId: proposalId
+            }
             node.callback({
                 eventType: "accepted",
                 proposal: proposal,
