@@ -127,7 +127,7 @@ function Messenger (node, port, address) {
             port: this.address,
             address: this.port,
             role: this.node.roles[0],
-            id: this.id
+            id: this.id,
             currentRound: currentRound
         })
         var nodes = this.node.acceptors.concat(this.node.proposers)
@@ -139,7 +139,7 @@ function Messenger (node, port, address) {
     this.sendInstance = function (instance, port, address) {
         // respond to joins with round info
         var message = this.createMessage({
-            instance: instance
+            instance: instance,
             port: this.port,
             address: this.address
         })
@@ -236,11 +236,11 @@ function Node (params) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
     } else {
         this.currentRound = 1
     }
-    node.startInstance = function () {
+    this.startInstance = function () {
         this.messenger.notifyJoin(currentRound)
     }
 
-    node.receiveInstance = function (info) {
+    this.receiveInstance = function (info) {
         if (info.currentRound > node.currentRound) {
             node.currentRound = info.currentRound
         }
@@ -251,7 +251,7 @@ function Node (params) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
         // should probably persist stateLog here
     }
 
-    node.receiveJoin = function (info) {
+    this.receiveJoin = function (info) {
         var instance = {}
         instance.lastValue = node.lastValue
         instance.currentStatus = node.currentStatus
@@ -283,7 +283,9 @@ function Node (params) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
     }
 
     if (params.nodes) {
-        params.nodes.forEach(this.addNode(node))
+        params.nodes.forEach(function (node) {
+          this.addNode(node)
+        }, this)
     }
 
     this.setCallback = function (func) {
