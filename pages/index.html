@@ -13,6 +13,50 @@
 </div>
 
 <div class="unit description markdown">
+
+</div>
+
+<div>
+<p>Lamport original Paxos.
+<table>
+  <tr>
+    <th>Message</th>
+    <th>Fields</th>
+  </tr>
+  <tr>
+    <td>Start a new round</td>
+    <td>Round number</td>
+  </tr>
+  <tr>
+    <td>Last vote</td>
+    <td>Round number, leader if elected, chosen value/proposal, proposal id</td>
+  </tr>
+  <tr>
+    <td>Send ballot / Start proposal</td>
+    <td>Round number, proposal number</td>
+  </tr>
+  <tr>
+    <td>Send vote / Promise</td>
+    <td>Promised proposal number</td>
+  </tr>
+  <tr>
+    <td>Success</td>
+    <td>Chosen proposal, proposal number, round number</td>
+  </tr>
+</table>
+</div>
+<div>
+<p>libpaxos
+<table>
+  <tr>
+    <th>Message</th>
+    <th>Fields</th>
+  </tr>
+  <tr>
+    <td>Name / Alt name</td>
+    <td>Field one, field two</td>
+  </tr>
+</table>
 </div>
 
 </div></body>
