@@ -1,3 +1,11 @@
 Paxos
 
     http://bigeasy.github.io/paxos/
+
+Building
+
+    npm install && make
+
+Editing
+
+    Edit pages in `pages/` not in root directory.
