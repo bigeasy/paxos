@@ -11,7 +11,7 @@ require('proof')(1, function(step) {
 
   var cluster = new paxos.Cluster(nodes)
 
-  for (var i=0; i<15; i++) {
+  for (var i=0; i<5; i++) {
       nodes[i] = new paxos.Node({
           id: i,
           address: '127.0.0.1',
@@ -19,18 +19,14 @@ require('proof')(1, function(step) {
           generateProposalId: generateProposalId,
           currentRound: 1
       })
-      if (i < 5) {
+      if (i < 3) {
           paxos.initializeAcceptor(nodes[i], cluster)
-      }
-
-      if (i < 10) {
-          paxos.initializeLearner(nodes[i], cluster)
       } else {
           paxos.initializeProposer(nodes[i], cluster)
       }
   }
 
-  nodes[11].startProposal("jump", step())
+  nodes[4].startProposal("jump", step())
 }, function (body, equal) {
     console.log(body)
     equal(body.proposal, "jump")

@@ -14,8 +14,7 @@ require('proof')(1, function (step) {
 
     var cluster = new paxos.Cluster(nodes)
 
-    nodes[0] = new paxos.Node(1, '0.0.0.0', 1025, generateProposalId, 1)
-    nodes[i] = new paxos.Node({
+    nodes[0] = new paxos.Node({
         id: 1,
         address: '127.0.0.1',
         port: 1025,

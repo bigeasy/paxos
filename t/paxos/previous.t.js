@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-require('proof')(1, function(equal) {
+require('proof')(1, function(step) {
     var paxos = require('../../index.js')
     var nodes = []
 
@@ -37,6 +37,6 @@ require('proof')(1, function(equal) {
             nodes[1].startProposal("sit")
         }
     }
-}, function (body, step) {
+}, function (body, equal) {
     equal(body, "jump")
 })
