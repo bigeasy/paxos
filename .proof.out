@@ -1,0 +1,6 @@
+1408134275176 run  t/paxos/cluster.t.js
+1408134275294 plan t/paxos/cluster.t.js 1
+1408134275324 test t/paxos/cluster.t.js ok 1 quorum is 3
+1408134275335 exit t/paxos/cluster.t.js 0
+1408134275335 run  t/paxos/leader.t.js
+1408134275341 err  t/paxos/leader.t.js execvp(): Permission denied
