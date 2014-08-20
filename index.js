@@ -356,9 +356,8 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
         node.currentStatus = "proposal"
         if (callback) {
             node.callback = callback
-        } else if (!node.callback) {
-            node.callback = function (body) { console.log(body) }
         }
+
         if (node.leader) {
             node.messenger.sendAcceptRequest()
         } else {
@@ -369,10 +368,12 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     node.prepare = function (nack, seed) {
         node.proposalId = seed ? node.generateProposalId(seed) : node.generateProposalId()
         if (nack) {
-            node.callback({
-                eventType: "NACK",
-                newProposalId: node.proposalId
-            })
+            if (node.callback) {
+                node.callback({
+                    eventType: "NACK",
+                    newProposalId: node.proposalId
+                })
+            }
         }
         node.messenger.sendPrepare()
     }
@@ -408,12 +409,14 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
             node.accepts.push(from)
         }
         if (node.accepts.length >= node.quorum) {
-            node.callback({
-                eventType: "accept",
-                proposal: proposal,
-                proposalId: proposalId,
-                leader: [node.address, node.port]
-            })
+            if (node.callback) {
+                node.callback({
+                    eventType: "accept",
+                    proposal: proposal,
+                    proposalId: proposalId,
+                    leader: [node.address, node.port]
+                })
+            }
 
             node.messenger.sendToAcceptors(node.messenger.createMessage({
                 type: "accepted",
@@ -447,9 +450,6 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
     node.learners = cluster.learners
     node.leader = null
     node.messenger.setMessageHandlers(node, 'Acceptor')
-    if (!node.callback) {
-        node.callback = function (body) { console.log(body) }
-    }
 
 
     node.receivePrepare = function (port, address, proposalId) {
@@ -484,12 +484,14 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
                 leader: node.leader,
                 proposalId: proposalId
             }
-            node.callback({
-                eventType: "accepted",
-                proposal: proposal,
-                proposalId: proposalId,
-                leader: node.leader
-            })
+            if (node.callback) {
+                node.callback({
+                    eventType: "accepted",
+                    proposal: proposal,
+                    proposalId: proposalId,
+                    leader: node.leader
+                })
+            }
         } else if (proposalId < node.promisedId) {
             node.messenger.sendPrevious(port, address, proposalId, proposal)
         } else {
@@ -515,9 +517,7 @@ function initializeLearner (node, cluster, callback) { // :: Node -> Cluster ->
     node.stateLog = {}
     node.finalProposalId = null
     if (callback) {
-	node.callback = callback
-    } else if (!node.callback) {
-        node.callback = function (body) { console.log(body) }
+        node.callback = callback
     }
 
     node.proposals = {} // proposal ID -> [accept count, retain count, value]
@@ -544,8 +544,17 @@ function initializeLearner (node, cluster, callback) { // :: Node -> Cluster ->
         if (node.proposals[proposalId][0] == node.quorum) { // round over
             node.finalValue = acceptedValue
             node.finalProposalId = proposalId
+            if (node.callback) {
+                node.callback({
+                    eventType: "accepted",
+                    proposal: acceptedValue,
+                    proposalId: proposalId,
+                    leader: from
+                })
+            }
         }
     }
+
     if (cluster) {
         cluster.addNode(node)
         cluster.setQuorum()
