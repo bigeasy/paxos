@@ -9,6 +9,7 @@ function Messenger (node, port, address) {
     this.address = address
     this.socket = dgram.createSocket("udp4")
     this.socket.bind(port, address)
+    this.pendingMessage = null
     this.close = function () {
         this.socket.close()
     }
@@ -80,6 +81,10 @@ function Messenger (node, port, address) {
         this.socket.send(prevAccepted, 0, prevAccepted.length, port, address)
     }
 
+    this.sendPending = function () {
+        this.pendingMessage[1](this.pendingMessage[0])
+    }
+
     this.notifyProposers = function (proposers, messageType, info) {
         var message = this.createMessage({
             type: messageType,
@@ -92,8 +97,10 @@ function Messenger (node, port, address) {
     }
 
     this.sendToAcceptors = function (message) {
+        if (this.pendingMessage) { this.sendPending() }
+
         if (!Object.keys(this.node.acceptors).length) {
-            this.node.pendingMessage = message
+            this.pendingMessage = [message, this.sendToAcceptors]
             return
         }
         for (var acceptor in this.node.acceptors) {
@@ -102,8 +109,10 @@ function Messenger (node, port, address) {
     }
 
     this.sendToLearners = function (message) {
+        if (this.pendingMessage) { this.sendPending() }
+
         if (!Object.keys(this.node.learners).length) {
-            this.node.pendingMessage = message
+            this.pendingMessage = [message, this.sendToLearners]
             return
         }
         for (var learner in this.node.learners) {
@@ -112,8 +121,10 @@ function Messenger (node, port, address) {
     }
 
     this.sendToProposers = function (message) {
+        if (this.pendingMessage) { this.sendPending() }
+
         if (!Object.keys(this.node.proposers).length) {
-            this.node.pendingMessage = message
+            this.pendingMessage = [message, this.sendToProposers]
             return
         }
         for (var proposer in this.node.proposers) {
@@ -252,6 +263,7 @@ function Node (params) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
     }
 
     this.receiveJoin = function (info) {
+        console.log("join")
         var instance = {}
         instance.lastValue = node.lastValue
         instance.currentStatus = node.currentStatus
