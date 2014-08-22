@@ -248,6 +248,7 @@ function Node (params) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
     this.learners = []
     this.acceptors = []
     this.proposers = []
+    this.nodes = []
     this.generateProposalId = params.generateProposalId
     this.messenger = new Messenger(this, params.port, params.address)
 
@@ -281,7 +282,8 @@ function Node (params) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
         node.addNode({
             role: info.role,
             port: info.port,
-            address: info.address
+            address: info.address,
+            id: info.id
         })
 
         if (info.currentRound > node.currentRound) {
@@ -293,14 +295,17 @@ function Node (params) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
     }
 
     this.addNode = function (node) {
-        if (node.role == 'Learner') {
-         this.learners.push([node.port, node.address])
-        }
-        if (node.role == 'Acceptor') {
-            this.acceptors.push([node.port, node.address])
-        }
-        if (node.role == 'Proposer') {
-            this.proposers.push([node.port, node.address])
+        if (this.nodes.indexOf(node.id) < 0) {
+            this.nodes.push(node.id)
+            if (node.role == 'Learner') {
+             this.learners.push([node.port, node.address])
+            }
+            if (node.role == 'Acceptor') {
+                this.acceptors.push([node.port, node.address])
+            }
+            if (node.role == 'Proposer') {
+                this.proposers.push([node.port, node.address])
+            }
         }
     }
 
