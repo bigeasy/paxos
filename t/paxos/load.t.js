@@ -8,4 +8,5 @@ require('proof')(1, function(equal) {
     })
 
     equal(node, node.messenger.node, "Node initialized")
+    node.end()
 })

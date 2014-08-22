@@ -10,12 +10,15 @@ function Messenger (node, port, address) {
     this.socket = dgram.createSocket("udp4")
     this.socket.bind(port, address)
     this.pendingMessage = null
+
     this.close = function () {
         this.socket.close()
     }
+
     this.createMessage = function (obj) {
         return new Buffer(JSON.stringify(obj))
     }
+
     this.sendAcceptRequest = function () {
         var acceptReq = this.createMessage({
             type: "accept",
@@ -28,6 +31,7 @@ function Messenger (node, port, address) {
             this.socket.send(acceptReq, 0, acceptReq.length, this.node.acceptors[acceptor][0][0], this.node.acceptors[acceptor][0][1])
         }
     }
+
     this.sendPromise = function (port, address) {
         var promise = this.createMessage({
             type: "promise",
@@ -40,6 +44,7 @@ function Messenger (node, port, address) {
         })
         this.socket.send(promise, 0, promise.length, port, address)
     }
+
     this.sendPrepare = function () {
         var proposal = this.createMessage({
             type: "prepare",
@@ -50,6 +55,7 @@ function Messenger (node, port, address) {
         })
         this.sendToAcceptors(proposal)
     }
+
     this.sendNACK = function(address, port, promise) {
         var nack = this.createMessage({
             type: "NACK",
@@ -59,6 +65,7 @@ function Messenger (node, port, address) {
         })
         this.socket.send(nack, 0, nack.length, port, address)
     }
+
     this.sendIdentRequest = function(from) {
         var identReq = this.createMessage({
             type: "identify",
@@ -213,6 +220,7 @@ function initializeFromFile (filepath, generateProposalId, callback) {
     var params = require(filepath)
     params.generateProposalId = generateProposalId
     var node = new Node(params)
+
     for (var role in params.roles) {
         if (role == 'Learner') initializeLearner(node)
         if (role == 'Proposer') initializeProposer(node)
@@ -242,11 +250,13 @@ function Node (params) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
     this.proposers = []
     this.generateProposalId = params.generateProposalId
     this.messenger = new Messenger(this, params.port, params.address)
+
     if (params.currentRound) {
         this.currentRound = params.currentRound
     } else {
         this.currentRound = 1
     }
+
     this.startInstance = function () {
         this.messenger.notifyJoin(currentRound)
     }
@@ -341,6 +351,7 @@ function Cluster (nodes) { // :: [Node] -> Cluster
             }
         }
     }
+
     if (nodes) {
         for (var node in nodes) {
             this.addNode(node)
@@ -359,7 +370,6 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     node.waiting = []
     node.messenger.setMessageHandlers(node, 'Proposer')
     node.leader = null
-
 
     node.startProposal = function (proposal, callback) {
         node.promises = []
@@ -487,6 +497,7 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
                 port: port,
                 proposalId: proposalId
             })
+
             node.messenger.sendToAcceptors(message)
             node.messenger.sendToLearners(message)
             node.leader = [address, port]
@@ -496,6 +507,7 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
                 leader: node.leader,
                 proposalId: proposalId
             }
+
             if (node.callback) {
                 node.callback({
                     eventType: "accepted",
