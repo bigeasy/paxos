@@ -16,6 +16,7 @@ require('proof')(1, function(step) {
             address: '127.0.0.1',
             port: 1024+i,
             generateProposalId: generateProposalId,
+            multi: false,
             currentRound: 1
         })
         if (i < 5) {

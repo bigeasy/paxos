@@ -238,6 +238,7 @@ function Node (params) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
     this.id = params.id
     this.address = params.address
     this.port = params.port
+    this.multi = params.multi
     this.proposal = null
     this.value = null
     this.lastValue = null
@@ -451,7 +452,11 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
                 value: proposal,
                 from: from
             }))
-            node.leader = true
+            if (!node.multi) {
+                node.end()
+            } else {
+              node.leader = true
+            }
         }
     }
 
@@ -521,6 +526,8 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
                     leader: node.leader
                 })
             }
+
+            if (!node.multi) {node.end()}
         } else if (proposalId < node.promisedId) {
             node.messenger.sendPrevious(port, address, proposalId, proposal)
         } else {
@@ -581,6 +588,7 @@ function initializeLearner (node, cluster, callback) { // :: Node -> Cluster ->
                     leader: from
                 })
             }
+            if (!node.multi) {node.end()}
         }
     }
 
