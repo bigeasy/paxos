@@ -19,6 +19,7 @@ require('proof')(1, function (step) {
         address: '127.0.0.1',
         port: 1025,
         generateProposalId: generateProposalId,
+        multi: false,
         currentRound: 1
     })
     paxos.initializeProposer(nodes[0], cluster)
