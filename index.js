@@ -66,17 +66,6 @@ function Messenger (node, port, address) {
         this.socket.send(nack, 0, nack.length, port, address)
     }
 
-    this.sendIdentRequest = function(from) {
-        var identReq = this.createMessage({
-            type: "identify",
-            nodeInfo: from,
-            address: this.address,
-            port: this.port
-        })
-        this.sendToAcceptors(identReq)
-        node.waiting.push(from)
-    }
-
     this.sendPrevious = function (port, address, proposalId, proposal) {
         var prevAccepted = this.createMessage({
             type: proposal ? "accepted" : "promised",
@@ -179,13 +168,6 @@ function Messenger (node, port, address) {
                     node.setProposal(message.proposal)
                 } else if (message.type == "accepted") {
                     node.receiveAccept(message.from, message.proposalId, message.value)
-                } else if (message.type == "known") {
-                    node.acceptors[message.nodeId] = [[message.nodePort, message.nodeAddress], null]
-                    var index = this.node.waiting.indexOf(message.nodeId)
-                    if (index > -1) {
-                        node.promises.push(message.nodeId)
-                        node.waiting.splice(index, 1)
-                    }
                 } else if (message.type == "NACK") {
                     node.prepare(true, message.highestProposalNum)
                 } else if (message.type == "new acceptor") {
@@ -199,10 +181,6 @@ function Messenger (node, port, address) {
                     node.receivePrepare(message.port, message.address, message.proposalId)
                 } else if (message.type == "accept") {
                     node.receiveAcceptRequest(message.address, message.port, message.proposalId, message.proposal)
-                } else if (message.type == "identify") {
-                    if (node.knownNode(message.nodeInfo)) {
-                        // send back 'known' if address belongs to known acceptor
-                    }
                 }
             })
         } else if (role == "Learner") {
@@ -373,7 +351,6 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     node.history = {}
     node.promises = []
     node.nextProposalNum = 1
-    node.waiting = []
     node.messenger.setMessageHandlers(node, 'Proposer')
     node.leader = null
 
@@ -412,7 +389,6 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
         }
 
         if (node.acceptors[fromId] == null) {
-            node.messenger.sendIdentRequest([fromId, fromAddress])
             return
         }
 
