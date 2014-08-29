@@ -227,7 +227,6 @@ function Node (params) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
     this.lastRound = null
     this.roles = []
     this.quorum = null
-    this.currentStatus = "idle"
     this.learners = []
     this.acceptors = []
     this.proposers = []
@@ -257,7 +256,6 @@ function Node (params) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
     }
 
     this.receiveJoin = function (info) {
-        console.log("join")
         var instance = {}
         instance.lastValue = node.lastValue
         instance.currentStatus = node.currentStatus
@@ -448,7 +446,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
         cluster.addNode(node)
         cluster.setQuorum()
     } else {
-        node.joinInstance()
+        node.startInstance()
     }
 }
 
@@ -459,7 +457,6 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
     node.promisedId = null
     node.acceptedId = null
     node.lastAccepted = null
-    node.learners = cluster.learners
     node.leader = null
     node.messenger.setMessageHandlers(node, 'Acceptor')
 
@@ -522,8 +519,6 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
     if (cluster) {
         cluster.addNode(node)
         cluster.setQuorum()
-    } else {
-        node.joinInstance()
     }
 }
 
