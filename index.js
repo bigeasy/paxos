@@ -542,15 +542,13 @@ function initializeLearner (node, cluster, callback) { // :: Node -> Cluster ->
         if (last) {
             if (last > proposalId) { return }
             node.acceptors[from][1] = proposalId
-
-            oldProposal = node.proposals[last]
-            oldProposal[1] -= 1
-            if (oldProposal[1] == 0) { delete node.proposals[last] }
         }
 
         if (node.proposals[proposalId] == null) {
             node.proposals[proposalId] = [1, 1, acceptedValue]
-        }
+        } else {
+			node.proposals[proposalId][0] += 1
+		}
 
         if (node.proposals[proposalId][0] == node.quorum) { // round over
             node.finalValue = acceptedValue
