@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-require('proof')(1, function(equal) {
+require('proof')(1, function(step) {
     var paxos = require('../../index.js')
     var nodes = []
 
@@ -17,6 +17,7 @@ require('proof')(1, function(equal) {
             address: '127.0.0.1',
             port: 1024+i,
             generateProposalId: generateProposalId,
+            multi: multi,
             currentRound: 1
         })
         if (i < 5) {
@@ -37,6 +38,6 @@ require('proof')(1, function(equal) {
             nodes[1].startProposal("sit")
         }
     }
-}, function (body, step) {
+}, function (body, equal) {
     equal(body, "jump")
 })

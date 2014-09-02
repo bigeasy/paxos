@@ -3,6 +3,7 @@
     "address": "0.0.0.0",
     "port": "1025",
     "currentRound": 1,
+    "multi": false,
     "roles": ["Proposer"],
     "nodes": [
         {

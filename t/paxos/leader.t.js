@@ -16,19 +16,20 @@ require('proof')(1, function(step) {
             address: '127.0.0.1',
             port: 1024+i,
             generateProposalId: generateProposalId,
+            multi: false,
             currentRound: 1
         })
         if (i < 5) {
-            paxos.initializeProposer(nodes[i], cluster)
+            paxos.initializeAcceptor(nodes[i], cluster)
         }
 
         if (i < 10) {
             paxos.initializeLearner(nodes[i], cluster)
         } else {
-            paxos.initializeAcceptor(nodes[i], cluster)
+            paxos.initializeProposer(nodes[i], cluster)
         }
     }
-    nodes[0].startProposal("test", step())
+    nodes[14].startProposal("test", step())
 }, function (body, equal) {
     console.log(body)
     equal(body.leader, ['0.0.0.0', 1025], "leader selected")

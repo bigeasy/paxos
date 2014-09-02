@@ -11,27 +11,26 @@ require('proof')(1, function (step) {
   var nodes = []
   var cluster = new paxos.Cluster(nodes)
 
-  for (var i=0; i<15; i++) {
+  for (var i=0; i<6; i++) {
       nodes[i] = new paxos.Node({
           id: i,
           address: '127.0.0.1',
           port: 1024+i,
           generateProposalId: generateProposalId,
+          multi: false,
           currentRound: 1
       })
-      if (i < 5) {
+      if (i < 3) {
           paxos.initializeAcceptor(nodes[i], cluster)
       }
 
-      if (i < 10) {
+      if (i < 4) {
           paxos.initializeLearner(nodes[i], cluster)
       } else {
           paxos.initializeProposer(nodes[i], cluster)
-          if (i == 12) {
+          if (i == 5) {
               nodes[i].startProposal("sit", step())
-          } else if (i == 13) {
-              nodes[i].startProposal("jump")
-          } else if (i == 14) {
+          } else if (i == 6) {
               nodes[i].startProposal("jump")
           }
       }
