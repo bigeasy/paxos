@@ -575,8 +575,6 @@ function initializeLearner (node, cluster, callback) { // :: Node -> Cluster ->
     }
 }
 
-
-exports.Messenger = Messenger
 exports.Node = Node
 exports.initializeProposer = initializeProposer
 exports.initializeAcceptor = initializeAcceptor
