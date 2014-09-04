@@ -159,10 +159,12 @@ function Messenger (node, port, address, socketType) {
 
     this.setMessageHandlers = function (node, role) {
         this.socket.on("message", function (message, rinfo) {
+			if (this.pendingMessage) { this.sendPending() }
             if (message.type == "join") {
                 node.receiveJoin(message)
             }
         })
+
         if (role == "Proposer") {
             this.socket.on("message", function (message, rinfo) {
                 message = JSON.parse(message.toString())
@@ -258,21 +260,21 @@ function Node (params) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
     this.receiveJoin = function (info) {
         var instance = {}
         instance.lastValue = node.lastValue
-        instance.currentStatus = node.currentStatus
+        instance.currentStatus = this.currentStatus
 
-        node.addNode({
+        this.addNode({
             role: info.role,
             port: info.port,
             address: info.address,
             id: info.id
         })
 
-        if (info.currentRound > node.currentRound) {
-            node.currentRound = info.currentRound
+        if (info.currentRound > this.currentRound) {
+            this.currentRound = info.currentRound
         }
-        instance.currentRound = node.currentRound
+        instance.currentRound = this.currentRound
 
-        node.messenger.sendInstance(instance, info.port, info.address)
+        this.messenger.sendInstance(instance, info.port, info.address)
     }
 
     this.addNode = function (node) {
