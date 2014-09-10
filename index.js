@@ -322,7 +322,7 @@ function Cluster (nodes) { // :: [Node] -> Cluster
         }
     }
 
-    this.addNode = function (node) {
+    this.addNode = function (node) { // :: Node ->
         if (node.roles) {
             if (node.roles.indexOf('Learner') > -1) {
              this.learners[node.id] = [node.port, node.address]
@@ -358,7 +358,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     node.messenger.setMessageHandlers(node, 'Proposer')
     node.leader = null
 
-    node.startProposal = function (proposal, callback) {
+    node.startProposal = function (proposal, callback) { // :: a -> function ->
         node.promises = []
         node.accepts = []
         node.proposal = proposal
@@ -374,7 +374,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
         }
     }
 
-    node.prepare = function (nack, seed) {
+    node.prepare = function (nack, seed) { // :: bool, int
         node.proposalId = seed ? node.generateProposalId(seed) : node.generateProposalId()
         if (nack) {
             if (node.callback) {
@@ -412,7 +412,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
         }
     }
 
-    node.receiveAccept = function (from, proposalId, proposal) {
+    node.receiveAccept = function (from, proposalId, proposal) { // :: String -> Int -> a ->
         if (node.accepts.indexOf(from) < 0) {
             node.accepts.push(from)
         }
@@ -440,7 +440,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
         }
     }
 
-    node.receivePrevious = function (from, proposalId) {
+    node.receivePrevious = function (from, proposalId) { // :: String -> Int ->
         node.prepare(true, proposalId)
     }
 
@@ -514,7 +514,7 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
         }
     }
 
-    node.knownNode = function (from) {
+    node.knownNode = function (from) { // :: String
         return (node.acceptors[from[0]][0] == from[1])
     }
 
