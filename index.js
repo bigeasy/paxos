@@ -159,10 +159,12 @@ function Messenger (node, port, address, socketType) {
 
     this.setMessageHandlers = function (node, role) {
         this.socket.on("message", function (message, rinfo) {
+			if (this.pendingMessage) { this.sendPending() }
             if (message.type == "join") {
                 node.receiveJoin(message)
             }
         })
+
         if (role == "Proposer") {
             this.socket.on("message", function (message, rinfo) {
                 message = JSON.parse(message.toString())
@@ -258,21 +260,21 @@ function Node (params) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
     this.receiveJoin = function (info) {
         var instance = {}
         instance.lastValue = node.lastValue
-        instance.currentStatus = node.currentStatus
+        instance.currentStatus = this.currentStatus
 
-        node.addNode({
+        this.addNode({
             role: info.role,
             port: info.port,
             address: info.address,
             id: info.id
         })
 
-        if (info.currentRound > node.currentRound) {
-            node.currentRound = info.currentRound
+        if (info.currentRound > this.currentRound) {
+            this.currentRound = info.currentRound
         }
-        instance.currentRound = node.currentRound
+        instance.currentRound = this.currentRound
 
-        node.messenger.sendInstance(instance, info.port, info.address)
+        this.messenger.sendInstance(instance, info.port, info.address)
     }
 
     this.addNode = function (node) {
@@ -320,7 +322,7 @@ function Cluster (nodes) { // :: [Node] -> Cluster
         }
     }
 
-    this.addNode = function (node) {
+    this.addNode = function (node) { // :: Node ->
         if (node.roles) {
             if (node.roles.indexOf('Learner') > -1) {
              this.learners[node.id] = [node.port, node.address]
@@ -356,7 +358,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     node.messenger.setMessageHandlers(node, 'Proposer')
     node.leader = null
 
-    node.startProposal = function (proposal, callback) {
+    node.startProposal = function (proposal, callback) { // :: a -> function ->
         node.promises = []
         node.accepts = []
         node.proposal = proposal
@@ -372,7 +374,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
         }
     }
 
-    node.prepare = function (nack, seed) {
+    node.prepare = function (nack, seed) { // :: bool, int
         node.proposalId = seed ? node.generateProposalId(seed) : node.generateProposalId()
         if (nack) {
             if (node.callback) {
@@ -410,7 +412,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
         }
     }
 
-    node.receiveAccept = function (from, proposalId, proposal) {
+    node.receiveAccept = function (from, proposalId, proposal) { // :: String -> Int -> a ->
         if (node.accepts.indexOf(from) < 0) {
             node.accepts.push(from)
         }
@@ -438,7 +440,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
         }
     }
 
-    node.receivePrevious = function (from, proposalId) {
+    node.receivePrevious = function (from, proposalId) { // :: String -> Int ->
         node.prepare(true, proposalId)
     }
 
@@ -512,7 +514,7 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
         }
     }
 
-    node.knownNode = function (from) {
+    node.knownNode = function (from) { // :: String
         return (node.acceptors[from[0]][0] == from[1])
     }
 
@@ -542,15 +544,13 @@ function initializeLearner (node, cluster, callback) { // :: Node -> Cluster ->
         if (last) {
             if (last > proposalId) { return }
             node.acceptors[from][1] = proposalId
-
-            oldProposal = node.proposals[last]
-            oldProposal[1] -= 1
-            if (oldProposal[1] == 0) { delete node.proposals[last] }
         }
 
         if (node.proposals[proposalId] == null) {
             node.proposals[proposalId] = [1, 1, acceptedValue]
-        }
+        } else {
+			node.proposals[proposalId][0] += 1
+		}
 
         if (node.proposals[proposalId][0] == node.quorum) { // round over
             node.finalValue = acceptedValue
