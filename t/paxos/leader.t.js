@@ -21,9 +21,7 @@ require('proof')(1, function(step) {
         })
         if (i < 5) {
             paxos.initializeAcceptor(nodes[i], cluster)
-        }
-
-        if (i < 10) {
+        } else if (i < 10) {
             paxos.initializeLearner(nodes[i], cluster)
         } else {
             paxos.initializeProposer(nodes[i], cluster)
