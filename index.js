@@ -82,6 +82,7 @@ function Messenger (node, port, address, socketType) {
     }
 
     this.sendPending = function () {
+        console.log('pending')
         this.pendingMessage[1](this.pendingMessage[0])
     }
 
@@ -128,6 +129,7 @@ function Messenger (node, port, address, socketType) {
             return
         }
         for (var proposer in this.node.proposers) {
+            console.log(this.node.proposers[proposer])
             this.socket.send(message, 0, message.length, this.node.proposers[proposer][0], this.node.proposers[proposer][1])
         }
     }
@@ -173,13 +175,13 @@ function Messenger (node, port, address, socketType) {
                 } else if (message.type == "proposal") {
                     node.setProposal(message.proposal)
                 } else if (message.type == "accepted") {
+                    console.log('woo')
                     node.receiveAccept(message.from, message.proposalId, message.value)
                 } else if (message.type == "NACK") {
                     node.prepare(true, message.highestProposalNum)
                 } else if (message.type == "new acceptor") {
                     node.acceptors[message.nodeId] = [message.info, null]
                     node.setQuorum()
-                    console.log(node.quorum)
                 }
             })
         } else if (role == "Acceptor") {
@@ -420,6 +422,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     node.receiveAccept = function (from, proposalId, proposal) { // :: String -> Int -> a ->
         if (node.accepts.indexOf(from) < 0) {
             node.accepts.push(from)
+            console.log('here')
         }
         if (node.accepts.length >= node.quorum) {
             console.log("here")
@@ -504,6 +507,7 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
             })
 
             node.messenger.sendToAcceptors(message)
+            node.messenger.sendToProposers(message)
             node.messenger.sendToLearners(message)
             node.leader = [address, port]
             node.stateLog[Date.now()] = {
