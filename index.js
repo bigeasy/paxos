@@ -86,7 +86,6 @@ function Messenger (node, port, address, socketType) {
     }
 
     this.sendPending = function () {
-        console.log('pending')
         this.pendingMessage[1](this.pendingMessage[0])
     }
 
@@ -134,7 +133,6 @@ function Messenger (node, port, address, socketType) {
             return
         }
         for (var proposer in this.node.proposers) {
-            console.log('sending ' + JSON.parse(message.toString()).type + ' to ' + this.node.proposers[proposer][0])
             this.socket.send(message, 0, message.length, this.node.proposers[proposer][0], this.node.proposers[proposer][1])
         }
     }
@@ -148,7 +146,6 @@ function Messenger (node, port, address, socketType) {
             id: this.id,
             currentRound: currentRound
         })
-
         this.sendToAcceptors(message)
         this.sendToProposers(message)
     }
@@ -174,13 +171,11 @@ function Messenger (node, port, address, socketType) {
         if (role == "Proposer") {
             this.socket.on("message", function (message, rinfo) {
                 message = JSON.parse(message.toString())
-                console.log('received ' + message.type + ' at ' + node.port)
                 if (message.type == "promise") {
                     node.receivePromise(message.id, message.address, message.round, message.proposalId, message.lastValue, message.lastAcceptedId)
                 } else if (message.type == "proposal") {
                     node.setProposal(message.proposal)
                 } else if (message.type == "accepted") {
-                    console.log('woo')
                     node.receiveAccept(message.from, message.round, message.proposalId, message.value)
                 } else if (message.type == "NACK") {
                     node.prepare(true, message.highestProposalNum)
@@ -192,7 +187,6 @@ function Messenger (node, port, address, socketType) {
         } else if (role == "Acceptor") {
             this.socket.on("message", function (message, rinfo) {
                 message = JSON.parse(message.toString())
-                console.log('received ' + message.type + ' at ' + node.port)
                 if (message.type == "prepare") {
                     node.receivePrepare(message.port, message.address, message.round, message.proposalId)
                 } else if (message.type == "accept") {
@@ -366,17 +360,19 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     node.lastAcceptedId = null
     node.history = {}
     node.promises = []
+    node.accepts = []
     node.nextProposalNum = 1
     node.messenger.setMessageHandlers(node, 'Proposer')
     node.leader = null
 
     node.startProposal = function (proposal, callback) { // :: a -> function ->
         node.promises = []
-        node.accepts = []
         node.proposal = proposal
         node.currentStatus = "proposal"
         if (callback) {
             node.callback = callback
+        } else {
+            node.callback = null
         }
 
         if (node.leader) {
@@ -428,16 +424,13 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     }
 
     node.receiveAccept = function (from, round, proposalId, proposal) { // :: String -> Int -> a ->
-        console.log('received')
         if (round < node.currentRound) {
             return
         }
         if (node.accepts.indexOf(from) < 0) {
             node.accepts.push(from)
-            console.log('here')
         }
         if (node.accepts.length >= node.quorum) {
-            console.log("here")
             if (node.callback) {
                 node.callback({
                     eventType: "accept",
@@ -454,11 +447,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
                 from: from
             }))
             node.currentRound += 1
-            if (!node.multi) {
-                node.end()
-            } else {
-              node.leader = true
-            }
+            node.leader = true
         }
     }
 
@@ -472,7 +461,6 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
         } else {
             this.quorum = Math.ceil(Object.keys(this.acceptors).length / 2)
         }
-        console.log(this.quorum)
     }
 
     if (cluster) {
@@ -548,8 +536,6 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
                     leader: node.leader
                 })
             }
-
-            if (!node.multi) {node.end()}
         } else if (proposalId < node.promisedId) {
             node.messenger.sendPrevious(port, address, proposalId, proposal)
         } else {
