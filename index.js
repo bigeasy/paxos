@@ -26,6 +26,7 @@ function Messenger (node, port, address, socketType) {
     this.sendAcceptRequest = function () {
         var acceptReq = this.createMessage({
             type: "accept",
+            round: this.node.currentRound,
             proposalId: this.node.proposalId,
             proposal: this.node.proposal,
             address: this.address,
@@ -43,6 +44,7 @@ function Messenger (node, port, address, socketType) {
             lastValue: this.node.lastAccepted,
             lastAcceptedId: this.node.lastAcceptedId,
             address: this.address,
+            round: this.node.currentRound,
             port: this.port,
             id: this.node.id
         })
@@ -55,6 +57,7 @@ function Messenger (node, port, address, socketType) {
             address: this.node.address,
             port: this.node.port,
             nodeId: this.node.id,
+            round: this.node.currentRound,
             proposalId: this.node.proposalId
         })
         this.sendToAcceptors(proposal)
@@ -75,6 +78,7 @@ function Messenger (node, port, address, socketType) {
             type: proposal ? "accepted" : "promised",
             address: this.address,
             port: this.port,
+            round: this.node.currentRound,
             proposalId: proposalId,
             proposal: proposal
         })
@@ -82,17 +86,19 @@ function Messenger (node, port, address, socketType) {
     }
 
     this.sendPending = function () {
+        console.log('pending')
         this.pendingMessage[1](this.pendingMessage[0])
     }
 
-    this.notifyProposers = function (proposers, messageType, info) {
+    this.notify = function (nodes, messageType, message) {
         var message = this.createMessage({
             type: messageType,
-            info: info
+            info: message.info,
+            nodeId: message.nodeId
         })
 
-        for (var proposer in proposers) {
-            this.socket.send(message, 0, message.length, proposers[proposer][0], proposers[proposer][1])
+        for (var node in nodes) {
+            this.socket.send(message, 0, message.length, nodes[node][0], nodes[node][1])
         }
     }
 
@@ -128,6 +134,7 @@ function Messenger (node, port, address, socketType) {
             return
         }
         for (var proposer in this.node.proposers) {
+            console.log('sending ' + JSON.parse(message.toString()).type + ' to ' + this.node.proposers[proposer][0])
             this.socket.send(message, 0, message.length, this.node.proposers[proposer][0], this.node.proposers[proposer][1])
         }
     }
@@ -168,32 +175,38 @@ function Messenger (node, port, address, socketType) {
         if (role == "Proposer") {
             this.socket.on("message", function (message, rinfo) {
                 message = JSON.parse(message.toString())
+                console.log('received ' + message.type + ' at ' + node.port)
                 if (message.type == "promise") {
-                    node.receivePromise(message.id, message.address, message.proposalId, message.lastValue, message.lastAcceptedId)
+                    node.receivePromise(message.id, message.address, message.round, message.proposalId, message.lastValue, message.lastAcceptedId)
                 } else if (message.type == "proposal") {
                     node.setProposal(message.proposal)
                 } else if (message.type == "accepted") {
-                    node.receiveAccept(message.from, message.proposalId, message.value)
+                    console.log('woo')
+                    node.receiveAccept(message.from, message.round, message.proposalId, message.value)
                 } else if (message.type == "NACK") {
                     node.prepare(true, message.highestProposalNum)
                 } else if (message.type == "new acceptor") {
                     node.acceptors[message.nodeId] = [message.info, null]
+                    node.setQuorum()
                 }
             })
         } else if (role == "Acceptor") {
             this.socket.on("message", function (message, rinfo) {
                 message = JSON.parse(message.toString())
+                console.log('received ' + message.type + ' at ' + node.port)
                 if (message.type == "prepare") {
-                    node.receivePrepare(message.port, message.address, message.proposalId)
+                    node.receivePrepare(message.port, message.address, message.round, message.proposalId)
                 } else if (message.type == "accept") {
-                    node.receiveAcceptRequest(message.address, message.port, message.proposalId, message.proposal)
+                    node.receiveAcceptRequest(message.address, message.port, message.round, message.proposalId, message.proposal)
+                } else if (message.type == "new proposer") {
+                    node.proposers.push(message.info)
                 }
             })
         } else if (role == "Learner") {
             this.socket.on("message", function (message, rinfo) {
                 message = JSON.parse(message.toString())
                 if (message.type == "accepted") {
-                    node.receiveAccept(message.from, message.proposalId, message.proposal)
+                    node.receiveAccept(message.from, message.round, message.proposalId, message.proposal)
                 }
             })
         }
@@ -248,8 +261,7 @@ function Node (params) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
 
     this.receiveInstance = function (info) {
         if (info.currentRound > node.currentRound) {
-            node.currentRound = info.currentRound
-        }
+            node.currentRound = info.currentRound }
     }
 
     this.end = function () {
@@ -298,6 +310,7 @@ function Node (params) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
         }, this)
     }
 
+
     this.setCallback = function (func) {
 	this.callback = func
     }
@@ -329,10 +342,11 @@ function Cluster (nodes) { // :: [Node] -> Cluster
             }
             if (node.roles.indexOf('Acceptor') > -1) {
                 this.acceptors[node.id] = [node.port, node.address]
-                node.messenger.notifyProposers(this.proposers, "new acceptor", {nodeId: node.id, info: this.acceptors[node.id]})
+                node.messenger.notify(this.proposers, "new acceptor", {nodeId: node.id, info: this.acceptors[node.id]})
             }
             if (node.roles.indexOf('Proposer') > -1) {
                 this.proposers[node.id] = [node.port, node.address]
+                node.messenger.notify(this.acceptors, "new proposer", {nodeId: node.id, info: this.proposers[node.id]})
             }
             for (var id in this.acceptors) {
                 node.acceptors[id] = [this.acceptors[id], null]
@@ -387,7 +401,10 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
         node.messenger.sendPrepare()
     }
 
-    node.receivePromise = function (fromId, fromAddress, proposalId, lastValue, lastAcceptedId) { // :: Int -> Int -> Int -> a ->
+    node.receivePromise = function (fromId, fromAddress, round, proposalId, lastValue, lastAcceptedId) { // :: Int -> Int -> Int -> a ->
+        if (round < node.currentRound) {
+            return
+        }
         if (proposalId != node.proposalId) {
             return
         }
@@ -412,11 +429,17 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
         }
     }
 
-    node.receiveAccept = function (from, proposalId, proposal) { // :: String -> Int -> a ->
+    node.receiveAccept = function (from, round, proposalId, proposal) { // :: String -> Int -> a ->
+        console.log('received')
+        if (round < node.currentRound) {
+            return
+        }
         if (node.accepts.indexOf(from) < 0) {
             node.accepts.push(from)
+            console.log('here')
         }
         if (node.accepts.length >= node.quorum) {
+            console.log("here")
             if (node.callback) {
                 node.callback({
                     eventType: "accept",
@@ -432,6 +455,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
                 value: proposal,
                 from: from
             }))
+            node.currentRound += 1
             if (!node.multi) {
                 node.end()
             } else {
@@ -444,12 +468,22 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
         node.prepare(true, proposalId)
     }
 
+    node.setQuorum = function () {
+        if (this.acceptors.length % 2 == 0) {
+            this.quorum = this.acceptors.length / 2 + 1
+        } else {
+            this.quorum = Math.ceil(Object.keys(this.acceptors).length / 2)
+        }
+        console.log(this.quorum)
+    }
+
     if (cluster) {
         cluster.addNode(node)
         cluster.setQuorum()
     } else {
         node.startInstance()
     }
+
 }
 
 function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
@@ -463,7 +497,10 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
     node.messenger.setMessageHandlers(node, 'Acceptor')
 
 
-    node.receivePrepare = function (port, address, proposalId) {
+    node.receivePrepare = function (port, address, round, proposalId) {
+        if (round < node.currentRound) {
+            return
+        }
         if (proposalId == node.promisedId) {
             return
         } else if (proposalId > node.promisedId) {
@@ -474,7 +511,10 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
         }
     }
 
-    node.receiveAcceptRequest = function (address, port, proposalId, proposal) { // :: Int -> Int -> a ->
+    node.receiveAcceptRequest = function (address, port, round, proposalId, proposal) { // :: Int -> Int -> a ->
+        if (round < node.currentRound) {
+            return
+        }
         if (proposalId == node.promisedId || (address == node.leader[0] && port == node.leader[1])) {
             node.promisedId = proposalId
             node.acceptedId = proposalId
@@ -483,19 +523,24 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
                 type: "accepted",
                 value: proposal,
                 address: address,
+                round: node.currentRound,
                 port: port,
                 proposalId: proposalId
             })
 
             node.messenger.sendToAcceptors(message)
+            node.messenger.sendToProposers(message)
             node.messenger.sendToLearners(message)
             node.leader = [address, port]
-            node.stateLog[Date.now()] = {
+            node.stateLog[node.currentRound] = {
                 round: node.currentRound,
                 value: proposal,
+                time: Date.now(),
                 leader: node.leader,
                 proposalId: proposalId
             }
+            
+            node.currentRound += 1
 
             if (node.callback) {
                 node.callback({

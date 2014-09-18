@@ -10,3 +10,5 @@ http://stackoverflow.com/questions/5850487/questions-about-paxos-implementation/
 - TODO:
     load from config file
     possibly give each node a cluster object to store instance info
+
+- talk to Alan about Proof so that tests will pass.
