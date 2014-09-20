@@ -1,8 +1,9 @@
-function Proposer (generateProposalId) {
+function Proposer (id, generateProposalId) { // :: a | num, function
     this.generateProposalId = generateProposalId || function () {
         return this._nextProposalId++
     }
     this._nextProposalId = 0
+    this.id = id
     this.proposalId = null
     this.lastAcceptedId = null
     this.history = {}
@@ -11,41 +12,37 @@ function Proposer (generateProposalId) {
     this.leader = null
 }
 
-Proposer.prototype.startProposal = function (proposal) { // :: a -> function ->
+Proposer.prototype.startProposal = function (proposal) { // :: a
     this.promises = []
     this.accepts = []
     this.proposal = proposal
     this.currentStatus = 'proposal'
 
-    if (callback) {
-        node.callback = callback
-    }
-
-    if (node.leader) {
+    if (this._leader) {
         return [{
             type: "accept",
             proposalId: this.proposalId,
             proposal: this.proposal
         }]
     } else {
-        return node.prepare(false)
+        return this.prepare(false)
     }
 }
 
 Proposer.prototype.prepare = function (nack, seed) { // :: bool, int
-    this.proposalId = arguments.length == 2 ? node.generateProposalId(seed)
-                                            : node.generateProposalId()
+    this.proposalId = arguments.length == 2 ? this.generateProposalId(seed)
+                                            : this.generateProposalId()
+    var messages = []
     if (nack) {
-        if (node.callback) {
-            node.callback({
-                eventType: "NACK",
-                newProposalId: node.proposalId
-            })
-        }
+        messages.push({
+            eventType: "NACK",
+            newProposalId: this.proposalId
+        })
     }
-    return [{
+    messages.push({
         type: "prepare", nodeId: this.id, proposalId: this.proposalId
-    }]
+    })
+    return messages
 }
 
 exports.Proposer = Proposer
