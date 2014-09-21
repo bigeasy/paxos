@@ -210,9 +210,9 @@ function initializeFromFile (filepath, generateProposalId, callback) {
     var node = new Node(params)
 
     for (var role in params.roles) {
-        if (role == 'Learner') initializeLearner(node)
-        if (role == 'Proposer') initializeProposer(node)
-        if (role == 'Acceptor') initializeAcceptor(node)
+        if (params.roles[role] == 'Learner') initializeLearner(node)
+        if (params.roles[role] == 'Proposer') initializeProposer(node)
+        if (params.roles[role] == 'Acceptor') initializeAcceptor(node)
     }
 
     if (callback) {
@@ -247,12 +247,12 @@ function Node (params) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
     }
 
     this.startInstance = function () {
-        this.messenger.notifyJoin(currentRound)
+        this.messenger.notifyJoin(this.currentRound)
     }
 
     this.receiveInstance = function (info) {
-        if (info.currentRound > node.currentRound) {
-            node.currentRound = info.currentRound }
+        if (info.currentRound > this.currentRound) {
+            this.currentRound = info.currentRound }
     }
 
     this.end = function () {
