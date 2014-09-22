@@ -104,7 +104,7 @@ function Messenger (node, port, address, socketType) {
             return
         }
         for (var acceptor in this.node.acceptors) {
-            this.socket.send(message, 0, message.length, this.node.acceptors[acceptor][0][0], this.node.acceptors[acceptor][0][1])
+            this.socket.send(message, 0, message.length, this.node.acceptors[acceptor][0], this.node.acceptors[acceptor][1])
         }
     }
 
@@ -135,16 +135,15 @@ function Messenger (node, port, address, socketType) {
     this.notifyJoin = function (currentRound) {
         var message = this.createMessage({
             type: "join",
-            port: this.address,
-            address: this.port,
+            port: this.port,
+            address: this.address,
             role: this.node.roles[0],
             id: this.id,
             currentRound: currentRound
         })
-        var nodes = this.node.acceptors.concat(this.node.proposers)
-        for (var i = 0; i < nodes.length; i++) {
-            this.socket.send(message, 0, message.length, nodes[i].port, nodes[i].address)
-        }
+
+        this.sendToAcceptors(message)
+        this.sendToProposers(message)
     }
 
     this.sendInstance = function (instance, port, address) {
