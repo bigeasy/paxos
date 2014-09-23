@@ -190,7 +190,9 @@ function Messenger (node, port, address, socketType) {
                 if (message.type == "prepare") {
                     node.receivePrepare(message.port, message.address, message.round, message.proposalId)
                 } else if (message.type == "accept") {
-                    node.receiveAcceptRequest(message.address, message.port, message.round, message.proposalId, message.proposal)
+                    node.receiveAcceptRequest(message.address, message.port, message.round, message.proposalId, message.proposal, false)
+                } else if (message.type == "accepted") {
+                    node.receiveAcceptRequest(message.address, message.port, message.round, message.proposalId, message.proposal, true)
                 } else if (message.type == "new proposer") {
                     node.proposers.push(message.info)
                 }
@@ -351,8 +353,7 @@ function Cluster (nodes) { // :: [Node] -> Cluster
         for (var node in nodes) {
             this.addNode(node)
         }
-    }
-}
+    } }
 
 function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     node.roles.push('Proposer')
@@ -497,11 +498,11 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
         }
     }
 
-    node.receiveAcceptRequest = function (address, port, round, proposalId, proposal) { // :: Int -> Int -> a ->
+    node.receiveAcceptRequest = function (address, port, round, proposalId, proposal, roundOver) { // :: Int -> Int -> a ->
         if (round < node.currentRound) {
             return
         }
-        if (proposalId == node.promisedId || (address == node.leader[0] && port == node.leader[1])) {
+        if (proposalId == node.promisedId || (address == node.leader[0] && port == node.leader[1]) || roundOver) {
             node.promisedId = proposalId
             node.acceptedId = proposalId
             node.value = proposal
