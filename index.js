@@ -23,14 +23,15 @@ function Messenger (node, port, address, socketType) {
         return new Buffer(JSON.stringify(obj))
     }
 
-    this.sendAcceptRequest = function () {
+    this.sendAcceptRequest = function (roundOver) {
         var acceptReq = this.createMessage({
             type: "accept",
             round: this.node.currentRound,
             proposalId: this.node.proposalId,
             proposal: this.node.proposal,
             address: this.address,
-            port: this.port
+            port: this.port,
+            roundOver: roundOver
         })
         for (var acceptor in this.node.acceptors) {
             this.socket.send(acceptReq, 0, acceptReq.length, this.node.acceptors[acceptor][0][0], this.node.acceptors[acceptor][0][1])
@@ -190,7 +191,7 @@ function Messenger (node, port, address, socketType) {
                 if (message.type == "prepare") {
                     node.receivePrepare(message.port, message.address, message.round, message.proposalId)
                 } else if (message.type == "accept") {
-                    node.receiveAcceptRequest(message.address, message.port, message.round, message.proposalId, message.proposal, false)
+                    node.receiveAcceptRequest(message.address, message.port, message.round, message.proposalId, message.proposal, message.roundOver)
                 } else if (message.type == "accepted") {
                     node.receiveAcceptRequest(message.address, message.port, message.round, message.proposalId, message.proposal, true)
                 } else if (message.type == "new proposer") {
@@ -419,7 +420,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
 
         if (node.promises.length >= node.quorum) {
             if (node.proposal) {
-                node.messenger.sendAcceptRequest()
+                node.messenger.sendAcceptRequest(false)
             }
         }
     }
@@ -445,7 +446,8 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
                 type: "accepted",
                 proposalId: proposalId,
                 value: proposal,
-                from: from
+                from: from,
+                roundOver: true,
             }))
             node.currentRound += 1
             node.leader = true
