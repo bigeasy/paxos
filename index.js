@@ -87,7 +87,7 @@ function Messenger (node, port, address, socketType) {
     }
 
     this.sendPending = function () {
-        this.pendingMessage[1](this.pendingMessage[0])
+        //this.pendingMessage[1](this.pendingMessage[0])
     }
 
     this.notify = function (nodes, messageType, message) {
@@ -482,7 +482,7 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
     node.promisedId = null
     node.acceptedId = null
     node.lastAccepted = null
-    node.leader = null
+    node.leader = [null, null]
     node.messenger.setMessageHandlers(node, 'Acceptor')
 
 
