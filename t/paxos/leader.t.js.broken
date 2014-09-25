@@ -29,6 +29,5 @@ require('proof')(1, function(step) {
     }
     nodes[14].startProposal("test", step())
 }, function (body, equal) {
-    console.log(body)
-    equal(body.leader, ['0.0.0.0', 1025], "leader selected")
+    equal(body.leader, ['0.0.0.0', 1038], "leader selected")
 })

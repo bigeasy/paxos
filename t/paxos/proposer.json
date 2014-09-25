@@ -9,23 +9,23 @@
         {
             "role": "Acceptor",
             "address": "0.0.0.0",
-            "port": "1026"
+            "port": 1026
         }, {
             "role": "Acceptor",
             "address": "0.0.0.0",
-            "port": "1027"
+            "port": 1027
         }, {
             "role": "Acceptor",
             "address": "0.0.0.0",
-            "port": "1028"
+            "port": 1028
         }, {
             "role": "Learner",
             "address": "0.0.0.0",
-            "port": "1029"
+            "port": 1029
         }, {
             "role": "Learner",
             "address": "0.0.0.0",
-            "port": "1030"
+            "port": 1030
         }
     ]
 }
