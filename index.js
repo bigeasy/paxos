@@ -536,7 +536,8 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
                     eventType: "accepted",
                     proposal: proposal,
                     proposalId: proposalId,
-                    leader: node.leader
+                    leader: node.leader,
+                    roundOver: roundOver,
                 })
             }
         } else if (proposalId < node.promisedId) {
