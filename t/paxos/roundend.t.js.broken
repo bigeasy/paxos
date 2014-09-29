@@ -24,6 +24,5 @@ require('proof')(1, function(step) {
     }))
     socket.send(message, 0, message.length, 1024, '127.0.0.1')
 }, function (body, equal) {
-    console.log(body)
-    equal(1, 1, 'ok')
+    equal(body.roundOver, true, 'ok')
 })
