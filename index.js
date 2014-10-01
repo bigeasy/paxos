@@ -438,6 +438,7 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
                     eventType: "accept",
                     proposal: proposal,
                     proposalId: proposalId,
+                    roundOver: true,
                     leader: [node.address, node.port]
                 })
             }
@@ -593,7 +594,8 @@ function initializeLearner (node, cluster, callback) { // :: Node -> Cluster ->
                     eventType: "accepted",
                     proposal: acceptedValue,
                     proposalId: proposalId,
-                    leader: from
+                    leader: from,
+                    roundOver: true,
                 })
             }
             if (!node.multi) {node.end()}
