@@ -11,4 +11,6 @@ http://stackoverflow.com/questions/5850487/questions-about-paxos-implementation/
     load from config file
     possibly give each node a cluster object to store instance info
 
+- need to reconfigure callbacks. Ask Alan during his refactor.
+
 - talk to Alan about Proof so that tests will pass.
