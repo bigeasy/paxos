@@ -14,7 +14,9 @@ require('proof')(1, function(step) {
         currentRound: 1
     })
     paxos.initializeAcceptor(acceptor)
-    acceptor.setCallback(step())
+    acceptor.setCallback(function (body) {
+        echo(body, step())
+    })
     var socket = require('dgram').createSocket('udp4')
     var message = new Buffer(JSON.stringify({
         type: "accepted",
