@@ -8,7 +8,8 @@ http://stackoverflow.com/questions/5850487/questions-about-paxos-implementation/
 - don't forget. Node processes not root - port 1024 & up
 
 - TODO:
-    load from config file
+    config file for entire instance, not just single node
+    should be able to join networked instance from config.
     possibly give each node a cluster object to store instance info
-
-- talk to Alan about Proof so that tests will pass.
+    need to reconfigure callbacks. Ask Alan during his refactor.
+    talk to Alan about Proof so that tests will pass.
