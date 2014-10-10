@@ -174,8 +174,8 @@ function Messenger (node, port, address, socketType) {
                 message = JSON.parse(message.toString())
                 if (message.type == "promise") {
                     node.receivePromise(message.id, message.address, message.round, message.proposalId, message.lastValue, message.lastAcceptedId)
-                } else if (message.type == "proposal") {
-                    node.setProposal(message.proposal)
+                } else if (message.type == "prepare") {
+                    node.receiverPrepare(message)
                 } else if (message.type == "accepted") {
                     node.receiveAccept(message.from, message.round, message.proposalId, message.value)
                 } else if (message.type == "NACK") {
@@ -455,8 +455,18 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
         }
     }
 
-    node.receivePrevious = function (from, proposalId) { // :: String -> Int ->
-        node.prepare(true, proposalId)
+    node.receivePrepare = function (message) { // :: String -> Int ->
+        if (node.leader && node.leader == [message.address, message.port]) {
+            node.startProposal(message.proposal)
+            if (node.callback) {
+                node.callback({
+                    eventType: "proposal",
+                    proposal: message.proposalId,
+                    address: message.address,
+                    port: message.port
+                })
+            }
+        }
     }
 
     node.setQuorum = function () {
