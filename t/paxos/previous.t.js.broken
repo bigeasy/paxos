@@ -8,36 +8,29 @@ require('proof')(1, function(step) {
         if (n) return n+1;
         return 1;
     }
+    var socket = require('dgram').createSocket("udp4")
+    socket.bind(1025, '0.0.0.0')
 
-    var cluster = new paxos.Cluster(nodes)
-
-    for (var i=0; i<15; i++) {
-        nodes[i] = new paxos.Node({
+    var node = new paxos.Node({
             id: i,
             address: '127.0.0.1',
             port: 1024+i,
             generateProposalId: generateProposalId,
             multi: false,
             currentRound: 1
-        })
-        if (i < 5) {
-            paxos.initializeProposer(nodes[i], cluster)
-        }
-
-        if (i < 10) {
-            paxos.initializeLearner(nodes[i], cluster)
-        } else {
-            paxos.initializeAcceptor(nodes[i], cluster)
-        }
-
-        if (i == 11) {
-            nodes[2].startProposal("jump", step())
-        }
-
-        if (i == 15) {
-            nodes[1].startProposal("sit")
-        }
-    }
+    })
+    paxos.initializeProposer(node, cluster)
+    node.startProposal("jump", step())
+    var proposal = new Buffer(JSON.stringify({
+        type: "prepare",
+        address: '0.0.0.0',
+        port: 1025,
+        nodeId: 2,
+        round: 1,
+        proposalId: 1
+    }))
+    socket.send(proposal, 0, proposal.length, 1024, '0.0.0.0')
 }, function (body, equal) {
+    console.log(body)
     equal(body, "jump")
 })
