@@ -175,7 +175,7 @@ function Messenger (node, port, address, socketType) {
                 if (message.type == "promise") {
                     node.receivePromise(message.id, message.address, message.round, message.proposalId, message.lastValue, message.lastAcceptedId)
                 } else if (message.type == "prepare") {
-                    node.receiverPrepare(message)
+                    node.receivePrepare(message)
                 } else if (message.type == "accepted") {
                     node.receiveAccept(message.from, message.round, message.proposalId, message.value)
                 } else if (message.type == "NACK") {
@@ -354,7 +354,8 @@ function Cluster (nodes) { // :: [Node] -> Cluster
         for (var node in nodes) {
             this.addNode(node)
         }
-    } }
+    }
+}
 
 function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     node.roles.push('Proposer')
@@ -459,13 +460,21 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
         if (node.leader && node.leader == [message.address, message.port]) {
             node.startProposal(message.proposal)
             if (node.callback) {
+                console.log('here')
                 node.callback({
-                    eventType: "proposal",
-                    proposal: message.proposalId,
+                    eventType: "leader overrided proposal",
+                    proposal: message.proposal,
                     address: message.address,
                     port: message.port
                 })
             }
+        } else if (node.callback) {
+            node.callback({
+                eventType: "proposal",
+                proposalId: message.proposalId,
+                address: message.address,
+                port: message.port
+            })
         }
     }
 
