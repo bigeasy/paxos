@@ -12,14 +12,14 @@ require('proof')(1, function(step) {
     socket.bind(1025, '0.0.0.0')
 
     var node = new paxos.Node({
-            id: i,
+            id: 1,
             address: '127.0.0.1',
-            port: 1024+i,
+            port: 1024,
             generateProposalId: generateProposalId,
             multi: false,
             currentRound: 1
     })
-    paxos.initializeProposer(node, cluster)
+    paxos.initializeProposer(node)
     node.startProposal("jump", step())
     var proposal = new Buffer(JSON.stringify({
         type: "prepare",
@@ -27,10 +27,9 @@ require('proof')(1, function(step) {
         port: 1025,
         nodeId: 2,
         round: 1,
-        proposalId: 1
+        proposalId: 1,
     }))
     socket.send(proposal, 0, proposal.length, 1024, '0.0.0.0')
 }, function (body, equal) {
-    console.log(body)
-    equal(body, "jump")
+    equal(body.proposalId, 1)
 })
