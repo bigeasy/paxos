@@ -20,7 +20,7 @@ require('proof')(1, function(step) {
             currentRound: 1
     })
     paxos.initializeProposer(node)
-    node.startProposal("jump", step())
+    node.startProposal("jump", step)
     var proposal = new Buffer(JSON.stringify({
         type: "prepare",
         address: '0.0.0.0',
@@ -31,5 +31,6 @@ require('proof')(1, function(step) {
     }))
     socket.send(proposal, 0, proposal.length, 1024, '0.0.0.0')
 }, function (body, equal) {
+    console.log(arguments)
     equal(body.proposalId, 1)
 })
