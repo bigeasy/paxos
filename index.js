@@ -231,7 +231,6 @@ function Node (params) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
     this.id = params.id
     this.address = params.address
     this.port = params.port
-    this.multi = params.multi
     this.proposal = null
     this.value = null
     this.lastValue = null
@@ -615,7 +614,6 @@ function initializeLearner (node, cluster, callback) { // :: Node -> Cluster ->
                     roundOver: true,
                 })
             }
-            if (!node.multi) {node.end()}
         }
     }
 
