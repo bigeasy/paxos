@@ -45,4 +45,4 @@ Proposer.prototype.prepare = function (nack, seed) { // :: bool, int
     return messages
 }
 
-exports.Proposer = Proposer
+module.exports = Proposer

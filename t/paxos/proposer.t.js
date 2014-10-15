@@ -1,13 +1,13 @@
 require('proof')(4, function (assert) {
-    var paxos = require('../../paxos')
-    var proposer = new paxos.Proposer(1, function () { return 'bar' })
+    var Proposer = require('../../proposer')
+    var proposer = new Proposer(1, function () { return 'bar' })
     assert(proposer.startProposal('foo'), [{
         type: 'prepare',
         nodeId: 1,
         proposalId: 'bar'
     }], 'specify proposal id creator')
 
-    var proposer = new paxos.Proposer(1)
+    var proposer = new Proposer(1)
     assert(proposer.startProposal('foo'), [{
         type: 'prepare',
         nodeId: 1,
