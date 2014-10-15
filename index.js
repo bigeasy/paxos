@@ -460,7 +460,6 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
         if (node.leader && node.leader == [message.address, message.port]) {
             node.startProposal(message.proposal)
             if (node.callback) {
-                console.log('here')
                 node.callback({
                     eventType: "leader overrided proposal",
                     proposal: message.proposal,
@@ -492,7 +491,6 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     } else {
         node.startInstance()
     }
-
 }
 
 function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
