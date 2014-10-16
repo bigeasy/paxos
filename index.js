@@ -604,6 +604,13 @@ function initializeLearner (node, cluster, callback) { // :: Node -> Cluster ->
 
         if (node.proposals[proposalId][0] == node.quorum) { // round over
             node.finalValue = acceptedValue
+            node.stateLog[node.currentRound] = {
+                round: node.currentRound,
+                value: proposal,
+                time: Date.now(),
+                leader: node.leader,
+                proposalId: proposalId
+            }
             node.finalProposalId = proposalId
             if (node.callback) {
                 node.callback({
