@@ -1,30 +1,24 @@
-require('proof')(4, function (assert) {
+require('proof')(3, function (assert) {
     var Proposer = require('../../proposer')
-    var proposer = new Proposer(1, function () { return 'bar' })
-    assert(proposer.startProposal('foo'), [{
-        type: 'prepare',
-        nodeId: 1,
-        proposalId: 'bar'
-    }], 'specify proposal id creator')
-
     var proposer = new Proposer(1)
+    proposer.reset(null, {})
     assert(proposer.startProposal('foo'), [{
         type: 'prepare',
         nodeId: 1,
-        proposalId: 0
+        proposalId: 1
     }], 'start proposal')
 
 
     proposer._leader = true
     assert(proposer.startProposal('foo'), [{
         type: 'accept',
-        proposalId: 0,
+        proposalId: 1,
                  // ^ Why are we using the previous proposal id?
         proposal: 'foo'
     }], 'start proposal')
 
     assert(proposer.prepare(true, 0), [
-        { eventType: 'NACK', newProposalId: 1 },
-        { type: 'prepare', nodeId: 1, proposalId: 1 }
+        { eventType: 'NACK', newProposalId: 2 },
+        { type: 'prepare', nodeId: 1, proposalId: 2 }
     ], 'prepare with nack')
 })

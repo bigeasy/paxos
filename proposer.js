@@ -1,9 +1,11 @@
-function Proposer (id, generateProposalId) { // :: a | num, function
-    this.generateProposalId = generateProposalId || function () {
-        return this._nextProposalId++
-    }
-    this._nextProposalId = 0
-    this.id = id
+function Proposer (id) {
+    this._id = id
+}
+
+Proposer.prototype.reset = function (queue, common) {
+    this._queue = queue
+    this._common = common
+    this._nextProposalId = 1
     this.proposalId = null
     this.lastAcceptedId = null
     this.history = {}
@@ -15,33 +17,37 @@ function Proposer (id, generateProposalId) { // :: a | num, function
 Proposer.prototype.startProposal = function (proposal) { // :: a
     this.promises = []
     this.accepts = []
-    this.proposal = proposal
-    this.currentStatus = 'proposal'
+    this._common.proposal = proposal
+    this._common.status = 'proposal'
 
     if (this._leader) {
         return [{
             type: "accept",
             proposalId: this.proposalId,
-            proposal: this.proposal
+            proposal: this._common.proposal
         }]
     } else {
         return this.prepare(false)
     }
 }
 
-Proposer.prototype.prepare = function (nack, seed) { // :: bool, int
-    this.proposalId = arguments.length == 2 ? this.generateProposalId(seed)
-                                            : this.generateProposalId()
+Proposer.prototype.prepare = function (nack) { // :: bool, int
     var messages = []
+
+    // todo: Wrap.
+    this.proposalId = this._nextProposalId++
+
     if (nack) {
         messages.push({
             eventType: "NACK",
             newProposalId: this.proposalId
         })
     }
+
     messages.push({
-        type: "prepare", nodeId: this.id, proposalId: this.proposalId
+        type: "prepare", nodeId: this._id, proposalId: this.proposalId
     })
+
     return messages
 }
 
