@@ -12,7 +12,14 @@
 <h1>Paxos</h1>
 </div>
 
-<div class="unit description markdown"></div>
+<div class="unit description markdown"><h1>Message Id</h1>
+<p>The paxos message id for a cluster will increment indefinately. It is a
+hexidecimal string representing an integer. So long as it is less than
+252, you can parse it into a JavaScript number for comparison. You
+can store it as a <code>BITINT</code> in MySQL so long as it is less than 264.</p>
+<p>You can use your own key, of course, but you also, always order using the paxos
+<code>Identifier</code> class.</p>
+</div>
 
 <div>
 <p>Lamport original Paxos.
