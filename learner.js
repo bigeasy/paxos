@@ -3,44 +3,47 @@ function Learner (id) {
 }
 
 Learner.prototype.reset = function (queue, common) {
-    this.queue = queue
-    this.common = common
+    this._queue = queue
+    this._common = common
     this.finalValue = null
     this.stateLog = {}
     this.finalProposalId = null
     this.proposals = {} // proposal ID -> [accept count, retain count, value]
     this.acceptors = {}
 }
+
                                        // :: Int -> Int -> a ->
-Learner.prototype.receiveAccept = function (proposal) {
+Learner.prototype.receiveAccepted = function (message) {
     var outcome = []
 
-    if (this.finalValue != null) {
-        return outcome
+    if (this._common.finalValue != null) {
+        return []
     }
 
+/*
     var last = this.acceptors[proposal.from][1]
     if (last) {
         if (last > proposal.proposalId) { return outcome }
         this.acceptors[proposal.from][1] = proposal.proposalId
-    }
+    }*/
 
-    if (this.proposals[proposal.proposalId] == null) {
-        this.proposals[proposal.proposalId] = [ 1, 1, proposal.acceptedValue ]
+    console.log(message)
+    if (this.proposals[message.proposalId] == null) {
+        this.proposals[message.proposalId] = [ 1, 1, message.value ]
     } else {
-        this.proposals[proposal.proposalId][0] += 1
+        this.proposals[message.proposalId][0] += 1
     }
 
-    if (this.proposals[proposal.proposalId][0] == this.quorum) { // round over
+    if (this.proposals[message.proposalId][0] == this._common.quorum) { // round over
 
-        this.finalValue = proposal.acceptedValue
-        this.finalProposalId = proposal.proposalId
+        this._common.finalValue = message.value
+        this._common.finalProposalId = message.proposalId
 
         outcome.push({
-            eventType: "accepted",
-            proposal: proposal.acceptedValue,
-            proposalId: proposal.proposalId,
-            leader: proposal.from,
+            eventType: 'consumed',
+            proposal: message.value,
+            proposalId: message.proposalId,
+            leader: message.nodeId,
             roundOver: true,
         })
     }

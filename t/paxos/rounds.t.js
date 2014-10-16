@@ -1,7 +1,11 @@
 require('proof')(1, function (assert) {
-    var slice = [].slice
+    var slice = [].slice, push = [].push, transcript = []
 
+    var util = require('../../utility')
+
+    var Common = require('../../common')
     var Queue = require('../../queue')
+
     var Learner = require('../../learner')
     var Acceptor = require('../../acceptor')
     var Proposer = require('../../proposer')
@@ -25,7 +29,8 @@ require('proof')(1, function (assert) {
     }
 
     nodes.forEach(function (node, index) {
-        var common = { id: index }
+        var common = new Common(index)
+        common.quorum = 2
         for (var key in node) {
             node[key].reset(queue, common)
         }
@@ -51,6 +56,15 @@ require('proof')(1, function (assert) {
 
     var messages = proposers[0].startProposal('able')
 
+    push.apply(transcript, messages)
+
+    messages = util.dispatch(messages, participants)
+    console.log(messages)
+    messages = util.dispatch(messages, participants)
+    console.log(messages)
+    messages = util.dispatch(messages, participants)
+    console.log(messages)
+    messages = util.dispatch(messages, participants)
     console.log(messages)
 
     assert(true)
