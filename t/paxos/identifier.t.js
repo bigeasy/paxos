@@ -1,21 +1,19 @@
-require('proof')(11, function (assert) {
-    var Identifer = require('../../identifier')
+require('proof')(10, function (assert) {
+    var Id = require('../../identifier')
 
-    assert(new Identifer('1fffffffff').words, [ 0x1f, 0xffffffff ], 'parse two words')
-    assert(new Identifer('ffffffff').words, [ 0xffffffff ], 'parse one word')
-    assert(new Identifer().words, [ 0x0 ], 'default')
-    assert(new Identifer([ 0x1, 0x1 ]).words, [ 0x1, 0x1 ], 'default')
+    assert(Id.parse('1fffffffff'), [ 0x1f, 0xffffffff ], 'parse two words')
+    assert(Id.parse('ffffffff'), [ 0xffffffff ], 'parse one word')
 
-    var ids = [ new Identifer('1ffffffff'), new Identifer('ffffffff'), new Identifer('1fffffffe') ]
+    var ids = [ Id.parse('1ffffffff'), Id.parse('ffffffff'), Id.parse('1fffffffe') ]
 
-    assert(ids[0].compare(ids[1]) > 0, 'compare longer')
-    assert(ids[0].compare(ids[2]) > 0, 'compare lesser')
-    assert(ids[0].compare(ids[0]) == 0, 'compare equal')
+    assert(Id.compare(ids[0], ids[1]) > 0, 'compare longer')
+    assert(Id.compare(ids[0], ids[2]) > 0, 'compare lesser')
+    assert(Id.compare(ids[0], ids[0]) == 0, 'compare equal')
 
-    assert(ids[0].increment().compare(new Identifer('200000000')) == 0, 'carry')
-    assert(ids[1].increment().compare(new Identifer('100000000')) == 0, 'carry unshift')
-    assert(ids[2].increment().compare(ids[0]) == 0, 'no carry')
+    assert(Id.compare(Id.increment(ids[0]), [ 0x2, 0x0 ]) == 0, 'carry')
+    assert(Id.compare(Id.increment(ids[1]), [ 0x1, 0x0 ]) == 0, 'carry unshift')
+    assert(Id.compare(Id.increment(ids[2]), ids[0]) == 0, 'no carry')
 
-    assert(String(ids[0]), '1ffffffff', 'to string')
-    assert(ids[0].toString(64), '00000001ffffffff', 'to string')
+    assert(Id.toString(ids[0]), '1ffffffff', 'to string')
+    assert(Id.toString(ids[0], 64), '00000001ffffffff', 'to string')
 })
