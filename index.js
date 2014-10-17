@@ -595,8 +595,9 @@ function initializeLearner (node, cluster, callback) { // :: Node -> Cluster ->
         var last = node.acceptors[from][1]
         if (last) {
             if (last > proposalId) { return }
-            node.acceptors[from][1] = proposalId
         }
+
+        node.acceptors[from][1] = proposalId
 
         if (node.proposals[proposalId] == null) {
             node.proposals[proposalId] = [1, 1, acceptedValue]
