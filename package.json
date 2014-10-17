@@ -18,6 +18,10 @@
                     "web":    "https://github.com/demarius"
         }
     ],
+    "dependencies":
+    {
+                    "skiplist": "1.0.0"
+    },
     "devDependencies":
     {
                     "proof": "0.0.50"

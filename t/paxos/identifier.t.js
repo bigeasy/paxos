@@ -17,4 +17,5 @@ require('proof')(11, function (assert) {
     assert(ids[2].increment().compare(ids[0]) == 0, 'no carry')
 
     assert(String(ids[0]), '1ffffffff', 'to string')
+    assert(ids[0].toString(64), '00000001ffffffff', 'to string')
 })

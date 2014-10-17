@@ -44,12 +44,17 @@ Identifier.prototype.compare = function (that) {
     return compare
 }
 
-Identifier.prototype.toString = function () {
+Identifier.prototype.toString = function (bits) {
     var words = this.words, string = [ words[0].toString(16) ]
     for (var i = 1, I = words.length; i < I; i++) {
         string.push(('00000000000' + words[i].toString(16)).substr(-8))
     }
-    return string.join('')
+    var string = string.join('')
+    if (bits) {
+        words = bits / 4
+        return (new Array(words).join('0') + string).substr(-words)
+    }
+    return string
 }
 
 module.exports = Identifier
