@@ -13,3 +13,5 @@ http://stackoverflow.com/questions/5850487/questions-about-paxos-implementation/
     possibly give each node a cluster object to store instance info
     need to reconfigure callbacks. Ask Alan during his refactor.
     talk to Alan about Proof so that tests will pass.
+
+If multi paxos is optional, remember to finish packet work before closing socket

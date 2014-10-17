@@ -175,7 +175,7 @@ function Messenger (node, port, address, socketType) {
                 if (message.type == "promise") {
                     node.receivePromise(message.id, message.address, message.round, message.proposalId, message.lastValue, message.lastAcceptedId)
                 } else if (message.type == "prepare") {
-                    node.receiverPrepare(message)
+                    node.receivePrepare(message)
                 } else if (message.type == "accepted") {
                     node.receiveAccept(message.from, message.round, message.proposalId, message.value)
                 } else if (message.type == "NACK") {
@@ -231,7 +231,6 @@ function Node (params) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
     this.id = params.id
     this.address = params.address
     this.port = params.port
-    this.multi = params.multi
     this.proposal = null
     this.value = null
     this.lastValue = null
@@ -354,7 +353,8 @@ function Cluster (nodes) { // :: [Node] -> Cluster
         for (var node in nodes) {
             this.addNode(node)
         }
-    } }
+    }
+}
 
 function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     node.roles.push('Proposer')
@@ -460,12 +460,19 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
             node.startProposal(message.proposal)
             if (node.callback) {
                 node.callback({
-                    eventType: "proposal",
-                    proposal: message.proposalId,
+                    eventType: "leader overrided proposal",
+                    proposal: message.proposal,
                     address: message.address,
                     port: message.port
                 })
             }
+        } else if (node.callback) {
+            node.callback({
+                eventType: "proposal",
+                proposalId: message.proposalId,
+                address: message.address,
+                port: message.port
+            })
         }
     }
 
@@ -483,7 +490,6 @@ function initializeProposer (node, cluster) { // :: Node -> Cluster -> a ->
     } else {
         node.startInstance()
     }
-
 }
 
 function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
@@ -608,7 +614,6 @@ function initializeLearner (node, cluster, callback) { // :: Node -> Cluster ->
                     roundOver: true,
                 })
             }
-            if (!node.multi) {node.end()}
         }
     }
 
