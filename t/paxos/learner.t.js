@@ -6,13 +6,13 @@ require('proof')(2, function (assert) {
     learner.reset(null, {})
     learner.acceptors[1] = []
 
-    assert(learner.receiveAccept({
+    assert(learner.receiveAccepted({
         from: 1,
         proposalId: 1,
         acceptedValue: 'foo'
     }), [], 'accept')
 
-    assert(learner.receiveAccept({
+    assert(learner.receiveAccepted({
         from: 1,
         proposalId: 1,
         acceptedValue: 'foo'

@@ -28,6 +28,14 @@ require('proof')(1, function (assert) {
         participants.push(proposer, acceptor, learner)
     }
 
+    function Logger () {
+        var head = {}
+        head.prev = head.next = head
+    }
+
+    Logger.prototype.consumeLearned = function (message) {
+    }
+
     nodes.forEach(function (node, index) {
         var common = new Common(index)
         common.quorum = 2
