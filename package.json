@@ -20,7 +20,8 @@
     ],
     "dependencies":
     {
-                    "skiplist": "1.0.0"
+                    "bintrees": "1.0.0",
+                    "magazine": "0.0.13"
     },
     "devDependencies":
     {
