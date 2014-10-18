@@ -21,7 +21,8 @@
     "dependencies":
     {
                     "bintrees": "1.0.0",
-                    "magazine": "0.0.13"
+                    "magazine": "0.0.13",
+                    "cadence": "0.0.43"
     },
     "devDependencies":
     {
