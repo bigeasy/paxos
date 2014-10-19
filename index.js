@@ -576,7 +576,7 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
 
 function initializeLearner (node, cluster, callback) { // :: Node -> Cluster ->
     node.roles.push('Learner')
-    node.finalValue = null
+    node.currentValue = null
     node.stateLog = {}
     node.finalProposalId = null
     if (callback) {
@@ -606,7 +606,7 @@ function initializeLearner (node, cluster, callback) { // :: Node -> Cluster ->
 		}
 
         if (node.proposals[proposalId][0] == node.quorum) { // round over
-            node.finalValue = acceptedValue
+            node.currentValue = acceptedValue
             node.stateLog[node.currentRound] = {
                 round: node.currentRound,
                 value: proposal,
