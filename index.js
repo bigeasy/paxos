@@ -554,7 +554,7 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
                     proposal: proposal,
                     proposalId: proposalId,
                     leader: node.leader,
-                    roundOver: roundOver,
+                    roundOver: roundOver
                 })
             }
         } else if (proposalId < node.promisedId) {
@@ -585,9 +585,11 @@ function initializeLearner (node, cluster, callback) { // :: Node -> Cluster ->
 
     node.proposals = {} // proposal ID -> [accept count, retain count, value]
 
-    node.receiveAccept = function (from, proposalId, acceptedValue) { // :: Int -> Int -> a ->
-        if (node.finalValue != null) {
-            return
+    node.receiveAccept = function (from, currentRound, proposalId, acceptedValue) { // :: Int -> Int -> a ->
+        if (currentRound > node.currentRound) {
+            node.currentRound = currentRound
+        } else if (currentRound < node.currentRound) {
+            return;
         }
 
         var last = node.acceptors[from][1]
@@ -618,7 +620,7 @@ function initializeLearner (node, cluster, callback) { // :: Node -> Cluster ->
                     proposal: acceptedValue,
                     proposalId: proposalId,
                     leader: from,
-                    roundOver: true,
+                    roundOver: true
                 })
             }
         }
