@@ -31,7 +31,7 @@ var Id = {
 function Legislator (id) {
     this.id = id
     this.proposal = { id: '0/0' }
-    this.promisedId = '0/1'
+    this.promise = { id: '0/0' }
     this.log = new RBTree(function (a, b) { return Id.compare(a.id, b.id) })
     this.government = {
         leader: 0,
@@ -99,13 +99,12 @@ Legislator.dispatch = function (messages, legislators) {
 Legislator.prototype.propose = function (value) {
     // assert(~this.quorum.indexOf(this.id), 'quorom includes self')
     this.proposal = {
-        id: Id.increment(this.proposal.id, 1),
+        id: Id.increment(this.proposal.id, 0),
         value: value,
         quorum: this.government.majority.slice(),
         promises: [],
         accepts: []
     }
-    this.promisedId = this.proposal.id
     // todo: pass around quorum?
     return [{
         from: [ this.id ],
@@ -116,7 +115,11 @@ Legislator.prototype.propose = function (value) {
 }
 
 Legislator.prototype.receivePrepare = function (message) {
-    var compare = Id.compare(this.proposal.id, message.id)
+    var words = {
+        promised: Id.toWords(this.promise.id),
+        prepare: Id.toWords(message.id)
+    }
+    var compare = Monotonic.compare(words.promised, words.prepare)
 
     if (compare == 0) {
         return []
@@ -206,7 +209,7 @@ Legislator.prototype._entry = function (id, message) {
 }
 
 Legislator.prototype.receiveAccept = function (message) {
-    var compare = Id.compare(this.promisedId, message.id)
+    var compare = Id.compare(this.promise.id, message.id)
     if (compare > 0) {
         return [{
             type: 'reject'
