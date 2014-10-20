@@ -26,16 +26,16 @@ require('proof')(1, function (assert) {
     messages = Legislator.dispatch(messages, majority)
     console.log('proxy returned', messages)
     messages = Legislator.dispatch(messages, majority)
-    console.log(majority[0].log.find({ id: [ 1 ]}))
+    console.log(majority[0].log.find({ id: '0/1' }))
     console.log('leader actionable', messages)
     messages = Legislator.dispatch(messages, majority)
     console.log('majority actionable', messages)
 
-    console.log(majority[0].log.find({ id: [ 1 ]}))
-    console.log(majority[1].log.find({ id: [ 1 ]}))
-    console.log(majority[2].log.find({ id: [ 1 ]}))
+    console.log(majority[0].log.find({ id: '0/1' }))
+    console.log(majority[1].log.find({ id: '0/1'}))
+    console.log(majority[2].log.find({ id: '0/1'}))
 
-    assert(majority[0].log.find({ id: [ 1 ]}).value, 'able', 'successful round')
+    assert(majority[0].log.find({ id: '0/1' }).value, 'able', 'successful round')
 
     return
 

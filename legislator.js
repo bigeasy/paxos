@@ -1,12 +1,37 @@
 var assert = require('assert')
-var Id = require('monotonic')
+var Monotonic = require('monotonic')
 var push = [].push
 var RBTree = require('bintrees').RBTree;
 
+var Id = {
+    toWords: function (id) {
+        var split = id.split('/')
+        return [ Monotonic.parse(split[0]), Monotonic.parse(split[1]) ]
+    },
+    toString: function (id) {
+        return Monotonic.toString(id[0]) + '/' + Monotonic.toString(id[1])
+    },
+    compare: function (a, b) {
+        a = Id.toWords(a)
+        b = Id.toWords(b)
+        var compare = Monotonic.compare(a[0], b[0])
+        if (compare == 0) {
+            return Monotonic.compare(a[1], b[1])
+        }
+        return compare
+    },
+    increment: function (id, index) {
+        id = Id.toWords(id)
+        var next = [ id[0], id[1] ]
+        next[index] = Monotonic.increment(next[index])
+        return Id.toString(next)
+    }
+}
+
 function Legislator (id) {
     this.id = id
-    this.proposal = { id: [ 0x0 ] }
-    this.promisedId = [ 0x1 ]
+    this.proposal = { id: '0/0' }
+    this.promisedId = '0/1'
     this.log = new RBTree(function (a, b) { return Id.compare(a.id, b.id) })
     this.government = {
         leader: 0,
@@ -46,7 +71,6 @@ Legislator.dispatch = function (messages, legislators) {
     })
     var decisions = {}, amalgamated = []
     responses.forEach(function (message) {
-        console.log(message)
         var key = Id.toString(message.id)
         var decision = decisions[key]
         if (!decision) {
@@ -75,7 +99,7 @@ Legislator.dispatch = function (messages, legislators) {
 Legislator.prototype.propose = function (value) {
     // assert(~this.quorum.indexOf(this.id), 'quorom includes self')
     this.proposal = {
-        id: Id.increment(this.proposal.id),
+        id: Id.increment(this.proposal.id, 1),
         value: value,
         quorum: this.government.majority.slice(),
         promises: [],
