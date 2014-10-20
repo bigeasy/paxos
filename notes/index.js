@@ -163,7 +163,7 @@ function Messenger (node, port, address, socketType) {
 
     this.setMessageHandlers = function (node, role) {
         this.socket.on("message", function (message, rinfo) {
-			if (this.pendingMessage) { this.sendPending() }
+            if (this.pendingMessage) { this.sendPending() }
             if (message.type == "join") {
                 node.receiveJoin(message)
             }
@@ -307,7 +307,7 @@ function Node (params) { // :: Int -> Int -> Int -> Socket -> (Int) -> Node
 
 
     this.setCallback = function (func) {
-	this.callback = func
+        this.callback = func
     }
 }
 
@@ -545,7 +545,7 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
                 leader: node.leader,
                 proposalId: proposalId
             }
-            
+
             node.currentRound += 1
 
             if (node.callback) {
@@ -599,8 +599,8 @@ function initializeLearner (node, cluster, callback) { // :: Node -> Cluster ->
         if (node.proposals[proposalId] == null) {
             node.proposals[proposalId] = [1, 1, acceptedValue]
         } else {
-			node.proposals[proposalId][0] += 1
-		}
+            node.proposals[proposalId][0] += 1
+        }
 
         if (node.proposals[proposalId][0] == node.quorum) { // round over
             node.finalValue = acceptedValue
