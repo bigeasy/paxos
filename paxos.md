@@ -52,8 +52,8 @@ number of acceptors *at start*. Thus, a proposer doesn't need to be able to tell
 which acceptors are currently active before sending a proposal, although
 obviously it would know which ones are up/down based on responses received.
 Still, conceivably a failed acceptor could be replaced at any point with a new
-acceptor using the same identifier and participate in the next round*** of
-proposals.
+acceptor using the same identifier and participate in the next round ***of
+proposals.***
 
 I'm assuming, because this makes the most sense to me (but, isn't that what an
 assumption is?), all proposals or proposed messages are sent through UDP and
@@ -72,4 +72,4 @@ broke; it did, which means back to sending proposals.
 word 'round' to describe the period in which proposals are sent/promises are
 made, with each round ending in a decision being made about the next state. I
 use 'process' to describe a series of rounds, with a clear start and end -
-ending the process means shutting every node down, reconfiguring, whatever.
+ending the process means shutting every node down, reconfiguring, whatever.***
