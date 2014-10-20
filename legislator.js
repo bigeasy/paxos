@@ -38,9 +38,6 @@ Legislator.dispatch = function (messages, legislators) {
                 }
             }
         })
-        if (!message.to) {
-            responses.push(message)
-        }
     })
     return responses
 }
