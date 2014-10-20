@@ -1,5 +1,6 @@
 ### Issue by Issue
 
+ * Use Monotonic. #108.
  * Explicitly address `accepted` messages. #105.
  * Add Cadence. #96.
  * Make `Identifer` a set of functions. #95.

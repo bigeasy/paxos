@@ -1,5 +1,5 @@
 var assert = require('assert')
-var Id = require('./identifier')
+var Id = require('monotonic')
 var push = [].push
 var RBTree = require('bintrees').RBTree;
 

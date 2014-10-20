@@ -22,7 +22,8 @@
     {
                     "bintrees": "1.0.0",
                     "magazine": "0.0.13",
-                    "cadence": "0.0.43"
+                    "cadence": "0.0.43",
+                    "monotonic": "0.0.1"
     },
     "devDependencies":
     {
