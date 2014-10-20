@@ -16,4 +16,13 @@ require('proof')(1, function (assert) {
         { type: 'other', from: [ 2 ], to: [ 1 ], id: [ 2 ] }
     ], [ legislator ])
     console.log(messages)
+    assert(messages, [
+        { type: 'bogus', to: [ 0, 1 ], from: [ 1, 0 ], id: [ 1 ] },
+        { type: 'dummy',
+          from: [ 1 ],
+          to: [ 1 ],
+          forward: [ 2 ],
+          id: [ 1 ] },
+        { type: 'other', from: [ 2 ], to: [ 1 ], id: [ 2 ] }
+    ], 'amalgamated')
 })
