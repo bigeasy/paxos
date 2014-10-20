@@ -15,12 +15,6 @@ function Legislator (id) {
     }
 }
 
-var MESSAGE_ORDER = [
-    'accept',
-    'accepted',
-    'learned'
-]
-
 Legislator.dispatch = function (messages, legislators) {
     var responses = []
     messages.forEach(function (message) {
