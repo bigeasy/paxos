@@ -28,6 +28,8 @@ require('proof')(1, function (assert) {
     messages = Legislator.dispatch(messages, majority)
     console.log(majority[0].log.find({ id: [ 1 ]}))
     console.log('leader actionable', messages)
+    messages = Legislator.dispatch(messages, majority)
+    console.log('majority actionable', messages)
 
     console.log(majority[0].log.find({ id: [ 1 ]}))
     console.log(majority[1].log.find({ id: [ 1 ]}))
