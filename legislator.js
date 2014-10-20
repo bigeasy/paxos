@@ -123,6 +123,7 @@ Legislator.prototype.receivePromise = function (message) {
         }, {
             // todo: value amalgamation prior to sending.
             from: [ this.id ],
+            to: this.government.majority,
             type: 'accepted',
             quorum: this.government.majority.length,
             id: this.proposal.id,
@@ -162,6 +163,7 @@ Legislator.prototype.receiveAccept = function (message) {
         return [{
             type: 'accepted',
             from: [ this.id ],
+            to: this.government.majority,
             quorum: message.quorum,
             id: message.id,
             value: message.value
@@ -193,14 +195,27 @@ Legislator.prototype.receiveAccepted = function (message) {
 Legislator.prototype.receiveLearned = function (message) {
     var entry = this._entry(message.id, message), messages = []
     message.from.forEach(function (id) {
-        if (Id.compare(this.proposal.id, message.id) == 0) {
-            if (!~entry.learns.indexOf(id)) {
-                entry.learns.push(id)
-            }
-        } else {
+        if (!~entry.learns.indexOf(id)) {
+            entry.learns.push(id)
+        }
+        if (entry.learns.length == entry.quorum) {
+            entry.actionable = true
+        }
+        if (entry.actionable && Id.compare(this.proposal.id, message.id) == 0) {
+            messages.push({
+                from: this.government.majority,
+                to: this.government.majority.filter(function (id) {
+                    return id != this.id
+                }.bind(this)),
+                type: 'learned',
+                id: message.id
+            })
         }
     }, this)
-    return []
+    return messages
+}
+
+Legislator.prototype.recieveDequeue = function (message) {
 }
 
 module.exports = Legislator

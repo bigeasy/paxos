@@ -1,4 +1,5 @@
 ### Issue by Issue
 
+ * Explicitly address `accepted` messages. #105.
  * Add Cadence. #96.
  * Make `Identifer` a set of functions. #95.
