@@ -8,33 +8,33 @@ require('proof')(1, function (assert) {
 
     var leader = parliment[0]
 
-    leader.quorum = parliment.slice(0, 3).map(function (legislator) {
-        return legislator.id
+    var majority = parliment.filter(function (legislator) {
+        return ~leader.government.majority.indexOf(legislator.id)
     })
 
     var messages = leader.propose('able')
 
-    console.log(messages)
-    messages = Legislator.dispatch(messages, parliment)
-    console.log(messages)
-    messages = Legislator.dispatch(messages, parliment)
-    console.log(messages)
-    messages = Legislator.dispatch(messages, parliment)
-    console.log(messages)
-    messages = Legislator.dispatch(messages, parliment)
-    console.log(messages)
-    messages = Legislator.dispatch(messages, parliment)
-    console.log(messages)
-    messages = Legislator.dispatch(messages, parliment)
-    console.log('x', messages)
+    console.log('proposed', messages)
+    messages = Legislator.dispatch(messages, majority)
+    console.log('promise', messages)
+    messages = Legislator.dispatch(messages, majority)
+    console.log('leader accepted', messages)
+    messages = Legislator.dispatch(messages, majority)
+    console.log('proxy accepted', messages)
+    messages = Legislator.dispatch(messages, majority)
+    console.log('terminus accepted', messages)
+    messages = Legislator.dispatch(messages, majority)
+    console.log('proxy returned', messages)
+    messages = Legislator.dispatch(messages, majority)
+    console.log(majority[0].log.find({ id: [ 1 ]}))
+    console.log('leader actionable', messages)
 
-    console.log(parliment[0].log.find({ id: [ 1 ]}))
-    console.log(parliment[1].log.find({ id: [ 1 ]}))
-    console.log(parliment[2].log.find({ id: [ 1 ]}))
+    console.log(majority[0].log.find({ id: [ 1 ]}))
+    console.log(majority[1].log.find({ id: [ 1 ]}))
+    console.log(majority[2].log.find({ id: [ 1 ]}))
 
-    assert(parliment[0].log.find({ id: [ 1 ]}).value, 'able', 'successful round')
+    assert(majority[0].log.find({ id: [ 1 ]}).value, 'able', 'successful round')
 
-            // ^^^ Legislature?
     return
 
     function post (legislator, path) {

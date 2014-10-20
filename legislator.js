@@ -8,6 +8,11 @@ function Legislator (id) {
     this.proposal = { id: [ 0x0 ] }
     this.promisedId = [ 0x1 ]
     this.log = new RBTree(function (a, b) { return Id.compare(a.id, b.id) })
+    this.government = {
+        leader: 0,
+        majority: [ 0, 1, 2 ],
+        members: [ 0, 1, 2, 3, 4 ]
+    }
 }
 
 Legislator.dispatch = function (messages, legislators) {
@@ -45,7 +50,7 @@ Legislator.prototype.propose = function (value) {
     this.proposal = {
         id: Id.increment(this.proposal.id),
         value: value,
-        quorum: this.quorum.slice(),
+        quorum: this.government.majority,
         promises: [],
         accepts: []
     }
@@ -103,24 +108,43 @@ Legislator.prototype.receivePromise = function (message) {
     }
 
     if (this.proposal.promises.length == this.proposal.quorum.length - 1) {
+        this._entry(this.proposal.id, {
+            quorum: this.government.majority.length,
+            value: this.proposal.value
+        })
         return [{
             from: this.id,
             to: [ this.proposal.quorum[1] ],
             forward: this.proposal.quorum.slice(2),
             type: 'accept',
-            quorum: this.quorum.length,
+            quorum: this.government.majority.length,
             id: this.proposal.id,
-            value: this.proposal.value,
+            value: this.proposal.value
+        }, {
+            // todo: value amalgamation prior to sending.
+            from: this.id,
+            type: 'accepted',
+            quorum: this.government.majority.length,
+            id: this.proposal.id,
+            value: this.proposal.value
         }]
     }
 
     return []
 }
 
-Legislator.prototype._entry = function (id) {
+Legislator.prototype._entry = function (id, message) {
     var entry = this.log.find({ id: id })
     if (!entry) {
-        var entry = { id: id, accepts: [] }
+        assert(message.quorum != null, 'quorum missing')
+        assert('value' in message, 'value missing')
+        var entry = {
+            id: id,
+            accepts: [],
+            learns: [],
+            quorum: message.quorum,
+            value: message.value
+        }
         this.log.insert(entry)
     }
     return entry
@@ -134,12 +158,11 @@ Legislator.prototype.receiveAccept = function (message) {
         }]
     } else if (compare < 0) {
     } else {
-        var entry = this._entry(message.id)
-        entry.value = message.value
+        this._entry(message.id, message)
         return [{
             type: 'accepted',
-            quorum: message.quorum,
             from: this.id,
+            quorum: message.quorum,
             id: message.id,
             value: message.value
         }]
@@ -147,39 +170,31 @@ Legislator.prototype.receiveAccept = function (message) {
 }
 
 Legislator.prototype.receiveAccepted = function (message) {
-    var entry = this._entry(message.id)
+    var entry = this._entry(message.id, message), messages = []
     if (!~entry.accepts.indexOf(message.from)) {
         entry.accepts.push(message.from)
     }
-    if (!entry.value) {
-        entry.value = message.value
-    }
-    if (!entry.quorum) {
-        entry.quorum = message.quorum
-    }
-    if (entry.accepts.length >= entry.quorum) {
+    if (entry.accepts.length >= entry.quorum && !entry.learned)  {
         entry.learned = true
+        if (~this.government.majority.indexOf(this.id)) {
+            return [{
+                from: this.id,
+                to: [ this.government.leader ],
+                type: 'learned',
+                id: message.id
+            }]
+        }
     }
+    return []
+}
+
+Legislator.prototype.receiveLearned = function (message) {
+    var entry = this._entry(message.id, message), messages = []
     if (Id.compare(this.proposal.id, message.id) == 0) {
-        if (!~this.proposal.accepts.indexOf(message.from)) {
-            this.proposal.accepts.push(message.from)
+        if (!~entry.learns.indexOf(message.from)) {
+            entry.learns.push(message.from)
         }
-        if (this.proposal.accepts.length == this.proposal.quorum.length - 1) {
-            if (!~entry.accepts.indexOf(this.id)) {
-                entry.accepts.push(this.id)
-                entry.learned = true
-                return this.quorum.map(function (id) {
-                    return {
-                        from: id,
-                        to: this.quorum.slice(),
-                        type: 'accepted',
-                        quorum: this.quorum.length,
-                        id: this.proposal.id,
-                        value: this.proposal.value,
-                    }
-                }.bind(this))
-            }
-        }
+    } else {
     }
     return []
 }
