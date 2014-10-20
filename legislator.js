@@ -40,9 +40,13 @@ Legislator.dispatch = function (messages, legislators) {
                 }
             }
         })
+        if (message.to.length) {
+            responses.push(message)
+        }
     })
     var decisions = {}, amalgamated = []
     responses.forEach(function (message) {
+        console.log(message)
         var key = Id.toString(message.id)
         var decision = decisions[key]
         if (!decision) {
