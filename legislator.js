@@ -20,6 +20,11 @@ var Id = {
         }
         return compare
     },
+    compareGovernment: function (a, b) {
+        a = Id.toWords(a)
+        b = Id.toWords(b)
+        return Monotonic.compare(a[0], b[0])
+    },
     increment: function (id, index) {
         id = Id.toWords(id)
         var next = [ id[0], id[1] ]
@@ -115,11 +120,7 @@ Legislator.prototype.propose = function (value) {
 }
 
 Legislator.prototype.receivePrepare = function (message) {
-    var words = {
-        promised: Id.toWords(this.promise.id),
-        prepare: Id.toWords(message.id)
-    }
-    var compare = Monotonic.compare(words.promised, words.prepare)
+    var compare = Id.compareGovernment(this.promise.id, message.id)
 
     if (compare == 0) {
         return []
@@ -209,7 +210,7 @@ Legislator.prototype._entry = function (id, message) {
 }
 
 Legislator.prototype.receiveAccept = function (message) {
-    var compare = Id.compare(this.promise.id, message.id)
+    var compare = Id.compareGovernment(this.promise.id, message.id)
     if (compare > 0) {
         return [{
             type: 'reject'
