@@ -76,6 +76,7 @@ Legislator.dispatch = function (messages, legislators) {
             if (~(index = message.to.indexOf(legislator.id))) {
                 message.to.splice(index, 1)
                 push.apply(responses, legislator[method](message))
+                /*
                 if (message.forward && message.forward.length) { // todo: validator.forward(message)
                     var forward = {}
                     for (var key in message) {
@@ -89,6 +90,7 @@ Legislator.dispatch = function (messages, legislators) {
                     }
                     responses.push(forward)
                 }
+                */
             }
         })
         if (message.to.length) {
@@ -211,8 +213,8 @@ Legislator.prototype.accept = function () {
     })
     return [{
         from: [ this.id ],
-        to: [ this.government.majority[0] ],
-        forward: this.proposal.quorum.slice(1),
+        to: this.government.majority.slice(),
+        proxy: this.government.majority.slice(),
         type: 'accept',
         internal: this.proposal.internal,
         previous: this.proposal.previous,
