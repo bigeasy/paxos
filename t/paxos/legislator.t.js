@@ -12,7 +12,7 @@ require('proof')(1, function (assert) {
         return ~leader.government.majority.indexOf(legislator.id)
     })
 
-    var messages = leader.propose('able')
+    var messages = leader.propose({ value: 'able' })
 
     console.log('proposed', messages)
     messages = Legislator.dispatch(messages, majority)
