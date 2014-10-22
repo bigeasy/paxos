@@ -11,14 +11,17 @@ var Id = {
     toString: function (id) {
         return Monotonic.toString(id[0]) + '/' + Monotonic.toString(id[1])
     },
-    compare: function (a, b) {
+    compare: function (a, b, index) {
         a = Id.toWords(a)
         b = Id.toWords(b)
-        var compare = Monotonic.compare(a[0], b[0])
-        if (compare == 0) {
-            return Monotonic.compare(a[1], b[1])
+        if (index == null) {
+            var compare = Monotonic.compare(a[0], b[0])
+            if (compare == 0) {
+                return Monotonic.compare(a[1], b[1])
+            }
+            return compare
         }
-        return compare
+        return Monotonic.compare(a[index], b[index])
     },
     compareGovernment: function (a, b) {
         a = Id.toWords(a)
@@ -29,41 +32,103 @@ var Id = {
         id = Id.toWords(id)
         var next = [ id[0], id[1] ]
         next[index] = Monotonic.increment(next[index])
+        if (index == 0) {
+            next[1] = [ 0 ]
+        }
         return Id.toString(next)
     }
 }
 
 function Legislator (id) {
     this.id = id
-    this.proposal = { id: '0/0' }
-    this.promise = { id: '0/0' }
+    this.idealGovernmentSize = 5
+    this.proposal = { id: '0/1' }
+    this.promise = { id: '0/1' }
     this.log = new RBTree(function (a, b) { return Id.compare(a.id, b.id) })
     this.government = {
         leader: 0,
         majority: [ 0, 1, 2 ],
         members: [ 0, 1, 2, 3, 4 ]
     }
-    var entry = {}
-    this.queue = entry.prev = entry.next = entry
+    this.last = {}
+    this.last[id] = {
+        learned: '0/1',
+        decided: '0/1',
+        uniform: '0/1'
+    }
+    var motion = {}
+    this.queue = motion.prev = motion.next = motion
+
+    var entry = this.entry('0/1', {
+        id: '0/1',
+        value: 0,
+        quorum: 1
+    })
+    entry.learns = [ id ]
+    entry.learned = true
+    entry.decided = true
+    entry.uniform = true
 }
 
 Legislator.prototype.bootstrap = function () {
+    this.restarted = false
     this.government = {
         leader: this.id,
         majority: [ this.id ],
         members: [ this.id ],
         interim: true
     }
-    this.entry('0/0', {}).actionable = true
-    return this.propose({
+    this.createProposal(0, {
         internal: true,
         value: {
-            type: 'government',
+            type: 'convene',
             to: this.government.majority.slice(),
             from: [ this.id ],
-            government: this.government
+            government: JSON.parse(JSON.stringify(this.government))
         }
     })
+    return this.prepare()
+}
+
+Legislator.dispatch2 = function (legislators, path, messages, logger) {
+    var legislator = legislators[path[path.length - 1]],
+        proxy, proxies = {}, self, responses = []
+    do {
+        self = false
+        messages.forEach(function (message) {
+            var copy = JSON.parse(JSON.stringify(message))
+            var index
+            if (~(index = message.to.indexOf(legislator.id))) {
+                self = true
+                logger(legislator.id, copy)
+                message.to.splice(index, 1)
+                var type = message.type
+                var method = 'receive' + type[0].toUpperCase() + type.substring(1)
+                push.apply(responses, legislator[method](copy))
+            }
+            if (message.proxy && message.proxy.length) {
+                message.to.slice(message.to.indexOf(legislator.id), 1)
+                var key = message.proxy.join('.')
+                if (!proxies[key]) proxies[key] = []
+                proxies[key].push(message)
+            } else if (message.to.length) {
+                responses.push(message)
+            }
+        })
+        messages = responses
+    } while (self)
+
+    var responses = [], invocations = {}
+    messages.forEach(function (message) {
+        message.to.forEach(function (to) {
+            if (!invocations[to]) invocations[to] = []
+            invocations[to].push(message)
+        })
+    })
+
+    for (var key in invocations) {
+        Legislator.dispatch2(legislators, path.concat(+key), invocations[key], logger)
+    }
 }
 
 Legislator.dispatch = function (messages, legislators) {
@@ -131,8 +196,7 @@ Legislator.prototype.enqueue = function (value) {
     entry.prev.next = entry
 }
 
-Legislator.prototype.propose = function (proposal) {
-    this.createProposal(proposal)
+Legislator.prototype.prepare = function () {
     return [{
         from: [ this.id ],
         to: this.government.majority.slice(),
@@ -193,10 +257,10 @@ Legislator.prototype.receivePromise = function (message) {
     }.bind(this)))
 }
 
-Legislator.prototype.createProposal = function (prototype) {
-    var previous = this.log.max() || {}
+Legislator.prototype.createProposal = function (index, prototype) {
+    var previous = this.log.max()
     this.proposal = {
-        id: Id.increment(this.proposal.id, 0),
+        id: Id.increment(this.proposal.id, index),
         internal: !! prototype.internal,
         value: prototype.value,
         quorum: this.government.majority.slice(),
@@ -267,6 +331,14 @@ Legislator.prototype.receiveAccept = function (message) {
     }
 }
 
+Legislator.prototype.markLastest = function (entry, type) {
+    console.log(entry.id)
+    if (Id.compare(this.last[this.id][type], entry.id) < 0) {
+        this.last[this.id][type] = entry.id
+    }
+    entry[type] = true
+}
+
 Legislator.prototype.receiveAccepted = function (message) {
     var entry = this.entry(message.id, message), messages = []
     message.from.forEach(function (id) {
@@ -274,8 +346,9 @@ Legislator.prototype.receiveAccepted = function (message) {
             entry.accepts.push(id)
         }
         if (entry.accepts.length >= entry.quorum && !entry.learned)  {
+            this.markLastest(entry, 'learned')
             entry.learned = true
-            if (~this.government.majority.indexOf(this.id)) {
+            if (!this.restarted && ~this.government.majority.indexOf(this.id)) {
                 messages.push({
                     from: [ this.id ],
                     to: [ this.government.leader ],
@@ -283,9 +356,131 @@ Legislator.prototype.receiveAccepted = function (message) {
                     id: message.id
                 })
             }
+            push.apply(messages, this.dispatchInternal('learn', entry))
         }
     }, this)
     return messages
+}
+
+Legislator.prototype.dispatchInternal = function (prefix, entry) {
+    if (entry.internal) {
+        var type = entry.value.type
+        var method = prefix + type[0].toUpperCase() + type.slice(1)
+        if (typeof this[method] == 'function') {
+            return this[method](entry.id)
+        }
+    }
+    return []
+}
+
+Legislator.prototype.markUniform = function () {
+    // Start from the last uniform entry.
+    this.log.each(function (entry) {
+        console.log('ordered', entry.id, !! entry.uniform)
+    })
+
+    var last = this.last[this.id],
+        iterator = this.log.findIter({ id: this.last[this.id].uniform }),
+        previous, current
+    for (;;) {
+        previous = iterator.data(), current = iterator.next()
+
+        if (!current) {
+            break
+        }
+
+        if (Id.compare(Id.increment(previous.id, 1), current.id) == 0) {
+            assert(previous.uniform || previous.ignored, 'previous must be resolved')
+            if (current.decided) {
+                current.uniform = true
+                last.uniform = current.id
+                continue
+            }
+        } else {
+            previous = iterator.prev(), current = iterator.data()
+        }
+
+        var end = trampoline.call(this, transition, this.log.findIter({ id: current.id }))
+        if (!end) {
+            break
+        }
+
+        if (Id.compare(current.id, end.terminus, 0) != 0) {
+            break
+        }
+
+        if (Id.compare(current.id, end.terminus) < 0) {
+            break
+        }
+
+        assert(Id.compare(current.id, end.terminus) == 0 ||
+               Id.compare(previous.id, end.terminus) == 0, 'terminus beyond decisions')
+
+        iterator = this.log.findIter({ id: end.terminus })
+        previous = iterator.data()
+        previous.uniform = true
+
+        for (;;) {
+            previous = iterator.data(), current = iterator.next()
+            if (Id.compare(current.id, end.government) == 0) {
+                break
+            }
+            current.ignored = true
+        }
+
+        current.uniform = true
+    }
+
+    function trampoline (f, i) {
+        while (typeof (f = f.call(this, i)) == 'function');
+        return f
+    }
+
+    // TODO: This becomes a while loop where `return null` is `break OUTER` and
+    // `return transition` is `continue`. Then `i` is simply `j`.
+    function transition (i) {
+        // Read from our iterator.
+        var previous = i.data(), current = i.next()
+
+        // If we are not at a goverment transition, then the previous entry
+        // cannot be known to be incomplete.
+        if (current == null || Id.compare(previous.id, current.id, 0) == 0) {
+            return null
+        }
+
+        // Ideally will be looking at the start of a new government.
+        previous = i.data(), current = i.next()
+
+        // At least two entries create a continual government.
+        if (current == null) {
+            return null
+        }
+
+        // The next uniform entry would be the start of a new government.
+        if (Id.compare(previous.id, '0/0', 1) != 0) {
+            return null
+        }
+
+        // If it did not settle old business, it might have failed.
+        if (Id.compare(Id.increment(previous.id, 1), current.id) != 0) {
+            return transition
+        }
+
+        // We now have the correct records for the start of a new government,
+        // did they become actionable? The we have a continual government.
+        if (previous.decided) {
+            if (current.decided) {
+                return { terminus: current.value.id, government: previous.id }
+            }
+            // Perhaps our old business entry is inactionable and this
+            // government failed.
+            return transition
+        }
+
+        // This probably cannot be reached, since every entry we get will be
+        // decided except for one that was left inside an legislator.
+        return transition
+    }
 }
 
 Legislator.prototype.receiveLearned = function (message) {
@@ -295,20 +490,16 @@ Legislator.prototype.receiveLearned = function (message) {
             entry.learns.push(id)
         }
         if (entry.learns.length == entry.quorum) {
-            entry.actionable = true
-            var previous = this.log.findIter({ id: entry.id }).prev()
-            if (previous && Id.compare(previous.id, entry.previous) == 0) {
-                if (entry.internal) {
-                    messages.push({
-                        type: entry.value.type,
-                        to: entry.value.to.slice(),
-                        from: entry.value.from.slice(),
-                        id: entry.id
-                    })
-                }
+            this.markLastest(entry, 'learned')
+            this.markLastest(entry, 'decided')
+            if (Id.compare(entry.id, this.last[this.id].decided) > 0) {
+                this.last[this.id].decided = entry.id
             }
+            this.markUniform()
+            push.apply(messages, this.dispatchInternal('decide', entry))
         }
-        if (entry.actionable && Id.compare(this.proposal.id, message.id) == 0) {
+        if (entry.decided && Id.compare(this.proposal.id, message.id) == 0) {
+            console.log(this.government, this.id)
             messages.push({
                 from: this.government.majority.slice(),
                 to: this.government.majority.filter(function (id) {
@@ -321,7 +512,7 @@ Legislator.prototype.receiveLearned = function (message) {
                 var next = this.queue.next
                 next.prev.next = next.next
                 next.next.prev = next.prev
-                this.createProposal(next.value)
+                this.createProposal(1, next.value)
                 this.accept()
             }
         }
@@ -329,9 +520,117 @@ Legislator.prototype.receiveLearned = function (message) {
     return messages
 }
 
-Legislator.prototype.receiveGovernment = function (message) {
-    var entry = this.entry(message.id, {})
+Legislator.prototype.learnConvene = function (id) {
+    var entry = this.entry(id, {})
     this.government = entry.value.government
+    if (this.government.leader == this.id) {
+        return []
+    }
+    return this.sync([ this.government.leader ], 0)
+}
+
+Legislator.prototype.sync = function (to, count) {
+    return [{
+        type: 'synchronize',
+        from: [ this.id ],
+        to: to,
+        count: count,
+        last: this.last[this.id]
+    }]
+}
+
+Legislator.prototype.decideConvene = function (id) {
+    var entry = this.entry(id, {})
+    this.government = entry.value.government
+    if (this.government.leader == this.id) {
+        var majority = this.government.majority.slice()
+        // new rule: the majority is always not more than one away from being uniform.
+        // todo: not difficult, you will be able to use most decided. Not sort
+        // the majority, because we will all be in sync.
+        majority.sort(function (a, b) {
+            return Id.compare(this.last[b].decided, this.last[a].decided)
+        }.bind(this))
+        var iterator = this.log.findIter({ id: id }), current
+        do {
+            current = iterator.prev()
+        } while (Id.compare(current.id, '0/0', 1) == 0 || !current.decided)
+        var terminus = current.id
+        assert(majority[0] == this.id, 'need to catch up')
+        this.createProposal(1, {
+            internal: true,
+            value: {
+                type: 'commence',
+                id: terminus
+            }
+        })
+        return this.accept()
+    }
+    return []
+}
+
+Legislator.prototype.decideCommence = function (id) {
+    this.government.interim = false
+    return []
+}
+
+Legislator.prototype.receiveSynchronize = function (message) {
+    assert(message.from.length == 1, 'multi synchronize')
+
+    if (message.last) {
+        this.last[message.from[0]] = message.last
+    }
+
+    var messages = []
+
+    assert(!~message.from.indexOf(this.id), 'synchronize with self')
+
+    if (message.count) {
+        messages.push({
+            from: [ this.id ],
+            to: message.from,
+            type: 'synchronize',
+            count: 0,
+            last: this.last[this.id],
+            government: this.government
+        })
+
+        message.count--
+        messages.push(createLearned(message.from, this.log.find({ id: this.last[this.id].uniform })))
+
+        var iterator = this.log.findIter({ id: this.last[message.from[0]].uniform }), entry
+        if (iterator == null) throw new Error('HC SVNT DRACONES') // TODO
+        var count = 20
+        while (count-- && (entry = iterator.next()) != null) {
+            if (entry.uniform) {
+                messages.push(createLearned(message.from, entry))
+            } else if (!entry.ignored) {
+                break
+            }
+        }
+
+        messages.push({
+            from: [ this.id ],
+            to: message.from,
+            type: 'synchronized'
+        })
+    }
+
+    return messages
+
+    function createLearned (to, entry) {
+        return {
+            type: 'learned',
+            to: to,
+            from: entry.learns.slice(),
+            id: entry.id,
+            quorum: entry.quorum,
+            value: entry.value
+        }
+    }
+}
+
+Legislator.prototype.receiveSynchronized = function (message) {
+    console.log('synchornized', message, 'last: ', this.last)
 }
 
 module.exports = Legislator
