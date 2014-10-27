@@ -1,4 +1,4 @@
-require('proof')(1, function (assert) {
+require('proof')(2, function (assert) {
     var Legislator = require('../../legislator')
 
     function run (messages, leaders, stop, count) {
@@ -41,15 +41,5 @@ require('proof')(1, function (assert) {
 
     assert(legislators[1].government, {
         leader: 0, majority: [ 0 ], members: [ 0 ], interim: false
-    }, 'bootstrap')
+    }, 'synchronize join')
 })
-
-
-/*
-Legislator.prototype.markLastest = function (entry, type) {
-    if (Id.compare(this.last[this.id][type], entry.id) < 0) {
-        this.last[this.id][type] = entry.id
-    }
-    entry[type] = true
-}
-*/
