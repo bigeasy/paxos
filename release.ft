@@ -1,5 +1,6 @@
 ### Issue by Issue
 
+ * Upgrade Monotonic to 0.0.2. #114.
  * Use Monotonic. #108.
  * Explicitly address `accepted` messages. #105.
  * Add Cadence. #96.
