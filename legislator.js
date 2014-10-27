@@ -1,5 +1,6 @@
 var assert = require('assert')
 var Monotonic = require('monotonic')
+var cadence = require('cadence')
 var push = [].push
 var RBTree = require('bintrees').RBTree;
 
@@ -90,103 +91,183 @@ Legislator.prototype.bootstrap = function () {
     return this.prepare()
 }
 
-Legislator.dispatch2 = function (legislators, path, messages, logger) {
+Legislator.invoke = function (legislators, messages, logger) {
     var legislator = legislators[path[path.length - 1]],
         proxy, proxies = {}, self, responses = []
-    do {
+}
+
+Legislator.prototype.receiveTranscript = function (message) {
+    return message.transcript
+}
+
+function assignUnless (object, index, initial) {
+    if (!(index in object)) {
+        return object[index] = initial
+    }
+    return object[index]
+}
+
+function deleteIfEmpty (object, index) {
+    var value = object[index].pop()
+    if (!(index in object)) {
+        return object[index] = initial
+    }
+    return object[index]
+}
+
+Legislator.prototype.tidy = function (message) {
+}
+
+Legislator.synchronous = function (legislators, id, transcript, logger) {
+    var machines = {}
+
+    function assignMachineUnless (id) {
+        return assignUnless(machines, id, {
+            id: id,
+            routes: [],
+            messages: []
+        })
+    }
+
+    assignMachineUnless(id).messages.push({
+        from: [ id ],
+        to: [ id ],
+        type: 'transcript',
+        transcript: transcript
+    })
+
+    function post (messages, route, index) {
+        var legislator = legislators[route[index]], returns = [], response
+        response = Legislator.route(legislator, messages, route, index, logger)
+        assignMachineUnless(route[index]).messages = response.unrouted
+        assert(machine.messages.every(function (message) {
+            return !~message.to.indexOf(legislator.id)
+        }), 'messages must be unroutable')
+        push.apply(returns, response.returns)
+        if (index + 1 < route.length) {
+            response = Legislator.route(legislator, post(response.forwards, route, index + 1), route, index, logger)
+            push.apply(returns, response.returns)
+        }
+        route.pop()
+        return returns
+    }
+
+    var machine
+    for (;;) {
+        var machine = machines[Object.keys(machines).pop()]
+        if (!machine) {
+            break
+        }
+        var route = machine.routes.pop()
+        if (route) {
+            post(machine.messages, route, 0, 0)
+        } else if (machine.messages.length) {
+            route = [ machine.id, machine.messages[0].to[0] ]
+            if (route[0] == route[1]) {
+                route.pop()
+            }
+            machine.routes.push(route)
+        } else {
+            delete machines[machine.id]
+        }
+    }
+}
+
+var count = 0
+
+// The only proxied invocation is `accept`.
+Legislator.route = function (legislator, messages, path, index, logger) {
+    // Get the stack out of the path.
+    var stack = path.slice(0, index + 1), forward = path.slice(index + 1)
+
+    // Consume messages to self.
+    var keep, self
+    for (;;) {
+        keep = []
         self = false
         messages.forEach(function (message) {
             var copy = JSON.parse(JSON.stringify(message))
             var index
             if (~(index = message.to.indexOf(legislator.id))) {
                 self = true
-                logger(legislator.id, copy)
+                logger(count, legislator.id, copy)
                 message.to.splice(index, 1)
                 var type = message.type
                 var method = 'receive' + type[0].toUpperCase() + type.substring(1)
-                push.apply(responses, legislator[method](copy))
+                push.apply(keep, legislator[method](copy))
             }
-            if (message.proxy && message.proxy.length) {
-                message.to.slice(message.to.indexOf(legislator.id), 1)
-                var key = message.proxy.join('.')
-                if (!proxies[key]) proxies[key] = []
-                proxies[key].push(message)
-            } else if (message.to.length) {
-                responses.push(message)
+            if (message.to.length) {
+                keep.push(message)
             }
         })
-        messages = responses
-    } while (self)
+        messages = keep
 
-    var responses = [], invocations = {}
+        // Get the routed message if any.
+        var routed = messages.filter(function (message) {
+            return message.route && message.route.length
+        })
+
+        // The only routed message is the accept, and those happen one at a time.
+        assert(routed.length <= 1, 'only one specific route at a time')
+
+        if (!self) {
+            break
+        }
+        count++
+    }
+
+    var split = []
     messages.forEach(function (message) {
         message.to.forEach(function (to) {
-            if (!invocations[to]) invocations[to] = []
-            invocations[to].push(message)
+            var copy = JSON.parse(JSON.stringify(message))
+            copy.to = [ to ]
+            split.push(copy)
         })
     })
+    messages = split
 
-    for (var key in invocations) {
-        Legislator.dispatch2(legislators, path.concat(+key), invocations[key], logger)
-    }
-}
-
-Legislator.dispatch = function (messages, legislators) {
-    var responses = []
+    var unrouted = [], returns = {}, forwards = {}, proxied = []
     messages.forEach(function (message) {
-        var type = message.type
-        var method = 'receive' + type[0].toUpperCase() + type.substring(1)
-        legislators.forEach(function (legislator) {
-            var index
-            if (~(index = message.to.indexOf(legislator.id))) {
-                message.to.splice(index, 1)
-                push.apply(responses, legislator[method](message))
-                /*
-                if (message.forward && message.forward.length) { // todo: validator.forward(message)
-                    var forward = {}
-                    for (var key in message) {
-                        forward[key] = message[key]
-                    }
-                    forward.to = [ message.forward[0] ]
-                    if (message.forward.length == 1) {
-                        delete forward.forward
-                    } else {
-                        forward.forward = message.forward.slice(1)
-                    }
-                    responses.push(forward)
+        var returning = false, forwarding = false
+        if (message.forward) {
+            throw new Error
+        }
+        var key = message.type + '/' + message.id
+        message.to.forEach(function (to) {
+            if (~stack.indexOf(to)) {
+                var existing = returns[key]
+                if (!existing) {
+                    existing = returns[key] = message
+                } else {
+                   existing.to.push(to)
                 }
-                */
+            } else if (~path.indexOf(to)) {
+                var existing = forwards[key]
+                if (!existing) {
+                    existing = forwards[key] = message
+                } else {
+                    existing.to.push(to)
+                }
+            } else {
+                unrouted.push(message)
             }
         })
-        if (message.to.length) {
-            responses.push(message)
-        }
     })
-    var decisions = {}, amalgamated = []
-    responses.forEach(function (message) {
-        var key = Id.toString(message.id)
-        var decision = decisions[key]
-        if (!decision) {
-            decision = decisions[key] = { messages: [] }
+
+    function values (map) {
+        var values = []
+        for (var key in map) {
+            values.push(map[key])
         }
-        var previous = decision.messages[message.type]
-        if (!previous) {
-            previous = decision.messages[message.type] = message
-            amalgamated.push(message)
-        } else {
-            message.from.forEach(function (id) {
-                if (!~previous.from.indexOf(id)) {
-                    previous.from.push(id)
-                }
-            })
-            message.to.forEach(function (id) {
-                if (!~previous.to.indexOf(id)) {
-                    previous.to.push(id)
-                }
-            })
-        }
-    })
-    return amalgamated
+        return values
+    }
+
+    return {
+        returns: values(returns),
+        forwards: values(forwards),
+        proxied: proxied,
+        unrouted: unrouted
+    }
 }
 
 Legislator.prototype.enqueue = function (value) {
@@ -278,18 +359,13 @@ Legislator.prototype.accept = function () {
     return [{
         from: [ this.id ],
         to: this.government.majority.slice(),
-        proxy: this.government.majority.slice(),
+        forward: this.government.majority.slice(1),
         type: 'accept',
         internal: this.proposal.internal,
         previous: this.proposal.previous,
         quorum: this.government.majority.length,
         id: this.proposal.id,
         value: this.proposal.value
-    }, {
-        from: [ this.id ],
-        to: this.government.majority.slice(),
-        type: 'accepted',
-        id: this.proposal.id
     }]
 }
 
@@ -323,16 +399,15 @@ Legislator.prototype.receiveAccept = function (message) {
     } else {
         this.entry(message.id, message)
         return [{
-            type: 'accepted',
             from: [ this.id ],
             to: this.government.majority.slice(),
+            type: 'accepted',
             id: message.id
         }]
     }
 }
 
 Legislator.prototype.markLastest = function (entry, type) {
-    console.log(entry.id)
     if (Id.compare(this.last[this.id][type], entry.id) < 0) {
         this.last[this.id][type] = entry.id
     }
@@ -374,11 +449,6 @@ Legislator.prototype.dispatchInternal = function (prefix, entry) {
 }
 
 Legislator.prototype.markUniform = function () {
-    // Start from the last uniform entry.
-    this.log.each(function (entry) {
-        console.log('ordered', entry.id, !! entry.uniform)
-    })
-
     var last = this.last[this.id],
         iterator = this.log.findIter({ id: this.last[this.id].uniform }),
         previous, current
@@ -499,7 +569,6 @@ Legislator.prototype.receiveLearned = function (message) {
             push.apply(messages, this.dispatchInternal('decide', entry))
         }
         if (entry.decided && Id.compare(this.proposal.id, message.id) == 0) {
-            console.log(this.government, this.id)
             messages.push({
                 from: this.government.majority.slice(),
                 to: this.government.majority.filter(function (id) {
@@ -535,6 +604,7 @@ Legislator.prototype.sync = function (to, count) {
         from: [ this.id ],
         to: to,
         count: count,
+        joined: null,
         last: this.last[this.id]
     }]
 }
@@ -576,9 +646,8 @@ Legislator.prototype.decideCommence = function (id) {
 Legislator.prototype.receiveSynchronize = function (message) {
     assert(message.from.length == 1, 'multi synchronize')
 
-    if (message.last) {
-        this.last[message.from[0]] = message.last
-    }
+    assert(message.last, 'message must have last')
+    var last = this.last[message.from[0]] = message.last
 
     var messages = []
 
@@ -594,13 +663,16 @@ Legislator.prototype.receiveSynchronize = function (message) {
             government: this.government
         })
 
+        var lastUniformId = this.last[this.id].uniform
         message.count--
         messages.push(createLearned(message.from, this.log.find({ id: this.last[this.id].uniform })))
 
         var iterator = this.log.findIter({ id: this.last[message.from[0]].uniform }), entry
         if (iterator == null) throw new Error('HC SVNT DRACONES') // TODO
         var count = 20
-        while (count-- && (entry = iterator.next()) != null) {
+        // todo: while (count-- && (entry = iterator.next()).id != lastUniformId) {
+        // ^^^ needs short circult.
+        while (count-- && (entry = iterator.next()) != null && entry.id != lastUniformId) {
             if (entry.uniform) {
                 messages.push(createLearned(message.from, entry))
             } else if (!entry.ignored) {
@@ -609,8 +681,8 @@ Legislator.prototype.receiveSynchronize = function (message) {
         }
 
         messages.push({
-            from: [ this.id ],
             to: message.from,
+            from: [ this.id ],
             type: 'synchronized'
         })
     }
@@ -624,13 +696,20 @@ Legislator.prototype.receiveSynchronize = function (message) {
             from: entry.learns.slice(),
             id: entry.id,
             quorum: entry.quorum,
-            value: entry.value
+            value: entry.value,
+            internal: entry.internal
         }
     }
 }
 
+// todo: figure out who has the highest uniform value and sync with them?
 Legislator.prototype.receiveSynchronized = function (message) {
-    console.log('synchornized', message, 'last: ', this.last)
+    if (this.government.leader === this.id) {
+        var last = this.last[message.from[0]]
+        if (message.joined == null && last.uniform === this.last[this.id].uniform) {
+            throw new Error
+        }
+    }
 }
 
 module.exports = Legislator
