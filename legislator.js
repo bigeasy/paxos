@@ -91,42 +91,23 @@ Legislator.prototype.bootstrap = function () {
     return this.prepare()
 }
 
-Legislator.invoke = function (legislators, messages, logger) {
-    var legislator = legislators[path[path.length - 1]],
-        proxy, proxies = {}, self, responses = []
-}
-
 Legislator.prototype.receiveTranscript = function (message) {
     return message.transcript
-}
-
-function assignUnless (object, index, initial) {
-    if (!(index in object)) {
-        return object[index] = initial
-    }
-    return object[index]
-}
-
-function deleteIfEmpty (object, index) {
-    var value = object[index].pop()
-    if (!(index in object)) {
-        return object[index] = initial
-    }
-    return object[index]
-}
-
-Legislator.prototype.tidy = function (message) {
 }
 
 Legislator.synchronous = function (legislators, id, transcript, logger) {
     var machines = {}
 
     function assignMachineUnless (id) {
-        return assignUnless(machines, id, {
-            id: id,
-            routes: [],
-            messages: []
-        })
+        var machine = machines[id]
+        if (!machine) {
+            machine = machines[id] = {
+                id: id,
+                routes: [],
+                messages: []
+            }
+        }
+        return machine
     }
 
     assignMachineUnless(id).messages.push({
@@ -229,9 +210,6 @@ Legislator.route = function (legislator, messages, path, index, logger) {
     var unrouted = [], returns = {}, forwards = {}, proxied = []
     messages.forEach(function (message) {
         var returning = false, forwarding = false
-        if (message.forward) {
-            throw new Error
-        }
         var key = message.type + '/' + message.id
         message.to.forEach(function (to) {
             if (~stack.indexOf(to)) {
@@ -668,8 +646,7 @@ Legislator.prototype.receiveSynchronize = function (message) {
         messages.push(createLearned(message.from, this.log.find({ id: this.last[this.id].uniform })))
 
         var iterator = this.log.findIter({ id: this.last[message.from[0]].uniform }), entry
-        if (iterator == null) throw new Error('HC SVNT DRACONES') // TODO
-        var count = 20
+        var count = (message.count - 1) || 0
         // todo: while (count-- && (entry = iterator.next()).id != lastUniformId) {
         // ^^^ needs short circult.
         while (count-- && (entry = iterator.next()) != null && entry.id != lastUniformId) {
