@@ -637,8 +637,7 @@ Legislator.prototype.receiveSynchronize = function (message) {
             to: message.from,
             type: 'synchronize',
             count: 0,
-            last: this.last[this.id],
-            government: this.government
+            last: this.last[this.id]
         })
 
         var lastUniformId = this.last[this.id].uniform
