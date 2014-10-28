@@ -23,7 +23,7 @@ require('proof')(2, function (assert) {
     })
 
     assert(legislators[0].government, {
-        leader: 0, majority: [ 0 ], members: [ 0 ], interim: false
+        id: '1/1', leader: 0, majority: [ 0 ], members: [ 0 ], interim: false
     }, 'bootstrap')
 
     legislators.push(new Legislator(1))
@@ -40,6 +40,6 @@ require('proof')(2, function (assert) {
     })
 
     assert(legislators[1].government, {
-        leader: 0, majority: [ 0 ], members: [ 0 ], interim: false
+        id: '1/1', leader: 0, majority: [ 0 ], members: [ 0 ], interim: false
     }, 'synchronize join')
 })

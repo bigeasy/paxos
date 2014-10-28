@@ -46,11 +46,7 @@ function Legislator (id) {
     this.proposal = { id: '0/1' }
     this.promise = { id: '0/1' }
     this.log = new RBTree(function (a, b) { return Id.compare(a.id, b.id) })
-    this.government = {
-        leader: 0,
-        majority: [ 0, 1, 2 ],
-        members: [ 0, 1, 2, 3, 4 ]
-    }
+    this.government = { id: '0/1' }
     this.last = {}
     this.last[id] = {
         learned: '0/1',
@@ -74,6 +70,7 @@ function Legislator (id) {
 Legislator.prototype.bootstrap = function () {
     this.restarted = false
     this.government = {
+        id: '0/1',
         leader: this.id,
         majority: [ this.id ],
         members: [ this.id ],
@@ -568,12 +565,15 @@ Legislator.prototype.receiveLearned = function (message) {
 }
 
 Legislator.prototype.learnConvene = function (id) {
-    var entry = this.entry(id, {})
-    this.government = entry.value.government
-    if (this.government.leader == this.id) {
-        return []
+    if (Id.compare(this.government.id, id) < 0) {
+        var entry = this.entry(id, {})
+        this.government = entry.value.government
+        this.government.id = id
+        if (this.government.leader != this.id) {
+            return this.sync([ this.government.leader ], 0)
+        }
     }
-    return this.sync([ this.government.leader ], 0)
+    return []
 }
 
 Legislator.prototype.sync = function (to, count) {
@@ -588,9 +588,9 @@ Legislator.prototype.sync = function (to, count) {
 }
 
 Legislator.prototype.decideConvene = function (id) {
-    var entry = this.entry(id, {})
-    this.government = entry.value.government
-    if (this.government.leader == this.id) {
+    this.learnConvene(id)
+    // todo: naturalization tests go here, or check proposal.
+    if (this.government.leader == this.id && id == this.proposal.id) {
         var majority = this.government.majority.slice()
         // new rule: the majority is always not more than one away from being uniform.
         // todo: not difficult, you will be able to use most decided. Not sort
@@ -608,6 +608,7 @@ Legislator.prototype.decideConvene = function (id) {
             internal: true,
             value: {
                 type: 'commence',
+                government: this.government,
                 id: terminus
             }
         })
@@ -617,7 +618,12 @@ Legislator.prototype.decideConvene = function (id) {
 }
 
 Legislator.prototype.decideCommence = function (id) {
-    this.government.interim = false
+    if (Id.compare(this.government.id, id)) {
+        var entry = this.entry(id, {})
+        this.government = entry.value.government
+        this.government.interim = false
+        this.government.id = id
+    }
     return []
 }
 
