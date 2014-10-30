@@ -101,13 +101,14 @@ Legislator.synchronous = function (legislators, id, transcript, logger) {
             machine = machines[id] = {
                 id: id,
                 routes: [],
-                messages: []
+                routed: [],
+                unrouted: []
             }
         }
         return machine
     }
 
-    assignMachineUnless(id).messages.push({
+    assignMachineUnless(id).unrouted.push({
         from: [ id ],
         to: [ id ],
         type: 'transcript',
@@ -117,8 +118,9 @@ Legislator.synchronous = function (legislators, id, transcript, logger) {
     function post (messages, route, index) {
         var legislator = legislators[route[index]], returns = [], response
         response = Legislator.route(legislator, messages, route, index, logger)
-        assignMachineUnless(route[index]).messages = response.unrouted
-        assert(machine.messages.every(function (message) {
+        assignMachineUnless(route[index]).unrouted = response.unrouted
+        assignMachineUnless(route[index]).routed = response.routed
+        assert(machine.unrouted.every(function (message) {
             return !~message.to.indexOf(legislator.id)
         }), 'messages must be unroutable')
         push.apply(returns, response.returns)
@@ -138,9 +140,13 @@ Legislator.synchronous = function (legislators, id, transcript, logger) {
         }
         var route = machine.routes.pop()
         if (route) {
-            post(machine.messages, route, 0, 0)
-        } else if (machine.messages.length) {
-            route = [ machine.id, machine.messages[0].to[0] ]
+            post(machine.unrouted, route, 0, 0)
+        } else if (machine.routed.length) {
+            var routed = machine.routed.pop()
+            machine.routes.push(routed.route)
+            machine.unrouted.push(routed)
+        } else if (machine.unrouted.length) {
+            route = [ machine.id, machine.unrouted[0].to[0] ]
             if (route[0] == route[1]) {
                 route.pop()
             }
@@ -159,7 +165,7 @@ Legislator.route = function (legislator, messages, path, index, logger) {
     var stack = path.slice(0, index + 1), forward = path.slice(index + 1)
 
     // Consume messages to self.
-    var keep, self
+    var routed = [], keep, self
     for (;;) {
         keep = []
         self = false
@@ -181,9 +187,15 @@ Legislator.route = function (legislator, messages, path, index, logger) {
         messages = keep
 
         // Get the routed message if any.
-        var routed = messages.filter(function (message) {
-            return message.route && message.route.length
+        keep = []
+        messages.forEach(function (message) {
+            if (message.route && message.route.length) {
+                routed.push(message)
+            } else {
+                keep.push(message)
+            }
         })
+        messages = keep
 
         // The only routed message is the accept, and those happen one at a time.
         assert(routed.length <= 1, 'only one specific route at a time')
@@ -191,6 +203,7 @@ Legislator.route = function (legislator, messages, path, index, logger) {
         if (!self) {
             break
         }
+
         count++
     }
 
@@ -204,7 +217,7 @@ Legislator.route = function (legislator, messages, path, index, logger) {
     })
     messages = split
 
-    var unrouted = [], returns = {}, forwards = {}, proxied = []
+    var unrouted = [], returns = {}, forwards = {}
     messages.forEach(function (message) {
         var returning = false, forwarding = false
         var key = message.type + '/' + message.id
@@ -240,7 +253,7 @@ Legislator.route = function (legislator, messages, path, index, logger) {
     return {
         returns: values(returns),
         forwards: values(forwards),
-        proxied: proxied,
+        routed: routed,
         unrouted: unrouted
     }
 }
@@ -334,7 +347,7 @@ Legislator.prototype.accept = function () {
     return [{
         from: [ this.id ],
         to: this.government.majority.slice(),
-        forward: this.government.majority.slice(1),
+        route: this.government.majority.slice(),
         type: 'accept',
         internal: this.proposal.internal,
         previous: this.proposal.previous,
