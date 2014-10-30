@@ -76,6 +76,7 @@ Legislator.prototype.bootstrap = function () {
         members: [ this.id ],
         interim: true
     }
+    this.immigrated = this.naturalized = '0/1'
     this.createProposal(0, {
         internal: true,
         value: {
@@ -665,14 +666,28 @@ Legislator.prototype.receiveSynchronize = function (message) {
 
         var iterator = this.log.findIter({ id: this.last[message.from[0]].uniform }), entry
         var count = (message.count - 1) || 0
+        var greatest = this.last[message.from[0]].uniform
         // todo: while (count-- && (entry = iterator.next()).id != lastUniformId) {
         // ^^^ needs short circult.
         while (count-- && (entry = iterator.next()) != null && entry.id != lastUniformId) {
             if (entry.uniform) {
+                greatest = entry.id
                 messages.push(createLearned(message.from, entry))
             } else if (!entry.ignored) {
                 break
             }
+        }
+
+        // todo: if leader.
+        if (Id.increment(greatest, 1) == lastUniformId) {
+            this.createProposal(1, {
+                internal: true,
+                value: {
+                    type: 'immigrate',
+                    id: message.from[0]
+                }
+            })
+            messages.push.apply(messages, this.accept())
         }
 
         messages.push({
