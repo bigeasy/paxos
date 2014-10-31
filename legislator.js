@@ -431,7 +431,7 @@ Legislator.prototype.dispatchInternal = function (prefix, entry) {
         var type = entry.value.type
         var method = prefix + type[0].toUpperCase() + type.slice(1)
         if (typeof this[method] == 'function') {
-            return this[method](entry.id)
+            return this[method](entry)
         }
     }
     return []
@@ -578,11 +578,10 @@ Legislator.prototype.receiveLearned = function (message) {
     return messages
 }
 
-Legislator.prototype.learnConvene = function (id) {
-    if (Id.compare(this.government.id, id) < 0) {
-        var entry = this.entry(id, {})
+Legislator.prototype.learnConvene = function (entry) {
+    if (Id.compare(this.government.id, entry.id) < 0) {
         this.government = entry.value.government
-        this.government.id = id
+        this.government.id = entry.id
         if (this.government.leader != this.id) {
             return this.sync([ this.government.leader ], 0)
         }
@@ -601,10 +600,10 @@ Legislator.prototype.sync = function (to, count) {
     }]
 }
 
-Legislator.prototype.decideConvene = function (id) {
-    this.learnConvene(id)
+Legislator.prototype.decideConvene = function (entry) {
+    this.learnConvene(entry)
     // todo: naturalization tests go here, or check proposal.
-    if (this.government.leader == this.id && id == this.proposal.id) {
+    if (this.government.leader == this.id && entry.id == this.proposal.id) {
         var majority = this.government.majority.slice()
         // new rule: the majority is always not more than one away from being uniform.
         // todo: not difficult, you will be able to use most decided. Not sort
@@ -612,7 +611,7 @@ Legislator.prototype.decideConvene = function (id) {
         majority.sort(function (a, b) {
             return Id.compare(this.last[b].decided, this.last[a].decided)
         }.bind(this))
-        var iterator = this.log.findIter({ id: id }), current
+        var iterator = this.log.findIter({ id: entry.id }), current
         do {
             current = iterator.prev()
         } while (Id.compare(current.id, '0/0', 1) == 0 || !current.decided)
@@ -631,12 +630,11 @@ Legislator.prototype.decideConvene = function (id) {
     return []
 }
 
-Legislator.prototype.decideCommence = function (id) {
-    if (Id.compare(this.government.id, id)) {
-        var entry = this.entry(id, {})
+Legislator.prototype.decideCommence = function (entry) {
+    if (Id.compare(this.government.id, entry.id)) {
         this.government = entry.value.government
         this.government.interim = false
-        this.government.id = id
+        this.government.id = entry.id
     }
     return []
 }
