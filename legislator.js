@@ -349,7 +349,6 @@ Legislator.prototype.accept = function () {
         route: this.government.majority.slice(),
         type: 'accept',
         internal: this.proposal.internal,
-        previous: this.proposal.previous,
         quorum: this.government.majority.length,
         id: this.proposal.id,
         value: this.proposal.value
