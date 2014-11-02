@@ -328,13 +328,11 @@ Legislator.prototype.receivePromise = function (message) {
 }
 
 Legislator.prototype.createProposal = function (index, prototype) {
-    var previous = this.log.max()
     this.proposal = {
         id: Id.increment(this.proposal.id, index),
         internal: !! prototype.internal,
         value: prototype.value,
         quorum: this.government.majority.slice(),
-        previous: previous.id,
         promises: [],
         accepts: []
     }
