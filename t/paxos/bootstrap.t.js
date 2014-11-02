@@ -42,4 +42,11 @@ require('proof')(2, function (assert) {
     assert(legislators[1].government, {
         id: '1/1', leader: 0, majority: [ 0 ], members: [ 0 ], interim: false
     }, 'synchronize join')
+
+    // todo: yes, you look inside the response. it is not opaque. you are at
+    // this low level when you are trying to create an interface to an algorithm
+    // that is uncommon and subtle.
+    var messages = legislators[1].naturalize()
+    var cookie = messages[0].cookie
+    assert(cookie, 1, 'cookie')
 })

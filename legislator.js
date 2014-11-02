@@ -2,7 +2,16 @@ var assert = require('assert')
 var Monotonic = require('monotonic')
 var cadence = require('cadence')
 var push = [].push
+var slice = [].slice
 var RBTree = require('bintrees').RBTree;
+var Cache = require('magazine')
+
+var Cookie = {
+    increment: function (cookie) {
+        return Monotonic.toString(Monotonic.increment(Monotonic.parse(cookie)))
+
+    }
+}
 
 var Id = {
     toWords: function (id) {
@@ -42,6 +51,7 @@ var Id = {
 
 function Legislator (id) {
     this.id = id
+    this.cookie = '0'
     this.idealGovernmentSize = 5
     this.promise = { id: '0/1' }
     this.log = new RBTree(function (a, b) { return Id.compare(a.id, b.id) })
@@ -50,6 +60,7 @@ function Legislator (id) {
     this.voting = false
     this.lastProposalId = '0/1'
     this.proposals = []
+    this.citizens = {}
     this.last[id] = {
         learned: '0/1',
         decided: '0/1',
@@ -67,6 +78,8 @@ function Legislator (id) {
     entry.learned = true
     entry.decided = true
     entry.uniform = true
+    this.cookies = new Cache().createMagazine()
+// todo: ^^^ more fun name.
 }
 
 Legislator.prototype.bootstrap = function () {
@@ -331,14 +344,16 @@ Legislator.prototype.receivePromise = function (message) {
 
 // todo: figure out how to merge into queue.
 Legislator.prototype.createProposal = function (index, prototype) {
+    var id = this.lastProposalId = Id.increment(this.lastProposalId, index)
     this.proposals.push({
-        id: this.lastProposalId = Id.increment(this.lastProposalId, index),
+        id: id,
         internal: !! prototype.internal,
         value: prototype.value,
         quorum: this.government.majority.slice(),
         promises: [],
         accepts: []
     })
+    return id
 }
 
 Legislator.prototype.accept = function () {
@@ -719,12 +734,30 @@ Legislator.prototype.receiveSynchronized = function (message) {
     }
 }
 
-Legislator.prototype.post = function (value) {
+function noop () {}
+
+Legislator.prototype.post = function () {
+    var vargs = slice.call(arguments), value = vargs.shift(), internal, callback,
+        cookie = this.cookie = Cookie.increment(this.cookie)
+
+    if (typeof vargs[0] == 'boolean') {
+        internal = vargs.shift()
+    }
+
+    if (typeof vargs[0] == 'function') {
+        callback = vargs.shift()
+    }
+
+    this.cookies.hold(cookie, callback || noop).release()
+
+    // todo: use magazine
     return [{
         from: [ this.id ],
         to: [ this.government.leader ],
-        government: this.government.id,
         type: 'post',
+        internal: true,
+        cookie: cookie,
+        governmentId: this.government.id,
         value: value
     }]
 }
@@ -734,12 +767,13 @@ Legislator.prototype.recievePost = function (message) {
     // not and as soon as possible.
     // todo: maybe they supply the government they attempting to petition.
     // The requested government has been replaced.
-    if (message.government != this.government.id) {
+    if (message.governmentId != this.government.id) {
         return [{
             from: [ this.id ],
             to: message.from.slice(),
-            status: 410,
-            type: 'posted'
+            type: 'posted',
+            cookie: message.cookie,
+            status: 410
         }]
     }
     // Correct government, but not the leader.
@@ -747,28 +781,56 @@ Legislator.prototype.recievePost = function (message) {
         return [{
             from: [ this.id ],
             to: message.from.slice(),
-            status: 405,
-            type: 'posted'
+            type: 'posted',
+            cookie: message.cookie,
+            status: 405
         }]
     }
+    var messages = []
     // Correct government and the leader.
-    var proposal = {
-        id: Id.increment(this.proposals[this.proposals.length - 1].id, index),
-        internal: !! prototype.internal,
-        value: prototype.value,
-        quorum: this.government.majority.slice(),
-        previous: previous.id,
-        promises: [],
-        accepts: []
+    var id = this.createProposal(0, {
+        internal: message.internal,
+        value: message.value
+    })
+    messages.push({
+        from: [ this.id ],
+        to: message.from.slice(),
+        type: 'posted',
+        cookie: message.cookie,
+        status: 200,
+        id: id
+    })
+    if (this.proposals.length == 1) {
+        push.apply(messages, this.accept())
     }
-    this.proposals.push(proposal)
-    if (!this.voting) {
-        this.voting = true
-        this.proposals.shift()
+    return messages
+}
+
+Legislator.prototype.learnNaturalize = function (entry) {
+    this.citizens[entry.value.id] = entry.id
+    if (entry.value.id == this.id) {
+        this.naturalized = entry.id
     }
 }
 
-Legislator.prototype.recievePosted = function () {
+Legislator.prototype.recievePosted = function (message) {
+    var cartridge = this.cookies.hold(message.cookie, false)
+    if (!cartridge.value) {
+        throw new Error
+        // todo: timed out and we got rid of it, so surprise, but shouldn't
+        // bring down the process.
+        // todo: actually, we are going to know for certain which messages will
+        // and will not eventually have responses, so...
+        // ... but that's after we get an id, and this is going to be
+        // synchronousish.
+    }
+    cartridge.remove()
+    this.posts.hold(message.id, cartridge.value).release()
+}
+
+// todo: all that it needs to do to naturalize is run a round of paxos.
+Legislator.prototype.naturalize = function () {
+    return this.post({ type: 'naturalize', id: this.id }, true)
 }
 
 module.exports = Legislator
