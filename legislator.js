@@ -43,11 +43,13 @@ var Id = {
 function Legislator (id) {
     this.id = id
     this.idealGovernmentSize = 5
-    this.proposal = { id: '0/1' }
     this.promise = { id: '0/1' }
     this.log = new RBTree(function (a, b) { return Id.compare(a.id, b.id) })
     this.government = { id: '0/1' }
     this.last = {}
+    this.voting = false
+    this.lastProposalId = '0/1'
+    this.proposals = []
     this.last[id] = {
         learned: '0/1',
         decided: '0/1',
@@ -271,7 +273,7 @@ Legislator.prototype.prepare = function () {
         from: [ this.id ],
         to: this.government.majority.slice(),
         type: 'prepare',
-        id: this.proposal.id
+        id: this.proposals[0].id
     }]
 }
 
@@ -302,24 +304,24 @@ Legislator.prototype.receivePrepare = function (message) {
 
 Legislator.prototype.receivePromise = function (message) {
     return [].concat.apply([], message.from.map(function (id) {
-        var compare = Id.compare(this.proposal.id, message.id)
+        var compare = Id.compare(this.proposals[0].id, message.id)
 
         if (compare != 0) {
             return []
         }
 
-        if (!~this.proposal.quorum.indexOf(id)) {
+        if (!~this.proposals[0].quorum.indexOf(id)) {
             return []
         }
 
-        if (!~this.proposal.promises.indexOf(id)) {
-            this.proposal.promises.push(id)
+        if (!~this.proposals[0].promises.indexOf(id)) {
+            this.proposals[0].promises.push(id)
         } else {
             // We have already received a promise. Something is probably wrong.
             return []
         }
 
-        if (this.proposal.promises.length == this.proposal.quorum.length) {
+        if (this.proposals[0].promises.length == this.proposals[0].quorum.length) {
             return this.accept()
         }
 
@@ -327,31 +329,32 @@ Legislator.prototype.receivePromise = function (message) {
     }.bind(this)))
 }
 
+// todo: figure out how to merge into queue.
 Legislator.prototype.createProposal = function (index, prototype) {
-    this.proposal = {
-        id: Id.increment(this.proposal.id, index),
+    this.proposals.push({
+        id: this.lastProposalId = Id.increment(this.lastProposalId, index),
         internal: !! prototype.internal,
         value: prototype.value,
         quorum: this.government.majority.slice(),
         promises: [],
         accepts: []
-    }
+    })
 }
 
 Legislator.prototype.accept = function () {
-    this.entry(this.proposal.id, {
+    this.entry(this.proposals[0].id, {
         quorum: this.government.majority.length,
-        value: this.proposal.value
+        value: this.proposals[0].value
     })
     return [{
         from: [ this.id ],
         to: this.government.majority.slice(),
         route: this.government.majority.slice(),
         type: 'accept',
-        internal: this.proposal.internal,
+        internal: this.proposals[0].internal,
         quorum: this.government.majority.length,
-        id: this.proposal.id,
-        value: this.proposal.value
+        id: this.proposals[0].id,
+        value: this.proposals[0].value
     }]
 }
 
@@ -554,7 +557,11 @@ Legislator.prototype.receiveLearned = function (message) {
             this.markUniform()
             push.apply(messages, this.dispatchInternal('decide', entry))
         }
-        if (entry.decided && Id.compare(this.proposal.id, message.id) == 0) {
+        if (entry.decided &&
+            this.proposals.length &&
+            Id.compare(this.proposals[0].id, message.id) == 0
+        ) {
+            this.proposals.shift()
             messages.push({
                 from: this.government.majority.slice(),
                 to: this.government.majority.filter(function (id) {
@@ -563,12 +570,8 @@ Legislator.prototype.receiveLearned = function (message) {
                 type: 'learned',
                 id: message.id
             })
-            if (this.queue.next.value) {
-                var next = this.queue.next
-                next.prev.next = next.next
-                next.next.prev = next.prev
-                this.createProposal(1, next.value)
-                this.accept()
+            if (this.proposals.length) {
+                push.apply(messages, this.accept())
             }
         }
     }, this)
@@ -600,7 +603,7 @@ Legislator.prototype.sync = function (to, count) {
 Legislator.prototype.decideConvene = function (entry) {
     this.learnConvene(entry)
     // todo: naturalization tests go here, or check proposal.
-    if (this.government.leader == this.id && entry.id == this.proposal.id) {
+    if (this.government.leader == this.id && entry.id == this.proposals[0].id) {
         var majority = this.government.majority.slice()
         // new rule: the majority is always not more than one away from being uniform.
         // todo: not difficult, you will be able to use most decided. Not sort
@@ -622,7 +625,6 @@ Legislator.prototype.decideConvene = function (entry) {
                 id: terminus
             }
         })
-        return this.accept()
     }
     return []
 }
@@ -715,6 +717,58 @@ Legislator.prototype.receiveSynchronized = function (message) {
             throw new Error
         }
     }
+}
+
+Legislator.prototype.post = function (value) {
+    return [{
+        from: [ this.id ],
+        to: [ this.government.leader ],
+        government: this.government.id,
+        type: 'post',
+        value: value
+    }]
+}
+
+Legislator.prototype.recievePost = function (message) {
+    // todo: be super sure that this is a good current government, reject if
+    // not and as soon as possible.
+    // todo: maybe they supply the government they attempting to petition.
+    // The requested government has been replaced.
+    if (message.government != this.government.id) {
+        return [{
+            from: [ this.id ],
+            to: message.from.slice(),
+            status: 410,
+            type: 'posted'
+        }]
+    }
+    // Correct government, but not the leader.
+    if (this.government.leader != this.id) {
+        return [{
+            from: [ this.id ],
+            to: message.from.slice(),
+            status: 405,
+            type: 'posted'
+        }]
+    }
+    // Correct government and the leader.
+    var proposal = {
+        id: Id.increment(this.proposals[this.proposals.length - 1].id, index),
+        internal: !! prototype.internal,
+        value: prototype.value,
+        quorum: this.government.majority.slice(),
+        previous: previous.id,
+        promises: [],
+        accepts: []
+    }
+    this.proposals.push(proposal)
+    if (!this.voting) {
+        this.voting = true
+        this.proposals.shift()
+    }
+}
+
+Legislator.prototype.recievePosted = function () {
 }
 
 module.exports = Legislator
