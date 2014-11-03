@@ -1,4 +1,4 @@
-require('proof')(2, function (assert) {
+require('proof')(3, function (assert) {
     var Legislator = require('../../legislator')
 
     function run (messages, leaders, stop, count) {
