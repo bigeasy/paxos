@@ -736,26 +736,13 @@ Legislator.prototype.receiveSynchronized = function (message) {
 
 function noop () {}
 
-Legislator.prototype.post = function () {
-    var vargs = slice.call(arguments), value = vargs.shift(), internal, callback,
-        cookie = this.cookie = Cookie.increment(this.cookie)
-
-    if (typeof vargs[0] == 'boolean') {
-        internal = vargs.shift()
-    }
-
-    if (typeof vargs[0] == 'function') {
-        callback = vargs.shift()
-    }
-
-    this.cookies.hold(cookie, callback || noop).release()
-
-    // todo: use magazine
+Legislator.prototype.post = function (value, internal) {
+    var cookie = this.cookie = Cookie.increment(this.cookie)
     return [{
         from: [ this.id ],
         to: [ this.government.leader ],
         type: 'post',
-        internal: true,
+        internal: !! internal,
         cookie: cookie,
         governmentId: this.government.id,
         value: value
@@ -806,26 +793,12 @@ Legislator.prototype.recievePost = function (message) {
     return messages
 }
 
-Legislator.prototype.learnNaturalize = function (entry) {
+Legislator.prototype.decideNaturalize = function (entry) {
     this.citizens[entry.value.id] = entry.id
-    if (entry.value.id == this.id) {
-        this.naturalized = entry.id
-    }
 }
 
 Legislator.prototype.recievePosted = function (message) {
-    var cartridge = this.cookies.hold(message.cookie, false)
-    if (!cartridge.value) {
-        throw new Error
-        // todo: timed out and we got rid of it, so surprise, but shouldn't
-        // bring down the process.
-        // todo: actually, we are going to know for certain which messages will
-        // and will not eventually have responses, so...
-        // ... but that's after we get an id, and this is going to be
-        // synchronousish.
-    }
-    cartridge.remove()
-    this.posts.hold(message.id, cartridge.value).release()
+    this.cookies.hold(message.cookie, message.id).release()
 }
 
 // todo: all that it needs to do to naturalize is run a round of paxos.
