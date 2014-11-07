@@ -9,7 +9,6 @@ var Cache = require('magazine')
 var Cookie = {
     increment: function (cookie) {
         return Monotonic.toString(Monotonic.increment(Monotonic.parse(cookie)))
-
     }
 }
 
@@ -51,6 +50,7 @@ var Id = {
 
 function Legislator (id) {
     this.id = id
+    // it appears that the only point of the cookie is to mark naturalization.
     this.cookie = '0'
     this.idealGovernmentSize = 5
     this.promise = { id: '0/1' }
@@ -770,7 +770,7 @@ Legislator.prototype.recievePost = function (message) {
             to: message.from.slice(),
             type: 'posted',
             cookie: message.cookie,
-            status: 410
+            statusCode: 410
         }]
     }
     // Correct government, but not the leader.
@@ -780,7 +780,7 @@ Legislator.prototype.recievePost = function (message) {
             to: message.from.slice(),
             type: 'posted',
             cookie: message.cookie,
-            status: 405
+            statusCode: 405
         }]
     }
     var messages = []
@@ -794,7 +794,7 @@ Legislator.prototype.recievePost = function (message) {
         to: message.from.slice(),
         type: 'posted',
         cookie: message.cookie,
-        status: 200,
+        statusCode: 200,
         id: id
     })
     if (this.proposals.length == 1) {
@@ -808,7 +808,9 @@ Legislator.prototype.decideNaturalize = function (entry) {
 }
 
 Legislator.prototype.recievePosted = function (message) {
-    this.cookies.hold(message.id, message.cookie).release()
+    if (message.statusCode == 200) {
+        this.cookies.hold(message.id, message.cookie).release()
+    }
 }
 
 // todo: all that it needs to do to naturalize is run a round of paxos.
