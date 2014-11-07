@@ -466,7 +466,7 @@ Legislator.prototype.markUniform = function () {
         if (Id.compare(Id.increment(previous.id, 1), current.id) == 0) {
             assert(previous.uniform || previous.ignored, 'previous must be resolved')
             if (current.decided) {
-                current.uniform = true
+                markUniform.call(this, current)
                 last.uniform = current.id
                 continue
             }
@@ -492,7 +492,7 @@ Legislator.prototype.markUniform = function () {
 
         iterator = this.log.findIter({ id: end.terminus })
         previous = iterator.data()
-        previous.uniform = true
+        markUniform.call(this, previous)
 
         for (;;) {
             previous = iterator.data(), current = iterator.next()
@@ -502,7 +502,16 @@ Legislator.prototype.markUniform = function () {
             current.ignored = true
         }
 
-        current.uniform = true
+        markUniform.call(this, current)
+    }
+
+    function markUniform (entry) {
+        entry.uniform = true
+        var cartridge = this.cookies.hold(entry.id, false)
+        if (cartridge.value) {
+            entry.cookie = cartridge.value
+        }
+        cartridge.remove()
     }
 
     function trampoline (f, i) {
@@ -564,6 +573,7 @@ Legislator.prototype.receiveLearned = function (message) {
             entry.learns.push(id)
         }
         if (entry.learns.length == entry.quorum) {
+            // todo: rename.
             this.markLastest(entry, 'learned')
             this.markLastest(entry, 'decided')
             if (Id.compare(entry.id, this.last[this.id].decided) > 0) {
@@ -798,7 +808,7 @@ Legislator.prototype.decideNaturalize = function (entry) {
 }
 
 Legislator.prototype.recievePosted = function (message) {
-    this.cookies.hold(message.cookie, message.id).release()
+    this.cookies.hold(message.id, message.cookie).release()
 }
 
 // todo: all that it needs to do to naturalize is run a round of paxos.
