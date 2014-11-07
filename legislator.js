@@ -509,7 +509,6 @@ Legislator.prototype.markUniform = function () {
         entry.uniform = true
         var cartridge = this.cookies.hold(entry.id, false)
         if (cartridge.value) {
-            throw new Error('huzzah!')
             entry.cookie = cartridge.value
         }
         cartridge.remove()
@@ -806,6 +805,10 @@ Legislator.prototype.receivePost = function (message) {
 
 Legislator.prototype.decideNaturalize = function (entry) {
     this.citizens[entry.value.id] = entry.id
+    console.log('entry', entry)
+    if (entry.cookie) {
+        throw new Error
+    }
 }
 
 Legislator.prototype.receivePosted = function (message) {

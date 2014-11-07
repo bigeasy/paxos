@@ -1,5 +1,6 @@
 require('proof')(3, function (assert) {
-    var Legislator = require('../../legislator')
+    var Legislator = require('../../legislator'),
+        messages
 
     function run (messages, leaders, stop, count) {
         stop = stop == null ? Infinity : stop, count = count || 0
@@ -16,13 +17,13 @@ require('proof')(3, function (assert) {
     }
 
     var legislators = [ new Legislator(0) ]
-    var messages = legislators[0].bootstrap()
+    messages = legislators[0].bootstrap()
 
     function logger (count, id, message) {
         console.log(count, id, message)
     }
 
-    var messages = Legislator.synchronous(legislators, 0, messages, logger)
+    messages = Legislator.synchronous(legislators, 0, messages, logger)
 
     assert(legislators[0].government, {
         id: '1/1', leader: 0, majority: [ 0 ], members: [ 0 ], interim: false
@@ -30,9 +31,9 @@ require('proof')(3, function (assert) {
 
     legislators.push(new Legislator(1))
 
-    var messages = legislators[1].sync([ 0 ], 20)
+    messages = legislators[1].sync([ 0 ], 20)
 
-    var messages = Legislator.synchronous(legislators, 1, messages, logger)
+    messages = Legislator.synchronous(legislators, 1, messages, logger)
     console.log(messages)
 
     legislators[1].log.each(function (entry) {
@@ -46,8 +47,11 @@ require('proof')(3, function (assert) {
     // todo: yes, you look inside the response. it is not opaque. you are at
     // this low level when you are trying to create an interface to an algorithm
     // that is uncommon and subtle.
-    var messages = legislators[1].naturalize()
+    messages = legislators[1].naturalize()
     var cookie = messages[0].cookie
     assert(cookie, 1, 'cookie')
-    var messages = Legislator.synchronous(legislators, 1, messages, logger)
+    Legislator.synchronous(legislators, 1, messages, logger)
+
+    messages = legislators[1].sync([ 0 ], 20)
+    Legislator.synchronous(legislators, 1, messages, logger)
 })
