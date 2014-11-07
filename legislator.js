@@ -91,7 +91,7 @@ Legislator.prototype.bootstrap = function () {
         members: [ this.id ],
         interim: true
     }
-    this.immigrated = this.naturalized = '0/1'
+    this.citizens[this.id] = this.naturalized = '0/1'
     this.createProposal(0, {
         internal: true,
         value: {
@@ -507,11 +507,13 @@ Legislator.prototype.markUniform = function () {
 
     function markUniform (entry) {
         entry.uniform = true
+        /*
         var cartridge = this.cookies.hold(entry.id, false)
         if (cartridge.value) {
             entry.cookie = cartridge.value
         }
         cartridge.remove()
+        */
     }
 
     function trampoline (f, i) {
@@ -674,14 +676,6 @@ Legislator.prototype.receiveSynchronize = function (message) {
     assert(!~message.from.indexOf(this.id), 'synchronize with self')
 
     if (message.count) {
-        messages.push({
-            from: [ this.id ],
-            to: message.from,
-            type: 'synchronize',
-            count: 0,
-            last: this.last[this.id]
-        })
-
         var lastUniformId = this.last[this.id].uniform
         message.count--
         messages.push(createLearned(message.from, this.log.find({ id: this.last[this.id].uniform })))
@@ -715,7 +709,10 @@ Legislator.prototype.receiveSynchronize = function (message) {
         messages.push({
             to: message.from,
             from: [ this.id ],
-            type: 'synchronized'
+            type: 'synchronized',
+            last: this.last[this.id],
+            citizens: this.citizens,
+            government: this.government
         })
     }
 
@@ -736,11 +733,8 @@ Legislator.prototype.receiveSynchronize = function (message) {
 
 // todo: figure out who has the highest uniform value and sync with them?
 Legislator.prototype.receiveSynchronized = function (message) {
+    this.last[message.from[0]] = message.last
     if (this.government.leader === this.id) {
-        var last = this.last[message.from[0]]
-        if (message.joined == null && last.uniform === this.last[this.id].uniform) {
-            throw new Error
-        }
     }
 }
 
@@ -748,6 +742,10 @@ function noop () {}
 
 Legislator.prototype.post = function (value, internal) {
     var cookie = this.cookie = Cookie.increment(this.cookie)
+    this.cookies.hold(cookie, {
+        internal: !! internal,
+        value: value
+    }).release()
     return [{
         from: [ this.id ],
         to: [ this.government.leader ],
@@ -789,6 +787,9 @@ Legislator.prototype.receivePost = function (message) {
         internal: message.internal,
         value: message.value
     })
+    // todo: Returning the value feels as though it is a waste. We're going to
+    // want to design algorithms that use atomic broadcast with smaller values.
+    // todo: No, I would prefer that we use a cache.
     messages.push({
         from: [ this.id ],
         to: message.from.slice(),
@@ -805,17 +806,19 @@ Legislator.prototype.receivePost = function (message) {
 
 Legislator.prototype.decideNaturalize = function (entry) {
     this.citizens[entry.value.id] = entry.id
-    console.log('entry', entry)
     if (entry.cookie) {
-        throw new Error
+        this.naturalized = entry.id
+        console.log('x', this.naturalized, this.citizens)
     }
 }
 
 Legislator.prototype.receivePosted = function (message) {
     if (message.statusCode == 200) {
-        this.cookies.hold(message.id, message.cookie).release()
-        var cartridge = this.cookies.hold(message.id, false)
-        cartridge.release()
+        var cartridge = this.cookies.hold(message.cookie, false)
+        if (cartridge.value) {
+            this.entry(message.id, cartridge.value).cookie = message.cookie
+        }
+        cartridge.remove()
     }
 }
 
