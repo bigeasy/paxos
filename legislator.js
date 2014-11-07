@@ -509,6 +509,7 @@ Legislator.prototype.markUniform = function () {
         entry.uniform = true
         var cartridge = this.cookies.hold(entry.id, false)
         if (cartridge.value) {
+            throw new Error('huzzah!')
             entry.cookie = cartridge.value
         }
         cartridge.remove()
@@ -759,7 +760,7 @@ Legislator.prototype.post = function (value, internal) {
     }]
 }
 
-Legislator.prototype.recievePost = function (message) {
+Legislator.prototype.receivePost = function (message) {
     // todo: be super sure that this is a good current government, reject if
     // not and as soon as possible.
     // todo: maybe they supply the government they attempting to petition.
@@ -785,7 +786,7 @@ Legislator.prototype.recievePost = function (message) {
     }
     var messages = []
     // Correct government and the leader.
-    var id = this.createProposal(0, {
+    var id = this.createProposal(1, {
         internal: message.internal,
         value: message.value
     })
@@ -807,9 +808,11 @@ Legislator.prototype.decideNaturalize = function (entry) {
     this.citizens[entry.value.id] = entry.id
 }
 
-Legislator.prototype.recievePosted = function (message) {
+Legislator.prototype.receivePosted = function (message) {
     if (message.statusCode == 200) {
         this.cookies.hold(message.id, message.cookie).release()
+        var cartridge = this.cookies.hold(message.id, false)
+        cartridge.release()
     }
 }
 
