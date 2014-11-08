@@ -160,6 +160,7 @@ Legislator.synchronous = function (legislators, id, transcript, logger) {
         } else if (machine.routed.length) {
             var routed = machine.routed.pop()
             machine.routes.push(routed.route)
+            delete routed.route
             machine.unrouted.push(routed)
         } else if (machine.unrouted.length) {
             route = [ machine.id, machine.unrouted[0].to[0] ]
@@ -361,7 +362,7 @@ Legislator.prototype.accept = function () {
         quorum: this.government.majority.length,
         value: this.proposals[0].value
     })
-    return [{
+    var accept = {
         from: [ this.id ],
         to: this.government.majority.slice(),
         route: this.government.majority.slice(),
@@ -370,7 +371,9 @@ Legislator.prototype.accept = function () {
         quorum: this.government.majority.length,
         id: this.proposals[0].id,
         value: this.proposals[0].value
-    }]
+    }
+    assert(accept.route.length, 'length')
+    return [accept]
 }
 
 Legislator.prototype.entry = function (id, message) {
@@ -695,7 +698,7 @@ Legislator.prototype.receiveSynchronize = function (message) {
         }
 
         // todo: if leader.
-        if (Id.increment(greatest, 1) == lastUniformId) {
+        if (false && Id.increment(greatest, 1) == lastUniformId) {
             this.createProposal(1, {
                 internal: true,
                 value: {
@@ -804,12 +807,62 @@ Legislator.prototype.receivePost = function (message) {
     return messages
 }
 
+// todo: Need to be sure about this. Yes, there will be times when it is false,
+// that an isolated leader has lost the leadership position, but it needs to be
+// true enough.
+// todo: Isn't this really a property I set?
+Legislator.prototype.__defineGetter__('isLeader', function () {
+    return this.naturalized && this.government.leader == this.id
+})
+
 Legislator.prototype.decideNaturalize = function (entry) {
+    var messages = []
+    var before = Object.keys(this.citizens).length
     this.citizens[entry.value.id] = entry.id
     if (entry.cookie) {
         this.naturalized = entry.id
-        console.log('x', this.naturalized, this.citizens)
     }
+    var after = Object.keys(this.citizens).length
+    // todo: Ideal parliment size can be configurable.
+    if (this.isLeader && after > before && after <= 5) {
+        var members = Object.keys(this.citizens).map(function (id) { return +id })
+        var majority = this.government.majority.slice()
+        var parlimentSize = Math.min(5, after)
+        var majoritySize = this.majoritySize(5, after)
+        console.log(this.government, members)
+        if (majority.length < majoritySize) {
+            var minority = members.filter(function (id) { return !~majority.indexOf(id) })
+            console.log(majoritySize, majority, minority, after)
+            console.log(majority, minority)
+            majority.push(minority.pop())
+            console.log(majoritySize, majority, minority, after)
+        }
+        this.government = {
+            leader: this.id,
+            majority: majority,
+            members: members,
+            interim: true
+        }
+        this.createProposal(0, {
+            internal: true,
+            value: {
+                type: 'convene',
+                to: this.government.majority.slice(),
+                from: [ this.id ],
+                government: JSON.parse(JSON.stringify(this.government))
+            }
+        })
+        push.apply(messages, this.prepare())
+    }
+    return messages
+}
+
+Legislator.prototype.majoritySize = function (parlimentSize, citizenCount) {
+    var size = Math.min(parlimentSize, citizenCount)
+    if (size % 2 == 0) {
+        size++
+    }
+    return Math.ceil(size / 2)
 }
 
 Legislator.prototype.receivePosted = function (message) {
