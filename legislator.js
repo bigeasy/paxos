@@ -134,14 +134,16 @@ Legislator.synchronous = function (legislators, id, transcript, logger) {
     function post (messages, route, index) {
         var legislator = legislators[route[index]], returns = [], response
         response = Legislator.route(legislator, messages, route, index, logger)
-        assignMachineUnless(route[index]).unrouted = response.unrouted
-        assignMachineUnless(route[index]).routed = response.routed
+        push.apply(assignMachineUnless(route[index]).unrouted, response.unrouted)
+        push.apply(assignMachineUnless(route[index]).routed, response.routed)
         assert(machine.unrouted.every(function (message) {
             return !~message.to.indexOf(legislator.id)
         }), 'messages must be unroutable')
         push.apply(returns, response.returns)
         if (index + 1 < route.length) {
             response = Legislator.route(legislator, post(response.forwards, route, index + 1), route, index, logger)
+            push.apply(assignMachineUnless(route[index]).unrouted, response.unrouted)
+            push.apply(assignMachineUnless(route[index]).routed, response.routed)
             push.apply(returns, response.returns)
         }
         route.pop()
@@ -156,7 +158,7 @@ Legislator.synchronous = function (legislators, id, transcript, logger) {
         }
         var route = machine.routes.pop()
         if (route) {
-            post(machine.unrouted, route, 0, 0)
+            post(machine.unrouted.splice(0, machine.unrouted.length), route, 0, 0)
         } else if (machine.routed.length) {
             var routed = machine.routed.pop()
             machine.routes.push(routed.route)
@@ -829,13 +831,9 @@ Legislator.prototype.decideNaturalize = function (entry) {
         var majority = this.government.majority.slice()
         var parlimentSize = Math.min(5, after)
         var majoritySize = this.majoritySize(5, after)
-        console.log(this.government, members)
         if (majority.length < majoritySize) {
             var minority = members.filter(function (id) { return !~majority.indexOf(id) })
-            console.log(majoritySize, majority, minority, after)
-            console.log(majority, minority)
             majority.push(minority.pop())
-            console.log(majoritySize, majority, minority, after)
         }
         this.government = {
             leader: this.id,
@@ -852,6 +850,9 @@ Legislator.prototype.decideNaturalize = function (entry) {
                 government: JSON.parse(JSON.stringify(this.government))
             }
         })
+        this.proposals.shift()
+        // todo: this all breaks when we actually queue.
+        this.government.id = this.proposals[0].id
         push.apply(messages, this.prepare())
     }
     return messages

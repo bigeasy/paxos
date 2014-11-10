@@ -34,10 +34,9 @@ require('proof')(3, function (assert) {
     messages = legislators[1].sync([ 0 ], 20)
 
     messages = Legislator.synchronous(legislators, 1, messages, logger)
-    console.log(messages)
 
     legislators[1].log.each(function (entry) {
-        console.log('entry', entry)
+        // console.log('entry', entry)
     })
 
     assert(legislators[1].government, {
@@ -52,6 +51,6 @@ require('proof')(3, function (assert) {
     assert(cookie, 1, 'cookie')
     Legislator.synchronous(legislators, 1, messages, logger)
 
-    messages = legislators[1].sync([ 0 ], 20)
-    Legislator.synchronous(legislators, 1, messages, logger)
+//    messages = legislators[1].sync([ 0 ], 20)
+//    Legislator.synchronous(legislators, 1, messages, logger)
 })
