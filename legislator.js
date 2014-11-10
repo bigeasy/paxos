@@ -589,19 +589,12 @@ Legislator.prototype.receiveLearned = function (message) {
             this.markUniform()
             push.apply(messages, this.dispatchInternal('decide', entry))
         }
-        if (entry.decided &&
+        // If we are the leader, will be decided.
+        if (
             this.proposals.length &&
             Id.compare(this.proposals[0].id, message.id) == 0
         ) {
             this.proposals.shift()
-            messages.push({
-                from: this.government.majority.slice(),
-                to: this.government.majority.filter(function (id) {
-                    return id != this.id
-                }.bind(this)),
-                type: 'learned',
-                id: message.id
-            })
             if (this.proposals.length) {
                 push.apply(messages, this.accept())
             }
@@ -850,9 +843,9 @@ Legislator.prototype.decideNaturalize = function (entry) {
                 government: JSON.parse(JSON.stringify(this.government))
             }
         })
+        this.government.id = this.proposals[this.proposals.length - 1].id
         this.proposals.shift()
         // todo: this all breaks when we actually queue.
-        this.government.id = this.proposals[0].id
         push.apply(messages, this.prepare())
     }
     return messages
