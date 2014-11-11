@@ -1,4 +1,4 @@
-require('proof')(3, function (assert) {
+require('proof')(4, function (assert) {
     var Legislator = require('../../legislator'),
         messages
 
@@ -50,6 +50,10 @@ require('proof')(3, function (assert) {
     var cookie = messages[0].cookie
     assert(cookie, 1, 'cookie')
     Legislator.synchronous(legislators, 1, messages, logger)
+
+    assert(legislators[0].government, {
+        id: '2/1', leader: 0, majority: [ 0, 1 ], members: [ 0, 1 ], interim: false
+    }, 'grow')
 
 //    messages = legislators[1].sync([ 0 ], 20)
 //    Legislator.synchronous(legislators, 1, messages, logger)

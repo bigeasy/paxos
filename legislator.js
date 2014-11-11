@@ -6,6 +6,8 @@ var slice = [].slice
 var RBTree = require('bintrees').RBTree;
 var Cache = require('magazine')
 
+var c = 0 // todo: temporary
+
 var Cookie = {
     increment: function (cookie) {
         return Monotonic.toString(Monotonic.increment(Monotonic.parse(cookie)))
@@ -67,7 +69,7 @@ function Legislator (id) {
     var entry = this.entry('0/1', {
         id: '0/1',
         value: 0,
-        quorum: 1
+        quorum: [ id ]
     })
     entry.learns = [ id ]
     entry.learned = true
@@ -356,7 +358,7 @@ Legislator.prototype.createProposal = function (index, prototype) {
 
 Legislator.prototype.accept = function () {
     this.entry(this.proposals[0].id, {
-        quorum: this.government.majority.length,
+        quorum: this.government.majority.slice(),
         value: this.proposals[0].value
     })
     var accept = {
@@ -365,7 +367,7 @@ Legislator.prototype.accept = function () {
         route: this.government.majority.slice(),
         type: 'accept',
         internal: this.proposals[0].internal,
-        quorum: this.government.majority.length,
+        quorum: this.government.majority.slice(),
         id: this.proposals[0].id,
         value: this.proposals[0].value
     }
@@ -401,10 +403,11 @@ Legislator.prototype.receiveAccept = function (message) {
         }]
     } else if (compare < 0) {
     } else {
-        this.entry(message.id, message)
+        var entry = this.entry(message.id, message)
         return [{
             from: [ this.id ],
-            to: this.government.majority.slice(),
+            to: entry.quorum.slice(),
+            quorum: entry.quorum.slice(),
             type: 'accepted',
             id: message.id
         }]
@@ -424,10 +427,10 @@ Legislator.prototype.receiveAccepted = function (message) {
         if (!~entry.accepts.indexOf(id)) {
             entry.accepts.push(id)
         }
-        if (entry.accepts.length >= entry.quorum && !entry.learned)  {
+        if (entry.accepts.length >= entry.quorum.length && !entry.learned)  {
             this.markLastest(entry, 'learned')
             entry.learned = true
-            if (!this.restarted && ~this.government.majority.indexOf(this.id)) {
+            if (~entry.quorum.indexOf(this.id)) {
                 messages.push({
                     from: [ this.id ],
                     to: [ this.government.leader ],
@@ -555,7 +558,7 @@ Legislator.prototype.markUniform = function () {
         // did they become actionable? The we have a continual government.
         if (previous.decided) {
             if (current.decided) {
-                return { terminus: current.value.id, government: previous.id }
+                return { terminus: current.value.terminus, government: previous.id }
             }
             // Perhaps our old business entry is inactionable and this
             // government failed.
@@ -574,7 +577,7 @@ Legislator.prototype.receiveLearned = function (message) {
         if (!~entry.learns.indexOf(id)) {
             entry.learns.push(id)
         }
-        if (entry.learns.length == entry.quorum) {
+        if (entry.learns.length == entry.quorum.length) {
             // todo: rename.
             this.markLastest(entry, 'learned')
             this.markLastest(entry, 'decided')
@@ -582,10 +585,12 @@ Legislator.prototype.receiveLearned = function (message) {
                 this.last[this.id].decided = entry.id
             }
             this.markUniform()
+            // todo: only on 'uniform', should we convene.
             push.apply(messages, this.dispatchInternal('decide', entry))
         }
         // If we are the leader, will be decided.
         if (
+            entry.decided &&
             this.proposals.length &&
             Id.compare(this.proposals[0].id, message.id) == 0
         ) {
@@ -602,6 +607,7 @@ Legislator.prototype.learnConvene = function (entry) {
     if (Id.compare(this.government.id, entry.id) < 0) {
         this.government = entry.value.government
         this.government.id = entry.id
+        return []
         if (this.government.leader != this.id) {
             return this.sync([ this.government.leader ], 0)
         }
@@ -623,7 +629,8 @@ Legislator.prototype.sync = function (to, count) {
 Legislator.prototype.decideConvene = function (entry) {
     this.learnConvene(entry)
     // todo: naturalization tests go here, or check proposal.
-    if (this.government.leader == this.id && entry.id == this.proposals[0].id) {
+    // todo: is this right if it is replaying?
+    if (this.government.leader == this.id && this.proposals.length && entry.id == this.proposals[0].id) {
         var majority = this.government.majority.slice()
         // new rule: the majority is always not more than one away from being uniform.
         // todo: not difficult, you will be able to use most decided. Not sort
@@ -642,7 +649,7 @@ Legislator.prototype.decideConvene = function (entry) {
             value: {
                 type: 'commence',
                 government: this.government,
-                id: terminus
+                terminus: terminus
             }
         })
     }
