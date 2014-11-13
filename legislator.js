@@ -510,13 +510,6 @@ Legislator.prototype.markUniform = function () {
 
     function markUniform (entry) {
         entry.uniform = true
-        /*
-        var cartridge = this.cookies.hold(entry.id, false)
-        if (cartridge.value) {
-            entry.cookie = cartridge.value
-        }
-        cartridge.remove()
-        */
     }
 
     function trampoline (f, i) {
