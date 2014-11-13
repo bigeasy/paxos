@@ -55,6 +55,10 @@ require('proof')(4, function (assert) {
         id: '2/1', leader: 0, majority: [ 0, 1 ], members: [ 0, 1 ], interim: false
     }, 'grow')
 
+    assert(legislators[1].government, {
+        id: '2/1', leader: 0, majority: [ 0, 1 ], members: [ 0, 1 ], interim: false
+    }, 'cleanup pulse')
+
 //    messages = legislators[1].sync([ 0 ], 20)
 //    Legislator.synchronous(legislators, 1, messages, logger)
 })

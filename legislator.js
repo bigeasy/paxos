@@ -371,8 +371,8 @@ Legislator.prototype.accept = function () {
         id: this.proposals[0].id,
         value: this.proposals[0].value
     }
-    assert(accept.route.length, 'length')
-    return [accept]
+    assert(accept.route.length, 'route has no length')
+    return [ accept ]
 }
 
 Legislator.prototype.entry = function (id, message) {
@@ -580,7 +580,7 @@ Legislator.prototype.receiveLearned = function (message) {
             // todo: only on 'uniform', should we convene.
             push.apply(messages, this.dispatchInternal('decide', entry))
         }
-        // If we are the leader, will be decided.
+        // Shift the next entry or else send final learning pulse.
         if (
             entry.decided &&
             this.proposals.length &&
@@ -589,10 +589,29 @@ Legislator.prototype.receiveLearned = function (message) {
             this.proposals.shift()
             if (this.proposals.length) {
                 push.apply(messages, this.accept())
+            } else {
+                push.apply(messages, this.nothing())
             }
         }
     }, this)
     return messages
+}
+
+// This merely asserts that a message follows a certain route. Maybe I'll
+// rename it to "route", but "nothing" is good enough.
+Legislator.prototype.nothing = function () {
+    var nothing = {
+        from: [ this.id ],
+        to: this.government.majority.slice(),
+        route: this.government.majority.slice(),
+        type: 'nothing'
+    }
+    assert(nothing.route.length, 'route has no length')
+    return [ nothing ]
+}
+
+Legislator.prototype.receiveNothing = function () {
+    return []
 }
 
 Legislator.prototype.learnConvene = function (entry) {
