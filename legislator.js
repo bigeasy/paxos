@@ -693,18 +693,6 @@ Legislator.prototype.receiveSynchronize = function (message) {
             }
         }
 
-        // todo: if leader.
-        if (false && Id.increment(greatest, 1) == lastUniformId) {
-            this.createProposal(1, {
-                internal: true,
-                value: {
-                    type: 'immigrate',
-                    id: message.from[0]
-                }
-            })
-            messages.push.apply(messages, this.accept())
-        }
-
         messages.push({
             to: message.from,
             from: [ this.id ],
