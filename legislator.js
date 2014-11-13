@@ -53,12 +53,12 @@ function Legislator (id) {
     this.promise = { id: '0/1' }
     this.log = new RBTree(function (a, b) { return Id.compare(a.id, b.id) })
     this.government = { id: '0/1' }
-    this.last = {}
+    this.greatest = {}
     this.voting = false
     this.lastProposalId = '0/1'
     this.proposals = []
     this.citizens = {}
-    this.last[id] = {
+    this.greatest[id] = {
         learned: '0/1',
         decided: '0/1',
         uniform: '0/1'
@@ -414,9 +414,9 @@ Legislator.prototype.receiveAccept = function (message) {
     }
 }
 
-Legislator.prototype.setLast = function (entry, type) {
-    if (Id.compare(this.last[this.id][type], entry.id) < 0) {
-        this.last[this.id][type] = entry.id
+Legislator.prototype.setGreatest = function (entry, type) {
+    if (Id.compare(this.greatest[this.id][type], entry.id) < 0) {
+        this.greatest[this.id][type] = entry.id
     }
     entry[type] = true
 }
@@ -428,7 +428,7 @@ Legislator.prototype.receiveAccepted = function (message) {
             entry.accepts.push(id)
         }
         if (entry.accepts.length >= entry.quorum.length && !entry.learned)  {
-            this.setLast(entry, 'learned')
+            this.setGreatest(entry, 'learned')
             entry.learned = true
             if (~entry.quorum.indexOf(this.id)) {
                 messages.push({
@@ -456,8 +456,8 @@ Legislator.prototype.dispatchInternal = function (prefix, entry) {
 }
 
 Legislator.prototype.markUniform = function () {
-    var last = this.last[this.id],
-        iterator = this.log.findIter({ id: this.last[this.id].uniform }),
+    var greatest = this.greatest[this.id],
+        iterator = this.log.findIter({ id: this.greatest[this.id].uniform }),
         previous, current
     for (;;) {
         previous = iterator.data(), current = iterator.next()
@@ -470,7 +470,7 @@ Legislator.prototype.markUniform = function () {
             assert(previous.uniform || previous.ignored, 'previous must be resolved')
             if (current.decided) {
                 markUniform.call(this, current)
-                last.uniform = current.id
+                greatest.uniform = current.id
                 continue
             }
         } else {
@@ -578,10 +578,10 @@ Legislator.prototype.receiveLearned = function (message) {
             entry.learns.push(id)
         }
         if (entry.learns.length == entry.quorum.length) {
-            this.setLast(entry, 'learned')
-            this.setLast(entry, 'decided')
-            if (Id.compare(entry.id, this.last[this.id].decided) > 0) {
-                this.last[this.id].decided = entry.id
+            this.setGreatest(entry, 'learned')
+            this.setGreatest(entry, 'decided')
+            if (Id.compare(entry.id, this.greatest[this.id].decided) > 0) {
+                this.greatest[this.id].decided = entry.id
             }
             this.markUniform()
             // todo: only on 'uniform', should we convene.
@@ -621,7 +621,7 @@ Legislator.prototype.sync = function (to, count) {
         to: to,
         count: count,
         joined: null,
-        last: this.last[this.id]
+        greatest: this.greatest[this.id]
     }]
 }
 
@@ -635,7 +635,7 @@ Legislator.prototype.decideConvene = function (entry) {
         // todo: not difficult, you will be able to use most decided. Not sort
         // the majority, because we will all be in sync.
         majority.sort(function (a, b) {
-            return Id.compare(this.last[b].decided, this.last[a].decided)
+            return Id.compare(this.greatest[b].decided, this.greatest[a].decided)
         }.bind(this))
         var iterator = this.log.findIter({ id: entry.id }), current
         do {
@@ -667,21 +667,21 @@ Legislator.prototype.decideCommence = function (entry) {
 Legislator.prototype.receiveSynchronize = function (message) {
     assert(message.from.length == 1, 'multi synchronize')
 
-    assert(message.last, 'message must have last')
-    var last = this.last[message.from[0]] = message.last
+    assert(message.greatest, 'message must have greatest')
+    var greatest = this.greatest[message.from[0]] = message.greatest
 
     var messages = []
 
     assert(!~message.from.indexOf(this.id), 'synchronize with self')
 
     if (message.count) {
-        var lastUniformId = this.last[this.id].uniform
+        var lastUniformId = this.greatest[this.id].uniform
         message.count--
-        messages.push(createLearned(message.from, this.log.find({ id: this.last[this.id].uniform })))
+        messages.push(createLearned(message.from, this.log.find({ id: this.greatest[this.id].uniform })))
 
-        var iterator = this.log.findIter({ id: this.last[message.from[0]].uniform }), entry
+        var iterator = this.log.findIter({ id: this.greatest[message.from[0]].uniform }), entry
         var count = (message.count - 1) || 0
-        var greatest = this.last[message.from[0]].uniform
+        var greatest = this.greatest[message.from[0]].uniform
         // todo: while (count-- && (entry = iterator.next()).id != lastUniformId) {
         // ^^^ needs short circult.
         while (count-- && (entry = iterator.next()) != null && entry.id != lastUniformId) {
@@ -709,7 +709,7 @@ Legislator.prototype.receiveSynchronize = function (message) {
             to: message.from,
             from: [ this.id ],
             type: 'synchronized',
-            last: this.last[this.id],
+            greatest: this.greatest[this.id],
             citizens: this.citizens,
             government: this.government
         })
@@ -732,7 +732,7 @@ Legislator.prototype.receiveSynchronize = function (message) {
 
 // todo: figure out who has the highest uniform value and sync with them?
 Legislator.prototype.receiveSynchronized = function (message) {
-    this.last[message.from[0]] = message.last
+    this.greatest[message.from[0]] = message.greatest
     if (this.government.leader === this.id) {
     }
 }
