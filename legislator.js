@@ -414,7 +414,7 @@ Legislator.prototype.receiveAccept = function (message) {
     }
 }
 
-Legislator.prototype.markLastest = function (entry, type) {
+Legislator.prototype.setLast = function (entry, type) {
     if (Id.compare(this.last[this.id][type], entry.id) < 0) {
         this.last[this.id][type] = entry.id
     }
@@ -428,7 +428,7 @@ Legislator.prototype.receiveAccepted = function (message) {
             entry.accepts.push(id)
         }
         if (entry.accepts.length >= entry.quorum.length && !entry.learned)  {
-            this.markLastest(entry, 'learned')
+            this.setLast(entry, 'learned')
             entry.learned = true
             if (~entry.quorum.indexOf(this.id)) {
                 messages.push({
@@ -578,9 +578,8 @@ Legislator.prototype.receiveLearned = function (message) {
             entry.learns.push(id)
         }
         if (entry.learns.length == entry.quorum.length) {
-            // todo: rename.
-            this.markLastest(entry, 'learned')
-            this.markLastest(entry, 'decided')
+            this.setLast(entry, 'learned')
+            this.setLast(entry, 'decided')
             if (Id.compare(entry.id, this.last[this.id].decided) > 0) {
                 this.last[this.id].decided = entry.id
             }

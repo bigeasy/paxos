@@ -1,5 +1,6 @@
 ### Issue by Issue
 
+ * Rename `markLastest`. #119.
  * Remove `compareGovernment`. #117.
  * Upgrade Monotonic to 0.0.2. #114.
  * Use Monotonic. #108.
