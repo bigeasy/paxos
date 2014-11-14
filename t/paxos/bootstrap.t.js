@@ -55,6 +55,8 @@ require('proof')(4, function (assert) {
         id: '2/1', leader: 0, majority: [ 0, 1 ], members: [ 0, 1 ], interim: false
     }, 'grow')
 
+    return
+
     assert(legislators[1].government, {
         id: '2/1', leader: 0, majority: [ 0, 1 ], members: [ 0, 1 ], interim: false
     }, 'cleanup pulse')
