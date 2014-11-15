@@ -1,22 +1,7 @@
 require('proof')(4, function (assert) {
-    var Legislator = require('../../legislator'),
-        messages
+    var Legislator = require('../../legislator')
 
-    function run (messages, leaders, stop, count) {
-        stop = stop == null ? Infinity : stop, count = count || 0
-        messages.forEach(function (message) {
-            console.log(0, message)
-        })
-        for (var i = 0; messages.length && i < stop; i++ ) {
-            messages = Legislator.synchronous(messages, legislators)
-            messages.forEach(function (message) {
-                console.log(count + i + 1, message)
-            })
-        }
-        return messages
-    }
-
-    var legislators = [ new Legislator(0) ]
+    var legislators = [ new Legislator(0) ], messages
     messages = legislators[0].bootstrap()
 
     function logger (count, id, message) {
