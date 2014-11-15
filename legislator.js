@@ -47,6 +47,7 @@ var Id = {
 
 function Legislator (id) {
     this.id = id
+    this.messageId = id + '/0'
     // it appears that the only point of the cookie is to mark naturalization.
     this.cookie = '0'
     this.idealGovernmentSize = 5
@@ -189,7 +190,6 @@ Legislator.route = function (legislator, messages, path, index, logger) {
         messages.forEach(function (message) {
             var copy = JSON.parse(JSON.stringify(message))
             var index
-            console.log(message)
             if (~(index = message.to.indexOf(legislator.id))) {
                 self = true
                 logger(count, legislator.id, copy)
@@ -708,7 +708,8 @@ Legislator.prototype.send = function () {
     var from = vargs.shift(), to = vargs.shift(), values = vargs.shift()
     var message = {
         from: from,
-        to: to
+        to: to,
+        messageId: this.messageId = Id.increment(this.messageId, 1)
     }
     for (var key in values) {
         message[key] = values[key]
