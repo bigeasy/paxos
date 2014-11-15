@@ -285,7 +285,7 @@ Legislator.prototype.enqueue = function (value) {
 }
 
 Legislator.prototype.prepare = function () {
-    this.send(this.government.majority.slice(), {
+    this.pulse(this.government.majority.slice(), {
         type: 'prepare',
         id: this.proposals[0].id
     })
@@ -296,12 +296,12 @@ Legislator.prototype.receivePrepare = function (message) {
     if (compare != 0) {
         if (compare < 0) {
             this.promise = { id: message.id }
-            this.send(message.from, {
+            this.pulse(message.from, {
                 type: 'promise',
                 id: this.promise.id
             })
         } else {
-            this.send(message.from, {
+            this.pulse(message.from, {
                 type: 'promised',
                 id: this.promisedId
             })
@@ -342,7 +342,7 @@ Legislator.prototype.accept = function () {
         quorum: this.government.majority.slice(),
         value: this.proposals[0].value
     })
-    this.send(this.government.majority.slice(), {
+    this.pulse(this.government.majority.slice(), {
         route: this.government.majority.slice(),
         type: 'accept',
         internal: this.proposals[0].internal,
@@ -379,7 +379,7 @@ Legislator.prototype.receiveAccept = function (message) {
     } else if (compare < 0) {
     } else {
         var entry = this.entry(message.id, message)
-        this.send(entry.quorum.slice(), {
+        this.pulse(entry.quorum.slice(), {
             quorum: entry.quorum.slice(),
             type: 'accepted',
             id: message.id
@@ -404,7 +404,7 @@ Legislator.prototype.receiveAccepted = function (message) {
             this.setGreatest(entry, 'learned')
             entry.learned = true
             if (~entry.quorum.indexOf(this.id)) {
-                this.send([ this.government.leader ], {
+                this.pulse([ this.government.leader ], {
                     type: 'learned',
                     id: message.id
                 })
@@ -568,7 +568,7 @@ Legislator.prototype.receiveLearned = function (message) {
 // This merely asserts that a message follows a certain route. Maybe I'll
 // rename it to "route", but "nothing" is good enough.
 Legislator.prototype.nothing = function () {
-    this.send(this.government.majority.slice(), {
+    this.pulse(this.government.majority.slice(), {
         route: this.government.majority.slice(),
         type: 'nothing'
     })
@@ -700,15 +700,19 @@ Legislator.prototype.post = function (value, internal) {
     return cookie
 }
 
-Legislator.prototype.send = function () {
-    var vargs = slice.call(arguments)
-    if (vargs.length == 2) {
-        vargs.unshift([ this.id ])
-    }
-    var from = vargs.shift(), to = vargs.shift(), values = vargs.shift()
+Legislator.prototype.pulse = function (to, values) {
+    this.message(to, this.government.id, values)
+}
+
+Legislator.prototype.send = function (to, values) {
+    this.message(to, '-', values)
+}
+
+Legislator.prototype.message = function (to, route, values) {
     var message = {
-        from: from,
+        from: [ this.id ],
         to: to,
+        _route: route,
         messageId: this.messageId = Id.increment(this.messageId, 1)
     }
     for (var key in values) {
