@@ -59,7 +59,7 @@ function Legislator (id) {
     this.lastProposalId = '0/0'
     this.proposals = []
     this.citizens = {}
-    this.messages = []
+    this.envelopes = []
     this.greatest[id] = {
         learned: '0/1',
         decided: '0/1',
@@ -173,6 +173,27 @@ Legislator.synchronous = function (legislators, id, transcript, logger) {
 
 var count = 0
 
+function flatten (envelopes) {
+    var messages = [], seen = {}
+    envelopes.forEach(function (envelope) {
+        var message = seen[envelope.message.id]
+        if (!message) {
+            var message = { from: [], to: [], _route: envelope._route }
+            for (var key in envelope.message)  {
+                message[key] = envelope.message[key]
+            }
+            messages.push(seen[envelope.message.id] = message)
+        }
+        if (!~message.from.indexOf(envelope.from)) {
+            message.from.push(envelope.from)
+        }
+        if (!~message.to.indexOf(envelope.to)) {
+            message.to.push(envelope.to)
+        }
+    })
+    return messages
+}
+
 // The only proxied invocation is `accept`.
 Legislator.route = function (legislator, messages, path, index, logger) {
     // Get the stack out of the path.
@@ -193,7 +214,8 @@ Legislator.route = function (legislator, messages, path, index, logger) {
                 var type = message.type
                 var method = 'receive' + type[0].toUpperCase() + type.substring(1)
                 legislator[method](copy)
-                push.apply(keep, legislator.messages.splice(0, legislator.messages.length))
+                var messages = flatten(legislator.envelopes.splice(0, legislator.envelopes.length))
+                push.apply(keep, messages)
             }
             if (message.to.length) {
                 keep.push(message)
@@ -664,6 +686,7 @@ Legislator.prototype.receiveSynchronize = function (message) {
     }
 
     function createLearned (entry) {
+        // todo: multiple froms.
         return {
             type: 'learned',
             promise: entry.id,
@@ -698,24 +721,24 @@ Legislator.prototype.post = function (value, internal) {
 }
 
 Legislator.prototype.pulse = function (to, values) {
-    this.message(to, this.government.id, values)
+    this.stuff(to, this.government.id, values)
 }
 
 Legislator.prototype.send = function (to, values) {
-    this.message(to, '-', values)
+    this.stuff(to, '-', values)
 }
 
-Legislator.prototype.message = function (to, route, values) {
-    var message = {
-        from: [ this.id ],
-        to: to,
-        _route: route,
-        id: this.messageId = Id.increment(this.messageId, 1)
-    }
-    for (var key in values) {
-        message[key] = values[key]
-    }
-    this.messages.push(message)
+Legislator.prototype.stuff = function (to, route, values) {
+    values.id = this.messageId = Id.increment(this.messageId, 1)
+    to.forEach(function (to) {
+        var envelope = {
+            from: this.id,
+            to: to,
+            _route: route,
+            message: values
+        }
+        this.envelopes.push(envelope)
+    }, this)
 }
 
 Legislator.prototype.receivePost = function (message) {
