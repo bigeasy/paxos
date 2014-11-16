@@ -51,12 +51,12 @@ function Legislator (id) {
     // it appears that the only point of the cookie is to mark naturalization.
     this.cookie = '0'
     this.idealGovernmentSize = 5
-    this.promise = { id: '0/1' }
+    this.promise = { id: '0/0' }
     this.log = new RBTree(function (a, b) { return Id.compare(a.id, b.id) })
-    this.government = { id: '0/1' }
+    this.government = { id: '0/0' }
     this.greatest = {}
     this.voting = false
-    this.lastProposalId = '0/1'
+    this.lastProposalId = '0/0'
     this.proposals = []
     this.citizens = {}
     this.messages = []
@@ -77,6 +77,7 @@ function Legislator (id) {
     entry.learned = true
     entry.decided = true
     entry.uniform = true
+
     this.cookies = new Cache().createMagazine()
 // todo: ^^^ more fun name.
 }
@@ -84,13 +85,13 @@ function Legislator (id) {
 Legislator.prototype.bootstrap = function () {
     this.restarted = false
     this.government = {
-        id: '0/1',
+        id: '0/0',
         leader: this.id,
         majority: [ this.id ],
         members: [ this.id ],
         interim: true
     }
-    this.citizens[this.id] = this.naturalized = '0/1'
+    this.citizens[this.id] = this.naturalized = '0/0'
     this.createProposal(0, {
         internal: true,
         value: {
@@ -604,6 +605,7 @@ Legislator.prototype.decideConvene = function (entry) {
         var iterator = this.log.findIter({ id: entry.id }), current
         do {
             current = iterator.prev()
+            console.log(current)
         } while (Id.compare(current.id, '0/0', 1) == 0 || !current.decided)
         var terminus = current.id
         assert(majority[0] == this.id, 'need to catch up')
@@ -619,10 +621,10 @@ Legislator.prototype.decideConvene = function (entry) {
 }
 
 Legislator.prototype.decideCommence = function (entry) {
-    if (Id.compare(this.government.id, entry.id)) {
+    console.log(entry.value.government)
+    if (Id.compare(this.government.id, entry.value.government.id) == 0) {
         this.government = entry.value.government
         this.government.interim = false
-        this.government.id = entry.id
     }
 }
 
