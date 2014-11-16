@@ -11,7 +11,7 @@ require('proof')(4, function (assert) {
     messages = Legislator.synchronous(legislators, 0, messages, logger)
 
     assert(legislators[0].government, {
-        id: '1/1', leader: 0, majority: [ 0 ], members: [ 0 ], interim: false
+        id: '1/0', leader: 0, majority: [ 0 ], members: [ 0 ], interim: false
     }, 'bootstrap')
 
     legislators.push(new Legislator(1))
@@ -25,7 +25,7 @@ require('proof')(4, function (assert) {
     })
 
     assert(legislators[1].government, {
-        id: '1/1', leader: 0, majority: [ 0 ], members: [ 0 ], interim: false
+        id: '1/0', leader: 0, majority: [ 0 ], members: [ 0 ], interim: false
     }, 'synchronize join')
 
     // todo: yes, you look inside the response. it is not opaque. you are at
@@ -36,13 +36,13 @@ require('proof')(4, function (assert) {
     Legislator.synchronous(legislators, 1, messages, logger)
 
     assert(legislators[0].government, {
-        id: '2/1', leader: 0, majority: [ 0, 1 ], members: [ 0, 1 ], interim: false
+        id: '2/0', leader: 0, majority: [ 0, 1 ], members: [ 0, 1 ], interim: false
     }, 'grow')
 
     return
 
     assert(legislators[1].government, {
-        id: '2/1', leader: 0, majority: [ 0, 1 ], members: [ 0, 1 ], interim: false
+        id: '2/0', leader: 0, majority: [ 0, 1 ], members: [ 0, 1 ], interim: false
     }, 'cleanup pulse')
 
 //    messages = legislators[1].sync([ 0 ], 20)
