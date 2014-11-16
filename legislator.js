@@ -713,7 +713,7 @@ Legislator.prototype.message = function (to, route, values) {
         from: [ this.id ],
         to: to,
         _route: route,
-        messageId: this.messageId = Id.increment(this.messageId, 1)
+        id: this.messageId = Id.increment(this.messageId, 1)
     }
     for (var key in values) {
         message[key] = values[key]
