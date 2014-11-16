@@ -103,10 +103,6 @@ Legislator.prototype.bootstrap = function () {
     this.prepare()
 }
 
-Legislator.prototype.receiveTranscript = function (message) {
-    push.apply(this.messages, message.transcript)
-}
-
 Legislator.synchronous = function (legislators, id, transcript, logger) {
     var machines = {}
 
@@ -126,8 +122,7 @@ Legislator.synchronous = function (legislators, id, transcript, logger) {
     assignMachineUnless(id).unrouted.push({
         from: [ id ],
         to: [ id ],
-        type: 'transcript',
-        transcript: transcript
+        type: 'nothing'
     })
 
     function post (messages, route, index) {
