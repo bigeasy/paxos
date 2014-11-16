@@ -1,14 +1,14 @@
 require('proof')(4, function (assert) {
     var Legislator = require('../../legislator')
 
-    var legislators = [ new Legislator(0) ], messages
-    messages = legislators[0].bootstrap()
+    var legislators = [ new Legislator(0) ]
+    legislators[0].bootstrap()
 
     function logger (count, id, message) {
         console.log(count, id, message)
     }
 
-    messages = Legislator.synchronous(legislators, 0, messages, logger)
+    Legislator.synchronous(legislators, 0, logger)
 
     assert(legislators[0].government, {
         id: '1/0', leader: 0, majority: [ 0 ], members: [ 0 ], interim: false
@@ -16,9 +16,9 @@ require('proof')(4, function (assert) {
 
     legislators.push(new Legislator(1))
 
-    messages = legislators[1].sync([ 0 ], 20)
+    legislators[1].sync([ 0 ], 20)
 
-    messages = Legislator.synchronous(legislators, 1, messages, logger)
+    Legislator.synchronous(legislators, 1, logger)
 
     legislators[1].log.each(function (entry) {
         // console.log('entry', entry)
@@ -33,7 +33,7 @@ require('proof')(4, function (assert) {
     // that is uncommon and subtle.
     var cookie = legislators[1].naturalize()
     assert(cookie, 1, 'cookie')
-    Legislator.synchronous(legislators, 1, messages, logger)
+    Legislator.synchronous(legislators, 1, logger)
 
     assert(legislators[0].government, {
         id: '2/0', leader: 0, majority: [ 0, 1 ], members: [ 0, 1 ], interim: false

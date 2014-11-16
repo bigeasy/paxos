@@ -104,7 +104,7 @@ Legislator.prototype.bootstrap = function () {
     this.prepare()
 }
 
-Legislator.synchronous = function (legislators, id, transcript, logger) {
+Legislator.synchronous = function (legislators, id, logger) {
     var machines = {}
 
     function assignMachineUnless (id) {
