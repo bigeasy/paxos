@@ -6,6 +6,8 @@ var slice = [].slice
 var RBTree = require('bintrees').RBTree;
 var Cache = require('magazine')
 
+var consume = require('./consume')
+
 var c = 0 // todo: temporary
 
 var Cookie = {
@@ -51,7 +53,7 @@ function Legislator (id) {
     // it appears that the only point of the cookie is to mark naturalization.
     this.cookie = '0'
     this.idealGovernmentSize = 5
-    this.promise = { id: '0/0' }
+    this.promises = [{ id: '0/0' }]
     this.log = new RBTree(function (a, b) { return Id.compare(a.id, b.id) })
     this.government = { id: '0/0' }
     this.greatest = {}
@@ -59,7 +61,8 @@ function Legislator (id) {
     this.lastProposalId = '0/0'
     this.proposals = []
     this.citizens = {}
-    this.envelopes = []
+    this.routed = new Cache().createMagazine()
+    this.unrouted = {}
     this.greatest[id] = {
         learned: '0/1',
         decided: '0/1',
@@ -92,7 +95,7 @@ Legislator.prototype.bootstrap = function () {
         interim: true
     }
     this.citizens[this.id] = this.naturalized = '0/0'
-    this.createProposal(0, {
+    this.proposeGovernment({
         internal: true,
         value: {
             type: 'convene',
@@ -104,8 +107,74 @@ Legislator.prototype.bootstrap = function () {
     this.prepare()
 }
 
+Legislator.prototype.receiveRoute = function (envelope, message) {
+    var cartridge = this.routed.hold(message.route.id, { initialized: false })
+    if (cartridge.value.initialized) {
+    }
+    cartridge.release()
+}
+
+Legislator.prototype.ingest = function (envelopes) {
+    envelopes.forEach(function (envelope) {
+        if (envelope.route == '-') {
+            var envelopes = this.unrouted[envelope.to]
+            if (!envelopes) {
+                envelopes = this.unrouted[envelope.to] = []
+            }
+            envelopes.push(envelope)
+        } else if (envelope.message.type == 'route') {
+        } else {
+        }
+    }, this)
+}
+
+Legislator.prototype.consume = function (logger) {
+    var purge = this.routed.purge()
+    while (purge.cartridge) {
+        consume(purge.cartridge.value.envelopes, intercept, this)
+        purge.release()
+        purge.next()
+    }
+    purge.release()
+    consume(this.unrouted[this.id] || [], intercept, this)
+    if (this.unrouted[this.id] && this.unrouted[this.id].length == 0) {
+        delete this.unrouted[this.id]
+    }
+
+    var consumed = false
+    function intercept (envelope) {
+        if (envelope.to == this.id) {
+            consumed = true
+            var type = envelope.message.type
+            var method = 'receive' + type[0].toUpperCase() + type.substring(1)
+            var message = {}
+            for (var key in envelope) {
+                message[key] = envelope[key]
+            }
+            for (var key in envelope.message) {
+                message[key] = envelope.message[key]
+            }
+            logger(++count, this.id, envelope.message)
+            this[method](envelope, envelope.message)
+            return true
+        }
+    }
+
+    return consumed
+}
+
 Legislator.synchronous = function (legislators, id, logger) {
     var machines = {}
+
+    return
+
+    var each = legislators.slice()
+
+    while (each.length) {
+        var legislator = each.shift()
+        if (legislator.consume()) {
+        }
+    }
 
     function assignMachineUnless (id) {
         var machine = machines[id]
@@ -178,7 +247,7 @@ function flatten (envelopes) {
     envelopes.forEach(function (envelope) {
         var message = seen[envelope.message.id]
         if (!message) {
-            var message = { from: [], to: [], _route: envelope._route }
+            var message = { from: [], to: [], route: envelope.route }
             for (var key in envelope.message)  {
                 message[key] = envelope.message[key]
             }
@@ -303,23 +372,22 @@ Legislator.prototype.enqueue = function (value) {
 }
 
 Legislator.prototype.prepare = function () {
-    this.pulse(this.government.majority.slice(), {
+    this.pulse(this.promise.quorum, {
         type: 'prepare',
         promise: this.proposals[0].id
     })
 }
 
-Legislator.prototype.receivePrepare = function (message) {
-    var compare = Id.compare(this.promise.id, message.promise, 0)
+Legislator.prototype.receivePrepare = function (envelope, message) {
+    var compare = Id.compare(this.promises[0].id, message.promise, 0)
     if (compare != 0) {
         if (compare < 0) {
-            this.promise = { id: message.promise }
-            this.pulse(message.from, {
+            this.pulse([ envelope.from ], {
                 type: 'promise',
                 promise: this.promise.id
             })
         } else {
-            this.pulse(message.from, {
+            this.pulse([ envelope.from ], {
                 type: 'promised',
                 promise: this.promisedId
             })
@@ -327,44 +395,65 @@ Legislator.prototype.receivePrepare = function (message) {
     }
 }
 
-Legislator.prototype.receivePromise = function (message) {
-    message.from.map(function (id) {
-        var compare = Id.compare(this.proposals[0].id, message.promise)
-        if (compare == 0 && ~this.proposals[0].quorum.indexOf(id)) {
-            if (!~this.proposals[0].promises.indexOf(id)) {
-                this.proposals[0].promises.push(id)
-            }
-            if (this.proposals[0].promises.length == this.proposals[0].quorum.length) {
-                this.accept()
-            }
+Legislator.prototype.receivePromise = function (envelope, message) {
+    var compare = Id.compare(this.proposals[0].id, message.promise)
+    if (compare == 0 && ~this.proposals[0].quorum.indexOf(envelope.from)) {
+        if (!~this.proposals[0].promises.indexOf(envelope.from)) {
+            this.proposals[0].promises.push(envelope.from)
         }
-    }.bind(this))
+        if (this.proposals[0].promises.length == this.proposals[0].quorum.length) {
+            this.accept()
+        }
+    }
+}
+
+Legislator.prototype.proposeGovernment = function (message) {
+    var purge = this.routed.purge()
+    while (purge.cartridge) {
+        if (purge.cartridge.value.path[0] == this.id) {
+            purge.cartridge.remove()
+        } else {
+            purge.cartridge.release()
+        }
+        purge.next()
+    }
+    purge.release()
+    var proposal = this.createProposal(0, message.value.government.majority.slice(), message)
+    this.promise = {
+        id: proposal.id,
+        quorum: proposal.quorum
+    }
+    this.addRoute(proposal.id, proposal.quorum)
+}
+
+Legislator.prototype.proposeEntry = function (message) {
+    this.createProposal(1, this.government.majority.slice(), message)
+    this.addRoute(this.promise.id, this.promise.quorum)
 }
 
 // todo: figure out how to merge into queue.
-Legislator.prototype.createProposal = function (index, prototype) {
-    var id = this.lastProposalId = Id.increment(this.lastProposalId, index)
-    this.proposals.push({
+Legislator.prototype.createProposal = function (index, quorum, message) {
+    var id = this.lastProposalId = Id.increment(this.lastProposalId, index), proposal
+    this.proposals.push(proposal = {
         id: id,
-        internal: !! prototype.internal,
-        value: prototype.value,
-        quorum: this.government.majority.slice(),
+        internal: !! message.internal,
+        value: message.value,
+        quorum: quorum,
         promises: [],
         accepts: []
     })
-    return id
+    return proposal
 }
 
 Legislator.prototype.accept = function () {
     this.entry(this.proposals[0].id, {
-        quorum: this.government.majority.slice(),
+        quorum: this.promise.quorum,
         value: this.proposals[0].value
     })
-    this.pulse(this.government.majority.slice(), {
-        route: this.government.majority.slice(),
+    this.pulse(this.promise.quorum, {
         type: 'accept',
         internal: this.proposals[0].internal,
-        quorum: this.government.majority.slice(),
+        quorum: this.promise.quorum,
         promise: this.proposals[0].id,
         value: this.proposals[0].value
     })
@@ -390,7 +479,7 @@ Legislator.prototype.entry = function (id, message) {
     return entry
 }
 
-Legislator.prototype.receiveAccept = function (message) {
+Legislator.prototype.receiveAccept = function (envelope, message) {
     var compare = Id.compare(this.promise.id, message.promise, 0)
     if (compare > 0) {
         throw new Error('reject')
@@ -412,24 +501,22 @@ Legislator.prototype.setGreatest = function (entry, type) {
     entry[type] = true
 }
 
-Legislator.prototype.receiveAccepted = function (message) {
+Legislator.prototype.receiveAccepted = function (envelope, message) {
     var entry = this.entry(message.promise, message)
-    message.from.forEach(function (id) {
-        if (!~entry.accepts.indexOf(id)) {
-            entry.accepts.push(id)
+    if (!~entry.accepts.indexOf(message.from)) {
+        entry.accepts.push(message.from)
+    }
+    if (entry.accepts.length >= entry.quorum.length && !entry.learned)  {
+        this.setGreatest(entry, 'learned')
+        entry.learned = true
+        if (~entry.quorum.indexOf(this.id)) {
+            this.pulse([ this.government.leader ], {
+                type: 'learned',
+                promise: message.promise
+            })
         }
-        if (entry.accepts.length >= entry.quorum.length && !entry.learned)  {
-            this.setGreatest(entry, 'learned')
-            entry.learned = true
-            if (~entry.quorum.indexOf(this.id)) {
-                this.pulse([ this.government.leader ], {
-                    type: 'learned',
-                    promise: message.promise
-                })
-            }
-            this.dispatchInternal('learn', entry)
-        }
-    }, this)
+        this.dispatchInternal('learn', entry)
+    }
 }
 
 Legislator.prototype.dispatchInternal = function (prefix, entry) {
@@ -551,43 +638,40 @@ Legislator.prototype.markUniform = function () {
     }
 }
 
-Legislator.prototype.receiveLearned = function (message) {
+Legislator.prototype.receiveLearned = function (envelope, message) {
     var entry = this.entry(message.promise, message)
-    message.from.forEach(function (id) {
-        if (!~entry.learns.indexOf(id)) {
-            entry.learns.push(id)
+    if (!~entry.learns.indexOf(envelope.from)) {
+        entry.learns.push(envelope.from)
+    }
+    if (entry.learns.length == entry.quorum.length) {
+        this.setGreatest(entry, 'learned')
+        this.setGreatest(entry, 'decided')
+        if (Id.compare(entry.id, this.greatest[this.id].decided) > 0) {
+            this.greatest[this.id].decided = entry.id
         }
-        if (entry.learns.length == entry.quorum.length) {
-            this.setGreatest(entry, 'learned')
-            this.setGreatest(entry, 'decided')
-            if (Id.compare(entry.id, this.greatest[this.id].decided) > 0) {
-                this.greatest[this.id].decided = entry.id
-            }
-            this.markUniform()
-            // todo: only on 'uniform', should we convene.
-            this.dispatchInternal('decide', entry)
+        this.markUniform()
+        // todo: only on 'uniform', should we convene.
+        this.dispatchInternal('decide', entry)
+    }
+    // Shift the next entry or else send final learning pulse.
+    if (
+        entry.decided &&
+        this.proposals.length &&
+        Id.compare(this.proposals[0].id, message.promise) == 0
+    ) {
+        this.proposals.shift()
+        if (this.proposals.length) {
+            this.accept()
+        } else {
+            this.nothing()
         }
-        // Shift the next entry or else send final learning pulse.
-        if (
-            entry.decided &&
-            this.proposals.length &&
-            Id.compare(this.proposals[0].id, message.promise) == 0
-        ) {
-            this.proposals.shift()
-            if (this.proposals.length) {
-                this.accept()
-            } else {
-                this.nothing()
-            }
-        }
-    }, this)
+    }
 }
 
 // This merely asserts that a message follows a certain route. Maybe I'll
 // rename it to "route", but "nothing" is good enough.
 Legislator.prototype.nothing = function () {
     this.pulse(this.government.majority.slice(), {
-        route: this.government.majority.slice(),
         type: 'nothing'
     })
 }
@@ -607,7 +691,6 @@ Legislator.prototype.sync = function (to, count) {
         type: 'synchronize',
         to: to,
         count: count,
-        joined: null,
         greatest: this.greatest[this.id]
     })
 }
@@ -627,11 +710,10 @@ Legislator.prototype.decideConvene = function (entry) {
         var iterator = this.log.findIter({ id: entry.id }), current
         do {
             current = iterator.prev()
-            console.log(current)
         } while (Id.compare(current.id, '0/0', 1) == 0 || !current.decided)
         var terminus = current.id
         assert(majority[0] == this.id, 'need to catch up')
-        this.createProposal(1, {
+        this.proposeEntry({
             internal: true,
             value: {
                 type: 'commence',
@@ -643,41 +725,38 @@ Legislator.prototype.decideConvene = function (entry) {
 }
 
 Legislator.prototype.decideCommence = function (entry) {
-    console.log(entry.value.government)
     if (Id.compare(this.government.id, entry.value.government.id) == 0) {
         this.government = entry.value.government
         this.government.interim = false
     }
 }
 
-Legislator.prototype.receiveSynchronize = function (message) {
-    assert(message.from.length == 1, 'multi synchronize')
-
+Legislator.prototype.receiveSynchronize = function (envelope, message) {
     assert(message.greatest, 'message must have greatest')
-    var greatest = this.greatest[message.from[0]] = message.greatest
+    var greatest = this.greatest[envelope.from] = message.greatest
 
-    assert(!~message.from.indexOf(this.id), 'synchronize with self')
+    assert(message.from != this.id, 'synchronize with self')
 
     if (message.count) {
         var lastUniformId = this.greatest[this.id].uniform
         message.count--
-        this.send(message.from, createLearned(this.log.find({ id: this.greatest[this.id].uniform })))
+        this.send([ envelope.from ], createLearned(this.log.find({ id: this.greatest[this.id].uniform })))
 
-        var iterator = this.log.findIter({ id: this.greatest[message.from[0]].uniform }), entry
+        var iterator = this.log.findIter({ id: this.greatest[envelope.from].uniform }), entry
         var count = (message.count - 1) || 0
-        var greatest = this.greatest[message.from[0]].uniform
+        var greatest = this.greatest[envelope.from].uniform
         // todo: while (count-- && (entry = iterator.next()).id != lastUniformId) {
         // ^^^ needs short circult.
         while (count-- && (entry = iterator.next()) != null && entry.id != lastUniformId) {
             if (entry.uniform) {
                 greatest = entry.id
-                this.send(message.from, createLearned(entry))
+                this.send([ envelope.from ], createLearned(entry))
             } else if (!entry.ignored) {
                 break
             }
         }
 
-        this.send(message.from, {
+        this.send([ envelope.from ], {
             type: 'synchronized',
             greatest: this.greatest[this.id],
             citizens: this.citizens,
@@ -720,34 +799,79 @@ Legislator.prototype.post = function (value, internal) {
     return cookie
 }
 
-Legislator.prototype.pulse = function (to, values) {
-    this.stuff(to, this.government.id, values)
-}
-
-Legislator.prototype.send = function (to, values) {
-    this.stuff(to, '-', values)
-}
-
-Legislator.prototype.stuff = function (to, route, values) {
-    values.id = this.messageId = Id.increment(this.messageId, 1)
-    to.forEach(function (to) {
-        var envelope = {
-            from: this.id,
-            to: to,
-            _route: route,
-            message: values
+Legislator.prototype.addRoute = function (id, path) {
+    var cartridge = this.routed.hold(id, { initialized: false })
+    if (cartridge.value.initialized) {
+        assert(cartridge.value.id == id &&
+               cartridge.value.path.every(function (value, index) {
+                   return value == path[index]
+               }), 'route not as expected')
+    } else {
+        cartridge.value = {
+            initialized: true,
+            id: this.promise.id,
+            path: this.promise.quorum,
+            envelopes: []
         }
-        this.envelopes.push(envelope)
+    }
+    cartridge.release()
+}
+
+Legislator.prototype.pulse = function () {
+    var vargs = slice.call(arguments),
+        message = vargs.pop(), to = vargs.pop(), id = vargs.pop() || this.promise.id
+    var cartridge = this.routed.hold(id, false)
+    assert(cartridge, 'cannot find route')
+    push.apply(cartridge.value.envelopes, this.stuff([ this.id ], to, id, message))
+    cartridge.release()
+}
+
+Legislator.prototype.send = function () {
+    var vargs = slice.call(arguments),
+        message = vargs.pop(), to = vargs.pop(), from = vargs.pop() || [ this.id ]
+    this.stuff(from, to, '-', message).forEach(function (envelope) {
+        var envelopes = this.unrouted[envelope.to]
+        if (!envelopes) {
+            envelopes = this.unrouted[envelope.to] = []
+        }
+        envelopes.push(envelope)
     }, this)
 }
 
-Legislator.prototype.receivePost = function (message) {
+Legislator.prototype.stuff = function (from, to, route, message) {
+    var envelopes = []
+    message.id = this.messageId = Id.increment(this.messageId, 1)
+    from.forEach(function (from) {
+        to.forEach(function (to) {
+            var envelope = {
+                from: from,
+                to: to,
+                route: route,
+                message: message
+            }
+            envelopes.push(envelope)
+        }, this)
+    }, this)
+    return envelopes
+}
+
+Legislator.prototype.route = function (route, envelope) {
+    if (route == '-') {
+        return [ envelope.from, envelope.to ]
+    }
+    if (route == this.government.id) {
+        return this.government.majority.slice()
+    }
+    return null
+}
+
+Legislator.prototype.receivePost = function (envelope, message) {
     // todo: be super sure that this is a good current government, reject if
     // not and as soon as possible.
     // todo: maybe they supply the government they attempting to petition.
     // The requested government has been replaced.
     if (message.governmentId != this.government.id) {
-        this.send(message.from.slice(), {
+        this.send([ envelope.from ], {
             type: 'posted',
             cookie: message.cookie,
             statusCode: 410
@@ -755,21 +879,21 @@ Legislator.prototype.receivePost = function (message) {
     }
     // Correct government, but not the leader.
     if (this.government.leader != this.id) {
-        this.send(message.from.slice(), {
+        this.send([ envelope.from ], {
             type: 'posted',
             cookie: message.cookie,
             statusCode: 405
         })
     }
     // Correct government and the leader.
-    var id = this.createProposal(1, {
+    var id = this.proposeEntry({
         internal: message.internal,
         value: message.value
     })
     // todo: Returning the value feels as though it is a waste. We're going to
     // want to design algorithms that use atomic broadcast with smaller values.
     // todo: No, I would prefer that we use a cache.
-    this.send(message.from.slice(), {
+    this.send([ envelope.from ], {
         type: 'posted',
         cookie: message.cookie,
         statusCode: 200,
@@ -805,22 +929,21 @@ Legislator.prototype.decideNaturalize = function (entry) {
             var minority = members.filter(function (id) { return !~majority.indexOf(id) })
             majority.push(minority.pop())
         }
-        this.government = {
+        var government = {
             leader: this.id,
             majority: majority,
             members: members,
             interim: true
         }
-        this.createProposal(0, {
+        this.proposeGovernment({
             internal: true,
             value: {
                 type: 'convene',
                 to: this.government.majority.slice(),
                 from: [ this.id ],
-                government: JSON.parse(JSON.stringify(this.government))
+                government: JSON.parse(JSON.stringify(government))
             }
         })
-        this.government.id = this.proposals[this.proposals.length - 1].id
         this.proposals.shift()
         // todo: this all breaks when we actually queue.
         this.prepare()
