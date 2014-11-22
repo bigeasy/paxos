@@ -781,8 +781,6 @@ Legislator.prototype.receiveSynchronized = function (message) {
     this.greatest[message.from[0]] = message.greatest
 }
 
-function noop () {}
-
 Legislator.prototype.post = function (value, internal) {
     var cookie = this.cookie = Cookie.increment(this.cookie)
     this.cookies.hold(cookie, {
