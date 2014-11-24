@@ -1,4 +1,7 @@
-require('proof')(3, function (assert) {
+
+require('proof')(3, prove)
+
+function prove (assert) {
     var Legislator = require('../../legislator'),
         Network = require('../../synchronous/network'),
         Machine = require('../../synchronous/machine')
@@ -37,12 +40,16 @@ require('proof')(3, function (assert) {
     var cookie = network.machines[1].legislator.naturalize()
     assert(cookie, 1, 'cookie')
     network.machines[1].tick()
-
-    return
+    network.machines[0].tick()
+    network.machines[0].tick()
+    network.machines[0].tick()
+    network.machines[0].tick()
 
     assert(legislators[0].government, {
         id: '2/0', leader: 0, majority: [ 0, 1 ], members: [ 0, 1 ], interim: false
     }, 'grow')
+
+    return
 
     assert(legislators[1].government, {
         id: '2/0', leader: 0, majority: [ 0, 1 ], members: [ 0, 1 ], interim: false
@@ -50,4 +57,4 @@ require('proof')(3, function (assert) {
 
 //    messages = legislators[1].sync([ 0 ], 20)
 //    Legislator.synchronous(legislators, 1, messages, logger)
-})
+}

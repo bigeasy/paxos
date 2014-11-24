@@ -68,6 +68,7 @@ function Legislator (id) {
         decided: '0/1',
         uniform: '0/1'
     }
+    this.promise = { id: '0' }
     var motion = {}
     this.queue = motion.prev = motion.next = motion
 
@@ -122,8 +123,11 @@ Legislator.prototype.ingest = function (envelopes) {
                 envelopes = this.unrouted[envelope.to] = []
             }
             envelopes.push(envelope)
-        } else if (envelope.message.type == 'route') {
         } else {
+            var cartridge = this.routed.hold(envelope.route, false)
+            assert(cartridge, 'no route for cartridge')
+            cartridge.value.envelopes.push(envelope)
+            cartridge.release()
         }
     }, this)
 }
@@ -149,12 +153,14 @@ Legislator.prototype.consume = function (logger) {
             var method = 'receive' + type[0].toUpperCase() + type.substring(1)
             var message = {}
             for (var key in envelope) {
-                message[key] = envelope[key]
+                if (key != 'message') {
+                    message[key] = envelope[key]
+                }
             }
             for (var key in envelope.message) {
                 message[key] = envelope.message[key]
             }
-            logger(++count, this.id, envelope.message)
+            logger(++count, this.id, message)
             this[method](envelope, envelope.message)
             return true
         }
@@ -263,107 +269,6 @@ function flatten (envelopes) {
     return messages
 }
 
-// The only proxied invocation is `accept`.
-Legislator.route = function (legislator, messages, path, index, logger) {
-    // Get the stack out of the path.
-    var stack = path.slice(0, index + 1), forward = path.slice(index + 1)
-
-    // Consume messages to self.
-    var routed = [], keep, self
-    for (;;) {
-        keep = []
-        self = false
-        messages.forEach(function (message) {
-            var copy = JSON.parse(JSON.stringify(message))
-            var index
-            if (~(index = message.to.indexOf(legislator.id))) {
-                self = true
-                logger(count, legislator.id, copy)
-                message.to.splice(index, 1)
-                var type = message.type
-                var method = 'receive' + type[0].toUpperCase() + type.substring(1)
-                legislator[method](copy)
-                var messages = flatten(legislator.envelopes.splice(0, legislator.envelopes.length))
-                push.apply(keep, messages)
-            }
-            if (message.to.length) {
-                keep.push(message)
-            }
-        })
-        messages = keep
-
-        // Get the routed message if any.
-        keep = []
-        messages.forEach(function (message) {
-            if (message.route && message.route.length) {
-                routed.push(message)
-            } else {
-                keep.push(message)
-            }
-        })
-        messages = keep
-
-        // The only routed message is the accept, and those happen one at a time.
-        assert(routed.length <= 1, 'only one specific route at a time')
-
-        if (!self) {
-            break
-        }
-
-        count++
-    }
-
-    var split = []
-    messages.forEach(function (message) {
-        message.to.forEach(function (to) {
-            var copy = JSON.parse(JSON.stringify(message))
-            copy.to = [ to ]
-            split.push(copy)
-        })
-    })
-    messages = split
-
-    var unrouted = [], returns = {}, forwards = {}
-    messages.forEach(function (message) {
-        var returning = false, forwarding = false
-        var key = message.type + '/' + message.promise
-        message.to.forEach(function (to) {
-            if (~stack.indexOf(to)) {
-                var existing = returns[key]
-                if (!existing) {
-                    existing = returns[key] = message
-                } else {
-                   existing.to.push(to)
-                }
-            } else if (~path.indexOf(to)) {
-                var existing = forwards[key]
-                if (!existing) {
-                    existing = forwards[key] = message
-                } else {
-                    existing.to.push(to)
-                }
-            } else {
-                unrouted.push(message)
-            }
-        })
-    })
-
-    function values (map) {
-        var values = []
-        for (var key in map) {
-            values.push(map[key])
-        }
-        return values
-    }
-
-    return {
-        returns: values(returns),
-        forwards: values(forwards),
-        routed: routed,
-        unrouted: unrouted
-    }
-}
-
 Legislator.prototype.enqueue = function (value) {
     assert(this.government.leader == this.id, 'not leader')
     var entry = { value: value, prev: this.queue.prev, next: this.queue }
@@ -374,7 +279,8 @@ Legislator.prototype.enqueue = function (value) {
 Legislator.prototype.prepare = function () {
     this.pulse(this.promise.quorum, {
         type: 'prepare',
-        promise: this.proposals[0].id
+        promise: this.proposals[0].id,
+        quorum: this.proposals[0].quorum
     })
 }
 
@@ -382,6 +288,11 @@ Legislator.prototype.receivePrepare = function (envelope, message) {
     var compare = Id.compare(this.promises[0].id, message.promise, 0)
     if (compare != 0) {
         if (compare < 0) {
+            console.log(message)
+            this.promise = {
+                id: message.promise,
+                quorum: message.quorum
+            }
             this.pulse([ envelope.from ], {
                 type: 'promise',
                 promise: this.promise.id
@@ -503,14 +414,14 @@ Legislator.prototype.setGreatest = function (entry, type) {
 
 Legislator.prototype.receiveAccepted = function (envelope, message) {
     var entry = this.entry(message.promise, message)
-    if (!~entry.accepts.indexOf(message.from)) {
-        entry.accepts.push(message.from)
+    if (!~entry.accepts.indexOf(envelope.from)) {
+        entry.accepts.push(envelope.from)
     }
     if (entry.accepts.length >= entry.quorum.length && !entry.learned)  {
         this.setGreatest(entry, 'learned')
         entry.learned = true
         if (~entry.quorum.indexOf(this.id)) {
-            this.pulse([ this.government.leader ], {
+            this.pulse(this.promise.quorum, {
                 type: 'learned',
                 promise: message.promise
             })
@@ -807,12 +718,43 @@ Legislator.prototype.addRoute = function (id, path) {
     } else {
         cartridge.value = {
             initialized: true,
-            id: this.promise.id,
-            path: this.promise.quorum,
+            id: id,
+            path: path,
             envelopes: []
         }
     }
     cartridge.release()
+}
+
+Legislator.prototype.unroute = function () {
+    var unrouted = Object.keys(this.unrouted)
+    if (unrouted.length) {
+        var envelope = this.unrouted[unrouted[0]][0]
+        assert(envelope.from == this.id, 'not from current legislator')
+        return {
+            id: '-',
+            path: [ envelope.from, envelope.to ]
+        }
+    }
+}
+
+Legislator.prototype.route = function () {
+    var cartridge = this.routed.hold(this.promise.id || '0', false)
+    if (!cartridge.value) {
+        cartridge.remove()
+    } else if (cartridge.value.envelopes.length) {
+        var pulse = cartridge.value
+        cartridge.value = {
+            id: pulse.id,
+            path: pulse.path,
+            envelopes: []
+        }
+        cartridge.release()
+        return pulse
+    } else {
+        cartridge.release()
+    }
+    return null
 }
 
 Legislator.prototype.pulse = function () {
@@ -851,16 +793,6 @@ Legislator.prototype.stuff = function (from, to, route, message) {
         }, this)
     }, this)
     return envelopes
-}
-
-Legislator.prototype.route = function (route, envelope) {
-    if (route == '-') {
-        return [ envelope.from, envelope.to ]
-    }
-    if (route == this.government.id) {
-        return this.government.majority.slice()
-    }
-    return null
 }
 
 Legislator.prototype.receivePost = function (envelope, message) {
