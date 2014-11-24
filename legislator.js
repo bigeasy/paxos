@@ -702,7 +702,7 @@ Legislator.prototype.post = function (value, internal) {
         type: 'post',
         internal: !! internal,
         cookie: cookie,
-        governmentId: this.government.id,
+        government: this.government.id,
         value: value
     })
     return cookie
@@ -800,7 +800,7 @@ Legislator.prototype.receivePost = function (envelope, message) {
     // not and as soon as possible.
     // todo: maybe they supply the government they attempting to petition.
     // The requested government has been replaced.
-    if (message.governmentId != this.government.id) {
+    if (message.government != this.government.id) {
         this.send([ envelope.from ], {
             type: 'posted',
             cookie: message.cookie,

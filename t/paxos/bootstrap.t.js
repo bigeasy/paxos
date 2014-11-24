@@ -1,5 +1,5 @@
 
-require('proof')(4, prove)
+require('proof')(5, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -49,9 +49,7 @@ function prove (assert) {
         id: '2/0', leader: 0, majority: [ 0, 1 ], members: [ 0, 1 ], interim: false
     }, 'grow')
 
-    return
-
-    assert(legislators[1].government, {
+    assert(network.machines[1].legislator.government, {
         id: '2/0', leader: 0, majority: [ 0, 1 ], members: [ 0, 1 ], interim: false
     }, 'cleanup pulse')
 
