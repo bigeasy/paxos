@@ -1,5 +1,5 @@
 
-require('proof')(3, prove)
+require('proof')(4, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
