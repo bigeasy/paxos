@@ -47,12 +47,15 @@ Machine.prototype.receive = function (route, index, envelopes) {
 }
 
 Machine.prototype.tick = function () {
-    var route, envelopes
+    var route, envelopes, ticked
 
-    while (this.legislator.consume(this.logger));
+    while (this.legislator.consume(this.logger)) {
+        ticked = true
+    }
 
     route = this.legislator.route()
     if (route) {
+        ticked = true
         envelopes = route.envelopes
     }
 
@@ -62,6 +65,7 @@ Machine.prototype.tick = function () {
     }
 
     if (route && route.path.length > 1) {
+        ticked = true
         route.path.slice(1).forEach(function (id) {
             push.apply(envelopes, this.legislator.unrouted[id] || [])
             delete this.legislator.unrouted[id]
@@ -69,6 +73,8 @@ Machine.prototype.tick = function () {
         this.legislator.ingest(this.network.post(route, 1, envelopes))
         this.legislator.consume(this.logger)
     }
+
+    return ticked
 }
 
 module.exports = Machine

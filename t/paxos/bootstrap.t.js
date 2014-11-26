@@ -19,7 +19,7 @@ function prove (assert) {
 
     // Legislator.synchronous(legislators, 0, logger)
 
-    machine.tick()
+    network.tick()
 
     assert(legislators[0].government, {
         id: '1/0', leader: 0, majority: [ 0 ], members: [ 0 ], interim: false
@@ -28,7 +28,7 @@ function prove (assert) {
     network.machines.push(new Machine(network, new Legislator(1), logger))
 
     network.machines[1].legislator.sync([ 0 ], 20)
-    network.machines[1].tick()
+    network.tick()
 
     assert(network.machines[1].legislator.government, {
         id: '1/0', leader: 0, majority: [ 0 ], members: [ 0 ], interim: false
@@ -39,11 +39,7 @@ function prove (assert) {
     // that is uncommon and subtle.
     var cookie = network.machines[1].legislator.naturalize()
     assert(cookie, 1, 'cookie')
-    network.machines[1].tick()
-    network.machines[0].tick()
-    network.machines[0].tick()
-    network.machines[0].tick()
-    network.machines[0].tick()
+    network.tick()
 
     assert(legislators[0].government, {
         id: '2/0', leader: 0, majority: [ 0, 1 ], members: [ 0, 1 ], interim: false

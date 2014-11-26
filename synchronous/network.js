@@ -11,4 +11,12 @@ Network.prototype.post = function (route, index, envelopes) {
     return machine.receive(route, index, envelopes)
 }
 
+Network.prototype.tick = function () {
+    var ticked
+    while (this.machines.some(function (machine) { return machine.tick() })) {
+        ticked = true
+    }
+    return ticked
+}
+
 module.exports = Network
