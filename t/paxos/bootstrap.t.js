@@ -1,5 +1,5 @@
 
-require('proof')(5, prove)
+require('proof')(6, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -49,6 +49,18 @@ function prove (assert) {
         id: '2/0', leader: 0, majority: [ 0, 1 ], members: [ 0, 1 ], interim: false
     }, 'cleanup pulse')
 
-//    messages = legislators[1].sync([ 0 ], 20)
-//    Legislator.synchronous(legislators, 1, messages, logger)
+    network.machines.push(new Machine(network, new Legislator(2), logger))
+    network.machines[2].legislator.sync([ 0 ], 20)
+    network.tick()
+
+    assert(network.machines[2].legislator.government, {
+        id: '2/0', leader: 0, majority: [ 0, 1 ], members: [ 0, 1 ], interim: false
+    }, 'cleanup pulse')
+
+    network.machines[2].legislator.naturalize()
+    network.tick()
+
+    assert(network.machines[1].legislator.government, {
+        id: '2/0', leader: 0, majority: [ 0, 1 ], members: [ 0, 1 ], interim: false
+    }, 'cleanup pulse')
 }

@@ -288,7 +288,6 @@ Legislator.prototype.receivePrepare = function (envelope, message) {
     var compare = Id.compare(this.promises[0].id, message.promise, 0)
     if (compare != 0) {
         if (compare < 0) {
-            console.log(message)
             this.promise = {
                 id: message.promise,
                 quorum: message.quorum
@@ -651,7 +650,9 @@ Legislator.prototype.receiveSynchronize = function (envelope, message) {
     if (message.count) {
         var lastUniformId = this.greatest[this.id].uniform
         message.count--
-        this.send([ envelope.from ], createLearned(this.log.find({ id: this.greatest[this.id].uniform })))
+        var greatest = this.log.find({ id: this.greatest[this.id].uniform })
+
+        createLearned.call(this, greatest)
 
         var iterator = this.log.findIter({ id: this.greatest[envelope.from].uniform }), entry
         var count = (message.count - 1) || 0
@@ -661,7 +662,7 @@ Legislator.prototype.receiveSynchronize = function (envelope, message) {
         while (count-- && (entry = iterator.next()) != null && entry.id != lastUniformId) {
             if (entry.uniform) {
                 greatest = entry.id
-                this.send([ envelope.from ], createLearned(entry))
+                createLearned.call(this, entry)
             } else if (!entry.ignored) {
                 break
             }
@@ -676,14 +677,13 @@ Legislator.prototype.receiveSynchronize = function (envelope, message) {
     }
 
     function createLearned (entry) {
-        // todo: multiple froms.
-        return {
+        this.send(entry.quorum, [ envelope.from ], {
             type: 'learned',
             promise: entry.id,
             quorum: entry.quorum,
             value: entry.value,
             internal: entry.internal
-        }
+        })
     }
 }
 
@@ -764,6 +764,9 @@ Legislator.prototype.pulse = function () {
     assert(cartridge, 'cannot find route')
     push.apply(cartridge.value.envelopes, this.stuff([ this.id ], to, id, message))
     cartridge.release()
+}
+
+Legislator.prototype.send2 = function () {
 }
 
 Legislator.prototype.send = function () {
