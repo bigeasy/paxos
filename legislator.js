@@ -133,7 +133,8 @@ Legislator.prototype.ingest = function (envelopes) {
 }
 
 Legislator.prototype.consume = function (logger) {
-    var purge = this.routed.purge()
+    var purge = this.routed.purge(), consumed = false
+
     while (purge.cartridge) {
         consume(purge.cartridge.value.envelopes, intercept, this)
         purge.release()
@@ -145,7 +146,6 @@ Legislator.prototype.consume = function (logger) {
         delete this.unrouted[this.id]
     }
 
-    var consumed = false
     function intercept (envelope) {
         if (envelope.to == this.id) {
             consumed = true
