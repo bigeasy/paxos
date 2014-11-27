@@ -132,6 +132,7 @@ Legislator.prototype.ingest = function (envelopes) {
     }, this)
 }
 
+var count = 0
 Legislator.prototype.consume = function (logger) {
     var purge = this.routed.purge(), consumed = false
 
@@ -167,106 +168,6 @@ Legislator.prototype.consume = function (logger) {
     }
 
     return consumed
-}
-
-Legislator.synchronous = function (legislators, id, logger) {
-    var machines = {}
-
-    return
-
-    var each = legislators.slice()
-
-    while (each.length) {
-        var legislator = each.shift()
-        if (legislator.consume()) {
-        }
-    }
-
-    function assignMachineUnless (id) {
-        var machine = machines[id]
-        if (!machine) {
-            machine = machines[id] = {
-                id: id,
-                routes: [],
-                routed: [],
-                unrouted: []
-            }
-        }
-        return machine
-    }
-
-    assignMachineUnless(id).unrouted.push({
-        from: [ id ],
-        to: [ id ],
-        type: 'nothing'
-    })
-
-    function post (messages, route, index) {
-        var legislator = legislators[route[index]], returns = [], response
-        response = Legislator.route(legislator, messages, route, index, logger)
-        push.apply(assignMachineUnless(route[index]).unrouted, response.unrouted)
-        push.apply(assignMachineUnless(route[index]).routed, response.routed)
-        assert(machine.unrouted.every(function (message) {
-            return !~message.to.indexOf(legislator.id)
-        }), 'messages must be unroutable')
-        push.apply(returns, response.returns)
-        if (index + 1 < route.length) {
-            response = Legislator.route(legislator, post(response.forwards, route, index + 1), route, index, logger)
-            push.apply(assignMachineUnless(route[index]).unrouted, response.unrouted)
-            push.apply(assignMachineUnless(route[index]).routed, response.routed)
-            push.apply(returns, response.returns)
-        }
-        route.pop()
-        return returns
-    }
-
-    var machine
-    for (;;) {
-        var machine = machines[Object.keys(machines).pop()]
-        if (!machine) {
-            break
-        }
-        var route = machine.routes.pop()
-        if (route) {
-            post(machine.unrouted.splice(0, machine.unrouted.length), route, 0, 0)
-        } else if (machine.routed.length) {
-            var routed = machine.routed.pop()
-            machine.routes.push(routed.route)
-            delete routed.route
-            machine.unrouted.push(routed)
-        } else if (machine.unrouted.length) {
-            route = [ machine.id, machine.unrouted[0].to[0] ]
-            if (route[0] == route[1]) {
-                route.pop()
-            }
-            machine.routes.push(route)
-        } else {
-            delete machines[machine.id]
-        }
-    }
-}
-
-var count = 0
-
-function flatten (envelopes) {
-    var messages = [], seen = {}
-    envelopes.forEach(function (envelope) {
-        var message = seen[envelope.message.id]
-        if (!message) {
-            var message = { from: [], to: [], route: envelope.route }
-            for (var key in envelope.message)  {
-                message[key] = envelope.message[key]
-            }
-            messages.push(seen[envelope.message.id] = message)
-        }
-        if (!~message.from.indexOf(envelope.from)) {
-            message.from.push(envelope.from)
-        }
-        if (!~message.to.indexOf(envelope.to)) {
-            message.to.push(envelope.to)
-        }
-    })
-    return messages
 }
 
 Legislator.prototype.enqueue = function (value) {
