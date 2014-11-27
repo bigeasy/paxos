@@ -531,7 +531,6 @@ Legislator.prototype.learnConvene = function (entry) {
 Legislator.prototype.sync = function (to, count) {
     this.send(to, {
         type: 'synchronize',
-        to: to,
         count: count,
         greatest: this.greatest[this.id]
     })
