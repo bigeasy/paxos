@@ -22,7 +22,7 @@ function prove (assert) {
     network.tick()
 
     assert(legislators[0].government, {
-        id: '1/0', leader: 0, majority: [ 0 ], members: [ 0 ], interim: false
+        id: '1/0', leader: 0, majority: [ 0 ], minority: [], members: [ 0 ], interim: false
     }, 'bootstrap')
 
     network.machines.push(new Machine(network, new Legislator(1), logger))
@@ -31,7 +31,7 @@ function prove (assert) {
     network.tick()
 
     assert(network.machines[1].legislator.government, {
-        id: '1/0', leader: 0, majority: [ 0 ], members: [ 0 ], interim: false
+        id: '1/0', leader: 0, majority: [ 0 ], minority: [], members: [ 0 ], interim: false
     }, 'synchronize join')
 
     // todo: yes, you look inside the response. it is not opaque. you are at
@@ -42,11 +42,11 @@ function prove (assert) {
     network.tick()
 
     assert(legislators[0].government, {
-        id: '2/0', leader: 0, majority: [ 0, 1 ], members: [ 0, 1 ], interim: false
+        id: '2/0', leader: 0, majority: [ 0, 1 ], minority: [], members: [ 0, 1 ], interim: false
     }, 'grow')
 
     assert(network.machines[1].legislator.government, {
-        id: '2/0', leader: 0, majority: [ 0, 1 ], members: [ 0, 1 ], interim: false
+        id: '2/0', leader: 0, majority: [ 0, 1 ], minority: [], members: [ 0, 1 ], interim: false
     }, 'cleanup pulse')
 
     network.machines.push(new Machine(network, new Legislator(2), logger))
@@ -54,13 +54,13 @@ function prove (assert) {
     network.tick()
 
     assert(network.machines[2].legislator.government, {
-        id: '2/0', leader: 0, majority: [ 0, 1 ], members: [ 0, 1 ], interim: false
+        id: '2/0', leader: 0, majority: [ 0, 1 ], minority: [], members: [ 0, 1 ], interim: false
     }, 'cleanup pulse')
 
     network.machines[2].legislator.naturalize()
     network.tick()
 
     assert(network.machines[1].legislator.government, {
-        id: '3/0', leader: 0, majority: [ 0, 1 ], members: [ 0, 1, 2 ], interim: false
+        id: '3/0', leader: 0, majority: [ 0, 1 ], minority: [ 2 ], members: [ 0, 1, 2 ], interim: false
     }, 'cleanup pulse')
 }

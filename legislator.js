@@ -92,6 +92,7 @@ Legislator.prototype.bootstrap = function () {
         id: '0/0',
         leader: this.id,
         majority: [ this.id ],
+        minority: [],
         members: [ this.id ],
         interim: true
     }
@@ -591,6 +592,7 @@ Legislator.prototype.receiveNothing = function () {
 
 Legislator.prototype.learnConvene = function (entry) {
     if (Id.compare(this.government.id, entry.id) < 0) {
+        assert(entry.value.government.minority)
         this.government = entry.value.government
         this.government.id = entry.id
     }
@@ -637,6 +639,7 @@ Legislator.prototype.decideConvene = function (entry) {
 Legislator.prototype.decideCommence = function (entry) {
     if (Id.compare(this.government.id, entry.value.government.id) == 0) {
         this.government = entry.value.government
+        assert(this.government.minority)
         this.government.interim = false
     }
 }
@@ -858,13 +861,14 @@ Legislator.prototype.decideNaturalize = function (entry) {
         var majority = this.government.majority.slice()
         var parlimentSize = Math.min(5, after)
         var majoritySize = this.majoritySize(5, after)
+        var minority = members.filter(function (id) { return !~majority.indexOf(id) })
         if (majority.length < majoritySize) {
-            var minority = members.filter(function (id) { return !~majority.indexOf(id) })
             majority.push(minority.pop())
         }
         var government = {
             leader: this.id,
             majority: majority,
+            minority: minority,
             members: members,
             interim: true
         }
