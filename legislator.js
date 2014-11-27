@@ -93,7 +93,6 @@ Legislator.prototype.bootstrap = function () {
         leader: this.id,
         majority: [ this.id ],
         minority: [],
-        members: [ this.id ],
         interim: true
     }
     this.citizens[this.id] = this.naturalized = '0/0'
@@ -861,7 +860,11 @@ Legislator.prototype.decideNaturalize = function (entry) {
         var majority = this.government.majority.slice()
         var parlimentSize = Math.min(5, after)
         var majoritySize = this.majoritySize(5, after)
-        var minority = members.filter(function (id) { return !~majority.indexOf(id) })
+        var minority = this.government.minority.slice()
+        var citizens = members.filter(function (id) {
+            return !~minority.indexOf(id) && !~majority.indexOf(id)
+        })
+        minority.push(citizens.pop())
         if (majority.length < majoritySize) {
             majority.push(minority.pop())
         }
@@ -869,7 +872,6 @@ Legislator.prototype.decideNaturalize = function (entry) {
             leader: this.id,
             majority: majority,
             minority: minority,
-            members: members,
             interim: true
         }
         this.proposeGovernment({
