@@ -554,7 +554,7 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
                     proposal: proposal,
                     proposalId: proposalId,
                     leader: node.leader,
-                    roundOver: roundOver,
+                    roundOver: roundOver
                 })
             }
         } else if (proposalId < node.promisedId) {
@@ -576,7 +576,7 @@ function initializeAcceptor (node, cluster) { // :: Node -> Cluster ->
 
 function initializeLearner (node, cluster, callback) { // :: Node -> Cluster ->
     node.roles.push('Learner')
-    node.finalValue = null
+    node.currentValue = null
     node.stateLog = {}
     node.finalProposalId = null
     if (callback) {
@@ -585,16 +585,19 @@ function initializeLearner (node, cluster, callback) { // :: Node -> Cluster ->
 
     node.proposals = {} // proposal ID -> [accept count, retain count, value]
 
-    node.receiveAccept = function (from, proposalId, acceptedValue) { // :: Int -> Int -> a ->
-        if (node.finalValue != null) {
-            return
+    node.receiveAccept = function (from, currentRound, proposalId, acceptedValue) { // :: Int -> Int -> a ->
+        if (currentRound > node.currentRound) {
+            node.currentRound = currentRound
+        } else if (currentRound < node.currentRound) {
+            return;
         }
 
         var last = node.acceptors[from][1]
         if (last) {
             if (last > proposalId) { return }
-            node.acceptors[from][1] = proposalId
         }
+
+        node.acceptors[from][1] = proposalId
 
         if (node.proposals[proposalId] == null) {
             node.proposals[proposalId] = [1, 1, acceptedValue]
@@ -603,7 +606,14 @@ function initializeLearner (node, cluster, callback) { // :: Node -> Cluster ->
         }
 
         if (node.proposals[proposalId][0] == node.quorum) { // round over
-            node.finalValue = acceptedValue
+            node.currentValue = acceptedValue
+            node.stateLog[node.currentRound] = {
+                round: node.currentRound,
+                value: proposal,
+                time: Date.now(),
+                leader: node.leader,
+                proposalId: proposalId
+            }
             node.finalProposalId = proposalId
             if (node.callback) {
                 node.callback({
@@ -611,7 +621,7 @@ function initializeLearner (node, cluster, callback) { // :: Node -> Cluster ->
                     proposal: acceptedValue,
                     proposalId: proposalId,
                     leader: from,
-                    roundOver: true,
+                    roundOver: true
                 })
             }
         }
