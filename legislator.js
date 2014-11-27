@@ -55,7 +55,7 @@ function Legislator (id) {
     this.idealGovernmentSize = 5
     this.promises = [{ id: '0/0' }]
     this.log = new RBTree(function (a, b) { return Id.compare(a.id, b.id) })
-    this.government = { id: '0/0' }
+    this.government = { id: '0/0', minority: [], majority: [] }
     this.greatest = {}
     this.voting = false
     this.lastProposalId = '0/0'
@@ -449,32 +449,62 @@ Legislator.prototype.markUniform = function () {
     }
 }
 
+Legislator.prototype.__defineGetter__('parliament', function () {
+    return [].concat(this.government.majority, this.government.minority)
+})
+
+Legislator.prototype.__defineGetter__('constituents', function () {
+    var parliament = this.parliament
+    return Object.keys(this.citizens).map(function (id) {
+        return +id
+    }).filter(function (id) {
+        return !~parliament.indexOf(id)
+    })
+})
+
 Legislator.prototype.receiveLearned = function (envelope, message) {
     var entry = this.entry(message.promise, message)
     if (!~entry.learns.indexOf(envelope.from)) {
         entry.learns.push(envelope.from)
-    }
-    if (entry.learns.length == entry.quorum.length) {
-        this.setGreatest(entry, 'learned')
-        this.setGreatest(entry, 'decided')
-        if (Id.compare(entry.id, this.greatest[this.id].decided) > 0) {
-            this.greatest[this.id].decided = entry.id
+        if (entry.learns.length == entry.quorum.length) {
+            this.setGreatest(entry, 'learned')
+            this.setGreatest(entry, 'decided')
+            if (Id.compare(entry.id, this.greatest[this.id].decided) > 0) {
+                this.greatest[this.id].decided = entry.id
+            }
+            this.markUniform()
+            // todo: only on 'uniform', should we convene.
+            this.dispatchInternal('decide', entry)
         }
-        this.markUniform()
-        // todo: only on 'uniform', should we convene.
-        this.dispatchInternal('decide', entry)
-    }
-    // Shift the next entry or else send final learning pulse.
-    if (
-        entry.decided &&
-        this.proposals.length &&
-        Id.compare(this.proposals[0].id, message.promise) == 0
-    ) {
-        this.proposals.shift()
-        if (this.proposals.length) {
-            this.accept()
-        } else {
-            this.nothing()
+        // Share this decision with the minority of parliament.
+        if (entry.decided &&
+            Id.compare(entry.id, '0/1', 0) > 0 &&
+            ~this.government.majority.indexOf(this.id)
+        ) {
+            var index = this.government.majority.indexOf(this.id)
+            var length = this.government.majority.length
+            this.government.minority.forEach(function (id) {
+                if (id % length == index) {
+                    this.send([ id ], [ this.id ], {
+                        type: 'synchronize',
+                        count: 20,
+                        greatest: this.greatest[id]
+                    })
+                }
+            }, this)
+        }
+        // Shift the next entry or else send final learning pulse.
+        if (
+            entry.decided &&
+            this.proposals.length &&
+            Id.compare(this.proposals[0].id, message.promise) == 0
+        ) {
+            this.proposals.shift()
+            if (this.proposals.length) {
+                this.accept()
+            } else {
+                this.nothing()
+            }
         }
     }
 }
@@ -546,22 +576,19 @@ Legislator.prototype.decideCommence = function (entry) {
 
 Legislator.prototype.receiveSynchronize = function (envelope, message) {
     assert(message.greatest, 'message must have greatest')
-    var greatest = this.greatest[envelope.from] = message.greatest
+    this.greatest[envelope.from] = message.greatest
 
     assert(message.from != this.id, 'synchronize with self')
 
     if (message.count) {
         var lastUniformId = this.greatest[this.id].uniform
-        message.count--
-        var greatest = this.log.find({ id: this.greatest[this.id].uniform })
 
-        createLearned.call(this, greatest)
+        createLearned.call(this, this.log.find({ id: lastUniformId }))
 
-        var iterator = this.log.findIter({ id: this.greatest[envelope.from].uniform }), entry
         var count = (message.count - 1) || 0
+        var iterator = this.log.findIter({ id: this.greatest[envelope.from].uniform }), entry
         var greatest = this.greatest[envelope.from].uniform
-        // todo: while (count-- && (entry = iterator.next()).id != lastUniformId) {
-        // ^^^ needs short circult.
+
         while (count-- && (entry = iterator.next()) != null && entry.id != lastUniformId) {
             if (entry.uniform) {
                 greatest = entry.id
