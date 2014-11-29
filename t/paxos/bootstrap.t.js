@@ -1,5 +1,5 @@
 
-require('proof')(8, prove)
+require('proof')(7, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -10,6 +10,7 @@ function prove (assert) {
     legislators[0].bootstrap()
 
     function logger (count, id, message) {
+        return
         console.log(count, id, message)
     }
 
@@ -42,29 +43,29 @@ function prove (assert) {
     network.tick()
 
     assert(legislators[0].government, {
-        id: '2/0', leader: 0, majority: [ 0, 1 ], minority: [], interim: false
+        id: '2/0', leader: 0, majority: [ 0 ], minority: [ 1 ], interim: false
     }, 'grow')
-
-    assert(network.machines[1].legislator.government, {
-        id: '2/0', leader: 0, majority: [ 0, 1 ], minority: [], interim: false
-    }, 'cleanup pulse')
 
     network.machines.push(new Machine(network, new Legislator(2), logger))
     network.machines[2].legislator.sync([ 0 ], 20)
     network.tick()
 
     assert(network.machines[2].legislator.government, {
-        id: '2/0', leader: 0, majority: [ 0, 1 ], minority: [], interim: false
-    }, 'cleanup pulse')
+        id: '2/0', leader: 0, majority: [ 0 ], minority: [ 1 ], interim: false
+    }, 'sync')
 
     network.machines[2].legislator.naturalize()
     network.tick()
 
-    assert(network.machines[1].legislator.government, {
-        id: '3/0', leader: 0, majority: [ 0, 1 ], minority: [ 2 ], interim: false
+    assert(network.machines[2].legislator.government, {
+        id: '3/0', leader: 0, majority: [ 0, 2 ], minority: [ 1 ], interim: false
     }, 'three member parliament')
 
-    assert(network.machines[2].legislator.government, {
-        id: '3/0', leader: 0, majority: [ 0, 1 ], minority: [ 2 ], interim: false
+    assert(network.machines[1].legislator.government, {
+        id: '3/0', leader: 0, majority: [ 0, 2 ], minority: [ 1 ], interim: false
     }, 'minority learning')
+
+    network.machines[2].legislator.log.each(function (entry) {
+        console.log(entry)
+    })
 }

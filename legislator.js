@@ -466,6 +466,9 @@ Legislator.prototype.receiveLearned = function (envelope, message) {
     var entry = this.entry(message.promise, message)
     if (!~entry.learns.indexOf(envelope.from)) {
         entry.learns.push(envelope.from)
+        if (entry.learns.length == entry.quorum.length && this.id == 2) {
+            console.log(entry, this.government)
+        }
         if (entry.learns.length == entry.quorum.length) {
             this.setGreatest(entry, 'learned')
             this.setGreatest(entry, 'decided')
@@ -478,7 +481,7 @@ Legislator.prototype.receiveLearned = function (envelope, message) {
         }
         // Share this decision with the minority of parliament.
         if (entry.decided &&
-            Id.compare(entry.id, '0/1', 0) > 0 &&
+            Id.compare(entry.id, '0/0', 1) > 0 &&
             ~this.government.majority.indexOf(this.id)
         ) {
             var index = this.government.majority.indexOf(this.id)
@@ -488,7 +491,7 @@ Legislator.prototype.receiveLearned = function (envelope, message) {
                     this.send([ id ], [ this.id ], {
                         type: 'synchronize',
                         count: 20,
-                        greatest: this.greatest[id]
+                        greatest: this.greatest[id] || { uniform: '0/0' }
                     })
                 }
             }, this)
@@ -585,7 +588,7 @@ Legislator.prototype.receiveSynchronize = function (envelope, message) {
         createLearned.call(this, this.log.find({ id: lastUniformId }))
 
         var count = (message.count - 1) || 0
-        var iterator = this.log.findIter({ id: this.greatest[envelope.from].uniform }), entry
+        var iterator = this.log.lowerBound({ id: this.greatest[envelope.from].uniform }), entry
         var greatest = this.greatest[envelope.from].uniform
 
         while (count-- && (entry = iterator.next()) != null && entry.id != lastUniformId) {
@@ -617,8 +620,8 @@ Legislator.prototype.receiveSynchronize = function (envelope, message) {
 }
 
 // todo: figure out who has the highest uniform value and sync with them?
-Legislator.prototype.receiveSynchronized = function (message) {
-    this.greatest[message.from[0]] = message.greatest
+Legislator.prototype.receiveSynchronized = function (envelope, message) {
+    this.greatest[envelope.from] = message.greatest
 }
 
 Legislator.prototype.post = function (value, internal) {
@@ -659,7 +662,6 @@ Legislator.prototype.unroute = function () {
     var unrouted = Object.keys(this.unrouted)
     if (unrouted.length) {
         var envelope = this.unrouted[unrouted[0]][0]
-        assert(envelope.from == this.id, 'not from current legislator')
         return {
             id: '-',
             path: [ envelope.from, envelope.to ]
@@ -674,11 +676,16 @@ Legislator.prototype.route = function () {
     } else if (cartridge.value.envelopes.length) {
         var pulse = cartridge.value
         cartridge.value = {
+            initialized: true,
             id: pulse.id,
             path: pulse.path,
             envelopes: []
         }
         cartridge.release()
+        var id = this.id
+        assert(!pulse.envelopes.some(function (envelope) {
+            return envelope.to == id
+        }), 'lost notes to self')
         return pulse
     } else {
         cartridge.release()
@@ -817,11 +824,7 @@ Legislator.prototype.decideNaturalize = function (entry) {
 }
 
 Legislator.prototype.majoritySize = function (parlimentSize, citizenCount) {
-    var size = Math.min(parlimentSize, citizenCount)
-    if (size % 2 == 0) {
-        size++
-    }
-    return Math.ceil(size / 2)
+    return Math.ceil(Math.min(parlimentSize, citizenCount) / 2)
 }
 
 Legislator.prototype.receivePosted = function (message) {
