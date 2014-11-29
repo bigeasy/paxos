@@ -10,7 +10,6 @@ function prove (assert) {
     legislators[0].bootstrap()
 
     function logger (count, id, message) {
-        return
         console.log(count, id, message)
     }
 
@@ -64,8 +63,4 @@ function prove (assert) {
     assert(network.machines[1].legislator.government, {
         id: '3/0', leader: 0, majority: [ 0, 2 ], minority: [ 1 ], interim: false
     }, 'minority learning')
-
-    network.machines[2].legislator.log.each(function (entry) {
-        console.log(entry)
-    })
 }

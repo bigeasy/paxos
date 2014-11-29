@@ -466,9 +466,6 @@ Legislator.prototype.receiveLearned = function (envelope, message) {
     var entry = this.entry(message.promise, message)
     if (!~entry.learns.indexOf(envelope.from)) {
         entry.learns.push(envelope.from)
-        if (entry.learns.length == entry.quorum.length && this.id == 2) {
-            console.log(entry, this.government)
-        }
         if (entry.learns.length == entry.quorum.length) {
             this.setGreatest(entry, 'learned')
             this.setGreatest(entry, 'decided')
@@ -566,6 +563,18 @@ Legislator.prototype.decideConvene = function (entry) {
             }
         })
     }
+}
+
+Legislator.prototype.learnCommence = function (entry) {
+    entry.quorum.forEach(function (id) {
+        if (id != this.id) {
+            this.send([ id ], [ this.id ], {
+                type: 'synchronize',
+                count: 20,
+                greatest: this.greatest[id] || { uniform: '0/0' }
+            })
+        }
+    }, this)
 }
 
 Legislator.prototype.decideCommence = function (entry) {
