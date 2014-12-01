@@ -316,17 +316,17 @@ Legislator.prototype.receiveAccepted = function (envelope, message) {
     var entry = this.entry(message.promise, message)
     if (!~entry.accepts.indexOf(envelope.from)) {
         entry.accepts.push(envelope.from)
-    }
-    if (entry.accepts.length >= entry.quorum.length && !entry.learned)  {
-        this.setGreatest(entry, 'learned')
-        entry.learned = true
-        if (~entry.quorum.indexOf(this.id)) {
-            this.pulse(this.promise.quorum, {
-                type: 'learned',
-                promise: message.promise
-            })
+        if (entry.accepts.length >= entry.quorum.length)  {
+            this.setGreatest(entry, 'learned')
+            entry.learned = true
+            if (~entry.quorum.indexOf(this.id)) {
+                this.pulse(this.promise.quorum, {
+                    type: 'learned',
+                    promise: message.promise
+                })
+            }
+            this.dispatchInternal('learn', entry)
         }
-        this.dispatchInternal('learn', entry)
     }
 }
 
