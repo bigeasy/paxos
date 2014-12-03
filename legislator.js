@@ -108,13 +108,6 @@ Legislator.prototype.bootstrap = function () {
     this.prepare()
 }
 
-Legislator.prototype.receiveRoute = function (envelope, message) {
-    var cartridge = this.routed.hold(message.route.id, { initialized: false })
-    if (cartridge.value.initialized) {
-    }
-    cartridge.release()
-}
-
 Legislator.prototype.ingest = function (envelopes) {
     envelopes.forEach(function (envelope) {
         if (envelope.route == '-') {
