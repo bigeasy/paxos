@@ -163,13 +163,6 @@ Legislator.prototype.consume = function (logger) {
     return consumed
 }
 
-Legislator.prototype.enqueue = function (value) {
-    assert(this.government.leader == this.id, 'not leader')
-    var entry = { value: value, prev: this.queue.prev, next: this.queue }
-    entry.next.prev = entry
-    entry.prev.next = entry
-}
-
 Legislator.prototype.prepare = function () {
     this.pulse(this.promise.quorum, {
         type: 'prepare',
