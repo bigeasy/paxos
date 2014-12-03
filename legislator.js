@@ -493,6 +493,23 @@ Legislator.prototype.receiveLearned = function (envelope, message) {
                 }
             }, this)
         }
+        // Share this decision with constituents.
+        if (entry.decided &&
+            Id.compare(entry.id, '0/0', 1) > 0 &&
+            ~this.government.minority.indexOf(this.id)
+        ) {
+            var index = this.government.minority.indexOf(this.id)
+            var length = this.government.minority.length
+            this.constituents.forEach(function (id) {
+                if (id % length == index) {
+                    this.send([ id ], [ this.id ], {
+                        type: 'synchronize',
+                        count: 20,
+                        greatest: this.greatest[id] || { uniform: '0/0' }
+                    })
+                }
+            }, this)
+        }
         // Shift the next entry or else send final learning pulse.
         if (
             entry.decided &&
@@ -798,7 +815,7 @@ Legislator.prototype.decideNaturalize = function (entry) {
     }
     var after = Object.keys(this.citizens).length
     // todo: Ideal parliment size can be configurable.
-    if (this.isLeader && after > before && after <= 5) {
+    if (this.isLeader && after > before && after <= this.idealGovernmentSize) {
         var members = Object.keys(this.citizens).map(function (id) { return +id })
         var majority = this.government.majority.slice()
         var parlimentSize = Math.min(5, after)

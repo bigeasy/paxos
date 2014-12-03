@@ -63,4 +63,27 @@ function prove (assert) {
     assert(network.machines[1].legislator.government, {
         id: '3/0', leader: 0, majority: [ 0, 2 ], minority: [ 1 ], interim: false
     }, 'minority learning')
+
+    network.machines.push(new Machine(network, new Legislator(3, 3), logger))
+    network.machines[3].legislator.sync([ 0 ], 20)
+    network.tick()
+
+    assert(network.machines[3].legislator.government, {
+        id: '3/0', leader: 0, majority: [ 0, 2 ], minority: [ 1 ], interim: false
+    }, 'citizen learning')
+
+    network.machines[3].legislator.naturalize()
+    network.tick()
+
+    assert(network.machines[3].legislator.log.max(), {
+        id: '3/2',
+        accepts: [],
+        learns: [ 0, 2 ],
+        quorum: [ 0, 2 ],
+        value: { type: 'naturalize', id: 3 },
+        internal: true,
+        learned: true,
+        decided: true,
+        uniform: true
+    }, 'citizen naturalized')
 }
