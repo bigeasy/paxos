@@ -846,7 +846,6 @@ Legislator.prototype.receivePosted = function (message) {
     }
 }
 
-// todo: all that it needs to do to naturalize is run a round of paxos.
 Legislator.prototype.naturalize = function () {
     return this.post({ type: 'naturalize', id: this.id }, true)
 }
