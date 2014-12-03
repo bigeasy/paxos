@@ -6,7 +6,7 @@ function prove (assert) {
         Network = require('../../synchronous/network'),
         Machine = require('../../synchronous/machine')
 
-    var legislators = [ new Legislator(0) ]
+    var legislators = [ new Legislator(0, 3) ]
     legislators[0].bootstrap()
 
     function logger (count, id, message) {
@@ -25,7 +25,7 @@ function prove (assert) {
         id: '1/0', leader: 0, majority: [ 0 ], minority: [], interim: false
     }, 'bootstrap')
 
-    network.machines.push(new Machine(network, new Legislator(1), logger))
+    network.machines.push(new Machine(network, new Legislator(1, 3), logger))
 
     network.machines[1].legislator.sync([ 0 ], 20)
     network.tick()
@@ -45,7 +45,7 @@ function prove (assert) {
         id: '2/0', leader: 0, majority: [ 0 ], minority: [ 1 ], interim: false
     }, 'grow')
 
-    network.machines.push(new Machine(network, new Legislator(2), logger))
+    network.machines.push(new Machine(network, new Legislator(2, 3), logger))
     network.machines[2].legislator.sync([ 0 ], 20)
     network.tick()
 

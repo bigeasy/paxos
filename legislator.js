@@ -47,12 +47,12 @@ var Id = {
     }
 }
 
-function Legislator (id) {
+function Legislator (id, size) {
     this.id = id
     this.messageId = id + '/0'
     // it appears that the only point of the cookie is to mark naturalization.
     this.cookie = '0'
-    this.idealGovernmentSize = 5
+    this.idealGovernmentSize = size || 5
     this.promises = [{ id: '0/0' }]
     this.log = new RBTree(function (a, b) { return Id.compare(a.id, b.id) })
     this.government = { id: '0/0', minority: [], majority: [] }
