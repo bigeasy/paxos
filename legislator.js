@@ -719,9 +719,6 @@ Legislator.prototype.pulse = function () {
     cartridge.release()
 }
 
-Legislator.prototype.send2 = function () {
-}
-
 Legislator.prototype.send = function () {
     var vargs = slice.call(arguments),
         message = vargs.pop(), to = vargs.pop(), from = vargs.pop() || [ this.id ]
