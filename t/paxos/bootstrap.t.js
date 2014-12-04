@@ -6,7 +6,10 @@ function prove (assert) {
         Network = require('../../synchronous/network'),
         Machine = require('../../synchronous/machine')
 
-    var legislators = [ new Legislator(0, 3) ]
+    var time = 0
+    var clock = function () { return time }
+
+    var legislators = [ new Legislator(0, 3, clock) ]
     legislators[0].bootstrap()
 
     function logger (count, id, message) {
@@ -25,7 +28,7 @@ function prove (assert) {
         id: '1/0', leader: 0, majority: [ 0 ], minority: [], interim: false
     }, 'bootstrap')
 
-    network.machines.push(new Machine(network, new Legislator(1, 3), logger))
+    network.machines.push(new Machine(network, new Legislator(1, 3, clock), logger))
 
     network.machines[1].legislator.sync([ 0 ], 20)
     network.tick()
@@ -45,7 +48,7 @@ function prove (assert) {
         id: '2/0', leader: 0, majority: [ 0 ], minority: [ 1 ], interim: false
     }, 'grow')
 
-    network.machines.push(new Machine(network, new Legislator(2, 3), logger))
+    network.machines.push(new Machine(network, new Legislator(2, 3, clock), logger))
     network.machines[2].legislator.sync([ 0 ], 20)
     network.tick()
 
@@ -64,7 +67,7 @@ function prove (assert) {
         id: '3/0', leader: 0, majority: [ 0, 2 ], minority: [ 1 ], interim: false
     }, 'minority learning')
 
-    network.machines.push(new Machine(network, new Legislator(3, 3), logger))
+    network.machines.push(new Machine(network, new Legislator(3, 3, clock), logger))
     network.machines[3].legislator.sync([ 0 ], 20)
     network.tick()
 
@@ -82,6 +85,7 @@ function prove (assert) {
         quorum: [ 0, 2 ],
         value: { type: 'naturalize', id: 3 },
         internal: true,
+        cookie: '1',
         learned: true,
         decided: true,
         uniform: true

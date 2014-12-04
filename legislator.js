@@ -47,8 +47,9 @@ var Id = {
     }
 }
 
-function Legislator (id, size) {
+function Legislator (id, size, clock) {
     this.id = id
+    this.clock = clock || function () { return Date.now() }
     this.messageId = id + '/0'
     // it appears that the only point of the cookie is to mark naturalization.
     this.cookie = '0'
@@ -224,8 +225,8 @@ Legislator.prototype.proposeGovernment = function (message) {
 }
 
 Legislator.prototype.proposeEntry = function (message) {
-    this.createProposal(1, this.government.majority.slice(), message)
     this.addRoute(this.promise.id, this.promise.quorum)
+    return this.createProposal(1, this.government.majority.slice(), message)
 }
 
 // todo: figure out how to merge into queue.
@@ -771,7 +772,7 @@ Legislator.prototype.receivePost = function (envelope, message) {
         })
     }
     // Correct government and the leader.
-    var id = this.proposeEntry({
+    var proposal = this.proposeEntry({
         internal: message.internal,
         value: message.value
     })
@@ -782,7 +783,7 @@ Legislator.prototype.receivePost = function (envelope, message) {
         type: 'posted',
         cookie: message.cookie,
         statusCode: 200,
-        promise: id
+        promise: proposal.id
     })
     if (this.proposals.length == 1) {
         this.accept()
@@ -843,10 +844,11 @@ Legislator.prototype.majoritySize = function (parlimentSize, citizenCount) {
     return Math.ceil(Math.min(parlimentSize, citizenCount) / 2)
 }
 
-Legislator.prototype.receivePosted = function (message) {
+Legislator.prototype.receivePosted = function (envelope, message) {
     if (message.statusCode == 200) {
         var cartridge = this.cookies.hold(message.cookie, false)
         if (cartridge.value) {
+            console.log(cartridge.value, message)
             this.entry(message.promise, cartridge.value).cookie = message.cookie
         }
         cartridge.remove()
