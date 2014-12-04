@@ -361,6 +361,10 @@ Legislator.prototype.markUniform = function () {
             break
         }
 
+        // todo: you can test this when there is a failure of a five member
+        // parliament and the second member of the majority is the only
+        // survivor, and it has an entry that has been accepted, but not yet
+        // learned.
         assert(Id.compare(current.id, end.terminus) == 0 ||
                Id.compare(previous.id, end.terminus) == 0, 'terminus beyond decisions')
 
