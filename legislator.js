@@ -47,13 +47,16 @@ var Id = {
     }
 }
 
-function Legislator (id, size, clock) {
+function Legislator (id, options) {
+
+    options || (options = {})
+
     this.id = id
-    this.clock = clock || function () { return Date.now() }
+    this.clock = options.clock || function () { return Date.now() }
     this.messageId = id + '/0'
     // it appears that the only point of the cookie is to mark naturalization.
     this.cookie = '0'
-    this.idealGovernmentSize = size || 5
+    this.idealGovernmentSize = options.size || 5
     this.promises = [{ id: '0/0' }]
     this.log = new RBTree(function (a, b) { return Id.compare(a.id, b.id) })
     this.government = { id: '0/0', minority: [], majority: [] }
@@ -69,6 +72,8 @@ function Legislator (id, size, clock) {
         decided: '0/1',
         uniform: '0/1'
     }
+    this.ticks = {}
+    this.timeout = options.timeout || 5000
     this.promise = { id: '0' }
     var motion = {}
     this.queue = motion.prev = motion.next = motion
@@ -142,6 +147,7 @@ Legislator.prototype.consume = function (logger) {
     }
 
     function intercept (envelope) {
+        this.ticks[envelope.from] = this.clock()
         if (envelope.to == this.id) {
             consumed = true
             var type = envelope.message.type
