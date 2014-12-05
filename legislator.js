@@ -237,6 +237,10 @@ Legislator.prototype.proposeEntry = function (message) {
 
 // todo: figure out how to merge into queue.
 Legislator.prototype.createProposal = function (index, quorum, message) {
+    var entry = this.log.max()
+    if (Id.compare(this.lastProposalId, entry.id) < 1) {
+        this.lastProposalId = entry.id
+    }
     var id = this.lastProposalId = Id.increment(this.lastProposalId, index), proposal
     this.proposals.push(proposal = {
         id: id,
@@ -808,11 +812,11 @@ Legislator.prototype.decideNaturalize = function (entry) {
         this.naturalized = entry.id
     }
     var after = Object.keys(this.citizens).length
-    // todo: Ideal parliment size can be configurable.
+    // todo: Ideal parliament size can be configurable.
     if (this.isLeader && after > before && after <= this.idealGovernmentSize) {
         var members = Object.keys(this.citizens).map(function (id) { return +id })
         var majority = this.government.majority.slice()
-        var parlimentSize = Math.min(5, after)
+        var parliamentSize = Math.min(5, after)
         var majoritySize = this.majoritySize(5, after)
         var minority = this.government.minority.slice()
         var citizens = members.filter(function (id) {
@@ -843,8 +847,8 @@ Legislator.prototype.decideNaturalize = function (entry) {
     }
 }
 
-Legislator.prototype.majoritySize = function (parlimentSize, citizenCount) {
-    return Math.ceil(Math.min(parlimentSize, citizenCount) / 2)
+Legislator.prototype.majoritySize = function (parliamentSize, citizenCount) {
+    return Math.ceil(Math.min(parliamentSize, citizenCount) / 2)
 }
 
 Legislator.prototype.receivePosted = function (envelope, message) {
@@ -860,6 +864,51 @@ Legislator.prototype.receivePosted = function (envelope, message) {
 
 Legislator.prototype.naturalize = function () {
     return this.post({ type: 'naturalize', id: this.id }, true)
+}
+
+Legislator.prototype.reelect = function () {
+    if (this.id != this.government.leader && ~this.government.majority.indexOf(this.id)) {
+        this.ticks[this.id] = this.clock()
+        var majority = this.government.majority.filter(function (id) {
+            return this.clock() - (this.ticks[id] || 0) < this.timeout
+        }.bind(this))
+        if (majority.length != this.government.majority.length) {
+            var minority = this.government.minority.slice()
+            var index = majority.indexOf(this.id)
+            majority.unshift(majority.splice(index, 1)[0])
+            var i = 0, I = this.government.minority.length;
+            while (i < I && this.government.majority.length != majority.length) {
+                if (this.clock() - (this.ticks[minority[i]] || 0) < this.timeout) {
+                    majority.push(minority.splice(i, 1))
+                } else {
+                    i++
+                }
+            }
+            while (this.government.majority.length != majority.length) {
+                var index = Math.floor(Math.random() * minority.length)
+                majority.push(minority.splice(index, 1)[0])
+            }
+            var minority = this.parliament.filter(function (id) {
+                return !~majority.indexOf(id)
+            })
+            var government = {
+                leader: this.id,
+                majority: majority,
+                minority: minority,
+                interim: true
+            }
+            this.proposeGovernment({
+                internal: true,
+                value: {
+                    type: 'convene',
+                    to: this.government.majority.slice(),
+                    from: [ this.id ],
+                    government: JSON.parse(JSON.stringify(government))
+                }
+            })
+            this.prepare()
+        }
+    }
 }
 
 module.exports = Legislator

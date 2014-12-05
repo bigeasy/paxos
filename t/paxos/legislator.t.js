@@ -1,5 +1,5 @@
 
-require('proof')(9, prove)
+require('proof')(10, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -95,4 +95,12 @@ function prove (assert) {
         decided: true,
         uniform: true
     }, 'citizen naturalized')
+
+    time++
+    network.machines[2].legislator.reelect()
+    network.tick()
+
+    assert(network.machines[1].legislator.government, {
+        id: '4/0', leader: 2, majority: [ 2, 1 ], minority: [ 0 ], interim: false
+    }, 'reelection')
 }
