@@ -46,10 +46,10 @@ Machine.prototype.receive = function (route, index, envelopes) {
     return returns
 }
 
-Machine.prototype.tick = function () {
+Machine.prototype.tick = function (filter) {
     var route, envelopes, ticked
 
-    while (this.legislator.consume(this.logger)) {
+    while (this.legislator.consume(this.logger, filter)) {
         ticked = true
     }
 

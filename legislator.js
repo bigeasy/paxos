@@ -72,6 +72,7 @@ function Legislator (id, options) {
         decided: '0/1',
         uniform: '0/1'
     }
+    this.outcomes = []
     this.ticks = {}
     this.timeout = options.timeout || 5000
     this.promise = { id: '0' }
@@ -132,7 +133,8 @@ Legislator.prototype.ingest = function (envelopes) {
 }
 
 var count = 0
-Legislator.prototype.consume = function (logger) {
+Legislator.prototype.consume = function (logger, filter) {
+    filter || (filter = function () {})
     var purge = this.routed.purge(), consumed = false
 
     while (purge.cartridge) {
@@ -162,6 +164,7 @@ Legislator.prototype.consume = function (logger) {
                 message[key] = envelope.message[key]
             }
             logger(++count, this.id, message)
+            filter(envelope, envelope.message)
             this[method](envelope, envelope.message)
             return true
         }
@@ -855,8 +858,12 @@ Legislator.prototype.receivePosted = function (envelope, message) {
     if (message.statusCode == 200) {
         var cartridge = this.cookies.hold(message.cookie, false)
         if (cartridge.value) {
-            console.log(cartridge.value, message)
-            this.entry(message.promise, cartridge.value).cookie = message.cookie
+            var entry = this.entry(message.promise, cartridge.value)
+            entry.cookie = message.cookie
+            this.outcomes.push({
+                type: 'posted',
+                entry: entry
+            })
         }
         cartridge.remove()
     }

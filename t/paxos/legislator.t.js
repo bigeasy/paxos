@@ -1,5 +1,5 @@
 
-require('proof')(10, prove)
+require('proof')(12, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -24,8 +24,6 @@ function prove (assert) {
     var network = new Network
     var machine = new Machine(network, legislators[0], logger)
     network.machines.push(machine)
-
-    // Legislator.synchronous(legislators, 0, logger)
 
     network.tick()
 
@@ -82,6 +80,7 @@ function prove (assert) {
 
     network.machines[3].legislator.naturalize()
     network.tick()
+    network.machines[2].legislator.outcomes.length = 0
 
     assert(network.machines[3].legislator.log.max(), {
         id: '3/2',
@@ -103,4 +102,21 @@ function prove (assert) {
     assert(network.machines[1].legislator.government, {
         id: '4/0', leader: 2, majority: [ 2, 1 ], minority: [ 0 ], interim: false
     }, 'reelection')
+
+    var cookie = network.machines[2].legislator.post({ greeting: 'Hello, World!' })
+    try {
+        network.tick(function (envelope, message) {
+            if (envelope.route != '-') {
+                throw new Error('stop')
+            }
+        })
+    } catch (e) {
+        if (e.message != 'stop') {
+            throw e
+        }
+    }
+    var outcome = network.machines[2].legislator.outcomes.shift()
+    assert(outcome.type, 'posted', 'user message outcome')
+    var entry = network.machines[2].legislator.log.find({ id: outcome.entry.id })
+    assert(entry.value.greeting, 'Hello, World!', 'user message')
 }

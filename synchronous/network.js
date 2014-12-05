@@ -11,9 +11,10 @@ Network.prototype.post = function (route, index, envelopes) {
     return machine.receive(route, index, envelopes)
 }
 
-Network.prototype.tick = function () {
+Network.prototype.tick = function (filter) {
+    filter || (filter = function () {})
     var ticked
-    while (this.machines.some(function (machine) { return machine.tick() })) {
+    while (this.machines.some(function (machine) { return machine.tick(filter) })) {
         ticked = true
     }
     return ticked
