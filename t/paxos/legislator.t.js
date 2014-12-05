@@ -104,17 +104,7 @@ function prove (assert) {
     }, 'reelection')
 
     var cookie = network.machines[2].legislator.post({ greeting: 'Hello, World!' })
-    try {
-        network.tick(function (envelope, message) {
-            if (envelope.route != '-') {
-                throw new Error('stop')
-            }
-        })
-    } catch (e) {
-        if (e.message != 'stop') {
-            throw e
-        }
-    }
+    network.tick()
     var outcome = network.machines[2].legislator.outcomes.shift()
     assert(outcome.type, 'posted', 'user message outcome')
     var entry = network.machines[2].legislator.log.find({ id: outcome.entry.id })
