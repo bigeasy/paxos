@@ -628,7 +628,7 @@ Legislator.prototype.receiveSynchronize = function (envelope, message) {
     }
 
     function createLearned (entry) {
-        this.send(entry.quorum, [ envelope.from ], {
+        this.send(entry.learns, [ envelope.from ], {
             type: 'learned',
             promise: entry.id,
             quorum: entry.quorum,

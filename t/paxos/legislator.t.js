@@ -25,7 +25,7 @@ function prove (assert) {
         for (var key in envelope.message) {
             message[key] = envelope.message[key]
         }
-        console.log(++count, message)
+        // console.log(++count, message)
         return [ envelope ]
     }
 
@@ -96,7 +96,7 @@ function prove (assert) {
     assert(network.machines[3].legislator.log.max(), {
         id: '3/2',
         accepts: [],
-        learns: [ 0, 2 ],
+        learns: [ 2, 0 ],
         quorum: [ 0, 2 ],
         value: { type: 'naturalize', id: 3 },
         internal: true,
