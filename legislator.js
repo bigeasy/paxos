@@ -133,7 +133,7 @@ Legislator.prototype.ingest = function (envelopes) {
 }
 
 var count = 0
-Legislator.prototype.consume = function (logger, filter) {
+Legislator.prototype.consume = function (filter) {
     filter || (filter = function () {})
     var purge = this.routed.purge(), consumed = false
 
@@ -154,18 +154,9 @@ Legislator.prototype.consume = function (logger, filter) {
             consumed = true
             var type = envelope.message.type
             var method = 'receive' + type[0].toUpperCase() + type.substring(1)
-            var message = {}
-            for (var key in envelope) {
-                if (key != 'message') {
-                    message[key] = envelope[key]
-                }
-            }
-            for (var key in envelope.message) {
-                message[key] = envelope.message[key]
-            }
-            logger(++count, this.id, message)
-            filter(envelope, envelope.message)
-            this[method](envelope, envelope.message)
+            filter.call(this, envelope, envelope.message).forEach(function (envelope) {
+                this[method](envelope, envelope.message)
+            }, this)
             return true
         }
     }

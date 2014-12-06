@@ -2,18 +2,17 @@ var assert = require('assert')
 var consume = require('../consume')
 var push = [].push
 
-function Machine (network, legislator, logger) {
+function Machine (network, legislator) {
     this.network = network
     this.legislator = legislator
-    this.logger = logger
 }
 
-Machine.prototype.receive = function (route, index, envelopes) {
+Machine.prototype.receive = function (filter, route, index, envelopes) {
     if (route.id != '-') {
         this.legislator.addRoute(route.id, route.path)
     }
     this.legislator.ingest(envelopes)
-    while (this.legislator.consume(this.logger));
+    while (this.legislator.consume(filter));
     var returns = [], parameters = []
     if (route.id != '-') {
         var cartridge = this.legislator.routed.hold(route.id, false)
@@ -49,7 +48,7 @@ Machine.prototype.receive = function (route, index, envelopes) {
 Machine.prototype.tick = function (filter) {
     var route, envelopes, ticked
 
-    while (this.legislator.consume(this.logger, filter)) {
+    while (this.legislator.consume(filter)) {
         ticked = true
     }
 
@@ -70,8 +69,8 @@ Machine.prototype.tick = function (filter) {
             push.apply(envelopes, this.legislator.unrouted[id] || [])
             delete this.legislator.unrouted[id]
         }, this)
-        this.legislator.ingest(this.network.post(route, 1, envelopes))
-        this.legislator.consume(this.logger)
+        this.legislator.ingest(this.network.post(filter, route, 1, envelopes))
+        this.legislator.consume(filter)
     }
 
     return ticked
