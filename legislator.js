@@ -132,7 +132,6 @@ Legislator.prototype.ingest = function (envelopes) {
     }, this)
 }
 
-var count = 0
 Legislator.prototype.consume = function (filter) {
     var purge = this.routed.purge(), consumed = false
 
