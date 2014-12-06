@@ -134,7 +134,6 @@ Legislator.prototype.ingest = function (envelopes) {
 
 var count = 0
 Legislator.prototype.consume = function (filter) {
-    filter || (filter = function () {})
     var purge = this.routed.purge(), consumed = false
 
     while (purge.cartridge) {
