@@ -134,13 +134,15 @@ Legislator.prototype.ingest = function (envelopes) {
 
 Legislator.prototype.consume = function (filter) {
     var purge = this.routed.purge(), consumed = false
-
-    while (purge.cartridge) {
-        consume(purge.cartridge.value.envelopes, intercept, this)
+    try {
+        while (purge.cartridge) {
+            consume(purge.cartridge.value.envelopes, intercept, this)
+            purge.release()
+            purge.next()
+        }
+    } finally {
         purge.release()
-        purge.next()
     }
-    purge.release()
     consume(this.unrouted[this.id] || [], intercept, this)
     if (this.unrouted[this.id] && this.unrouted[this.id].length == 0) {
         delete this.unrouted[this.id]
@@ -246,6 +248,7 @@ Legislator.prototype.createProposal = function (index, quorum, message) {
 }
 
 Legislator.prototype.accept = function () {
+    console.log('!!!!!!!!!!!! 4/3 !!!!!!!!!!!!', this.id, this.log.find({ id: '4/3' }))
     this.entry(this.proposals[0].id, {
         quorum: this.promise.quorum,
         value: this.proposals[0].value
@@ -314,6 +317,7 @@ Legislator.prototype.receiveAccepted = function (envelope, message) {
                     promise: message.promise
                 })
             }
+            console.log(envelope)
             this.dispatchInternal('learn', entry)
         }
     }
@@ -561,7 +565,7 @@ Legislator.prototype.decideConvene = function (entry) {
         var iterator = this.log.findIter({ id: entry.id }), current
         do {
             current = iterator.prev()
-        } while (Id.compare(current.id, '0/0', 1) == 0 || !current.decided)
+        } while (Id.compare(current.id, '0/0', 1) == 0 || !current.learned)
         var terminus = current.id
         assert(majority[0] == this.id, 'need to catch up')
         this.proposeEntry({
@@ -576,6 +580,10 @@ Legislator.prototype.decideConvene = function (entry) {
 }
 
 Legislator.prototype.learnCommence = function (entry) {
+    assert(this.log.find({ id: entry.value.terminus }))
+    console.log(this.id, entry.value.terminus, this.log.find({ id: entry.value.terminus }))
+    console.log(this.government)
+    assert(this.log.find({ id: entry.value.terminus }).learns.length)
     entry.quorum.forEach(function (id) {
         if (id != this.id) {
             this.send([ id ], [ this.id ], {
@@ -602,20 +610,27 @@ Legislator.prototype.receiveSynchronize = function (envelope, message) {
     assert(message.from != this.id, 'synchronize with self')
 
     if (message.count) {
+        if (message.learned &&
+            this.greatest[this.id].learned != this.greatest[envelope.from].learned
+        ) {
+            createLearned.call(this, this.log.find({ id: this.greatest[this.id].learned }))
+        }
+
         var lastUniformId = this.greatest[this.id].uniform
+        if (lastUniformId != this.greatest[envelope.from].uniform) {
+            createLearned.call(this, this.log.find({ id: lastUniformId }))
 
-        createLearned.call(this, this.log.find({ id: lastUniformId }))
+            var count = (message.count - 1) || 0
+            var iterator = this.log.lowerBound({ id: this.greatest[envelope.from].uniform }), entry
+            var greatest = this.greatest[envelope.from].uniform
 
-        var count = (message.count - 1) || 0
-        var iterator = this.log.lowerBound({ id: this.greatest[envelope.from].uniform }), entry
-        var greatest = this.greatest[envelope.from].uniform
-
-        while (count-- && (entry = iterator.next()) != null && entry.id != lastUniformId) {
-            if (entry.uniform) {
-                greatest = entry.id
-                createLearned.call(this, entry)
-            } else if (!entry.ignored) {
-                break
+            while (count-- && (entry = iterator.next()) != null && entry.id != lastUniformId) {
+                if (entry.uniform) {
+                    greatest = entry.id
+                    createLearned.call(this, entry)
+                } else if (!entry.ignored) {
+                    break
+                }
             }
         }
 
@@ -836,6 +851,16 @@ Legislator.prototype.decideNaturalize = function (entry) {
         this.proposals.shift()
         // todo: this all breaks when we actually queue.
         this.prepare()
+        this.proposals[0].quorum.forEach(function (id) {
+            if (id != this.id) {
+                this.send([ id ], [ this.id ], {
+                    type: 'synchronize',
+                    count: 20,
+                    greatest: this.greatest[id] || { uniform: '0/0' },
+                    learned: true
+                })
+            }
+        }, this)
     }
 }
 
@@ -903,6 +928,31 @@ Legislator.prototype.reelect = function () {
                 }
             })
             this.prepare()
+            this.proposals[0].quorum.forEach(function (id) {
+                if (id != this.id) {
+                    this.send([ id ], [ this.id ], {
+                        type: 'synchronize',
+                        count: 20,
+                        greatest: this.greatest[id] || { uniform: '0/0' },
+                        learned: true
+                    })
+                }
+            }, this)
+            /*
+            var iterator = this.log.findIter(this.log.max()), entry = iterator.data()
+            while (Id.compare(entry.id, '0/0', 1) == 0 || !entry.learned) {
+                entry = entry.prev()
+            }
+            // todo: always make sure you can stop somewhere, at least one good
+            // government.
+            this.pulse(this.promise.quorum, {
+                type: 'accept',
+                internal: entry.internal,
+                quorum: this.promise.quorum,
+                promise: entry.id,
+                value: entry.value
+            })
+            */
         }
     }
 }
