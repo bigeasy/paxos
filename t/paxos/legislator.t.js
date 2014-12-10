@@ -1,5 +1,5 @@
 
-require('proof')(15, prove)
+require('proof')(19, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -168,14 +168,18 @@ function prove (assert) {
         uniform: true
     }, 'former leader learned')
 
-/*
-    console.log(0, network.machines[0].legislator.log.find({ id: '4/3' }))
-    console.log(0, network.machines[0].legislator.log.max())
-    console.log(0, network.machines[1].legislator.log.find({ id: '4/3' }))
-    console.log(0, network.machines[2].legislator.log.find({ id: '4/3' }))
- */
+    network.machines[1].legislator.post({ value: 1 })
+    network.machines[1].tick(logger)
+    network.machines[1].legislator.post({ value: 2 })
+    network.machines[1].tick(logger)
+    network.machines[1].legislator.post({ value: 3 })
+    network.machines[1].tick(logger)
 
-    network.machines[1].legislator.log.each(function (entry) {
-        console.log(entry)
-    })
+    assert(network.machines[0].legislator.log.max().id, '5/1', 'rounds waiting')
+    assert(network.machines[2].legislator.proposals.length, 3, 'queued')
+
+    network.tick(logger)
+
+    assert(network.machines[2].legislator.proposals.length, 0, 'queue empty')
+    assert(network.machines[1].legislator.log.max().value, { value: 3 }, 'rounds complete')
 }
