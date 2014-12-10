@@ -815,7 +815,6 @@ Legislator.prototype.decideNaturalize = function (entry) {
         this.naturalized = entry.id
     }
     var after = Object.keys(this.citizens).length
-    // todo: Ideal parliament size can be configurable.
     if (this.isLeader && after > before && after <= this.idealGovernmentSize) {
         var members = Object.keys(this.citizens).map(function (id) { return +id })
         var majority = this.government.majority.slice()
