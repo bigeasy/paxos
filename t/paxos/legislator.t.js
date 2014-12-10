@@ -174,4 +174,8 @@ function prove (assert) {
     console.log(0, network.machines[1].legislator.log.find({ id: '4/3' }))
     console.log(0, network.machines[2].legislator.log.find({ id: '4/3' }))
  */
+
+    network.machines[1].legislator.log.each(function (entry) {
+        console.log(entry)
+    })
 }

@@ -808,23 +808,17 @@ Legislator.prototype.__defineGetter__('isLeader', function () {
     return this.naturalized && this.government.leader == this.id
 })
 
-Legislator.prototype.decideNaturalize = function (entry) {
-    var before = Object.keys(this.citizens).length
-    this.citizens[entry.value.id] = entry.id
-    if (entry.cookie) {
-        this.naturalized = entry.id
-    }
-    var after = Object.keys(this.citizens).length
-    if (this.isLeader && after > before && after <= this.idealGovernmentSize) {
-        var members = Object.keys(this.citizens).map(function (id) { return +id })
+Legislator.prototype.decideInagurate = function (entry) {
+    if (this.isLeader) {
+        var citizens = Object.keys(this.citizens).map(function (id) { return +id })
         var majority = this.government.majority.slice()
-        var parliamentSize = Math.min(5, after)
-        var majoritySize = this.majoritySize(5, after)
+        var parliamentSize = Math.min(this.idealGovernmentSize, citizens.length)
+        var majoritySize = this.majoritySize(parliamentSize, citizens.length)
         var minority = this.government.minority.slice()
-        var citizens = members.filter(function (id) {
+        var constituents = citizens.filter(function (id) {
             return !~minority.indexOf(id) && !~majority.indexOf(id)
         })
-        minority.push(citizens.pop())
+        minority.push(constituents.pop())
         if (majority.length < majoritySize) {
             majority.push(minority.pop())
         }
@@ -843,6 +837,7 @@ Legislator.prototype.decideNaturalize = function (entry) {
                 government: JSON.parse(JSON.stringify(government))
             }
         })
+        // todo: why is this necessary?
         this.proposals.shift()
         // todo: this all breaks when we actually queue.
         this.prepare()
@@ -856,6 +851,24 @@ Legislator.prototype.decideNaturalize = function (entry) {
                 })
             }
         }, this)
+    }
+}
+
+Legislator.prototype.decideNaturalize = function (entry) {
+    var before = Object.keys(this.citizens).length
+    this.citizens[entry.value.id] = entry.id
+    if (entry.cookie) {
+        this.naturalized = entry.id
+    }
+    var after = Object.keys(this.citizens).length
+    if (this.isLeader && after > before && after <= this.idealGovernmentSize) {
+        this.proposeEntry({
+            internal: true,
+            value: {
+                type: 'inagurate',
+                id: entry.value.id
+            }
+        })
     }
 }
 
