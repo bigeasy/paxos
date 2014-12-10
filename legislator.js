@@ -786,15 +786,14 @@ Legislator.prototype.receivePost = function (envelope, message) {
         internal: message.internal,
         value: message.value
     })
-    // todo: Returning the value feels as though it is a waste. We're going to
-    // want to design algorithms that use atomic broadcast with smaller values.
-    // todo: No, I would prefer that we use a cache.
+
     this.send([ envelope.from ], {
         type: 'posted',
         cookie: message.cookie,
         statusCode: 200,
         promise: proposal.id
     })
+
     if (this.proposals.length == 1) {
         this.accept()
     }
