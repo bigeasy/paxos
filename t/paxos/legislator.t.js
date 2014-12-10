@@ -1,5 +1,5 @@
 
-require('proof')(14, prove)
+require('proof')(15, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -28,6 +28,9 @@ function prove (assert) {
         console.log(++count, message)
         return [ envelope ]
     }
+
+    var defaults = new Legislator(0)
+    assert(Date.now() - defaults.clock() < 250, 'default clock')
 
     var legislators = [ new Legislator(0, options) ]
     legislators[0].bootstrap()
