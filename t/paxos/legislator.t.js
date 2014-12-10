@@ -25,7 +25,7 @@ function prove (assert) {
         for (var key in envelope.message) {
             message[key] = envelope.message[key]
         }
-        console.log(++count, message)
+        // console.log(++count, message)
         return [ envelope ]
     }
 
@@ -62,7 +62,7 @@ function prove (assert) {
     network.tick(logger)
 
     assert(legislators[0].government, {
-        id: '2/0', leader: 0, majority: [ 0 ], minority: [ 1 ], interim: false
+        id: '2/0', leader: 0, majority: [ 0, 1 ], minority: [], interim: false
     }, 'grow')
 
     network.machines.push(new Machine(network, new Legislator(2, options)))
@@ -70,18 +70,18 @@ function prove (assert) {
     network.tick(logger)
 
     assert(network.machines[2].legislator.government, {
-        id: '2/0', leader: 0, majority: [ 0 ], minority: [ 1 ], interim: false
+        id: '2/0', leader: 0, majority: [ 0, 1 ], minority: [], interim: false
     }, 'sync')
 
     network.machines[2].legislator.naturalize()
     network.tick(logger)
 
     assert(network.machines[2].legislator.government, {
-        id: '3/0', leader: 0, majority: [ 0, 2 ], minority: [ 1 ], interim: false
+        id: '3/0', leader: 0, majority: [ 0, 1 ], minority: [ 2 ], interim: false
     }, 'three member parliament')
 
     assert(network.machines[1].legislator.government, {
-        id: '3/0', leader: 0, majority: [ 0, 2 ], minority: [ 1 ], interim: false
+        id: '3/0', leader: 0, majority: [ 0, 1 ], minority: [ 2 ], interim: false
     }, 'minority learning')
 
     network.machines.push(new Machine(network, new Legislator(3, options)))
@@ -89,18 +89,18 @@ function prove (assert) {
     network.tick(logger)
 
     assert(network.machines[3].legislator.government, {
-        id: '3/0', leader: 0, majority: [ 0, 2 ], minority: [ 1 ], interim: false
+        id: '3/0', leader: 0, majority: [ 0, 1 ], minority: [ 2 ], interim: false
     }, 'citizen learning')
 
     network.machines[3].legislator.naturalize()
     network.tick(logger)
-    network.machines[2].legislator.outcomes.length = 0
+    network.machines[1].legislator.outcomes.length = 0
 
     assert(network.machines[3].legislator.log.max(), {
         id: '3/2',
         accepts: [],
-        learns: [ 2, 0 ],
-        quorum: [ 0, 2 ],
+        learns: [ 1, 0 ],
+        quorum: [ 0, 1 ],
         value: { type: 'naturalize', id: 3 },
         internal: true,
         cookie: '1',
@@ -110,54 +110,54 @@ function prove (assert) {
     }, 'citizen naturalized')
 
     time++
-    network.machines[2].legislator.reelect()
+    network.machines[1].legislator.reelect()
     network.tick(logger)
 
     assert(network.machines[1].legislator.government, {
-        id: '4/0', leader: 2, majority: [ 2, 1 ], minority: [ 0 ], interim: false
+        id: '4/0', leader: 1, majority: [ 1, 2 ], minority: [ 0 ], interim: false
     }, 'reelection')
 
-    var cookie = network.machines[2].legislator.post({ greeting: 'Hello, World!' })
+    var cookie = network.machines[1].legislator.post({ greeting: 'Hello, World!' })
     network.tick(logger)
-    var outcome = network.machines[2].legislator.outcomes.shift()
+    var outcome = network.machines[1].legislator.outcomes.shift()
     assert(outcome.type, 'posted', 'user message outcome')
-    var entry = network.machines[2].legislator.log.find({ id: outcome.entry.id })
+    var entry = network.machines[1].legislator.log.find({ id: outcome.entry.id })
     assert(entry.value.greeting, 'Hello, World!', 'user message')
 
-    var cookie = network.machines[2].legislator.post({ greeting: '¡hola mundo!' })
+    var cookie = network.machines[1].legislator.post({ greeting: '¡hola mundo!' })
     network.tick(function (envelope) {
-        if (envelope.to != 2 || envelope.from == 2) {
+        if (envelope.to != 1 || envelope.from == 1) {
             return logger(envelope)
         } else {
             return []
         }
     })
 
-    assert(network.machines[2].legislator.log.max(), {
+    assert(network.machines[1].legislator.log.max(), {
         id: '4/3',
-        accepts: [ 2 ],
+        accepts: [ 1 ],
         learns: [],
-        quorum: [ 2, 1 ],
+        quorum: [ 1, 2 ],
         value: { greeting: '¡hola mundo!' },
         internal: false,
         cookie: '3'
     }, 'leader unlearned')
 
     time++
-    network.machines[1].legislator.reelect()
+    network.machines[2].legislator.reelect()
     network.tick(logger)
 
-    assert(network.machines[2].legislator.log.max(), {
+    assert(network.machines[1].legislator.log.max(), {
         id: '5/1',
         accepts: [],
-        learns: [ 0, 1 ],
-        quorum: [ 1, 0 ],
+        learns: [ 0, 2 ],
+        quorum: [ 2, 0 ],
         value: {
             type: 'commence',
             government: {
-                leader: 1,
-                majority: [ 1, 0 ],
-                minority: [ 2 ],
+                leader: 2,
+                majority: [ 2, 0 ],
+                minority: [ 1 ],
                 interim: false,
                 id: '5/0'
             }, terminus: '4/3'
@@ -168,8 +168,10 @@ function prove (assert) {
         uniform: true
     }, 'former leader learned')
 
+/*
     console.log(0, network.machines[0].legislator.log.find({ id: '4/3' }))
     console.log(0, network.machines[0].legislator.log.max())
     console.log(0, network.machines[1].legislator.log.find({ id: '4/3' }))
     console.log(0, network.machines[2].legislator.log.find({ id: '4/3' }))
+ */
 }

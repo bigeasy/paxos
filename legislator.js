@@ -248,7 +248,6 @@ Legislator.prototype.createProposal = function (index, quorum, message) {
 }
 
 Legislator.prototype.accept = function () {
-    console.log('!!!!!!!!!!!! 4/3 !!!!!!!!!!!!', this.id, this.log.find({ id: '4/3' }))
     this.entry(this.proposals[0].id, {
         quorum: this.promise.quorum,
         value: this.proposals[0].value
@@ -317,7 +316,6 @@ Legislator.prototype.receiveAccepted = function (envelope, message) {
                     promise: message.promise
                 })
             }
-            console.log(envelope)
             this.dispatchInternal('learn', entry)
         }
     }
@@ -581,15 +579,13 @@ Legislator.prototype.decideConvene = function (entry) {
 
 Legislator.prototype.learnCommence = function (entry) {
     assert(this.log.find({ id: entry.value.terminus }))
-    console.log(this.id, entry.value.terminus, this.log.find({ id: entry.value.terminus }))
-    console.log(this.government)
     assert(this.log.find({ id: entry.value.terminus }).learns.length)
     entry.quorum.forEach(function (id) {
         if (id != this.id) {
             this.send([ id ], [ this.id ], {
                 type: 'synchronize',
                 count: 20,
-                greatest: this.greatest[id] || { uniform: '0/0' }
+                greatest: this.greatest[id] || { decided: '0/0', uniform: '0/0' }
             })
         }
     }, this)
@@ -856,7 +852,7 @@ Legislator.prototype.decideNaturalize = function (entry) {
                 this.send([ id ], [ this.id ], {
                     type: 'synchronize',
                     count: 20,
-                    greatest: this.greatest[id] || { uniform: '0/0' },
+                    greatest: this.greatest[id] || { decided: '0/0', uniform: '0/0' },
                     learned: true
                 })
             }
@@ -865,7 +861,11 @@ Legislator.prototype.decideNaturalize = function (entry) {
 }
 
 Legislator.prototype.majoritySize = function (parliamentSize, citizenCount) {
-    return Math.ceil(Math.min(parliamentSize, citizenCount) / 2)
+    var size = Math.min(parliamentSize, citizenCount)
+    if (size % 2 == 0) {
+        size++
+    }
+    return Math.ceil(size / 2)
 }
 
 Legislator.prototype.receivePosted = function (envelope, message) {
@@ -933,7 +933,7 @@ Legislator.prototype.reelect = function () {
                     this.send([ id ], [ this.id ], {
                         type: 'synchronize',
                         count: 20,
-                        greatest: this.greatest[id] || { uniform: '0/0' },
+                        greatest: this.greatest[id] || { decided: '0/0', uniform: '0/0' },
                         learned: true
                     })
                 }
