@@ -937,21 +937,6 @@ Legislator.prototype.reelect = function () {
                     })
                 }
             }, this)
-            /*
-            var iterator = this.log.findIter(this.log.max()), entry = iterator.data()
-            while (Id.compare(entry.id, '0/0', 1) == 0 || !entry.learned) {
-                entry = entry.prev()
-            }
-            // todo: always make sure you can stop somewhere, at least one good
-            // government.
-            this.pulse(this.promise.quorum, {
-                type: 'accept',
-                internal: entry.internal,
-                quorum: this.promise.quorum,
-                promise: entry.id,
-                value: entry.value
-            })
-            */
         }
     }
 }
