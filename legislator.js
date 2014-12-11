@@ -74,7 +74,7 @@ function Legislator (id, options) {
     this.outcomes = []
     this.ticks = {}
     this.timeout = options.timeout || 5000
-    this.promise = { id: '0/0' }
+    this.promise = { id: '0/0', quorum: [] }
     var motion = {}
     this.queue = motion.prev = motion.next = motion
 
@@ -165,7 +165,7 @@ Legislator.prototype.consume = function (filter) {
 
 Legislator.prototype.prepare = function () {
     var proposal = this.proposals[this.proposals.length - 1]
-    this.pulse(proposal.id, proposal.quorum, {
+    this.pulse(proposal.quorum, {
         type: 'prepare',
         promise: proposal.id,
         quorum: proposal.quorum
@@ -180,12 +180,12 @@ Legislator.prototype.receivePrepare = function (envelope, message) {
                 id: message.promise,
                 quorum: message.quorum
             }
-            this.pulse([ envelope.from ], {
+            this.pulse(this.promise.quorum, [ envelope.from ], {
                 type: 'promise',
                 promise: this.promise.id
             })
         } else {
-            this.pulse([ envelope.from ], {
+            this.pulse(this.promise.quorum, [ envelope.from ], {
                 type: 'promised',
                 promise: this.promise.id
             })
@@ -217,11 +217,11 @@ Legislator.prototype.proposeGovernment = function (message) {
     }
     purge.release()
     var proposal = this.createProposal(0, message.value.government.majority.slice(), message)
-    this.addRoute(proposal.id, proposal.quorum)
+    this.addRoute(proposal.quorum)
 }
 
 Legislator.prototype.proposeEntry = function (message) {
-    this.addRoute(this.promise.id, this.promise.quorum)
+    this.addRoute(this.promise.quorum)
     return this.createProposal(1, this.government.majority.slice(), message)
 }
 
@@ -284,8 +284,8 @@ Legislator.prototype.receiveAccept = function (envelope, message) {
     } else if (compare < 0) {
     } else {
         var entry = this.entry(message.promise, message)
-        this.pulse(entry.quorum.slice(), {
-            quorum: entry.quorum.slice(),
+        this.pulse(entry.quorum, {
+            quorum: entry.quorum,
             type: 'accepted',
             promise: message.promise
         })
@@ -520,9 +520,7 @@ Legislator.prototype.receiveLearned = function (envelope, message) {
 // This merely asserts that a message follows a certain route. Maybe I'll
 // rename it to "route", but "nothing" is good enough.
 Legislator.prototype.nothing = function () {
-    this.pulse(this.government.majority.slice(), {
-        type: 'nothing'
-    })
+    this.pulse(this.promise.quorum, { type: 'nothing' })
 }
 
 Legislator.prototype.receiveNothing = function () {
@@ -666,8 +664,9 @@ Legislator.prototype.post = function (value, internal) {
     return cookie
 }
 
-Legislator.prototype.addRoute = function (id, path) {
-    var cartridge = this.routed.hold(id, { initialized: false })
+Legislator.prototype.addRoute = function (path) {
+    var id = path.join(' -> '),
+        cartridge = this.routed.hold(id, { initialized: false })
     if (cartridge.value.initialized) {
         assert(cartridge.value.id == id &&
                cartridge.value.path.every(function (value, index) {
@@ -696,7 +695,7 @@ Legislator.prototype.unroute = function () {
 }
 
 Legislator.prototype.route = function () {
-    var cartridge = this.routed.hold(this.promise.id || '0', false)
+    var cartridge = this.routed.hold(this.promise.quorum.join(' -> '), false)
     if (!cartridge.value) {
         cartridge.remove()
     } else if (cartridge.value.envelopes.length) {
@@ -721,7 +720,10 @@ Legislator.prototype.route = function () {
 
 Legislator.prototype.pulse = function () {
     var vargs = slice.call(arguments),
-        message = vargs.pop(), to = vargs.pop(), id = vargs.pop() || this.promise.id
+        message = vargs.pop(),
+        to = vargs.pop(),
+        route = vargs.pop() || to,
+        id = route.join(' -> ')
     var cartridge = this.routed.hold(id, false)
     assert(cartridge, 'cannot find route')
     push.apply(cartridge.value.envelopes, this.stuff([ this.id ], to, id, message))

@@ -9,7 +9,7 @@ function Machine (network, legislator) {
 
 Machine.prototype.receive = function (filter, route, index, envelopes) {
     if (route.id != '-') {
-        this.legislator.addRoute(route.id, route.path)
+        this.legislator.addRoute(route.path)
     }
     this.legislator.ingest(envelopes)
     while (this.legislator.consume(filter));
