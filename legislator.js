@@ -106,7 +106,7 @@ Legislator.prototype.bootstrap = function () {
         internal: true,
         value: {
             type: 'convene',
-            to: this.government.majority.slice(),
+            to: this.government.majority,
             from: [ this.id ],
             government: JSON.parse(JSON.stringify(this.government))
         }
@@ -216,13 +216,13 @@ Legislator.prototype.proposeGovernment = function (message) {
         purge.next()
     }
     purge.release()
-    var proposal = this.createProposal(0, message.value.government.majority.slice(), message)
+    var proposal = this.createProposal(0, message.value.government.majority, message)
     this.addRoute(proposal.quorum)
 }
 
 Legislator.prototype.proposeEntry = function (message) {
     this.addRoute(this.promise.quorum)
-    return this.createProposal(1, this.government.majority.slice(), message)
+    return this.createProposal(1, this.government.majority, message)
 }
 
 // todo: figure out how to merge into queue.
@@ -829,7 +829,7 @@ Legislator.prototype.decideInagurate = function (entry) {
             internal: true,
             value: {
                 type: 'convene',
-                to: this.government.majority.slice(),
+                to: this.government.majority,
                 from: [ this.id ],
                 government: JSON.parse(JSON.stringify(government))
             }
