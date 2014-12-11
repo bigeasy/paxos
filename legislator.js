@@ -75,7 +75,7 @@ function Legislator (id, options) {
     this.outcomes = []
     this.ticks = {}
     this.timeout = options.timeout || 5000
-    this.promise = { id: '0' }
+    this.promise = { id: '0/0' }
     var motion = {}
     this.queue = motion.prev = motion.next = motion
 
@@ -165,15 +165,16 @@ Legislator.prototype.consume = function (filter) {
 }
 
 Legislator.prototype.prepare = function () {
-    this.pulse(this.promise.quorum, {
+    var proposal = this.proposals[this.proposals.length - 1]
+    this.pulse(proposal.id, proposal.quorum, {
         type: 'prepare',
-        promise: this.proposals[0].id,
-        quorum: this.proposals[0].quorum
+        promise: proposal.id,
+        quorum: proposal.quorum
     })
 }
 
 Legislator.prototype.receivePrepare = function (envelope, message) {
-    var compare = Id.compare(this.promises[0].id, message.promise, 0)
+    var compare = Id.compare(this.promise.id, message.promise, 0)
     if (compare != 0) {
         if (compare < 0) {
             this.promise = {
@@ -187,7 +188,7 @@ Legislator.prototype.receivePrepare = function (envelope, message) {
         } else {
             this.pulse([ envelope.from ], {
                 type: 'promised',
-                promise: this.promisedId
+                promise: this.promise.id
             })
         }
     }
@@ -217,10 +218,6 @@ Legislator.prototype.proposeGovernment = function (message) {
     }
     purge.release()
     var proposal = this.createProposal(0, message.value.government.majority.slice(), message)
-    this.promise = {
-        id: proposal.id,
-        quorum: proposal.quorum
-    }
     this.addRoute(proposal.id, proposal.quorum)
 }
 
