@@ -172,22 +172,20 @@ Legislator.prototype.prepare = function () {
 
 Legislator.prototype.receivePrepare = function (envelope, message) {
     var compare = Id.compare(this.promise.id, message.promise, 0)
-    if (compare != 0) {
-        if (compare < 0) {
-            this.promise = {
-                id: message.promise,
-                quorum: message.quorum
-            }
-            this.pulse(this.promise.quorum, [ envelope.from ], {
-                type: 'promise',
-                promise: this.promise.id
-            })
-        } else {
-            this.pulse(this.promise.quorum, [ envelope.from ], {
-                type: 'promised',
-                promise: this.promise.id
-            })
+    if (compare < 0) {
+        this.promise = {
+            id: message.promise,
+            quorum: message.quorum
         }
+        this.pulse(this.promise.quorum, [ envelope.from ], {
+            type: 'promise',
+            promise: this.promise.id
+        })
+    } else {
+        this.pulse(this.promise.quorum, [ envelope.from ], {
+            type: 'promised',
+            promise: this.promise.id
+        })
     }
 }
 
