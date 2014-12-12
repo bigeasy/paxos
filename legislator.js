@@ -8,8 +8,6 @@ var Cache = require('magazine')
 
 var consume = require('./consume')
 
-var c = 0 // todo: temporary
-
 var Cookie = {
     increment: function (cookie) {
         return Monotonic.toString(Monotonic.increment(Monotonic.parse(cookie)))
