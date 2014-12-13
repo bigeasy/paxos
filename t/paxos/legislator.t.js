@@ -42,7 +42,7 @@ function prove (assert) {
     network.tick(logger)
 
     assert(legislators[0].government, {
-        id: '1/0', leader: 0, majority: [ 0 ], minority: [], interim: false
+        id: '1/0', majority: [ 0 ], minority: [], interim: false
     }, 'bootstrap')
 
     network.machines.push(new Machine(network, new Legislator(1, options)))
@@ -51,7 +51,7 @@ function prove (assert) {
     network.tick(logger)
 
     assert(network.machines[1].legislator.government, {
-        id: '1/0', leader: 0, majority: [ 0 ], minority: [], interim: false
+        id: '1/0', majority: [ 0 ], minority: [], interim: false
     }, 'synchronize join')
 
     // todo: yes, you look inside the response. it is not opaque. you are at
@@ -62,7 +62,7 @@ function prove (assert) {
     network.tick(logger)
 
     assert(legislators[0].government, {
-        id: '2/0', leader: 0, majority: [ 0, 1 ], minority: [], interim: false
+        id: '2/0', majority: [ 0, 1 ], minority: [], interim: false
     }, 'grow')
 
     network.machines.push(new Machine(network, new Legislator(2, options)))
@@ -70,18 +70,18 @@ function prove (assert) {
     network.tick(logger)
 
     assert(network.machines[2].legislator.government, {
-        id: '2/0', leader: 0, majority: [ 0, 1 ], minority: [], interim: false
+        id: '2/0', majority: [ 0, 1 ], minority: [], interim: false
     }, 'sync')
 
     network.machines[2].legislator.naturalize()
     network.tick(logger)
 
     assert(network.machines[2].legislator.government, {
-        id: '3/0', leader: 0, majority: [ 0, 1 ], minority: [ 2 ], interim: false
+        id: '3/0', majority: [ 0, 1 ], minority: [ 2 ], interim: false
     }, 'three member parliament')
 
     assert(network.machines[1].legislator.government, {
-        id: '3/0', leader: 0, majority: [ 0, 1 ], minority: [ 2 ], interim: false
+        id: '3/0', majority: [ 0, 1 ], minority: [ 2 ], interim: false
     }, 'minority learning')
 
     network.machines.push(new Machine(network, new Legislator(3, options)))
@@ -89,7 +89,7 @@ function prove (assert) {
     network.tick(logger)
 
     assert(network.machines[3].legislator.government, {
-        id: '3/0', leader: 0, majority: [ 0, 1 ], minority: [ 2 ], interim: false
+        id: '3/0', majority: [ 0, 1 ], minority: [ 2 ], interim: false
     }, 'citizen learning')
 
     network.machines[3].legislator.naturalize()
@@ -114,7 +114,7 @@ function prove (assert) {
     network.tick(logger)
 
     assert(network.machines[1].legislator.government, {
-        id: '4/0', leader: 1, majority: [ 1, 2 ], minority: [ 0 ], interim: false
+        id: '4/0', majority: [ 1, 2 ], minority: [ 0 ], interim: false
     }, 'reelection')
 
     var cookie = network.machines[1].legislator.post({ greeting: 'Hello, World!' })
@@ -155,7 +155,6 @@ function prove (assert) {
         value: {
             type: 'commence',
             government: {
-                leader: 2,
                 majority: [ 2, 0 ],
                 minority: [ 1 ],
                 interim: false,

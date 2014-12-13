@@ -94,7 +94,6 @@ Legislator.prototype.bootstrap = function () {
     this.restarted = false
     this.government = {
         id: '0/0',
-        leader: this.id,
         majority: [ this.id ],
         minority: [],
         interim: true
@@ -542,7 +541,7 @@ Legislator.prototype.decideConvene = function (entry) {
     this.learnConvene(entry)
     // todo: naturalization tests go here, or check proposal.
     // todo: is this right if it is replaying?
-    if (this.government.leader == this.id && this.proposals.length && entry.id == this.proposals[0].id) {
+    if (this.government.majority[0] == this.id && this.proposals.length && entry.id == this.proposals[0].id) {
         var majority = this.government.majority.slice()
         // new rule: the majority is always not more than one away from being uniform.
         // todo: not difficult, you will be able to use most decided. Not sort
@@ -650,7 +649,7 @@ Legislator.prototype.post = function (value, internal) {
         internal: !! internal,
         value: value
     }).release()
-    this.send([ this.government.leader ], {
+    this.send([ this.government.majority[0] ], {
         type: 'post',
         internal: !! internal,
         cookie: cookie,
@@ -768,7 +767,7 @@ Legislator.prototype.receivePost = function (envelope, message) {
         })
     }
     // Correct government, but not the leader.
-    if (this.government.leader != this.id) {
+    if (this.government.majority[0] != this.id) {
         this.send([ envelope.from ], {
             type: 'posted',
             cookie: message.cookie,
@@ -798,7 +797,7 @@ Legislator.prototype.receivePost = function (envelope, message) {
 // true enough.
 // todo: Isn't this really a property I set?
 Legislator.prototype.__defineGetter__('isLeader', function () {
-    return this.naturalized && this.government.leader == this.id
+    return this.naturalized && this.government.majority[0] == this.id
 })
 
 Legislator.prototype.decideInagurate = function (entry) {
@@ -816,7 +815,6 @@ Legislator.prototype.decideInagurate = function (entry) {
             majority.push(minority.pop())
         }
         var government = {
-            leader: this.id,
             majority: majority,
             minority: minority,
             interim: true
@@ -893,7 +891,7 @@ Legislator.prototype.naturalize = function () {
 }
 
 Legislator.prototype.reelect = function () {
-    if (this.id != this.government.leader && ~this.government.majority.indexOf(this.id)) {
+    if (this.id != this.government.majority[0] && ~this.government.majority.indexOf(this.id)) {
         this.ticks[this.id] = this.clock()
         var majority = this.government.majority.filter(function (id) {
             return this.clock() - (this.ticks[id] || 0) < this.timeout
@@ -918,7 +916,6 @@ Legislator.prototype.reelect = function () {
                 return !~majority.indexOf(id)
             })
             var government = {
-                leader: this.id,
                 majority: majority,
                 minority: minority,
                 interim: true
