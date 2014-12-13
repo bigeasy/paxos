@@ -59,7 +59,7 @@ function Legislator (id, options) {
     this.government = { id: '0/0', minority: [], majority: [] }
     this.greatest = {}
     this.voting = false
-    this.lastProposalId = '0/0'
+    this.lastPromisedId = '0/0'
     this.proposals = []
     this.citizens = {}
     this.routed = new Cache().createMagazine()
@@ -223,11 +223,11 @@ Legislator.prototype.proposeEntry = function (message) {
 
 // todo: figure out how to merge into queue.
 Legislator.prototype.createProposal = function (index, quorum, message) {
-    var entry = this.log.max()
-    if (Id.compare(this.lastProposalId, entry.id) < 1) {
-        this.lastProposalId = entry.id
+    var entry = this.log.max(), id = entry.id, proposal
+    if (Id.compare(id, this.lastPromisedId) < 0) {
+        id = this.lastPromisedId
     }
-    var id = this.lastProposalId = Id.increment(this.lastProposalId, index), proposal
+    id = this.lastPromisedId = Id.increment(id, index)
     this.proposals.push(proposal = {
         id: id,
         internal: !! message.internal,
