@@ -129,6 +129,11 @@ Legislator.prototype.ingest = function (envelopes) {
 }
 
 Legislator.prototype.consume = function (filter) {
+    consume(this.unrouted[this.id] || [], intercept, this)
+    if (this.unrouted[this.id] && this.unrouted[this.id].length == 0) {
+        delete this.unrouted[this.id]
+    }
+
     var purge = this.routed.purge(), consumed = false
     try {
         while (purge.cartridge) {
@@ -138,10 +143,6 @@ Legislator.prototype.consume = function (filter) {
         }
     } finally {
         purge.release()
-    }
-    consume(this.unrouted[this.id] || [], intercept, this)
-    if (this.unrouted[this.id] && this.unrouted[this.id].length == 0) {
-        delete this.unrouted[this.id]
     }
 
     function intercept (envelope) {
