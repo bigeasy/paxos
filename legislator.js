@@ -171,18 +171,26 @@ Legislator.prototype.prepare = function () {
 }
 
 Legislator.prototype.receivePrepare = function (envelope, message) {
-    var compare = Id.compare(this.promise.id, message.promise, 0)
-    if (compare < 0) {
-        this.promise = {
-            id: message.promise,
-            quorum: message.quorum
+    if (Id.compare(this.greatest[this.id].decided, this.greatest[this.id].uniform) == 0) {
+        var compare = Id.compare(this.promise.id, message.promise, 0)
+        if (compare < 0) {
+            this.promise = {
+                id: message.promise,
+                quorum: message.quorum
+            }
+            this.pulse(this.promise.quorum, [ envelope.from ], {
+                type: 'promise',
+                promise: this.promise.id
+            })
+        } else {
+            this.pulse(this.promise.quorum, [ envelope.from ], {
+                type: 'promised',
+                promise: this.promise.id
+            })
         }
-        this.pulse(this.promise.quorum, [ envelope.from ], {
-            type: 'promise',
-            promise: this.promise.id
-        })
     } else {
-        this.pulse(this.promise.quorum, [ envelope.from ], {
+        throw new Error
+        this.send([ envelope.from ], {
             type: 'promised',
             promise: this.promise.id
         })
@@ -921,6 +929,13 @@ Legislator.prototype.reelect = function () {
                 minority: minority,
                 interim: true
             }
+            government.majority.concat(government.minority).forEach(function (id) {
+                this.send([ id ], [ this.id ], {
+                    type: 'synchronize',
+                    count: 20,
+                    greatest: this.greatest[id] || { uniform: '0/0' }
+                })
+            }, this)
             this.proposeGovernment({
                 internal: true,
                 value: {
