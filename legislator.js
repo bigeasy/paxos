@@ -809,7 +809,7 @@ Legislator.prototype.__defineGetter__('isLeader', function () {
     return this.naturalized && this.government.majority[0] == this.id
 })
 
-Legislator.prototype.decideInagurate = function (entry) {
+Legislator.prototype.decideInaugurate = function (entry) {
     if (this.isLeader) {
         var citizens = Object.keys(this.citizens).map(function (id) { return +id })
         var majority = this.government.majority.slice()
@@ -865,7 +865,7 @@ Legislator.prototype.decideNaturalize = function (entry) {
         this.proposeEntry({
             internal: true,
             value: {
-                type: 'inagurate',
+                type: 'inaugurate',
                 id: entry.value.id
             }
         })
