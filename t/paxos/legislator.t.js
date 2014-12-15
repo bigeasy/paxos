@@ -42,7 +42,7 @@ function prove (assert) {
     network.tick(logger)
 
     assert(legislators[0].government, {
-        id: '1/0', majority: [ 0 ], minority: [], interim: false
+        id: '1/0', majority: [ 0 ], minority: []
     }, 'bootstrap')
 
     network.machines.push(new Machine(network, new Legislator(1, options)))
@@ -51,7 +51,7 @@ function prove (assert) {
     network.tick(logger)
 
     assert(network.machines[1].legislator.government, {
-        id: '1/0', majority: [ 0 ], minority: [], interim: false
+        id: '1/0', majority: [ 0 ], minority: []
     }, 'synchronize join')
 
     // todo: yes, you look inside the response. it is not opaque. you are at
@@ -62,7 +62,7 @@ function prove (assert) {
     network.tick(logger)
 
     assert(legislators[0].government, {
-        id: '2/0', majority: [ 0, 1 ], minority: [], interim: false
+        id: '2/0', majority: [ 0, 1 ], minority: []
     }, 'grow')
 
     network.machines.push(new Machine(network, new Legislator(2, options)))
@@ -70,18 +70,18 @@ function prove (assert) {
     network.tick(logger)
 
     assert(network.machines[2].legislator.government, {
-        id: '2/0', majority: [ 0, 1 ], minority: [], interim: false
+        id: '2/0', majority: [ 0, 1 ], minority: []
     }, 'sync')
 
     network.machines[2].legislator.naturalize()
     network.tick(logger)
 
-    assert(network.machines[2].legislator.government, {
-        id: '3/0', majority: [ 0, 1 ], minority: [ 2 ], interim: false
+    assert(network.machines[1].legislator.government, {
+        id: '3/0', majority: [ 0, 1 ], minority: [ 2 ]
     }, 'three member parliament')
 
-    assert(network.machines[1].legislator.government, {
-        id: '3/0', majority: [ 0, 1 ], minority: [ 2 ], interim: false
+    assert(network.machines[2].legislator.government, {
+        id: '3/0', majority: [ 0, 1 ], minority: [ 2 ]
     }, 'minority learning')
 
     network.machines.push(new Machine(network, new Legislator(3, options)))
@@ -89,7 +89,7 @@ function prove (assert) {
     network.tick(logger)
 
     assert(network.machines[3].legislator.government, {
-        id: '3/0', majority: [ 0, 1 ], minority: [ 2 ], interim: false
+        id: '3/0', majority: [ 0, 1 ], minority: [ 2 ]
     }, 'citizen learning')
 
     network.machines[3].legislator.naturalize()
@@ -97,7 +97,7 @@ function prove (assert) {
     network.machines[1].legislator.outcomes.length = 0
 
     assert(network.machines[3].legislator.log.max(), {
-        id: '3/2',
+        id: '3/1',
         accepts: [],
         learns: [ 1, 0 ],
         quorum: [ 0, 1 ],
@@ -114,7 +114,7 @@ function prove (assert) {
     network.tick(logger)
 
     assert(network.machines[1].legislator.government, {
-        id: '4/0', majority: [ 1, 2 ], minority: [ 0 ], interim: false
+        id: '4/0', majority: [ 1, 2 ], minority: [ 0 ]
     }, 'reelection')
 
     var cookie = network.machines[1].legislator.post({ greeting: 'Hello, World!' })
@@ -134,7 +134,7 @@ function prove (assert) {
     })
 
     assert(network.machines[1].legislator.log.max(), {
-        id: '4/3',
+        id: '4/2',
         accepts: [ 1 ],
         learns: [],
         quorum: [ 1, 2 ],
@@ -148,18 +148,17 @@ function prove (assert) {
     network.tick(logger)
 
     assert(network.machines[1].legislator.log.max(), {
-        id: '5/1',
+        id: '5/0',
         accepts: [],
         learns: [ 0, 2 ],
         quorum: [ 2, 0 ],
         value: {
-            type: 'commence',
+            type: 'convene',
             government: {
                 majority: [ 2, 0 ],
                 minority: [ 1 ],
-                interim: false,
                 id: '5/0'
-            }, terminus: '4/3'
+            }, terminus: '4/2'
         },
         internal: true,
         learned: true,
@@ -174,8 +173,9 @@ function prove (assert) {
     network.machines[1].legislator.post({ value: 3 })
     network.machines[1].tick(logger)
 
-    assert(network.machines[0].legislator.log.max().id, '5/1', 'rounds waiting')
-    assert(network.machines[2].legislator.proposals.length, 3, 'queued')
+    assert(network.machines[1].legislator.log.max().id, '5/3', 'rounds waiting')
+    // todo: this is now a pointless test.
+    assert(network.machines[1].legislator.proposals.length, 1, 'queued')
 
     network.tick(logger)
 

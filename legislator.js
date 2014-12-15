@@ -92,22 +92,13 @@ function Legislator (id, options) {
 
 Legislator.prototype.bootstrap = function () {
     this.restarted = false
-    this.government = {
+    var government = {
         id: '0/0',
         majority: [ this.id ],
-        minority: [],
-        interim: true
+        minority: []
     }
     this.citizens[this.id] = this.naturalized = '0/0'
-    this.proposeGovernment({
-        internal: true,
-        value: {
-            type: 'convene',
-            to: this.government.majority,
-            from: [ this.id ],
-            government: JSON.parse(JSON.stringify(this.government))
-        }
-    })
+    this.proposeGovernment(government)
     this.prepare()
 }
 
@@ -209,7 +200,19 @@ Legislator.prototype.receivePromise = function (envelope, message) {
     }
 }
 
-Legislator.prototype.proposeGovernment = function (message) {
+Legislator.prototype.proposeGovernment = function (government) {
+    var iterator = this.log.findIter(this.log.max()), current = iterator.data()
+    while (Id.compare(current.id, '0/0', 1) == 0 || !current.learned) {
+        current = iterator.prev()
+    }
+    var message = {
+        internal: true,
+        value: {
+            type: 'convene',
+            government: government,
+            terminus: current.id
+        }
+    }
     var purge = this.routed.purge()
     while (purge.cartridge) {
         if (purge.cartridge.value.path[0] == this.id) {
@@ -296,11 +299,15 @@ Legislator.prototype.receiveAccept = function (envelope, message) {
     }
 }
 
-Legislator.prototype.setGreatest = function (entry, type) {
-    if (Id.compare(this.greatest[this.id][type], entry.id) < 0) {
-        this.greatest[this.id][type] = entry.id
+Legislator.prototype.markAndSetGreatest = function (entry, type) {
+    if (!entry[type]) {
+        if (Id.compare(this.greatest[this.id][type], entry.id) < 0) {
+            this.greatest[this.id][type] = entry.id
+        }
+        entry[type] = true
+        return true
     }
-    entry[type] = true
+    return false
 }
 
 Legislator.prototype.receiveAccepted = function (envelope, message) {
@@ -308,34 +315,35 @@ Legislator.prototype.receiveAccepted = function (envelope, message) {
     if (!~entry.accepts.indexOf(envelope.from)) {
         entry.accepts.push(envelope.from)
         if (entry.accepts.length >= entry.quorum.length)  {
-            this.setGreatest(entry, 'learned')
-            entry.learned = true
+            this.markAndSetGreatest(entry, 'learned')
             if (~entry.quorum.indexOf(this.id)) {
                 this.pulse(this.promise.quorum, {
                     type: 'learned',
                     promise: message.promise
                 })
             }
-            this.dispatchInternal('learn', entry)
         }
     }
 }
 
-Legislator.prototype.dispatchInternal = function (prefix, entry) {
-    if (entry.internal) {
-        var type = entry.value.type
-        var method = prefix + type[0].toUpperCase() + type.slice(1)
-        if (typeof this[method] == 'function') {
-            this[method](entry)
+Legislator.prototype.markUniform = function (entry) {
+    assert(entry.learns.length > 0)
+    if (this.markAndSetGreatest(entry, 'uniform')) {
+        if (entry.internal) {
+            var type = entry.value.type
+            var method = 'decide' + type[0].toUpperCase() + type.slice(1)
+            if (typeof this[method] == 'function') {
+                this[method](entry)
+            }
         }
     }
 }
 
-Legislator.prototype.markUniform = function () {
-    var greatest = this.greatest[this.id],
-        iterator = this.log.findIter({ id: this.greatest[this.id].uniform }),
-        previous, current
-    for (;;) {
+Legislator.prototype.playUniform = function () {
+    var iterator = this.log.findIter({ id: this.greatest[this.id].uniform }), skip,
+        previous, current, terminus
+
+    OUTER: for (;;) {
         previous = iterator.data(), current = iterator.next()
 
         if (!current) {
@@ -343,104 +351,60 @@ Legislator.prototype.markUniform = function () {
         }
 
         if (Id.compare(Id.increment(previous.id, 1), current.id) == 0) {
-            assert(previous.uniform || previous.ignored, 'previous must be resolved')
+            assert(previous.uniform, 'previous must be resolved')
             if (current.decided) {
-                markUniform.call(this, current)
-                greatest.uniform = current.id
+                this.markUniform(current)
                 continue
+            } else {
+                skip = this.log.findIter(current)
+                skip.next()
             }
         } else {
-            previous = iterator.prev(), current = iterator.data()
+            skip = this.log.findIter(current)
         }
 
-        var end = trampoline.call(this, transition, this.log.findIter({ id: current.id }))
-        if (!end) {
-            break
-        }
-
-        if (Id.compare(current.id, end.terminus, 0) != 0) {
-            break
-        }
-
-        if (Id.compare(current.id, end.terminus) < 0) {
-            break
-        }
-
-        // todo: you can test this when there is a failure of a five member
-        // parliament and the second member of the majority is the only
-        // survivor, and it has an entry that has been accepted, but not yet
-        // learned.
-        assert(Id.compare(current.id, end.terminus) == 0 ||
-               Id.compare(previous.id, end.terminus) == 0, 'terminus beyond decisions')
-
-        iterator = this.log.findIter({ id: end.terminus })
-        previous = iterator.data()
-        markUniform.call(this, previous)
-
+        terminus = skip.data()
         for (;;) {
-            previous = iterator.data(), current = iterator.next()
-            if (Id.compare(current.id, end.government) == 0) {
+            if (!terminus || Id.compare(terminus.id, '0/0', 1) != 0) {
+                break OUTER
+            }
+            if (terminus.decided) {
                 break
             }
-            current.ignored = true
+            terminus = skip.next()
         }
 
-        markUniform.call(this, current)
-    }
-
-    function markUniform (entry) {
-        entry.uniform = true
-    }
-
-    function trampoline (f, i) {
-        while (typeof (f = f.call(this, i)) == 'function');
-        return f
-    }
-
-    // TODO: This becomes a while loop where `return null` is `break OUTER` and
-    // `return transition` is `continue`. Then `i` is simply `j`.
-    function transition (i) {
-        // Read from our iterator.
-        var previous = i.data(), current = i.next()
-
-        // If we are not at a goverment transition, then the previous entry
-        // cannot be known to be incomplete.
-        if (current == null || Id.compare(previous.id, current.id, 0) == 0) {
-            return null
-        }
-
-        // Ideally will be looking at the start of a new government.
-        previous = i.data(), current = i.next()
-
-        // At least two entries create a continual government.
-        if (current == null) {
-            return null
-        }
-
-        // The next uniform entry would be the start of a new government.
-        if (Id.compare(previous.id, '0/0', 1) != 0) {
-            return null
-        }
-
-        // If it did not settle old business, it might have failed.
-        if (Id.compare(Id.increment(previous.id, 1), current.id) != 0) {
-            return transition
-        }
-
-        // We now have the correct records for the start of a new government,
-        // did they become actionable? The we have a continual government.
-        if (previous.decided) {
-            if (current.decided) {
-                return { terminus: current.value.terminus, government: previous.id }
+        for (;;) {
+            terminus = this.log.find({ id: terminus.value.terminus })
+            if (!terminus) {
+                break OUTER
             }
-            // Perhaps our old business entry is inactionable and this
-            // government failed.
-            return transition
+            if (Id.compare(current.id, terminus.id, 0) >= 0) {
+                break
+            }
         }
 
-        // This probably cannot be reached, since every entry we get will be
-        // decided except for one that was left inside an legislator.
-        return transition
+        if (Id.compare(terminus.id, current.id) != 0 && Id.compare(terminus.id, previous.id) != 0) {
+            break
+        }
+
+        var uniform = [ terminus = skip.data() ]
+        for (;;) {
+            terminus = this.log.find({ id: terminus.value.terminus })
+            uniform.push(terminus)
+            if (Id.compare(current.id, terminus.id, 0) >= 0) {
+                break
+            }
+        }
+
+        while (uniform.length) {
+            if (uniform[uniform.length - 1].learns.length == 0) {
+                break OUTER
+            }
+            this.markUniform(uniform.pop())
+        }
+
+        terminus = skip
     }
 }
 
@@ -462,18 +426,15 @@ Legislator.prototype.receiveLearned = function (envelope, message) {
     if (!~entry.learns.indexOf(envelope.from)) {
         entry.learns.push(envelope.from)
         if (entry.learns.length == entry.quorum.length) {
-            this.setGreatest(entry, 'learned')
-            this.setGreatest(entry, 'decided')
+            this.markAndSetGreatest(entry, 'learned')
+            this.markAndSetGreatest(entry, 'decided')
             if (Id.compare(entry.id, this.greatest[this.id].decided) > 0) {
                 this.greatest[this.id].decided = entry.id
             }
-            this.markUniform()
-            // todo: only on 'uniform', should we convene.
-            this.dispatchInternal('decide', entry)
         }
+        this.playUniform()
         // Share this decision with the minority of parliament.
         if (entry.decided &&
-            Id.compare(entry.id, '0/0', 1) > 0 &&
             ~this.government.majority.indexOf(this.id)
         ) {
             var index = this.government.majority.indexOf(this.id)
@@ -490,7 +451,6 @@ Legislator.prototype.receiveLearned = function (envelope, message) {
         }
         // Share this decision with constituents.
         if (entry.decided &&
-            Id.compare(entry.id, '0/0', 1) > 0 &&
             ~this.government.minority.indexOf(this.id)
         ) {
             var index = this.government.minority.indexOf(this.id)
@@ -530,14 +490,6 @@ Legislator.prototype.nothing = function () {
 Legislator.prototype.receiveNothing = function () {
 }
 
-Legislator.prototype.learnConvene = function (entry) {
-    if (Id.compare(this.government.id, entry.id) < 0) {
-        assert(entry.value.government.minority)
-        this.government = entry.value.government
-        this.government.id = entry.id
-    }
-}
-
 Legislator.prototype.sync = function (to, count) {
     this.send(to, {
         type: 'synchronize',
@@ -547,53 +499,12 @@ Legislator.prototype.sync = function (to, count) {
 }
 
 Legislator.prototype.decideConvene = function (entry) {
-    this.learnConvene(entry)
-    // todo: naturalization tests go here, or check proposal.
-    // todo: is this right if it is replaying?
-    if (this.government.majority[0] == this.id && this.proposals.length && entry.id == this.proposals[0].id) {
-        var majority = this.government.majority.slice()
-        // new rule: the majority is always not more than one away from being uniform.
-        // todo: not difficult, you will be able to use most decided. Not sort
-        // the majority, because we will all be in sync.
-        majority.sort(function (a, b) {
-            return Id.compare(this.greatest[b].decided, this.greatest[a].decided)
-        }.bind(this))
-        var iterator = this.log.findIter({ id: entry.id }), current
-        do {
-            current = iterator.prev()
-        } while (Id.compare(current.id, '0/0', 1) == 0 || !current.learned)
-        var terminus = current.id
-        assert(majority[0] == this.id, 'need to catch up')
-        this.proposeEntry({
-            internal: true,
-            value: {
-                type: 'commence',
-                government: this.government,
-                terminus: terminus
-            }
-        })
-    }
-}
-
-Legislator.prototype.learnCommence = function (entry) {
-    assert(this.log.find({ id: entry.value.terminus }))
-    assert(this.log.find({ id: entry.value.terminus }).learns.length)
-    entry.quorum.forEach(function (id) {
-        if (id != this.id) {
-            this.send([ id ], [ this.id ], {
-                type: 'synchronize',
-                count: 20,
-                greatest: this.greatest[id] || { decided: '0/0', uniform: '0/0' }
-            })
-        }
-    }, this)
-}
-
-Legislator.prototype.decideCommence = function (entry) {
-    if (Id.compare(this.government.id, entry.value.government.id) == 0) {
+    var terminus = this.log.find({ id: entry.value.terminus })
+    assert(terminus)
+    assert(terminus.learns.length > 0)
+    if (Id.compare(this.government.id, entry.id) < 0) {
         this.government = entry.value.government
-        assert(this.government.minority)
-        this.government.interim = false
+        this.government.id = entry.id
     }
 }
 
@@ -823,19 +734,9 @@ Legislator.prototype.decideInaugurate = function (entry) {
         if (majority.length < majoritySize) {
             majority.push(minority.pop())
         }
-        var government = {
-            majority: majority,
-            minority: minority,
-            interim: true
-        }
         this.proposeGovernment({
-            internal: true,
-            value: {
-                type: 'convene',
-                to: this.government.majority,
-                from: [ this.id ],
-                government: JSON.parse(JSON.stringify(government))
-            }
+            majority: majority,
+            minority: minority
         })
         // todo: why is this necessary?
         this.proposals.shift()
@@ -926,8 +827,7 @@ Legislator.prototype.reelect = function () {
             })
             var government = {
                 majority: majority,
-                minority: minority,
-                interim: true
+                minority: minority
             }
             government.majority.concat(government.minority).forEach(function (id) {
                 this.send([ id ], [ this.id ], {
@@ -936,15 +836,7 @@ Legislator.prototype.reelect = function () {
                     greatest: this.greatest[id] || { uniform: '0/0' }
                 })
             }, this)
-            this.proposeGovernment({
-                internal: true,
-                value: {
-                    type: 'convene',
-                    to: this.government.majority.slice(),
-                    from: [ this.id ],
-                    government: JSON.parse(JSON.stringify(government))
-                }
-            })
+            this.proposeGovernment(government)
             this.prepare()
             this.proposals[0].quorum.forEach(function (id) {
                 if (id != this.id) {
