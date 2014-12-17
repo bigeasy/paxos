@@ -153,11 +153,11 @@ Legislator.prototype.consume = function (filter) {
 }
 
 Legislator.prototype.prepare = function () {
-    var proposal = this.proposals[this.proposals.length - 1]
-    this.pulse(proposal.quorum, {
+    var entry = this.log.max()
+    this.pulse(entry.quorum, {
         type: 'prepare',
-        promise: proposal.id,
-        quorum: proposal.quorum
+        promise: entry.id,
+        quorum: entry.quorum
     })
 }
 
@@ -165,6 +165,7 @@ Legislator.prototype.receivePrepare = function (envelope, message) {
     if (Id.compare(this.greatest[this.id].decided, this.greatest[this.id].uniform) == 0) {
         var compare = Id.compare(this.promise.id, message.promise, 0)
         if (compare < 0) {
+            this.proposals.length = 0
             this.promise = {
                 id: message.promise,
                 quorum: message.quorum
@@ -189,13 +190,13 @@ Legislator.prototype.receivePrepare = function (envelope, message) {
 }
 
 Legislator.prototype.receivePromise = function (envelope, message) {
-    var compare = Id.compare(this.proposals[0].id, message.promise)
-    if (compare == 0 && ~this.proposals[0].quorum.indexOf(envelope.from)) {
-        if (!~this.proposals[0].promises.indexOf(envelope.from)) {
-            this.proposals[0].promises.push(envelope.from)
-        }
-        if (this.proposals[0].promises.length == this.proposals[0].quorum.length) {
-            this.accept()
+    var entry = this.log.max(), compare = Id.compare(entry.id, message.promise)
+    if (compare == 0 && ~entry.quorum.indexOf(envelope.from)) {
+        if (!~entry.promises.indexOf(envelope.from)) {
+            entry.promises.push(envelope.from)
+            if (entry.promises.length == entry.quorum.length) {
+                this.accept()
+            }
         }
     }
 }
@@ -223,13 +224,18 @@ Legislator.prototype.proposeGovernment = function (government) {
         purge.next()
     }
     purge.release()
+    this.proposals.length = 0
     var proposal = this.createProposal(0, message.value.government.majority, message)
-    this.addRoute(proposal.quorum)
+    var entry = this.entry(proposal.id, proposal)
+    entry.promises = []
+    this.addRoute(entry.quorum)
 }
 
 Legislator.prototype.proposeEntry = function (message) {
     this.addRoute(this.promise.quorum)
-    return this.createProposal(1, this.government.majority, message)
+    var proposal = this.createProposal(1, this.government.majority, message)
+    this.proposals.push(proposal)
+    return proposal
 }
 
 // todo: figure out how to merge into queue.
@@ -239,28 +245,24 @@ Legislator.prototype.createProposal = function (index, quorum, message) {
         id = this.lastPromisedId
     }
     id = this.lastPromisedId = Id.increment(id, index)
-    this.proposals.push(proposal = {
+    return {
         id: id,
         internal: !! message.internal,
         value: message.value,
         quorum: quorum,
-        promises: [],
+        promises: [], // todo: unused.
         accepts: []
-    })
-    return proposal
+    }
 }
 
 Legislator.prototype.accept = function () {
-    this.entry(this.proposals[0].id, {
-        quorum: this.promise.quorum,
-        value: this.proposals[0].value
-    })
-    this.pulse(this.promise.quorum, {
+    var entry = this.log.max()
+    this.pulse(entry.quorum, {
         type: 'accept',
-        internal: this.proposals[0].internal,
-        quorum: this.promise.quorum,
-        promise: this.proposals[0].id,
-        value: this.proposals[0].value
+        internal: entry.internal,
+        quorum: entry.quorum,
+        promise: entry.id,
+        value: entry.value
     })
 }
 
@@ -468,11 +470,11 @@ Legislator.prototype.receiveLearned = function (envelope, message) {
         // Shift the next entry or else send final learning pulse.
         if (
             entry.decided &&
-            this.proposals.length &&
-            Id.compare(this.proposals[0].id, message.promise) == 0
+            this.government.majority[0] == this.id
         ) {
-            this.proposals.shift()
-            if (this.proposals.length) {
+            var proposal = this.proposals.shift()
+            if (proposal) {
+                this.entry(proposal.id, proposal)
                 this.accept()
             } else {
                 this.nothing()
@@ -708,6 +710,8 @@ Legislator.prototype.receivePost = function (envelope, message) {
     })
 
     if (this.proposals.length == 1) {
+        this.proposals.shift()
+        this.entry(proposal.id, proposal)
         this.accept()
     }
 }
@@ -738,19 +742,15 @@ Legislator.prototype.decideInaugurate = function (entry) {
             majority: majority,
             minority: minority
         })
-        // todo: why is this necessary?
-        this.proposals.shift()
         // todo: this all breaks when we actually queue.
         this.prepare()
-        this.proposals[0].quorum.forEach(function (id) {
-            if (id != this.id) {
-                this.send([ id ], [ this.id ], {
-                    type: 'synchronize',
-                    count: 20,
-                    greatest: this.greatest[id] || { decided: '0/0', uniform: '0/0' },
-                    learned: true
-                })
-            }
+        majority.slice(1).forEach(function (id) {
+            this.send([ id ], [ this.id ], {
+                type: 'synchronize',
+                count: 20,
+                greatest: this.greatest[id] || { decided: '0/0', uniform: '0/0' },
+                learned: true
+            })
         }, this)
     }
 }
@@ -838,15 +838,13 @@ Legislator.prototype.reelect = function () {
             }, this)
             this.proposeGovernment(government)
             this.prepare()
-            this.proposals[0].quorum.forEach(function (id) {
-                if (id != this.id) {
-                    this.send([ id ], [ this.id ], {
-                        type: 'synchronize',
-                        count: 20,
-                        greatest: this.greatest[id] || { decided: '0/0', uniform: '0/0' },
-                        learned: true
-                    })
-                }
+            majority.slice(1).forEach(function (id) {
+                this.send([ id ], [ this.id ], {
+                    type: 'synchronize',
+                    count: 20,
+                    greatest: this.greatest[id] || { decided: '0/0', uniform: '0/0' },
+                    learned: true
+                })
             }, this)
         }
     }

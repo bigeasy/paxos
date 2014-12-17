@@ -175,7 +175,7 @@ function prove (assert) {
 
     assert(network.machines[1].legislator.log.max().id, '5/3', 'rounds waiting')
     // todo: this is now a pointless test.
-    assert(network.machines[1].legislator.proposals.length, 1, 'queued')
+    assert(network.machines[1].legislator.proposals.length, 0, 'queued')
 
     network.tick(logger)
 
