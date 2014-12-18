@@ -285,6 +285,16 @@ Legislator.prototype.entry = function (id, message) {
     return entry
 }
 
+// The accepted message must go out on the pulse, we cannot put it in the
+// unrouted list and then count on it to get drawn into a pulse, because the
+// leader needs to know if the message failed. The only way the leader will know
+// is if the message rides a pulse. This is worth noting because I thought, "the
+// only place where the pulse matters is in the leader, it does not need to be a
+// property of the legislator, it can just be a property of an envelope that
+// describes a route." Not so. The message should be keep with the route and it
+// should only go out when that route is pulsed. If the network calls fail, the
+// leader will be able to learn immediately.
+
 Legislator.prototype.receiveAccept = function (envelope, message) {
     var compare = Id.compare(this.promise.id, message.promise, 0)
     if (compare > 0) {
