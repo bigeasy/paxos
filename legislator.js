@@ -87,7 +87,6 @@ function Legislator (id, options) {
     entry.uniform = true
 
     this.cookies = new Cache().createMagazine()
-// todo: ^^^ more fun name.
 }
 
 Legislator.prototype.bootstrap = function () {
