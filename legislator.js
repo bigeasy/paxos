@@ -544,8 +544,6 @@ Legislator.prototype.receiveSynchronize = function (envelope, message) {
                 if (entry.uniform) {
                     greatest = entry.id
                     createLearned.call(this, entry)
-                } else if (!entry.ignored) {
-                    break
                 }
             }
         }
