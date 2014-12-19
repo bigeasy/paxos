@@ -62,7 +62,7 @@ function Legislator (id, options) {
     this.lastPromisedId = '0/0'
     this.proposals = []
     this.citizens = {}
-    this.routed = new Cache().createMagazine()
+    this._routed = {}
     this.unrouted = {}
     this.greatest[id] = {
         learned: '0/1',
@@ -110,10 +110,9 @@ Legislator.prototype.ingest = function (envelopes) {
             }
             envelopes.push(envelope)
         } else {
-            var cartridge = this.routed.hold(envelope.route, false)
-            assert(cartridge, 'no route for cartridge')
-            cartridge.value.envelopes.push(envelope)
-            cartridge.release()
+            var route = this.routeOf(envelope.route)
+            assert(route, 'no route for cartridge')
+            route.envelopes.push(envelope)
         }
     }, this)
 }
@@ -124,15 +123,9 @@ Legislator.prototype.consume = function (filter) {
         delete this.unrouted[this.id]
     }
 
-    var purge = this.routed.purge(), consumed = false
-    try {
-        while (purge.cartridge) {
-            consume(purge.cartridge.value.envelopes, intercept, this)
-            purge.release()
-            purge.next()
-        }
-    } finally {
-        purge.release()
+    var consumed = false
+    for (var key in this._routed) {
+        consume(this._routed[key].envelopes, intercept, this)
     }
 
     function intercept (envelope) {
@@ -213,25 +206,13 @@ Legislator.prototype.proposeGovernment = function (government) {
             terminus: current.id
         }
     }
-    var purge = this.routed.purge()
-    while (purge.cartridge) {
-        if (purge.cartridge.value.path[0] == this.id) {
-            purge.cartridge.remove()
-        } else {
-            purge.cartridge.release()
-        }
-        purge.next()
-    }
-    purge.release()
     this.proposals.length = 0
     var proposal = this.createProposal(0, message.value.government.majority, message)
     var entry = this.entry(proposal.id, proposal)
     entry.promises = []
-    this.addRoute(entry.quorum)
 }
 
 Legislator.prototype.proposeEntry = function (message) {
-    this.addRoute(this.promise.quorum)
     var proposal = this.createProposal(1, this.government.majority, message)
     this.proposals.push(proposal)
     return proposal
@@ -588,23 +569,17 @@ Legislator.prototype.post = function (value, internal) {
     return cookie
 }
 
-Legislator.prototype.addRoute = function (path) {
-    var id = path.join(' -> '),
-        cartridge = this.routed.hold(id, { initialized: false })
-    if (cartridge.value.initialized) {
-        assert(cartridge.value.id == id &&
-               cartridge.value.path.every(function (value, index) {
-                   return value == path[index]
-               }), 'route not as expected')
-    } else {
-        cartridge.value = {
-            initialized: true,
+Legislator.prototype.routeOf = function (path) {
+    if (typeof path == 'string') path = path.split(' -> ').map(function (id) { return +id })
+    var id = path.join(' -> '), route = this._routed[id]
+    if (!route) {
+        this._routed[id] = route = {
             id: id,
             path: path,
             envelopes: []
         }
     }
-    cartridge.release()
+    return route
 }
 
 Legislator.prototype.unroute = function () {
@@ -619,25 +594,17 @@ Legislator.prototype.unroute = function () {
 }
 
 Legislator.prototype.route = function () {
-    var cartridge = this.routed.hold(this.promise.quorum.join(' -> '), false)
-    if (!cartridge.value) {
-        cartridge.remove()
-    } else if (cartridge.value.envelopes.length) {
-        var pulse = cartridge.value
-        cartridge.value = {
-            initialized: true,
-            id: pulse.id,
-            path: pulse.path,
+    var route = this._routed[this.promise.quorum.join(' -> ')]
+    if (route && route.envelopes.length) {
+        this._routed[route.id] = {
+            id: route.id,
+            path: route.path,
             envelopes: []
         }
-        cartridge.release()
-        var id = this.id
-        assert(!pulse.envelopes.some(function (envelope) {
-            return envelope.to == id
-        }), 'lost notes to self')
-        return pulse
-    } else {
-        cartridge.release()
+        assert(!route.envelopes.some(function (envelope) {
+            return envelope.to == this.id
+        }.bind(this)), 'lost notes to self')
+        return route
     }
     return null
 }
@@ -646,12 +613,10 @@ Legislator.prototype.pulse = function () {
     var vargs = slice.call(arguments),
         message = vargs.pop(),
         to = vargs.pop(),
-        route = vargs.pop() || to,
-        id = route.join(' -> ')
-    var cartridge = this.routed.hold(id, false)
-    assert(cartridge, 'cannot find route')
-    push.apply(cartridge.value.envelopes, this.stuff([ this.id ], to, id, message))
-    cartridge.release()
+        path = vargs.pop() || to,
+        route = this.routeOf(path)
+    assert(route, 'cannot find route')
+    push.apply(route.envelopes, this.stuff([ this.id ], to, route.id, message))
 }
 
 Legislator.prototype.send = function () {

@@ -8,19 +8,12 @@ function Machine (network, legislator) {
 }
 
 Machine.prototype.receive = function (filter, route, index, envelopes) {
-    if (route.id != '-') {
-        this.legislator.addRoute(route.path)
-    }
     this.legislator.ingest(envelopes)
     while (this.legislator.consume(filter));
     var returns = [], parameters = []
     if (route.id != '-') {
-        var cartridge = this.legislator.routed.hold(route.id, false)
-        assert(cartridge, 'cartridge')
-        assert(cartridge.value.path.every(function (value, index) {
-            return value == route.path[index]
-        }), 'routes do not match')
-        cartridge.value.envelopes.forEach(function (envelope) {
+        var route = this.legislator.routeOf(route.id)
+        route.envelopes.forEach(function (envelope) {
             var i = route.path.indexOf(envelope.to)
             assert(i != -1, 'not in path')
             assert(i != index, 'not consumed')
@@ -30,8 +23,7 @@ Machine.prototype.receive = function (filter, route, index, envelopes) {
                 parameters.push(envelope)
             }
         })
-        cartridge.value.envelopes = []
-        cartridge.release()
+        route.envelopes = []
     }
     // todo: post
     if (index < route.length) {
