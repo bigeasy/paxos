@@ -594,6 +594,7 @@ Legislator.prototype.unroute = function () {
 }
 
 Legislator.prototype.route = function () {
+    if (this.promise.quorum[0] != this.id) return null
     var route = this._routed[this.promise.quorum.join(' -> ')]
     if (route && route.envelopes.length) {
         this._routed[route.id] = {
