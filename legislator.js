@@ -167,12 +167,14 @@ Legislator.prototype.receivePrepare = function (envelope, message) {
                 promise: this.promise.id
             })
         } else {
-            this.pulse(this.promise.quorum, [ envelope.from ], {
+            this.send([ envelope.from ], {
                 type: 'promised',
                 promise: this.promise.id
             })
         }
     } else {
+        // todo: test this by having two majority members first seek promises
+        // from each other.
         throw new Error
         this.send([ envelope.from ], {
             type: 'promised',
@@ -190,6 +192,12 @@ Legislator.prototype.receivePromise = function (envelope, message) {
                 this.accept()
             }
         }
+    }
+}
+
+Legislator.prototype.receivePromised = function (envelope, message) {
+    if (Id.compare(this.lastPromisedId, message.promise) < 0) {
+        this.lastPromisedId = this.promise
     }
 }
 
@@ -415,6 +423,12 @@ Legislator.prototype.__defineGetter__('constituents', function () {
 
 Legislator.prototype.receiveLearned = function (envelope, message) {
     var entry = this.entry(message.promise, message)
+    if (message.quorum && message.quorum[0] != entry.quorum[0]) {
+        assert(entry.learns.length == 0, 'replace not learned')
+        assert(!entry.learned, 'replace not learned')
+        this.log.remove(entry)
+        entry = this.entry(message.promise, message)
+    }
     if (!~entry.learns.indexOf(envelope.from)) {
         entry.learns.push(envelope.from)
         if (entry.learns.length == entry.quorum.length) {
@@ -774,7 +788,7 @@ Legislator.prototype.naturalize = function () {
 }
 
 Legislator.prototype.reelect = function () {
-    if (this.id != this.government.majority[0] && ~this.government.majority.indexOf(this.id)) {
+    if (~this.government.majority.indexOf(this.id)) {
         this.ticks[this.id] = this.clock()
         var majority = this.government.majority.filter(function (id) {
             return this.clock() - (this.ticks[id] || 0) < this.timeout

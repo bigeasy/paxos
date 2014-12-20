@@ -1,5 +1,5 @@
 
-require('proof')(19, prove)
+require('proof')(21, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -181,4 +181,26 @@ function prove (assert) {
 
     assert(network.machines[2].legislator.proposals.length, 0, 'queue empty')
     assert(network.machines[1].legislator.log.max().value, { value: 3 }, 'rounds complete')
+
+    // Test a reelection proposal race.
+    time++
+    network.machines[2].legislator.reelect()
+    network.machines[2].legislator.consume(logger)
+    network.machines[0].legislator.reelect()
+    network.machines[0].legislator.consume(logger)
+
+    network.machines[0].tick(logger)
+    network.tick(logger)
+
+    assert(network.machines[1].legislator.government, {
+        majority: [ 0, 1 ],
+        minority: [ 2 ],
+        id: '6/0'
+    }, 'race resolved')
+
+    assert(network.machines[2].legislator.government, {
+        majority: [ 0, 1 ],
+        minority: [ 2 ],
+        id: '6/0'
+    }, 'race resolved, old majority member learned')
 }
