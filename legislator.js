@@ -153,10 +153,14 @@ Legislator.prototype.prepare = function () {
     })
 }
 
+// todo: leader is never going to aggree to a new government that was not
+// proposed by itself, thus the only race is when it is the minorities, so I
+// need to test the race with a five member parliament.
 Legislator.prototype.receivePrepare = function (envelope, message) {
     if (Id.compare(this.greatestOf(this.id).decided, this.greatestOf(this.id).uniform) == 0) {
         var compare = Id.compare(this.promise.id, message.promise, 0)
         if (compare < 0) {
+            // todo: will this happen, or will it reject the prepare?
             this.proposals.length = 0
             this.promise = {
                 id: message.promise,
@@ -220,6 +224,7 @@ Legislator.prototype.proposeGovernment = function (government) {
     var proposal = this.createProposal(0, message.value.government.majority, message)
     var entry = this.entry(proposal.id, proposal)
     entry.promises = []
+    this.proposals.push(proposal)
 }
 
 Legislator.prototype.proposeEntry = function (message) {
@@ -480,7 +485,8 @@ Legislator.prototype.receiveLearned = function (envelope, message) {
             entry.decided &&
             this.government.majority[0] == this.id
         ) {
-            var proposal = this.proposals.shift()
+            this.proposals.shift()
+            var proposal = this.proposals[0]
             if (proposal) {
                 this.entry(proposal.id, proposal)
                 this.accept()
@@ -704,7 +710,6 @@ Legislator.prototype.receivePost = function (envelope, message) {
     })
 
     if (this.proposals.length == 1) {
-        this.proposals.shift()
         this.entry(proposal.id, proposal)
         this.accept()
     }
