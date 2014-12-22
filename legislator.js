@@ -69,6 +69,7 @@ function Legislator (id, options) {
         decided: '0/1',
         uniform: '0/1'
     }
+    this.filter = options.filter || function () { return true }
     this.outcomes = []
     this.ticks = {}
     this.timeout = options.timeout || 5000
@@ -117,7 +118,7 @@ Legislator.prototype.ingest = function (envelopes) {
     }, this)
 }
 
-Legislator.prototype.consume = function (filter) {
+Legislator.prototype.consume = function () {
     consume(this.unrouted[this.id] || [], intercept, this)
     if (this.unrouted[this.id] && this.unrouted[this.id].length == 0) {
         delete this.unrouted[this.id]
@@ -134,7 +135,7 @@ Legislator.prototype.consume = function (filter) {
             consumed = true
             var type = envelope.message.type
             var method = 'receive' + type[0].toUpperCase() + type.substring(1)
-            filter.call(this, envelope, envelope.message).forEach(function (envelope) {
+            this.filter(envelope, envelope.message).forEach(function (envelope) {
                 this[method](envelope, envelope.message)
             }, this)
             return true

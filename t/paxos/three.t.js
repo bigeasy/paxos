@@ -11,7 +11,8 @@ function prove (assert) {
     var options = {
         clock: function () { return time },
         timeout: 1,
-        size: 3
+        size: 3,
+        filter: logger
     }
 
     var count = 0
@@ -39,7 +40,7 @@ function prove (assert) {
     var machine = new Machine(network, legislators[0])
     network.machines.push(machine)
 
-    network.tick(logger)
+    network.tick()
 
     assert(legislators[0].government, {
         id: '1/0', majority: [ 0 ], minority: []
@@ -48,7 +49,7 @@ function prove (assert) {
     network.machines.push(new Machine(network, new Legislator(1, options)))
 
     network.machines[1].legislator.sync([ 0 ], 20)
-    network.tick(logger)
+    network.tick()
 
     assert(network.machines[1].legislator.government, {
         id: '1/0', majority: [ 0 ], minority: []
@@ -59,7 +60,7 @@ function prove (assert) {
     // that is uncommon and subtle.
     var cookie = network.machines[1].legislator.naturalize()
     assert(cookie, 1, 'cookie')
-    network.tick(logger)
+    network.tick()
 
     assert(legislators[0].government, {
         id: '2/0', majority: [ 0, 1 ], minority: []
@@ -67,14 +68,14 @@ function prove (assert) {
 
     network.machines.push(new Machine(network, new Legislator(2, options)))
     network.machines[2].legislator.sync([ 0 ], 20)
-    network.tick(logger)
+    network.tick()
 
     assert(network.machines[2].legislator.government, {
         id: '2/0', majority: [ 0, 1 ], minority: []
     }, 'sync')
 
     network.machines[2].legislator.naturalize()
-    network.tick(logger)
+    network.tick()
 
     assert(network.machines[1].legislator.government, {
         id: '3/0', majority: [ 0, 1 ], minority: [ 2 ]
@@ -86,14 +87,14 @@ function prove (assert) {
 
     network.machines.push(new Machine(network, new Legislator(3, options)))
     network.machines[3].legislator.sync([ 0 ], 20)
-    network.tick(logger)
+    network.tick()
 
     assert(network.machines[3].legislator.government, {
         id: '3/0', majority: [ 0, 1 ], minority: [ 2 ]
     }, 'citizen learning')
 
     network.machines[3].legislator.naturalize()
-    network.tick(logger)
+    network.tick()
     network.machines[1].legislator.outcomes.length = 0
 
     assert(network.machines[3].legislator.log.max(), {
@@ -111,26 +112,37 @@ function prove (assert) {
 
     time++
     network.machines[1].legislator.reelect()
-    network.tick(logger)
+    network.tick()
 
     assert(network.machines[1].legislator.government, {
         id: '4/0', majority: [ 1, 2 ], minority: [ 0 ]
     }, 'reelection')
 
     var cookie = network.machines[1].legislator.post({ greeting: 'Hello, World!' })
-    network.tick(logger)
+    network.tick()
     var outcome = network.machines[1].legislator.outcomes.shift()
     assert(outcome.type, 'posted', 'user message outcome')
     var entry = network.machines[1].legislator.log.find({ id: outcome.entry.id })
     assert(entry.value.greeting, 'Hello, World!', 'user message')
 
     var cookie = network.machines[1].legislator.post({ greeting: '¡hola mundo!' })
-    network.tick(function (envelope) {
+
+    function dropper (envelope) {
         if (envelope.to != 1 || envelope.from == 1) {
-            return logger(envelope)
+            return logger.call(this, envelope)
         } else {
             return []
         }
+    }
+
+    network.machines.forEach(function (machine) {
+        machine.legislator.filter = dropper
+    })
+
+    network.tick()
+
+    network.machines.forEach(function (machine) {
+        machine.legislator.filter = logger
     })
 
     assert(network.machines[1].legislator.log.max(), {
@@ -145,7 +157,7 @@ function prove (assert) {
 
     time++
     network.machines[2].legislator.reelect()
-    network.tick(logger)
+    network.tick()
 
     assert(network.machines[1].legislator.log.max(), {
         id: '5/0',
@@ -167,17 +179,17 @@ function prove (assert) {
     }, 'former leader learned')
 
     network.machines[1].legislator.post({ value: 1 })
-    network.machines[1].tick(logger)
+    network.machines[1].tick()
     network.machines[1].legislator.post({ value: 2 })
-    network.machines[1].tick(logger)
+    network.machines[1].tick()
     network.machines[1].legislator.post({ value: 3 })
-    network.machines[1].tick(logger)
+    network.machines[1].tick()
 
     assert(network.machines[1].legislator.log.max().id, '5/3', 'rounds waiting')
     // todo: this is now a pointless test.
     assert(network.machines[1].legislator.proposals.length, 0, 'queued')
 
-    network.tick(logger)
+    network.tick()
 
     assert(network.machines[2].legislator.proposals.length, 0, 'queue empty')
     assert(network.machines[1].legislator.log.max().value, { value: 3 }, 'rounds complete')
@@ -185,12 +197,12 @@ function prove (assert) {
     // Test a reelection proposal race.
     time++
     network.machines[2].legislator.reelect()
-    network.machines[2].legislator.consume(logger)
+    network.machines[2].legislator.consume()
     network.machines[0].legislator.reelect()
-    network.machines[0].legislator.consume(logger)
+    network.machines[0].legislator.consume()
 
-    network.machines[0].tick(logger)
-    network.tick(logger)
+    network.machines[0].tick()
+    network.tick()
 
     assert(network.machines[1].legislator.government, {
         majority: [ 0, 1 ],

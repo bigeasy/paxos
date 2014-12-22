@@ -7,9 +7,9 @@ function Machine (network, legislator) {
     this.legislator = legislator
 }
 
-Machine.prototype.receive = function (filter, route, index, envelopes) {
+Machine.prototype.receive = function (route, index, envelopes) {
     this.legislator.ingest(envelopes)
-    while (this.legislator.consume(filter));
+    while (this.legislator.consume());
     var returns = [], parameters = []
     if (route.id != '-') {
         var route = this.legislator.routeOf(route.id)
@@ -37,10 +37,10 @@ Machine.prototype.receive = function (filter, route, index, envelopes) {
     return returns
 }
 
-Machine.prototype.tick = function (filter) {
+Machine.prototype.tick = function () {
     var route, envelopes, ticked
 
-    while (this.legislator.consume(filter)) {
+    while (this.legislator.consume()) {
         ticked = true
     }
 
@@ -61,8 +61,8 @@ Machine.prototype.tick = function (filter) {
             push.apply(envelopes, this.legislator.unrouted[id] || [])
             delete this.legislator.unrouted[id]
         }, this)
-        this.legislator.ingest(this.network.post(filter, route, 1, envelopes))
-        this.legislator.consume(filter)
+        this.legislator.ingest(this.network.post(route, 1, envelopes))
+        this.legislator.consume()
     }
 
     return ticked
