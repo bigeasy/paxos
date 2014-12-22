@@ -197,9 +197,7 @@ function prove (assert) {
     // Test a reelection proposal race.
     time++
     network.machines[2].legislator.reelect()
-    network.machines[2].legislator.consume()
     network.machines[0].legislator.reelect()
-    network.machines[0].legislator.consume()
 
     network.machines[0].tick()
     network.tick()

@@ -1,5 +1,4 @@
 var assert = require('assert')
-var consume = require('../consume')
 var push = [].push
 
 function Machine (network, legislator) {
@@ -9,7 +8,6 @@ function Machine (network, legislator) {
 
 Machine.prototype.receive = function (route, index, envelopes) {
     this.legislator.ingest(envelopes)
-    while (this.legislator.consume());
     var returns = [], parameters = []
     if (route.id != '-') {
         var route = this.legislator.routeOf(route.id)
@@ -40,10 +38,6 @@ Machine.prototype.receive = function (route, index, envelopes) {
 Machine.prototype.tick = function () {
     var route, envelopes, ticked
 
-    while (this.legislator.consume()) {
-        ticked = true
-    }
-
     route = this.legislator.route()
     if (route) {
         ticked = true
@@ -62,7 +56,6 @@ Machine.prototype.tick = function () {
             delete this.legislator.unrouted[id]
         }, this)
         this.legislator.ingest(this.network.post(route, 1, envelopes))
-        this.legislator.consume()
     }
 
     return ticked

@@ -104,12 +104,8 @@ Legislator.prototype.bootstrap = function () {
 
 Legislator.prototype.ingest = function (envelopes) {
     envelopes.forEach(function (envelope) {
-        if (envelope.route == '-') {
-            var envelopes = this.unrouted[envelope.to]
-            if (!envelopes) {
-                envelopes = this.unrouted[envelope.to] = []
-            }
-            envelopes.push(envelope)
+        if (envelope.to == this.id) {
+            this.consume(envelope)
         } else {
             var route = this.routeOf(envelope.route)
             assert(route, 'no route for cartridge')
@@ -118,31 +114,13 @@ Legislator.prototype.ingest = function (envelopes) {
     }, this)
 }
 
-Legislator.prototype.consume = function () {
-    consume(this.unrouted[this.id] || [], intercept, this)
-    if (this.unrouted[this.id] && this.unrouted[this.id].length == 0) {
-        delete this.unrouted[this.id]
-    }
-
-    var consumed = false
-    for (var key in this._routed) {
-        consume(this._routed[key].envelopes, intercept, this)
-    }
-
-    function intercept (envelope) {
-        this.ticks[envelope.from] = this.clock()
-        if (envelope.to == this.id) {
-            consumed = true
-            var type = envelope.message.type
-            var method = 'receive' + type[0].toUpperCase() + type.substring(1)
-            this.filter(envelope, envelope.message).forEach(function (envelope) {
-                this[method](envelope, envelope.message)
-            }, this)
-            return true
-        }
-    }
-
-    return consumed
+Legislator.prototype.consume = function (envelope) {
+    assert(envelope.to == this.id, 'consume not self')
+    var type = envelope.message.type
+    var method = 'receive' + type[0].toUpperCase() + type.substring(1)
+    this.filter(envelope, envelope.message).forEach(function (envelope) {
+        this[method](envelope, envelope.message)
+    }, this)
 }
 
 Legislator.prototype.prepare = function () {
@@ -647,7 +625,6 @@ Legislator.prototype.pulse = function () {
         to = vargs.pop(),
         path = vargs.pop() || to,
         route = this.routeOf(path)
-    assert(route, 'cannot find route')
     push.apply(route.envelopes, this.stuff([ this.id ], to, route.id, message))
 }
 
@@ -674,7 +651,11 @@ Legislator.prototype.stuff = function (from, to, route, message) {
                 route: route,
                 message: message
             }
-            envelopes.push(envelope)
+            if (this.id == envelope.to) {
+                this.consume(envelope)
+            } else {
+                envelopes.push(envelope)
+            }
         }, this)
     }, this)
     return envelopes
