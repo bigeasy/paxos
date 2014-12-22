@@ -161,7 +161,9 @@ Legislator.prototype.receivePrepare = function (envelope, message) {
         var compare = Id.compare(this.promise.id, message.promise, 0)
         if (compare < 0) {
             // todo: will this happen, or will it reject the prepare?
-            this.proposals.length = 0
+            if (message.quorum[0] != this.id) {
+                this.proposals.length = 0
+            }
             this.promise = {
                 id: message.promise,
                 quorum: message.quorum
@@ -483,7 +485,8 @@ Legislator.prototype.receiveLearned = function (envelope, message) {
         // Shift the next entry or else send final learning pulse.
         if (
             entry.decided &&
-            this.government.majority[0] == this.id
+            this.government.majority[0] == this.id &&
+            Id.compare(this.proposals[0].id, entry.id) <= 0
         ) {
             this.proposals.shift()
             var proposal = this.proposals[0]
