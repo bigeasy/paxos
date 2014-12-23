@@ -578,8 +578,46 @@ Legislator.prototype.post = function (value, internal) {
     return cookie
 }
 
+Legislator.prototype.returns = function (path, index) {
+    var route = this.routeOf(path)
+    var envelopes = []
+    consume(route.envelopes, function (envelope) {
+        var i = route.path.indexOf(envelope.to)
+        if (i < index) {
+            envelopes.push(envelope)
+            return true
+        }
+        return false
+    })
+    path.slice(0, index).forEach(function (id) {
+        push.apply(envelopes, this.unrouted[id] || [])
+        delete this.unrouted[id]
+    }, this)
+    return envelopes
+}
+
+Legislator.prototype.forwards = function (path, index) {
+    var route = this.routeOf(path)
+    var envelopes = []
+    consume(route.envelopes, function (envelope) {
+        var i = route.path.indexOf(envelope.to)
+        if (index < i) {
+            envelopes.push(envelope)
+            return true
+        }
+        return false
+    })
+    path.slice(index + 1).forEach(function (id) {
+        push.apply(envelopes, this.unrouted[id] || [])
+        delete this.unrouted[id]
+    }, this)
+    return envelopes
+}
+
 Legislator.prototype.routeOf = function (path) {
-    if (typeof path == 'string') path = path.split(' -> ').map(function (id) { return +id })
+    if (typeof path == 'string') {
+        path = path.split(' -> ').map(function (id) { return +id })
+    }
     var id = path.join(' -> '), route = this._routed[id]
     if (!route) {
         this._routed[id] = route = {
@@ -603,18 +641,11 @@ Legislator.prototype.unroute = function () {
 }
 
 Legislator.prototype.route = function () {
-    if (this.promise.quorum[0] != this.id) return null
-    var route = this._routed[this.promise.quorum.join(' -> ')]
-    if (route && route.envelopes.length) {
-        this._routed[route.id] = {
-            id: route.id,
-            path: route.path,
-            envelopes: []
+    if (this.promise.quorum[0] == this.id) {
+        var route = this.routeOf(this.promise.quorum)
+        if (route.envelopes.length) {
+            return { id: route.id, path: route.path }
         }
-        assert(!route.envelopes.some(function (envelope) {
-            return envelope.to == this.id
-        }.bind(this)), 'lost notes to self')
-        return route
     }
     return null
 }
