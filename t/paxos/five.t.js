@@ -73,4 +73,33 @@ function prove (assert) {
 
     assert(network.machines[3].legislator.government,
         { majority: [ 0, 1, 3 ], minority: [ 2, 4 ], id: '5/0' }, 'five and two')
+
+    network.machines.forEach(function (machine) {
+        machine.legislator.filter = function (envelope) {
+            if (envelope.to == 0) {
+                return []
+            } else {
+                return [ envelope ]
+            }
+        }
+    })
+
+    time++
+
+    network.machines[1].legislator.ticks[3] = time
+    network.machines[1].legislator.ticks[2] = time
+
+    network.machines[1].legislator.reelect()
+
+    network.machines[3].legislator.ticks[1] = time
+    network.machines[3].legislator.ticks[2] = time
+
+    network.tick()
+
+    console.log(network.machines[1].legislator.government)
+    console.log(network.machines[0].legislator.government)
+
+    network.machines.forEach(function (machine) {
+        machine.legislator.filter = logger
+    })
 }

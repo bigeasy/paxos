@@ -827,7 +827,7 @@ Legislator.prototype.reelect = function () {
             var i = 0, I = this.government.minority.length;
             while (i < I && this.government.majority.length != majority.length) {
                 if (this.clock() - (this.ticks[minority[i]] || 0) < this.timeout) {
-                    majority.push(minority.splice(i, 1))
+                    majority.push(minority.splice(i, 1)[0])
                 } else {
                     i++
                 }
