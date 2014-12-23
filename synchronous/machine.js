@@ -11,9 +11,9 @@ Machine.prototype.receive = function (route, index, envelopes) {
 
     var route = this.legislator.routeOf(route.path)
 
-    // todo: post
-    if (index < route.length) {
-        throw new Error('post')
+    if (index + 1 < route.path.length) {
+        var forwards = this.legislator.forwards(route.path, index)
+        this.legislator.ingest(this.network.post(route, index + 1, forwards))
     }
 
     return this.legislator.returns(route.path, index)
