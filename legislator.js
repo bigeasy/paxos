@@ -119,6 +119,7 @@ Legislator.prototype.consume = function (envelope) {
     var type = envelope.message.type
     var method = 'receive' + type[0].toUpperCase() + type.substring(1)
     this.filter(envelope, envelope.message).forEach(function (envelope) {
+        this.ticks[envelope.from] = this.clock()
         this[method](envelope, envelope.message)
     }, this)
 }
