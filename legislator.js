@@ -107,8 +107,7 @@ Legislator.prototype.ingest = function (envelopes) {
         if (envelope.to == this.id) {
             this.consume(envelope)
         } else {
-            var route = this.routeOf(envelope.route)
-            route.envelopes.push(envelope)
+            this.routeOf(envelope.route).envelopes.push(envelope)
         }
     }, this)
 }
