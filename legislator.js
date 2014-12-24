@@ -108,7 +108,6 @@ Legislator.prototype.ingest = function (envelopes) {
             this.consume(envelope)
         } else {
             var route = this.routeOf(envelope.route)
-            assert(route, 'no route for cartridge')
             route.envelopes.push(envelope)
         }
     }, this)
