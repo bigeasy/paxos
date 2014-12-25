@@ -439,10 +439,6 @@ Legislator.prototype.receiveLearned = function (envelope, message) {
         if (entry.learns.length == entry.quorum.length) {
             this.markAndSetGreatest(entry, 'learned')
             this.markAndSetGreatest(entry, 'decided')
-            // todo: when would this be false? We always replay.
-            if (Id.compare(entry.id, this.greatestOf(this.id).decided) > 0) {
-                this.greatestOf(this.id).decided = entry.id
-            }
         }
         this.playUniform()
         // Share this decision with the minority of parliament.
