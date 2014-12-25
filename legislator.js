@@ -271,14 +271,21 @@ Legislator.prototype.entry = function (id, message) {
 
 Legislator.prototype.receiveAccept = function (envelope, message) {
     var compare = Id.compare(this.promise.id, message.promise, 0)
-    if (compare > 0) {
-        throw new Error('reject')
-    } else if (compare < 0) {
-    } else {
+    if (compare == 0) {
         var entry = this.entry(message.promise, message)
         this.pulse(entry.quorum, {
-            quorum: entry.quorum,
             type: 'accepted',
+            promise: message.promise,
+            quorum: entry.quorum
+        })
+    } else {
+        this.send([ envelope.from ], [ this.id ], {
+            type: 'synchronize',
+            count: 20,
+            greatest: this.greatestOf(envelope.from)
+        })
+        this.send([ envelope.from ], {
+            type: 'rejected',
             promise: message.promise
         })
     }
@@ -299,6 +306,7 @@ Legislator.prototype.receiveAccepted = function (envelope, message) {
     var entry = this.entry(message.promise, message)
     assert(!~entry.accepts.indexOf(envelope.from))
     assert(~entry.quorum.indexOf(this.id))
+    assert(~entry.quorum.indexOf(envelope.from))
     entry.accepts.push(envelope.from)
     if (entry.accepts.length >= entry.quorum.length)  {
         this.markAndSetGreatest(entry, 'learned')
@@ -307,6 +315,15 @@ Legislator.prototype.receiveAccepted = function (envelope, message) {
             promise: message.promise
         })
     }
+}
+
+Legislator.prototype.receiveRejected = function (envelope, message) {
+    var entry = this.entry(message.promise, message)
+    assert(!~entry.accepts.indexOf(envelope.from))
+    assert(~entry.quorum.indexOf(this.id))
+    assert(~entry.quorum.indexOf(envelope.from))
+    entry.rejects || (entry.rejects = [])
+    entry.rejects.push(envelope.from)
 }
 
 Legislator.prototype.markUniform = function (entry) {

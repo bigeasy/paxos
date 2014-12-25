@@ -19,7 +19,8 @@ Machine.prototype.receive = function (route, index, buffers) {
         this.legislator.ingest(this.network.post(route, index + 1, forwards))
     }
 
-    return this.legislator.returns(route.path, index)
+    var returns = this.legislator.returns(route.path, index)
+    return transcript.serialize(serializer.flatten(returns))
 }
 
 Machine.prototype.tick = function () {

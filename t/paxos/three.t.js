@@ -1,5 +1,5 @@
 
-require('proof')(23, prove)
+require('proof')(25, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -231,4 +231,27 @@ function prove (assert) {
         minority: [ 2 ],
         id: '6/0'
     }, 'no reelection, not in majority')
+
+    time++
+    network.machines[1].legislator.reelect()
+    var gremlin = network.addGremlin(function (when, route, index) {
+        return route.path[index] == 0
+    })
+    network.tick()
+    network.removeGremlin(gremlin)
+
+    assert(network.machines[0].legislator.government, {
+        majority: [ 0, 1 ],
+        minority: [ 2 ],
+        id: '6/0'
+    }, 'leader isolated')
+
+    network.machines[0].legislator.post({ value: 1 })
+    network.machines[0].tick()
+
+    assert(network.machines[0].legislator.government, {
+        majority: [ 1, 2 ],
+        minority: [ 0 ],
+        id: '7/0'
+    }, 'leader updated on pulse')
 }
