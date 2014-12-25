@@ -808,14 +808,13 @@ Legislator.prototype.majoritySize = function (parliamentSize, citizenCount) {
 Legislator.prototype.receivePosted = function (envelope, message) {
     if (message.statusCode == 200) {
         var cartridge = this.cookies.hold(message.cookie, false)
-        if (cartridge.value) {
-            var entry = this.entry(message.promise, cartridge.value)
-            entry.cookie = message.cookie
-            this.outcomes.push({
-                type: 'posted',
-                entry: entry
-            })
-        }
+        assert(cartridge.value, 'no cookie')
+        var entry = this.entry(message.promise, cartridge.value)
+        entry.cookie = message.cookie
+        this.outcomes.push({
+            type: 'posted',
+            entry: entry
+        })
         cartridge.remove()
     }
 }
