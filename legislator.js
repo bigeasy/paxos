@@ -69,7 +69,7 @@ function Legislator (id, options) {
         decided: '0/1',
         uniform: '0/1'
     }
-    this.filter = options.filter || function () { return true }
+    this.filter = options.filter || function (envelopes) { return [ envelopes ] }
     this.outcomes = []
     this.ticks = {}
     this.timeout = options.timeout || 5000
