@@ -1,14 +1,15 @@
 var assert = require('assert')
 var push = [].push
 var serializer = require('../serializer')
+var transcript = require('../transcript')
 
 function Machine (network, legislator) {
     this.network = network
     this.legislator = legislator
 }
 
-Machine.prototype.receive = function (route, index, envelopes) {
-    var expanded = serializer.expand(envelopes)
+Machine.prototype.receive = function (route, index, buffers) {
+    var expanded = serializer.expand(transcript.deserialize(buffers))
     this.legislator.ingest(expanded)
 
     var route = this.legislator.routeOf(route.path)
