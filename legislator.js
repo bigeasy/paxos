@@ -512,11 +512,9 @@ Legislator.prototype.decideConvene = function (entry) {
     var terminus = this.log.find({ id: entry.value.terminus })
     assert(terminus)
     assert(terminus.learns.length > 0)
-    // todo: when would this not be true? We always replay.
-    if (Id.compare(this.government.id, entry.id) < 0) {
-        this.government = entry.value.government
-        this.government.id = entry.id
-    }
+    assert(Id.compare(this.government.id, entry.id) < 0, 'governments out of order')
+    this.government = entry.value.government
+    this.government.id = entry.id
 }
 
 Legislator.prototype.receiveSynchronize = function (envelope, message) {
