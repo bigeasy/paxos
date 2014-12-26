@@ -704,22 +704,19 @@ Legislator.prototype.routeOf = function (path) {
     return route
 }
 
-Legislator.prototype.unroute = function () {
+Legislator.prototype.outbox = function () {
+    if (this.promise.quorum[0] == this.id) {
+        var route = this.routeOf(this.promise.quorum)
+        if (route.envelopes.length) {
+            return { id: route.id, path: route.path }
+        }
+    }
     var unrouted = Object.keys(this.unrouted)
     if (unrouted.length) {
         var envelope = this.unrouted[unrouted[0]][0]
         return {
             id: '-',
             path: [ envelope.from, envelope.to ]
-        }
-    }
-}
-
-Legislator.prototype.route = function () {
-    if (this.promise.quorum[0] == this.id) {
-        var route = this.routeOf(this.promise.quorum)
-        if (route.envelopes.length) {
-            return { id: route.id, path: route.path }
         }
     }
     return null

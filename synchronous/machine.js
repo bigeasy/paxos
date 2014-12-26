@@ -26,9 +26,8 @@ Machine.prototype.receive = function (route, index, buffers) {
 Machine.prototype.tick = function () {
     var ticked = false
 
-    var route = this.legislator.route() || this.legislator.unroute()
-
-    if (route && route.path.length > 1) {
+    var route
+    while (route = this.legislator.outbox()) {
         var forwards = this.legislator.forwards(route.path, 0)
         if (forwards.length) {
             ticked = true
