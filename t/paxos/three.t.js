@@ -122,7 +122,7 @@ function prove (assert) {
     network.tick()
     var outcome = network.machines[1].legislator.outcomes.shift()
     assert(outcome.type, 'posted', 'user message outcome')
-    var entry = network.machines[1].legislator.log.find({ id: outcome.entry.id })
+    var entry = network.machines[1].legislator.log.find({ id: outcome.promise })
     assert(entry.value.greeting, 'Hello, World!', 'user message')
 
     var cookie = network.machines[1].legislator.post({ greeting: '¡hola mundo!' })

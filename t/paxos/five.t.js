@@ -1,5 +1,5 @@
 
-require('proof')(1, prove)
+require('proof')(2, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -74,14 +74,8 @@ function prove (assert) {
     assert(network.machines[3].legislator.government,
         { majority: [ 0, 1, 3 ], minority: [ 2, 4 ], id: '5/0' }, 'five and two')
 
-    network.machines.forEach(function (machine) {
-        machine.legislator.filter = function (envelope) {
-            if (envelope.to == 0) {
-                return []
-            } else {
-                return [ envelope ]
-            }
-        }
+    var gremlin = network.addGremlin(function (when, route, index) {
+        return route.path[index] == 4
     })
 
     time++
@@ -96,10 +90,22 @@ function prove (assert) {
 
     network.tick()
 
-    console.log(network.machines[1].legislator.government)
-    console.log(network.machines[0].legislator.government)
+    network.removeGremlin(gremlin)
 
-    network.machines.forEach(function (machine) {
-        machine.legislator.filter = logger
+    network.machines[4].legislator.outcomes.length = 0
+    var cookie = network.machines[4].legislator.post({ value: 1 })
+    network.tick()
+    assert(
+        network.machines[4].legislator.outcomes,
+        [ { type: 'posted', cookie: '2', statusCode: 410 } ], 'leader moved')
+
+    return
+    var gremlin = network.addGremlin(function (when, route, index) {
+        return route.path[index] == 4
     })
+
+    for (var i = 0; i < 31; i++) {
+        network.machines[0].legislator.post({ value: i })
+    }
+    network.tick()
 }

@@ -789,26 +789,27 @@ Legislator.prototype.receivePost = function (envelope, message) {
                 statusCode: 410
             }
         })
-    }
-    // Correct government and the leader.
-    var proposal = this.proposeEntry({
-        internal: message.internal,
-        value: message.value
-    })
+    } else {
+        // Correct government and the leader.
+        var proposal = this.proposeEntry({
+            internal: message.internal,
+            value: message.value
+        })
 
-    this.dispatch({
-        to: envelope.from,
-        message: {
-            type: 'posted',
-            cookie: message.cookie,
-            statusCode: 200,
-            promise: proposal.id
+        this.dispatch({
+            to: envelope.from,
+            message: {
+                type: 'posted',
+                cookie: message.cookie,
+                statusCode: 200,
+                promise: proposal.id
+            }
+        })
+
+        if (this.proposals.length == 1) {
+            this.entry(proposal.id, proposal)
+            this.accept()
         }
-    })
-
-    if (this.proposals.length == 1) {
-        this.entry(proposal.id, proposal)
-        this.accept()
     }
 }
 
@@ -881,17 +882,20 @@ Legislator.prototype.majoritySize = function (parliamentSize, citizenCount) {
 }
 
 Legislator.prototype.receivePosted = function (envelope, message) {
+    var cartridge = this.cookies.hold(message.cookie, false)
+    assert(cartridge.value, 'no cookie')
+    var outcome = {
+        type: 'posted',
+        cookie: message.cookie,
+        statusCode: message.statusCode
+    }
     if (message.statusCode == 200) {
-        var cartridge = this.cookies.hold(message.cookie, false)
-        assert(cartridge.value, 'no cookie')
         var entry = this.entry(message.promise, cartridge.value)
         entry.cookie = message.cookie
-        this.outcomes.push({
-            type: 'posted',
-            entry: entry
-        })
-        cartridge.remove()
+        outcome.promise = message.promise
     }
+    this.outcomes.push(outcome)
+    cartridge.remove()
 }
 
 Legislator.prototype.naturalize = function () {
