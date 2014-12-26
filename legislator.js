@@ -931,17 +931,6 @@ Legislator.prototype.reelect = function () {
                 majority: majority,
                 minority: minority
             }
-            government.majority.concat(government.minority).forEach(function (id) {
-                this.dispatch({
-                    to: this.id,
-                    from: id,
-                    message: {
-                        type: 'synchronize',
-                        count: 20,
-                        greatest: this.greatestOf(id)
-                    }
-                })
-            }, this)
             this.proposeGovernment(government)
             this.prepare()
             majority.slice(1).forEach(function (id) {
