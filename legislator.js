@@ -596,10 +596,8 @@ Legislator.prototype.receiveSynchronize = function (envelope, message) {
         route: envelope.route,
         to: envelope.from,
         message: {
-            type: 'synchronized',
-            greatest: this.greatestOf(this.id),
-            citizens: this.citizens,
-            government: this.government
+            type: 'ping',
+            greatest: this.greatestOf(this.id)
         }
     })
 
@@ -620,7 +618,19 @@ Legislator.prototype.receiveSynchronize = function (envelope, message) {
 }
 
 // todo: figure out who has the highest uniform value and sync with them?
-Legislator.prototype.receiveSynchronized = function (envelope, message) {
+Legislator.prototype.receivePing = function (envelope, message) {
+    this.greatest[envelope.from] = message.greatest
+    this.dispatch({
+        route: envelope.route,
+        to: envelope.from,
+        message: {
+            type: 'pong',
+            greatest: this.greatestOf(this.id)
+        }
+    })
+}
+
+Legislator.prototype.receivePong = function (envelope, message) {
     this.greatest[envelope.from] = message.greatest
 }
 
