@@ -10,13 +10,13 @@ function Machine (network, legislator) {
 
 Machine.prototype.receive = function (route, index, buffers) {
     var expanded = serializer.expand(transcript.deserialize(buffers))
-    this.legislator.ingest(expanded)
+    this.legislator.inbox(expanded)
 
     var route = this.legislator.routeOf(route.path)
 
     if (index + 1 < route.path.length) {
         var forwards = this.legislator.forwards(route.path, index)
-        this.legislator.ingest(this.network.post(route, index + 1, forwards))
+        this.legislator.inbox(this.network.post(route, index + 1, forwards))
     }
 
     var returns = this.legislator.returns(route.path, index)
@@ -26,13 +26,15 @@ Machine.prototype.receive = function (route, index, buffers) {
 Machine.prototype.tick = function () {
     var ticked = false
 
-    var route
-    while (route = this.legislator.outbox()) {
-        var forwards = this.legislator.forwards(route.path, 0)
-        if (forwards.length) {
-            ticked = true
-            this.legislator.ingest(this.network.post(route, 1, forwards))
-        }
+    var routes
+    while ((routes = this.legislator.outbox()).length) {
+        routes.forEach(function (route) {
+            var forwards = this.legislator.forwards(route.path, 0)
+            if (forwards.length) {
+                ticked = true
+                this.legislator.inbox(this.network.post(route, 1, forwards))
+            }
+        }, this)
     }
 
     return ticked

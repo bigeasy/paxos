@@ -102,7 +102,7 @@ Legislator.prototype.bootstrap = function () {
     this.prepare()
 }
 
-Legislator.prototype.ingest = function (envelopes) {
+Legislator.prototype.inbox = function (envelopes) {
     envelopes.forEach(function (envelope) {
         this.dispatch({
             route: envelope.route,
@@ -705,21 +705,25 @@ Legislator.prototype.routeOf = function (path) {
 }
 
 Legislator.prototype.outbox = function () {
+    var routes = [], seen = {}
     if (this.promise.quorum[0] == this.id) {
         var route = this.routeOf(this.promise.quorum)
         if (route.envelopes.length) {
-            return { id: route.id, path: route.path }
+            routes.push({ id: route.id, path: route.path })
+            route.path.forEach(function (id) { seen[id] = true })
         }
     }
-    var unrouted = Object.keys(this.unrouted)
-    if (unrouted.length) {
-        var envelope = this.unrouted[unrouted[0]][0]
-        return {
-            id: '-',
-            path: [ envelope.from, envelope.to ]
+    Object.keys(this.unrouted).forEach(function (id) {
+        if (!seen[id]) {
+            var envelope = this.unrouted[id][0]
+            routes.push({
+                id: '-',
+                path: [ envelope.from, envelope.to ]
+            })
+            seen[id] = true
         }
-    }
-    return null
+    }, this)
+    return routes
 }
 
 Legislator.prototype.dispatch = function (options) {
