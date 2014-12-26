@@ -735,14 +735,6 @@ Legislator.prototype.receivePost = function (envelope, message) {
             statusCode: 410
         })
     }
-    // Correct government, but not the leader.
-    if (this.government.majority[0] != this.id) {
-        this.send([ envelope.from ], {
-            type: 'posted',
-            cookie: message.cookie,
-            statusCode: 405
-        })
-    }
     // Correct government and the leader.
     var proposal = this.proposeEntry({
         internal: message.internal,
