@@ -123,8 +123,8 @@ Legislator.prototype.consume = function (envelope) {
 }
 
 Legislator.prototype.prepare = function () {
-    var entry = this.log.max()
-    this.pulse(entry.quorum, {
+    var entry = this.log.max(), quorum = entry.quorum
+    this.pulse(quorum, quorum, {
         type: 'prepare',
         promise: entry.id,
         quorum: entry.quorum
@@ -146,12 +146,12 @@ Legislator.prototype.receivePrepare = function (envelope, message) {
                 id: message.promise,
                 quorum: message.quorum
             }
-            this.pulse(this.promise.quorum, [ envelope.from ], {
+            this.pulse(envelope.route, [ envelope.from ], {
                 type: 'promise',
                 promise: this.promise.id
             })
         } else {
-            this.send([ envelope.from ], {
+            this.pulse(envelope.route, [ envelope.from ], {
                 type: 'promised',
                 promise: this.promise.id
             })
@@ -160,7 +160,7 @@ Legislator.prototype.receivePrepare = function (envelope, message) {
         // todo: test this by having two majority members first seek promises
         // from each other.
         throw new Error
-        this.send([ envelope.from ], {
+        this.pulse(envelope.route, [ envelope.from ], {
             type: 'promised',
             promise: this.promise.id
         })
@@ -229,8 +229,8 @@ Legislator.prototype.createProposal = function (index, quorum, message) {
 }
 
 Legislator.prototype.accept = function () {
-    var entry = this.log.max()
-    this.pulse(entry.quorum, {
+    var entry = this.log.max(), quorum = entry.quorum
+    this.pulse(quorum, quorum, {
         type: 'accept',
         internal: entry.internal,
         quorum: entry.quorum,
@@ -273,7 +273,7 @@ Legislator.prototype.receiveAccept = function (envelope, message) {
     var compare = Id.compare(this.promise.id, message.promise, 0)
     if (compare == 0) {
         var entry = this.entry(message.promise, message)
-        this.pulse(entry.quorum, {
+        this.pulse(envelope.route, entry.quorum, {
             type: 'accepted',
             promise: message.promise,
             quorum: entry.quorum
@@ -310,7 +310,7 @@ Legislator.prototype.receiveAccepted = function (envelope, message) {
     entry.accepts.push(envelope.from)
     if (entry.accepts.length >= entry.quorum.length)  {
         this.markAndSetGreatest(entry, 'learned')
-        this.pulse(this.promise.quorum, {
+        this.pulse(envelope.route, entry.quorum, {
             type: 'learned',
             promise: message.promise
         })
@@ -494,7 +494,8 @@ Legislator.prototype.receiveLearned = function (envelope, message) {
 // This merely asserts that a message follows a certain route. Maybe I'll
 // rename it to "route", but "nothing" is good enough.
 Legislator.prototype.nothing = function () {
-    this.pulse(this.promise.quorum, { type: 'nothing' })
+    var quorum = this.promise.quorum
+    this.pulse(quorum, quorum, { type: 'nothing' })
 }
 
 Legislator.prototype.receiveNothing = function () {
@@ -667,6 +668,26 @@ Legislator.prototype.pulse = function () {
         path = vargs.pop() || to,
         route = this.routeOf(path)
     push.apply(route.envelopes, this.stuff([ this.id ], to, route.id, message))
+}
+
+Legislator.prototype.dispatch = function (options) {
+    var route = options.route || '-'
+    var from = options.from || [ this.id ]
+    var to = options.to
+    var message = options.message
+    if (!Array.isArray(to)) to = [ to ]
+    if (route == '-') {
+        this.stuff(from, to, '-', message).forEach(function (envelope) {
+            var envelopes = this.unrouted[envelope.to]
+            if (!envelopes) {
+                envelopes = this.unrouted[envelope.to] = []
+            }
+            envelopes.push(envelope)
+        }, this)
+    } else {
+        var route = this.routeOf(path)
+        push.apply(route.envelopes, this.stuff(from, to, route.id, message))
+    }
 }
 
 Legislator.prototype.send = function () {
