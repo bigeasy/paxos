@@ -1,5 +1,5 @@
 
-require('proof')(25, prove)
+require('proof')(29, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -58,8 +58,7 @@ function prove (assert) {
     // todo: yes, you look inside the response. it is not opaque. you are at
     // this low level when you are trying to create an interface to an algorithm
     // that is uncommon and subtle.
-    var cookie = network.machines[1].legislator.naturalize()
-    assert(cookie, 1, 'cookie')
+    assert(network.machines[0].legislator.naturalize(1).posted, 'naturalize')
     network.tick()
 
     assert(legislators[0].government, {
@@ -74,7 +73,7 @@ function prove (assert) {
         id: '2/0', majority: [ 0, 1 ], minority: []
     }, 'sync')
 
-    network.machines[2].legislator.naturalize()
+    network.machines[0].legislator.naturalize(2)
     network.tick()
 
     assert(network.machines[1].legislator.government, {
@@ -93,9 +92,8 @@ function prove (assert) {
         id: '3/0', majority: [ 0, 1 ], minority: [ 2 ]
     }, 'citizen learning')
 
-    network.machines[3].legislator.naturalize()
+    network.machines[0].legislator.naturalize(3)
     network.tick()
-    network.machines[1].legislator.outcomes.length = 0
 
     assert(network.machines[3].legislator.log.max(), {
         id: '3/1',
@@ -104,7 +102,6 @@ function prove (assert) {
         quorum: [ 0, 1 ],
         value: { type: 'naturalize', id: 3 },
         internal: true,
-        cookie: '1',
         learned: true,
         decided: true,
         uniform: true
@@ -118,14 +115,13 @@ function prove (assert) {
         id: '4/0', majority: [ 1, 2 ], minority: [ 0 ]
     }, 'reelection')
 
-    var cookie = network.machines[1].legislator.post({ greeting: 'Hello, World!' })
+    var post = network.machines[1].legislator.post({ greeting: 'Hello, World!' })
+    assert(post.posted, 'user message outcome')
     network.tick()
-    var outcome = network.machines[1].legislator.outcomes.shift()
-    assert(outcome.type, 'posted', 'user message outcome')
-    var entry = network.machines[1].legislator.log.find({ id: outcome.promise })
+    var entry = network.machines[1].legislator.log.find({ id: post.promise })
     assert(entry.value.greeting, 'Hello, World!', 'user message')
 
-    var cookie = network.machines[1].legislator.post({ greeting: '¡hola mundo!' })
+    network.machines[1].legislator.post({ greeting: '¡hola mundo!' })
 
     function dropper (envelope) {
         if (envelope.to != 1 || envelope.from == 1) {
@@ -151,8 +147,7 @@ function prove (assert) {
         learns: [],
         quorum: [ 1, 2 ],
         value: { greeting: '¡hola mundo!' },
-        internal: false,
-        cookie: '3'
+        internal: false
     }, 'leader unlearned')
 
     time++
@@ -178,16 +173,17 @@ function prove (assert) {
         uniform: true
     }, 'former leader learned')
 
-    network.machines[1].legislator.post({ value: 1 })
-    network.machines[1].tick()
-    network.machines[1].legislator.post({ value: 2 })
-    network.machines[1].tick()
-    network.machines[1].legislator.post({ value: 3 })
-    network.machines[1].tick()
+    network.machines[2].legislator.post({ value: 1 })
+    network.machines[2].legislator.post({ value: 2 })
+    network.machines[2].legislator.post({ value: 3 })
 
-    assert(network.machines[1].legislator.log.max().id, '5/3', 'rounds waiting')
-    // todo: this is now a pointless test.
-    assert(network.machines[1].legislator.proposals.length, 0, 'queued')
+    assert(network.machines[2].legislator.log.max().id, '5/1', 'rounds started')
+    assert(network.machines[2].legislator.proposals.length, 3, 'queued')
+
+    network.tick()
+
+    assert(network.machines[2].legislator.log.max().id, '5/3', 'rounds complete')
+    assert(network.machines[2].legislator.proposals.length, 0, 'queued')
 
     network.tick()
 
@@ -254,4 +250,14 @@ function prove (assert) {
         minority: [ 0 ],
         id: '7/0'
     }, 'leader updated on pulse')
+
+    network.machines[1].legislator.newGovernment({
+        majority: [ 1, 0 ],
+        minority: [ 2 ]
+    })
+
+    assert(network.machines[1].legislator.post({ value: 1 }).leader == null, 'post during election')
+    assert(network.machines[0].legislator.post({ value: 1 }).leader, 1, 'post not leader')
+
+    network.tick()
 }

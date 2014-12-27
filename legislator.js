@@ -8,12 +8,6 @@ var Cache = require('magazine')
 
 var consume = require('./consume')
 
-var Cookie = {
-    increment: function (cookie) {
-        return Monotonic.toString(Monotonic.increment(Monotonic.parse(cookie)))
-    }
-}
-
 var Id = {
     toWords: function (id) {
         var split = id.split('/')
@@ -45,6 +39,10 @@ var Id = {
     }
 }
 
+function isGovernment (record) {
+    return Id.compare('0/0', record.id, 1) == 0
+}
+
 function Legislator (id, options) {
 
     options || (options = {})
@@ -52,8 +50,6 @@ function Legislator (id, options) {
     this.id = id
     this.clock = options.clock || function () { return Date.now() }
     this.messageId = id + '/0'
-    // it appears that the only point of the cookie is to mark naturalization.
-    this.cookie = '0'
     this.idealGovernmentSize = options.size || 5
     this.log = new RBTree(function (a, b) { return Id.compare(a.id, b.id) })
     this.government = { id: '0/0', minority: [], majority: [] }
@@ -70,7 +66,6 @@ function Legislator (id, options) {
         uniform: '0/1'
     }
     this.filter = options.filter || function (envelopes) { return [ envelopes ] }
-    this.outcomes = []
     this.ticks = {}
     this.timeout = options.timeout || 5000
     this.promise = { id: '0/0', quorum: [] }
@@ -86,8 +81,6 @@ function Legislator (id, options) {
     entry.learned = true
     entry.decided = true
     entry.uniform = true
-
-    this.cookies = new Cache().createMagazine()
 }
 
 Legislator.prototype.bootstrap = function () {
@@ -634,25 +627,6 @@ Legislator.prototype.receivePong = function (envelope, message) {
     this.greatest[envelope.from] = message.greatest
 }
 
-Legislator.prototype.post = function (value, internal) {
-    var cookie = this.cookie = Cookie.increment(this.cookie)
-    this.cookies.hold(cookie, {
-        internal: !! internal,
-        value: value
-    }).release()
-    this.dispatch({
-        to: this.government.majority[0],
-        message: {
-            type: 'post',
-            internal: !! internal,
-            cookie: cookie,
-            government: this.government.id,
-            value: value
-        }
-    })
-    return cookie
-}
-
 Legislator.prototype.returns = function (path, index) {
     var route = this.routeOf(path)
     var envelopes = []
@@ -775,41 +749,36 @@ Legislator.prototype.stuff = function (from, to, route, message) {
     return envelopes
 }
 
-Legislator.prototype.receivePost = function (envelope, message) {
-    // todo: be super sure that this is a good current government, reject if
-    // not and as soon as possible.
-    // todo: maybe they supply the government they attempting to petition.
-    // The requested government has been replaced.
-    if (message.government != this.government.id) {
-        this.dispatch({
-            to: envelope.from,
-            message: {
-                type: 'posted',
-                cookie: message.cookie,
-                statusCode: 410
-            }
-        })
-    } else {
-        // Correct government and the leader.
-        var proposal = this.proposeEntry({
-            internal: message.internal,
-            value: message.value
-        })
-
-        this.dispatch({
-            to: envelope.from,
-            message: {
-                type: 'posted',
-                cookie: message.cookie,
-                statusCode: 200,
-                promise: proposal.id
-            }
-        })
-
-        if (this.proposals.length == 1) {
-            this.entry(proposal.id, proposal)
-            this.accept()
+Legislator.prototype.post = function (value, internal) {
+    if (this.government.majority[0] != this.id) {
+        return {
+            posted: false,
+            leader: this.government.majority[0]
         }
+    }
+
+    if (this.proposals.length && isGovernment(this.proposals[0])) {
+        return {
+            posted: false,
+            leader: null
+        }
+    }
+
+    var proposal = this.proposeEntry({
+        internal: internal,
+        value: value
+    })
+
+
+    if (this.proposals.length == 1) {
+        this.entry(proposal.id, proposal)
+        this.accept()
+    }
+
+    return {
+        posted: true,
+        leader: this.government.majority[0],
+        promise: proposal.id
     }
 }
 
@@ -858,7 +827,7 @@ Legislator.prototype.decideInaugurate = function (entry) {
 Legislator.prototype.decideNaturalize = function (entry) {
     var before = Object.keys(this.citizens).length
     this.citizens[entry.value.id] = entry.id
-    if (entry.cookie) {
+    if (entry.value.id == this.id) {
         this.naturalized = entry.id
     }
     var after = Object.keys(this.citizens).length
@@ -881,25 +850,8 @@ Legislator.prototype.majoritySize = function (parliamentSize, citizenCount) {
     return Math.ceil(size / 2)
 }
 
-Legislator.prototype.receivePosted = function (envelope, message) {
-    var cartridge = this.cookies.hold(message.cookie, false)
-    assert(cartridge.value, 'no cookie')
-    var outcome = {
-        type: 'posted',
-        cookie: message.cookie,
-        statusCode: message.statusCode
-    }
-    if (message.statusCode == 200) {
-        var entry = this.entry(message.promise, cartridge.value)
-        entry.cookie = message.cookie
-        outcome.promise = message.promise
-    }
-    this.outcomes.push(outcome)
-    cartridge.remove()
-}
-
-Legislator.prototype.naturalize = function () {
-    return this.post({ type: 'naturalize', id: this.id }, true)
+Legislator.prototype.naturalize = function (id) {
+    return this.post({ type: 'naturalize', id: id }, true)
 }
 
 Legislator.prototype.reelect = function () {
@@ -927,26 +879,29 @@ Legislator.prototype.reelect = function () {
             var minority = this.parliament.filter(function (id) {
                 return !~majority.indexOf(id)
             })
-            var government = {
+            this.newGovernment({
                 majority: majority,
                 minority: minority
-            }
-            this.proposeGovernment(government)
-            this.prepare()
-            majority.slice(1).forEach(function (id) {
-                this.dispatch({
-                    from: id,
-                    to: this.id,
-                    message: {
-                        type: 'synchronize',
-                        count: 20,
-                        greatest: this.greatestOf(id),
-                        learned: true
-                    }
-                })
-            }, this)
+            })
         }
     }
+}
+
+Legislator.prototype.newGovernment = function (government) {
+    this.proposeGovernment(government)
+    this.prepare()
+    government.majority.slice(1).forEach(function (id) {
+        this.dispatch({
+            from: id,
+            to: this.id,
+            message: {
+                type: 'synchronize',
+                count: 20,
+                greatest: this.greatestOf(id),
+                learned: true
+            }
+        })
+    }, this)
 }
 
 module.exports = Legislator

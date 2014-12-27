@@ -1,5 +1,5 @@
 
-require('proof')(2, prove)
+require('proof')(1, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -38,37 +38,37 @@ function prove (assert) {
     network.machines.push(new Machine(network, new Legislator(1, options)))
     network.machines[1].legislator.sync([ 0 ], 20)
     network.tick()
-    network.machines[1].legislator.naturalize()
+    network.machines[0].legislator.naturalize(1)
     network.tick()
 
     network.machines.push(new Machine(network, new Legislator(2, options)))
     network.machines[2].legislator.sync([ 0 ], 20)
     network.tick()
-    network.machines[2].legislator.naturalize()
+    network.machines[0].legislator.naturalize(2)
     network.tick()
 
     network.machines.push(new Machine(network, new Legislator(3, options)))
     network.machines[3].legislator.sync([ 0 ], 20)
     network.tick()
-    network.machines[3].legislator.naturalize()
+    network.machines[0].legislator.naturalize(3)
     network.tick()
 
     network.machines.push(new Machine(network, new Legislator(4, options)))
     network.machines[4].legislator.sync([ 0 ], 20)
     network.tick()
-    network.machines[4].legislator.naturalize()
+    network.machines[0].legislator.naturalize(4)
     network.tick()
 
     network.machines.push(new Machine(network, new Legislator(5, options)))
     network.machines[5].legislator.sync([ 0 ], 20)
     network.tick()
-    network.machines[5].legislator.naturalize()
+    network.machines[0].legislator.naturalize(5)
     network.tick()
 
     network.machines.push(new Machine(network, new Legislator(6, options)))
     network.machines[6].legislator.sync([ 0 ], 20)
     network.tick()
-    network.machines[6].legislator.naturalize()
+    network.machines[0].legislator.naturalize(6)
     network.tick()
 
     assert(network.machines[3].legislator.government,
@@ -91,13 +91,6 @@ function prove (assert) {
     network.tick()
 
     network.removeGremlin(gremlin)
-
-    network.machines[4].legislator.outcomes.length = 0
-    var cookie = network.machines[4].legislator.post({ value: 1 })
-    network.tick()
-    assert(
-        network.machines[4].legislator.outcomes,
-        [ { type: 'posted', cookie: '2', statusCode: 410 } ], 'leader moved')
 
     return
     var gremlin = network.addGremlin(function (when, route, index) {
