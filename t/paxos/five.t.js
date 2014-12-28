@@ -31,47 +31,47 @@ function prove (assert) {
     }
 
     var network = new Network
-    network.machines.push(new Machine(network, new Legislator(0, options)))
+    network.machines.push(new Machine(network, new Legislator('0', options)))
     network.machines[0].legislator.bootstrap()
     network.tick()
 
-    network.machines.push(new Machine(network, new Legislator(1, options)))
-    network.machines[1].legislator.sync([ 0 ], 20)
+    network.machines.push(new Machine(network, new Legislator('1', options)))
+    network.machines[1].legislator.sync([ '0' ], 20)
     network.tick()
-    network.machines[0].legislator.naturalize(1)
-    network.tick()
-
-    network.machines.push(new Machine(network, new Legislator(2, options)))
-    network.machines[2].legislator.sync([ 0 ], 20)
-    network.tick()
-    network.machines[0].legislator.naturalize(2)
+    network.machines[0].legislator.naturalize('1')
     network.tick()
 
-    network.machines.push(new Machine(network, new Legislator(3, options)))
-    network.machines[3].legislator.sync([ 0 ], 20)
+    network.machines.push(new Machine(network, new Legislator('2', options)))
+    network.machines[2].legislator.sync([ '0' ], 20)
     network.tick()
-    network.machines[0].legislator.naturalize(3)
-    network.tick()
-
-    network.machines.push(new Machine(network, new Legislator(4, options)))
-    network.machines[4].legislator.sync([ 0 ], 20)
-    network.tick()
-    network.machines[0].legislator.naturalize(4)
+    network.machines[0].legislator.naturalize('2')
     network.tick()
 
-    network.machines.push(new Machine(network, new Legislator(5, options)))
-    network.machines[5].legislator.sync([ 0 ], 20)
+    network.machines.push(new Machine(network, new Legislator('3', options)))
+    network.machines[3].legislator.sync([ '0' ], 20)
     network.tick()
-    network.machines[0].legislator.naturalize(5)
-    network.tick()
-
-    network.machines.push(new Machine(network, new Legislator(6, options)))
-    network.machines[6].legislator.sync([ 0 ], 20)
-    network.tick()
-    network.machines[0].legislator.naturalize(6)
+    network.machines[0].legislator.naturalize('3')
     network.tick()
 
-    assert(network.machines[3].legislator.government,
+    network.machines.push(new Machine(network, new Legislator('4', options)))
+    network.machines[4].legislator.sync([ '0' ], 20)
+    network.tick()
+    network.machines[0].legislator.naturalize('4')
+    network.tick()
+
+    network.machines.push(new Machine(network, new Legislator('5', options)))
+    network.machines[5].legislator.sync([ '0' ], 20)
+    network.tick()
+    network.machines[0].legislator.naturalize('5')
+    network.tick()
+
+    network.machines.push(new Machine(network, new Legislator('6', options)))
+    network.machines[6].legislator.sync([ '0' ], 20)
+    network.tick()
+    network.machines[0].legislator.naturalize('6')
+    network.tick()
+
+    assert(network.machines[0].legislator.government,
         { majority: [ 0, 1, 3 ], minority: [ 2, 4 ], id: '5/0' }, 'five and two')
 
     var gremlin = network.addGremlin(function (when, route, index) {
@@ -94,7 +94,7 @@ function prove (assert) {
 
     return
     var gremlin = network.addGremlin(function (when, route, index) {
-        return route.path[index] == 4
+        return route.path[index] == '4'
     })
 
     for (var i = 0; i < 31; i++) {

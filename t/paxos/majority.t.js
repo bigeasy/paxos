@@ -1,7 +1,7 @@
 require('proof')(6, function (assert) {
     var Legislator = require('../../legislator')
 
-    var legislator = new Legislator(0)
+    var legislator = new Legislator('0')
 
     assert(legislator.majoritySize(5, 1), 1, 'one')
     assert(legislator.majoritySize(5, 2), 2, 'two')

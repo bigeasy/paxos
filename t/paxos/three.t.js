@@ -30,10 +30,10 @@ function prove (assert) {
         return [ envelope ]
     }
 
-    var defaults = new Legislator(0)
+    var defaults = new Legislator('0')
     assert(Date.now() - defaults.clock() < 250, 'default clock')
 
-    var legislators = [ new Legislator(0, options) ]
+    var legislators = [ new Legislator('0', options) ]
     legislators[0].bootstrap()
 
     var network = new Network
@@ -43,16 +43,16 @@ function prove (assert) {
     network.tick()
 
     assert(legislators[0].government, {
-        id: '1/0', majority: [ 0 ], minority: []
+        id: '1/0', majority: [ '0' ], minority: []
     }, 'bootstrap')
 
-    network.machines.push(new Machine(network, new Legislator(1, options)))
+    network.machines.push(new Machine(network, new Legislator('1', options)))
 
-    network.machines[1].legislator.sync([ 0 ], 20)
+    network.machines[1].legislator.sync([ '0' ], 20)
     network.tick()
 
     assert(network.machines[1].legislator.government, {
-        id: '1/0', majority: [ 0 ], minority: []
+        id: '1/0', majority: [ '0' ], minority: []
     }, 'synchronize join')
 
     // todo: yes, you look inside the response. it is not opaque. you are at
@@ -62,44 +62,44 @@ function prove (assert) {
     network.tick()
 
     assert(legislators[0].government, {
-        id: '2/0', majority: [ 0, 1 ], minority: []
+        id: '2/0', majority: [ '0', '1' ], minority: []
     }, 'grow')
 
-    network.machines.push(new Machine(network, new Legislator(2, options)))
-    network.machines[2].legislator.sync([ 0 ], 20)
+    network.machines.push(new Machine(network, new Legislator('2', options)))
+    network.machines[2].legislator.sync([ '0' ], 20)
     network.tick()
 
     assert(network.machines[2].legislator.government, {
-        id: '2/0', majority: [ 0, 1 ], minority: []
+        id: '2/0', majority: [ '0', '1' ], minority: []
     }, 'sync')
 
     network.machines[0].legislator.naturalize(2)
     network.tick()
 
     assert(network.machines[1].legislator.government, {
-        id: '3/0', majority: [ 0, 1 ], minority: [ 2 ]
+        id: '3/0', majority: [ '0', '1' ], minority: [ '2' ]
     }, 'three member parliament')
 
     assert(network.machines[2].legislator.government, {
-        id: '3/0', majority: [ 0, 1 ], minority: [ 2 ]
+        id: '3/0', majority: [ '0', '1' ], minority: [ '2' ]
     }, 'minority learning')
 
-    network.machines.push(new Machine(network, new Legislator(3, options)))
-    network.machines[3].legislator.sync([ 0 ], 20)
+    network.machines.push(new Machine(network, new Legislator('3', options)))
+    network.machines[3].legislator.sync([ '0' ], 20)
     network.tick()
 
     assert(network.machines[3].legislator.government, {
-        id: '3/0', majority: [ 0, 1 ], minority: [ 2 ]
+        id: '3/0', majority: [ '0', '1' ], minority: [ 2 ]
     }, 'citizen learning')
 
-    network.machines[0].legislator.naturalize(3)
+    network.machines[0].legislator.naturalize('3')
     network.tick()
 
-    assert(network.machines[3].legislator.log.max(), {
+    assert(network.machines[2].legislator.log.max(), {
         id: '3/1',
         accepts: [],
-        learns: [ 1, 0 ],
-        quorum: [ 0, 1 ],
+        learns: [ '1', '0' ],
+        quorum: [ '0', '1' ],
         value: { type: 'naturalize', id: 3 },
         internal: true,
         learned: true,
@@ -112,7 +112,7 @@ function prove (assert) {
     network.tick()
 
     assert(network.machines[1].legislator.government, {
-        id: '4/0', majority: [ 1, 2 ], minority: [ 0 ]
+        id: '4/0', majority: [ '1', '2' ], minority: [ '0' ]
     }, 'reelection')
 
     var post = network.machines[1].legislator.post({ greeting: 'Hello, World!' })
@@ -143,9 +143,9 @@ function prove (assert) {
 
     assert(network.machines[1].legislator.log.max(), {
         id: '4/2',
-        accepts: [ 1 ],
+        accepts: [ '1' ],
         learns: [],
-        quorum: [ 1, 2 ],
+        quorum: [ '1', '2' ],
         value: { greeting: '¡hola mundo!' },
         internal: false
     }, 'leader unlearned')
@@ -157,13 +157,13 @@ function prove (assert) {
     assert(network.machines[1].legislator.log.max(), {
         id: '5/0',
         accepts: [],
-        learns: [ 0, 2 ],
-        quorum: [ 2, 0 ],
+        learns: [ '0', '2' ],
+        quorum: [ '2', '0' ],
         value: {
             type: 'convene',
             government: {
-                majority: [ 2, 0 ],
-                minority: [ 1 ],
+                majority: [ '2', '0' ],
+                minority: [ '1' ],
                 id: '5/0'
             }, terminus: '4/2'
         },
@@ -199,8 +199,8 @@ function prove (assert) {
     network.tick()
 
     assert(network.machines[1].legislator.government, {
-        majority: [ 0, 1 ],
-        minority: [ 2 ],
+        majority: [ '0', '1' ],
+        minority: [ '2' ],
         id: '6/0'
     }, 'race resolved')
 
@@ -252,8 +252,8 @@ function prove (assert) {
     }, 'leader updated on pulse')
 
     network.machines[1].legislator.newGovernment({
-        majority: [ 1, 0 ],
-        minority: [ 2 ]
+        majority: [ '1', '0' ],
+        minority: [ '2' ]
     })
 
     assert(network.machines[1].legislator.post({ value: 1 }).leader == null, 'post during election')

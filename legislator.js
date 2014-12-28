@@ -47,6 +47,8 @@ function Legislator (id, options) {
 
     options || (options = {})
 
+    assert(typeof id == 'string', 'id must be hexidecimal string')
+
     this.id = id
     this.clock = options.clock || function () { return Date.now() }
     this.messageId = id + '/0'
@@ -441,9 +443,7 @@ Legislator.prototype.__defineGetter__('parliament', function () {
 
 Legislator.prototype.__defineGetter__('constituents', function () {
     var parliament = this.parliament
-    return Object.keys(this.citizens).map(function (id) {
-        return +id
-    }).filter(function (id) {
+    return Object.keys(this.citizens).filter(function (id) {
         return !~parliament.indexOf(id)
     })
 })
@@ -467,10 +467,11 @@ Legislator.prototype.receiveLearned = function (envelope, message) {
         if (entry.decided &&
             ~this.government.majority.indexOf(this.id)
         ) {
+            //console.log(this.id, entry)
             var index = this.government.majority.indexOf(this.id)
             var length = this.government.majority.length
-            this.government.minority.forEach(function (id) {
-                if (id % length == index) {
+            this.government.minority.forEach(function (id, i) {
+                if (i % length == index) {
                     this.dispatch({
                         from: id,
                         to: this.id,
@@ -489,8 +490,8 @@ Legislator.prototype.receiveLearned = function (envelope, message) {
         ) {
             var index = this.government.minority.indexOf(this.id)
             var length = this.government.minority.length
-            this.constituents.forEach(function (id) {
-                if (id % length == index) {
+            this.constituents.forEach(function (id, i) {
+                if (i % length == index) {
                     this.dispatch({
                         from: id,
                         to: this.id,
@@ -665,7 +666,7 @@ Legislator.prototype.forwards = function (path, index) {
 
 Legislator.prototype.routeOf = function (path) {
     if (typeof path == 'string') {
-        path = path.split(' -> ').map(function (id) { return +id })
+        path = path.split(' -> ')
     }
     var id = path.join(' -> '), route = this._routed[id]
     if (!route) {
@@ -792,7 +793,7 @@ Legislator.prototype.__defineGetter__('isLeader', function () {
 
 Legislator.prototype.decideInaugurate = function (entry) {
     if (this.isLeader) {
-        var citizens = Object.keys(this.citizens).map(function (id) { return +id })
+        var citizens = Object.keys(this.citizens)
         var majority = this.government.majority.slice()
         var parliamentSize = Math.min(this.idealGovernmentSize, citizens.length)
         var majoritySize = this.majoritySize(parliamentSize, citizens.length)

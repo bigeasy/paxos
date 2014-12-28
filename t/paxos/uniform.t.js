@@ -4,7 +4,7 @@ require('proof')(1, prove)
 function prove (assert) {
     var Legislator = require('../../legislator')
 
-    var legislator = new Legislator(0)
+    var legislator = new Legislator('0')
 
     legislator.bootstrap()
 
