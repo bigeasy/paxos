@@ -73,7 +73,8 @@ function Legislator (id, options) {
     this.promise = { id: '0/0', quorum: [] }
     var motion = {}
     this.queue = motion.prev = motion.next = motion
-    this.retry = 1
+    this.retry = 2
+    this.sleep = 1
 
     var entry = this.entry('0/1', {
         id: '0/1',
@@ -624,6 +625,7 @@ Legislator.prototype.routeOf = function (path) {
     if (!route) {
         this._routed[id] = route = {
             retry: this.retry,
+            sleep: this.clock(),
             id: id,
             path: path,
             envelopes: []
@@ -637,7 +639,7 @@ Legislator.prototype.outbox = function () {
 
     if (this.promise.quorum[0] == this.id) {
         var route = this.routeOf(this.promise.quorum)
-        if (route.envelopes.length && !route.sending && route.retry) {
+        if (route.envelopes.length && !route.sending && route.retry && route.sleep <= this.clock()) {
             route.sending = true
             route.retry = this.retry
             routes.push({ id: route.id, path: route.path })
@@ -647,7 +649,7 @@ Legislator.prototype.outbox = function () {
     this.constituency.forEach(function (id) {
         if (Id.compare(this.greatestOf(id).uniform, this.greatestOf(this.id).uniform) < 0) {
             var route = this.routeOf([ this.id, id ])
-            if (!route.sending && route.retry) {
+            if (!route.sending && route.retry && route.sleep <= this.clock()) {
                 route.sending = true
                 route.retry = this.retry
                 this.dispatch({
@@ -675,22 +677,28 @@ Legislator.prototype.sent = function (route, sent, received) {
     received.forEach(function (envelope) {
         types[envelope.message.type] = true
     })
-    var completed = true
+    var completed = false
     sent.forEach(function (envelope) {
         switch (envelope.message.type) {
         case 'ping':
             completed = types.pong
             break
+        case 'prepare':
+            completed = types.promise || types.promised
+            break
         case 'accept':
             completed = types.accepted || types.rejected
             break
-        case 'prepare':
-            completed = types.promise || types.promised
+        case 'nothing':
+            completed = true
             break
         }
     })
     if (completed) {
         route.retry = this.retry
+        route.sleep = this.clock()
+    } else {
+        route.sleep = this.clock() + this.sleep
     }
 }
 

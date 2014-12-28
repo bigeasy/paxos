@@ -216,6 +216,8 @@ function prove (assert) {
     network.tick()
     network.removeGremlin(gremlin)
 
+    time++
+
     assert(network.machines[0].legislator.government, {
         majority: [ 0, 1 ],
         minority: [ 2 ],
