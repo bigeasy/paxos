@@ -40,9 +40,15 @@ Network.prototype.post = function (route, index, envelopes) {
 }
 
 Network.prototype.tick = function () {
-    var ticked
-    while (this.machines.some(function (machine) { return machine.tick() })) {
-        ticked = true
+    var ticked, looped = true
+    while (looped) {
+        looped = false
+        this.machines.forEach(function (machine) {
+            if (machine.tick()) {
+                looped = true
+                ticked = true
+            }
+        })
     }
     return ticked
 }

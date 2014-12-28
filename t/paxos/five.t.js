@@ -36,37 +36,31 @@ function prove (assert) {
     network.tick()
 
     network.machines.push(new Machine(network, new Legislator('1', options)))
-    network.machines[1].legislator.sync([ '0' ], 20)
     network.tick()
     network.machines[0].legislator.naturalize('1')
     network.tick()
 
     network.machines.push(new Machine(network, new Legislator('2', options)))
-    network.machines[2].legislator.sync([ '0' ], 20)
     network.tick()
     network.machines[0].legislator.naturalize('2')
     network.tick()
 
     network.machines.push(new Machine(network, new Legislator('3', options)))
-    network.machines[3].legislator.sync([ '0' ], 20)
     network.tick()
     network.machines[0].legislator.naturalize('3')
     network.tick()
 
     network.machines.push(new Machine(network, new Legislator('4', options)))
-    network.machines[4].legislator.sync([ '0' ], 20)
     network.tick()
     network.machines[0].legislator.naturalize('4')
     network.tick()
 
     network.machines.push(new Machine(network, new Legislator('5', options)))
-    network.machines[5].legislator.sync([ '0' ], 20)
     network.tick()
     network.machines[0].legislator.naturalize('5')
     network.tick()
 
     network.machines.push(new Machine(network, new Legislator('6', options)))
-    network.machines[6].legislator.sync([ '0' ], 20)
     network.tick()
     network.machines[0].legislator.naturalize('6')
     network.tick()

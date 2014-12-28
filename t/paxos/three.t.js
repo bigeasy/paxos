@@ -1,5 +1,5 @@
 
-require('proof')(29, prove)
+require('proof')(27, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -48,16 +48,6 @@ function prove (assert) {
 
     network.machines.push(new Machine(network, new Legislator('1', options)))
 
-    network.machines[1].legislator.sync([ '0' ], 20)
-    network.tick()
-
-    assert(network.machines[1].legislator.government, {
-        id: '1/0', majority: [ '0' ], minority: []
-    }, 'synchronize join')
-
-    // todo: yes, you look inside the response. it is not opaque. you are at
-    // this low level when you are trying to create an interface to an algorithm
-    // that is uncommon and subtle.
     assert(network.machines[0].legislator.naturalize(1).posted, 'naturalize')
     network.tick()
 
@@ -66,13 +56,6 @@ function prove (assert) {
     }, 'grow')
 
     network.machines.push(new Machine(network, new Legislator('2', options)))
-    network.machines[2].legislator.sync([ '0' ], 20)
-    network.tick()
-
-    assert(network.machines[2].legislator.government, {
-        id: '2/0', majority: [ '0', '1' ], minority: []
-    }, 'sync')
-
     network.machines[0].legislator.naturalize(2)
     network.tick()
 
@@ -85,22 +68,19 @@ function prove (assert) {
     }, 'minority learning')
 
     network.machines.push(new Machine(network, new Legislator('3', options)))
-    network.machines[3].legislator.sync([ '0' ], 20)
+    network.machines[0].legislator.naturalize('3')
     network.tick()
 
     assert(network.machines[3].legislator.government, {
-        id: '3/0', majority: [ '0', '1' ], minority: [ 2 ]
+        id: '3/0', majority: [ '0', '1' ], minority: [ '2' ]
     }, 'citizen learning')
-
-    network.machines[0].legislator.naturalize('3')
-    network.tick()
 
     assert(network.machines[2].legislator.log.max(), {
         id: '3/1',
         accepts: [],
         learns: [ '1', '0' ],
         quorum: [ '0', '1' ],
-        value: { type: 'naturalize', id: 3 },
+        value: { type: 'naturalize', id: '3' },
         internal: true,
         learned: true,
         decided: true,

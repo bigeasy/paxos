@@ -73,6 +73,7 @@ function Legislator (id, options) {
     this.promise = { id: '0/0', quorum: [] }
     var motion = {}
     this.queue = motion.prev = motion.next = motion
+    this.retry = 1
 
     var entry = this.entry('0/1', {
         id: '0/1',
@@ -83,6 +84,8 @@ function Legislator (id, options) {
     entry.learned = true
     entry.decided = true
     entry.uniform = true
+
+    this.propagation()
 }
 
 Legislator.prototype.bootstrap = function () {
@@ -463,47 +466,6 @@ Legislator.prototype.receiveLearned = function (envelope, message) {
             this.markAndSetGreatest(entry, 'decided')
         }
         this.playUniform()
-        // Share this decision with the minority of parliament.
-        if (entry.decided &&
-            ~this.government.majority.indexOf(this.id)
-        ) {
-            //console.log(this.id, entry)
-            var index = this.government.majority.indexOf(this.id)
-            var length = this.government.majority.length
-            this.government.minority.forEach(function (id, i) {
-                if (i % length == index) {
-                    this.dispatch({
-                        from: id,
-                        to: this.id,
-                        message: {
-                            type: 'synchronize',
-                            count: 20,
-                            greatest: this.greatestOf(id)
-                        }
-                    })
-                }
-            }, this)
-        }
-        // Share this decision with constituents.
-        if (entry.decided &&
-            ~this.government.minority.indexOf(this.id)
-        ) {
-            var index = this.government.minority.indexOf(this.id)
-            var length = this.government.minority.length
-            this.constituents.forEach(function (id, i) {
-                if (i % length == index) {
-                    this.dispatch({
-                        from: id,
-                        to: this.id,
-                        message: {
-                            type: 'synchronize',
-                            count: 20,
-                            greatest: this.greatestOf(id)
-                        }
-                    })
-                }
-            }, this)
-        }
         // Shift the next entry or else send final learning pulse.
         if (
             entry.decided &&
@@ -534,17 +496,6 @@ Legislator.prototype.nothing = function () {
 Legislator.prototype.receiveNothing = function () {
 }
 
-Legislator.prototype.sync = function (to, count) {
-    this.dispatch({
-        to: to,
-        message: {
-            type: 'synchronize',
-            count: count,
-            greatest: this.greatestOf(this.id)
-        }
-    })
-}
-
 Legislator.prototype.decideConvene = function (entry) {
     var terminus = this.log.find({ id: entry.value.terminus })
     assert(terminus)
@@ -552,6 +503,7 @@ Legislator.prototype.decideConvene = function (entry) {
     assert(Id.compare(this.government.id, entry.id) < 0, 'governments out of order')
     this.government = entry.value.government
     this.government.id = entry.id
+    this.propagation()
 }
 
 Legislator.prototype.receiveSynchronize = function (envelope, message) {
@@ -649,6 +601,10 @@ Legislator.prototype.returns = function (path, index) {
 Legislator.prototype.forwards = function (path, index) {
     var route = this.routeOf(path)
     var envelopes = []
+    path.slice(index + 1).forEach(function (id) {
+        push.apply(envelopes, this.unrouted[id] || [])
+        delete this.unrouted[id]
+    }, this)
     consume(route.envelopes, function (envelope) {
         var i = route.path.indexOf(envelope.to)
         if (index < i) {
@@ -657,10 +613,6 @@ Legislator.prototype.forwards = function (path, index) {
         }
         return false
     })
-    path.slice(index + 1).forEach(function (id) {
-        push.apply(envelopes, this.unrouted[id] || [])
-        delete this.unrouted[id]
-    }, this)
     return envelopes
 }
 
@@ -671,6 +623,7 @@ Legislator.prototype.routeOf = function (path) {
     var id = path.join(' -> '), route = this._routed[id]
     if (!route) {
         this._routed[id] = route = {
+            retry: this.retry,
             id: id,
             path: path,
             envelopes: []
@@ -680,25 +633,65 @@ Legislator.prototype.routeOf = function (path) {
 }
 
 Legislator.prototype.outbox = function () {
-    var routes = [], seen = {}
+    var routes = []
+
     if (this.promise.quorum[0] == this.id) {
         var route = this.routeOf(this.promise.quorum)
-        if (route.envelopes.length) {
+        if (route.envelopes.length && !route.sending && route.retry) {
+            route.sending = true
+            route.retry = this.retry
             routes.push({ id: route.id, path: route.path })
-            route.path.forEach(function (id) { seen[id] = true })
         }
     }
-    Object.keys(this.unrouted).forEach(function (id) {
-        if (!seen[id]) {
-            var envelope = this.unrouted[id][0]
-            routes.push({
-                id: '-',
-                path: [ envelope.from, envelope.to ]
-            })
-            seen[id] = true
+
+    this.constituency.forEach(function (id) {
+        if (Id.compare(this.greatestOf(id).uniform, this.greatestOf(this.id).uniform) < 0) {
+            var route = this.routeOf([ this.id, id ])
+            if (!route.sending && route.retry) {
+                route.sending = true
+                route.retry = this.retry
+                this.dispatch({
+                    from: id,
+                    to: this.id,
+                    message: {
+                        type: 'synchronize',
+                        count: 20,
+                        greatest: this.greatestOf(id),
+                        learned: true
+                    }
+                })
+                routes.push(route)
+            }
         }
     }, this)
+
     return routes
+}
+
+Legislator.prototype.sent = function (route, sent, received) {
+    var route = this.routeOf(route.path), types = {}
+    route.sending = false
+    route.retry--
+    received.forEach(function (envelope) {
+        types[envelope.message.type] = true
+    })
+    var completed = true
+    sent.forEach(function (envelope) {
+        switch (envelope.message.type) {
+        case 'ping':
+            completed = types.pong
+            break
+        case 'accept':
+            completed = types.accepted || types.rejected
+            break
+        case 'prepare':
+            completed = types.promise || types.promised
+            break
+        }
+    })
+    if (completed) {
+        route.retry = this.retry
+    }
 }
 
 Legislator.prototype.dispatch = function (options) {
@@ -805,29 +798,17 @@ Legislator.prototype.decideInaugurate = function (entry) {
         if (majority.length < majoritySize) {
             majority.push(minority.pop())
         }
-        this.proposeGovernment({
+        this.newGovernment({
             majority: majority,
             minority: minority
         })
-        // todo: this all breaks when we actually queue.
-        this.prepare()
-        majority.slice(1).forEach(function (id) {
-            this.dispatch({
-                from: id,
-                to: this.id,
-                message: {
-                    type: 'synchronize',
-                    count: 20,
-                    greatest: this.greatestOf(id)
-                }
-            })
-        }, this)
     }
 }
 
 Legislator.prototype.decideNaturalize = function (entry) {
     var before = Object.keys(this.citizens).length
     this.citizens[entry.value.id] = entry.id
+    this.propagation()
     if (entry.value.id == this.id) {
         this.naturalized = entry.id
     }
@@ -853,6 +834,32 @@ Legislator.prototype.majoritySize = function (parliamentSize, citizenCount) {
 
 Legislator.prototype.naturalize = function (id) {
     return this.post({ type: 'naturalize', id: id }, true)
+}
+
+Legislator.prototype.propagation = function () {
+    var parliament = this.government.majority.concat(this.government.minority)
+    this.constituency = []
+    this.constituents = Object.keys(this.citizens).filter(function (id) {
+        return !~parliament.indexOf(id)
+    }).sort()
+    var index = this.government.majority.slice(1).indexOf(this.id)
+    if (~index) {
+        var length = this.government.majority.length - 1
+        this.constituency = this.government.minority.filter(function (id, i) {
+            return i % length == index
+        })
+        if (this.government.minority.length == 0) {
+            push.apply(this.constituency, this.constituents)
+        }
+    } else {
+        var index = this.government.minority.indexOf(this.id)
+        if (~index) {
+            var length = this.government.minority.length
+            this.constituency = this.constituents.filter(function (id, i) {
+                return i % length == index
+            })
+        }
+    }
 }
 
 Legislator.prototype.reelect = function () {
@@ -890,7 +897,6 @@ Legislator.prototype.reelect = function () {
 
 Legislator.prototype.newGovernment = function (government) {
     this.proposeGovernment(government)
-    this.prepare()
     government.majority.slice(1).forEach(function (id) {
         this.dispatch({
             from: id,
@@ -903,6 +909,7 @@ Legislator.prototype.newGovernment = function (government) {
             }
         })
     }, this)
+    this.prepare()
 }
 
 module.exports = Legislator

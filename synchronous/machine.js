@@ -26,16 +26,14 @@ Machine.prototype.receive = function (route, index, buffers) {
 Machine.prototype.tick = function () {
     var ticked = false
 
-    var routes
-    while ((routes = this.legislator.outbox()).length) {
-        routes.forEach(function (route) {
-            var forwards = this.legislator.forwards(route.path, 0)
-            if (forwards.length) {
-                ticked = true
-                this.legislator.inbox(this.network.post(route, 1, forwards))
-            }
-        }, this)
-    }
+    this.legislator.outbox().forEach(function (route) {
+        var forwards = this.legislator.forwards(route.path, 0)
+        assert(forwards.length, 'no forwards')
+        var returns = this.network.post(route, 1, forwards)
+        this.legislator.inbox(returns)
+        this.legislator.sent(route, forwards, returns)
+        ticked = true
+    }, this)
 
     return ticked
 }
