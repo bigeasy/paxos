@@ -850,22 +850,26 @@ Legislator.prototype.propagation = function () {
     this.constituents = Object.keys(this.citizens).filter(function (id) {
         return !~parliament.indexOf(id)
     }).sort()
-    var index = this.government.majority.slice(1).indexOf(this.id)
-    if (~index) {
-        var length = this.government.majority.length - 1
-        this.constituency = this.government.minority.filter(function (id, i) {
-            return i % length == index
-        })
-        if (this.government.minority.length == 0) {
-            push.apply(this.constituency, this.constituents)
-        }
+    if (parliament.length == 1) {
+        this.constituency = this.constituents.slice()
     } else {
-        var index = this.government.minority.indexOf(this.id)
+        var index = this.government.majority.slice(1).indexOf(this.id)
         if (~index) {
-            var length = this.government.minority.length
-            this.constituency = this.constituents.filter(function (id, i) {
+            var length = this.government.majority.length - 1
+            this.constituency = this.government.minority.filter(function (id, i) {
                 return i % length == index
             })
+            if (this.government.minority.length == 0) {
+                push.apply(this.constituency, this.constituents)
+            }
+        } else {
+            var index = this.government.minority.indexOf(this.id)
+            if (~index) {
+                var length = this.government.minority.length
+                this.constituency = this.constituents.filter(function (id, i) {
+                    return i % length == index
+                })
+            }
         }
     }
 }
