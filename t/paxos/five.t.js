@@ -65,6 +65,9 @@ function prove (assert) {
     network.machines[0].legislator.naturalize('6')
     network.tick()
 
+    network.machines[0].legislator.naturalize('3')
+    network.tick()
+
     assert(network.machines[0].legislator.government,
         { majority: [ 0, 1, 3 ], minority: [ 2, 4 ], id: '5/0' }, 'five and two')
 
