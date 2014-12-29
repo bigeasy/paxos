@@ -258,6 +258,10 @@ Legislator.prototype.forwards = function (path, index) {
 Legislator.prototype.returns = function (path, index) {
     var route = this.routeOf(path)
     var envelopes = []
+    path.slice(0, index).forEach(function (id) {
+        push.apply(envelopes, this.unrouted[id] || [])
+        delete this.unrouted[id]
+    }, this)
     consume(route.envelopes, function (envelope) {
         var i = route.path.indexOf(envelope.to)
         if (i < index) {
@@ -266,10 +270,6 @@ Legislator.prototype.returns = function (path, index) {
         }
         return false
     })
-    path.slice(0, index).forEach(function (id) {
-        push.apply(envelopes, this.unrouted[id] || [])
-        delete this.unrouted[id]
-    }, this)
     return envelopes
 }
 
