@@ -89,6 +89,16 @@ function Legislator (id, options) {
     this.propagation()
 }
 
+Legislator.prototype.consume = function (envelope) {
+    assert(envelope.to == this.id, 'consume not self')
+    var type = envelope.message.type
+    var method = 'receive' + type[0].toUpperCase() + type.substring(1)
+    this.filter(envelope, envelope.message).forEach(function (envelope) {
+        this.ticks[envelope.from] = this.clock()
+        this[method](envelope, envelope.message)
+    }, this)
+}
+
 Legislator.prototype.bootstrap = function () {
     this.restarted = false
     var government = {
@@ -109,16 +119,6 @@ Legislator.prototype.inbox = function (envelopes) {
             to: envelope.to,
             message: envelope.message
         })
-    }, this)
-}
-
-Legislator.prototype.consume = function (envelope) {
-    assert(envelope.to == this.id, 'consume not self')
-    var type = envelope.message.type
-    var method = 'receive' + type[0].toUpperCase() + type.substring(1)
-    this.filter(envelope, envelope.message).forEach(function (envelope) {
-        this.ticks[envelope.from] = this.clock()
-        this[method](envelope, envelope.message)
     }, this)
 }
 
