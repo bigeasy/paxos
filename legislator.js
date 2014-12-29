@@ -191,7 +191,7 @@ Legislator.prototype.receivePromise = function (envelope, message) {
 
 Legislator.prototype.receivePromised = function (envelope, message) {
     if (Id.compare(this.lastPromisedId, message.promise) < 0) {
-        this.lastPromisedId = this.promise
+        this.lastPromisedId = message.promise
     }
 }
 

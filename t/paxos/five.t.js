@@ -111,6 +111,7 @@ function prove (assert) {
         majority: [ '3', '0', '4' ],
         minority: [ '1', '2' ]
     })
+    network.machines[4].legislator.promise = { id: '11/0', quorum: [] }
     network.tick()
 
     assert(network.machines[3].legislator.government, {
@@ -126,6 +127,6 @@ function prove (assert) {
     assert(network.machines[3].legislator.government, {
         majority: [ '3', '0', '4' ],
         minority: [ '1', '2' ],
-        id: '8/0'
+        id: '12/0'
     }, 'proposal synced')
 }
