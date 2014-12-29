@@ -8,6 +8,10 @@ var Cache = require('magazine')
 
 var consume = require('./consume')
 
+function random (min, max) {
+    return Math.floor(Math.random() * (max - min)) + min
+}
+
 var Id = {
     toWords: function (id) {
         var split = id.split('/')
@@ -74,7 +78,7 @@ function Legislator (id, options) {
 
     this.ticks = {}
     this.retry = 2
-    this.sleep = 1
+    this.sleep = [ 1, 1 ]
     this.funnel = {}
 
     var entry = this.entry('0/1', {
@@ -234,7 +238,7 @@ Legislator.prototype.sent = function (route, sent, received) {
         route.retry = this.retry
         route.sleep = this.clock()
     } else {
-        route.sleep = this.clock() + this.sleep
+        route.sleep = this.clock() + random.apply(null, this.sleep)
     }
 }
 
