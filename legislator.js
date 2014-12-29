@@ -441,17 +441,6 @@ Legislator.prototype.playUniform = function () {
     }
 }
 
-Legislator.prototype.__defineGetter__('parliament', function () {
-    return [].concat(this.government.majority, this.government.minority)
-})
-
-Legislator.prototype.__defineGetter__('constituents', function () {
-    var parliament = this.parliament
-    return Object.keys(this.citizens).filter(function (id) {
-        return !~parliament.indexOf(id)
-    })
-})
-
 Legislator.prototype.receiveLearned = function (envelope, message) {
     var entry = this.entry(message.promise, message)
     if (message.quorum && message.quorum[0] != entry.quorum[0]) {
@@ -791,9 +780,7 @@ Legislator.prototype.decideInaugurate = function (entry) {
         var parliamentSize = Math.min(this.idealGovernmentSize, citizens.length)
         var majoritySize = this.majoritySize(parliamentSize, citizens.length)
         var minority = this.government.minority.slice()
-        var constituents = citizens.filter(function (id) {
-            return !~minority.indexOf(id) && !~majority.indexOf(id)
-        })
+        var constituents = this.constituents.slice()
         minority.push(constituents.pop())
         if (majority.length < majoritySize) {
             majority.push(minority.pop())
@@ -837,13 +824,14 @@ Legislator.prototype.naturalize = function (id) {
 }
 
 Legislator.prototype.propagation = function () {
-    var parliament = this.government.majority.concat(this.government.minority)
+    var parliament = this.parliament = this.government.majority.concat(this.government.minority)
     this.constituency = []
-    this.constituents = Object.keys(this.citizens).filter(function (id) {
+    // todo: remove the `constituents` variable.
+    var constituents = this.constituents = Object.keys(this.citizens).filter(function (id) {
         return !~parliament.indexOf(id)
     }).sort()
     if (parliament.length == 1) {
-        this.constituency = this.constituents.slice()
+        this.constituency = constituents.slice()
     } else {
         var index = this.government.majority.slice(1).indexOf(this.id)
         if (~index) {
@@ -852,13 +840,13 @@ Legislator.prototype.propagation = function () {
                 return i % length == index
             })
             if (this.government.minority.length == 0) {
-                push.apply(this.constituency, this.constituents)
+                push.apply(this.constituency, constituents)
             }
         } else {
             var index = this.government.minority.indexOf(this.id)
             if (~index) {
                 var length = this.government.minority.length
-                this.constituency = this.constituents.filter(function (id, i) {
+                this.constituency = constituents.filter(function (id, i) {
                     return i % length == index
                 })
             }
