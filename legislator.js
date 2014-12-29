@@ -759,7 +759,6 @@ Legislator.prototype.receiveSynchronize = function (envelope, message) {
     }
 }
 
-// todo: figure out who has the highest uniform value and sync with them?
 Legislator.prototype.receivePing = function (envelope, message) {
     this.greatest[envelope.from] = message.greatest
     this.dispatch({
