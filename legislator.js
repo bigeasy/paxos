@@ -120,7 +120,7 @@ Legislator.prototype.greatestOf = function (id) {
 }
 
 Legislator.prototype.schedule = function (event) {
-    event.when = this.clock() + random.apply(null, event.delay || [ 0, 0 ])
+    event.when = this.clock() + random.apply(null, event.delay)
     var scheduled = this.events.what[event.id]
 
     if (scheduled) {
