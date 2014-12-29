@@ -281,7 +281,6 @@ Legislator.prototype.inbox = function (envelopes) {
 }
 
 Legislator.prototype.bootstrap = function () {
-    this.restarted = false
     var government = {
         id: '0/0',
         majority: [ this.id ],
