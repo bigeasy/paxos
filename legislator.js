@@ -43,32 +43,36 @@ var Id = {
 }
 
 function Legislator (id, options) {
-
     options || (options = {})
 
     assert(typeof id == 'string', 'id must be hexidecimal string')
 
     this.id = id
-    this.clock = options.clock || function () { return Date.now() }
-    this.messageId = id + '/0'
     this.idealGovernmentSize = options.size || 5
+    this.timeout = options.timeout || 5000
+
+    this.filter = options.filter || function (envelopes) { return [ envelopes ] }
+    this.clock = options.clock || function () { return Date.now() }
+
+    this.messageId = id + '/0'
     this.log = new RBTree(function (a, b) { return Id.compare(a.id, b.id) })
-    this.government = { id: '0/0', minority: [], majority: [] }
-    this.greatest = {}
+
+    this.promise = { id: '0/0', quorum: [] }
     this.lastPromisedId = '0/0'
     this.proposals = []
-    this.citizens = {}
     this._routed = {}
     this.unrouted = {}
+
+    this.government = { id: '0/0', minority: [], majority: [] }
+    this.citizens = {}
+    this.greatest = {}
     this.greatest[id] = {
         learned: '0/1',
         decided: '0/1',
         uniform: '0/1'
     }
-    this.filter = options.filter || function (envelopes) { return [ envelopes ] }
+
     this.ticks = {}
-    this.timeout = options.timeout || 5000
-    this.promise = { id: '0/0', quorum: [] }
     this.retry = 2
     this.sleep = 1
 
