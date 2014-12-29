@@ -1,9 +1,9 @@
 var Transcript = require('transcript'),
     transcript = new Transcript
 
-exports.serialize = function (messages) {
+exports.serialize = function (route, index, messages) {
     var writer = transcript.createWriter(), output
-    writer.output().end(JSON.stringify(messages.length))
+    writer.output().end(JSON.stringify({ route: route, index: index, count: messages.length }))
     messages.forEach(function (message) {
         writer.output().end(JSON.stringify(message))
     })
@@ -17,9 +17,9 @@ exports.deserialize = function (buffers) {
         reader.push(buffer)
     })
     input = reader.read()
-    var count = +input.body.toString(), messages = []
+    var header = JSON.parse(input.body.toString()), messages = []
     while (input = reader.read()) {
         messages.push(JSON.parse(input.body.toString()))
     }
-    return messages
+    return { route: header.route, index: header.index, messages: messages }
 }

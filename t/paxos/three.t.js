@@ -254,7 +254,7 @@ function prove (assert) {
         }
         var forwards = this.legislator.forwards(route.path, 0)
         var returns = this.network.post(route, 1, forwards)
-        this.legislator.inbox(returns)
+        this.legislator.inbox({ id: '2 -> 1', path: [ '2', '1' ] }, returns)
         this.legislator.sent(route, forwards, returns)
     }, network.machines[1])
 }

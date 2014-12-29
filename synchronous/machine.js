@@ -8,19 +8,20 @@ function Machine (network, legislator) {
     this.legislator = legislator
 }
 
-Machine.prototype.receive = function (route, index, buffers) {
-    var expanded = serializer.expand(transcript.deserialize(buffers))
-    this.legislator.inbox(expanded)
+Machine.prototype.receive = function (buffers) {
+    var work = transcript.deserialize(buffers)
+    var route = work.route, index = work.index, expanded = serializer.expand(work.messages)
+    this.legislator.inbox(route, expanded)
 
     var route = this.legislator.routeOf(route.path)
 
     if (index + 1 < route.path.length) {
         var forwards = this.legislator.forwards(route.path, index)
-        this.legislator.inbox(this.network.post(route, index + 1, forwards))
+        this.legislator.inbox(route, this.network.post(route, index + 1, forwards))
     }
 
     var returns = this.legislator.returns(route.path, index)
-    return transcript.serialize(serializer.flatten(returns))
+    return transcript.serialize(work.route, work.index, serializer.flatten(returns))
 }
 
 Machine.prototype.tick = function () {
@@ -30,7 +31,7 @@ Machine.prototype.tick = function () {
         var forwards = this.legislator.forwards(route.path, 0)
         assert(forwards.length, 'no forwards')
         var returns = this.network.post(route, 1, forwards)
-        this.legislator.inbox(returns)
+        this.legislator.inbox(route, returns)
         this.legislator.sent(route, forwards, returns)
         ticked = true
     }, this)

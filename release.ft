@@ -1,5 +1,6 @@
 ### Issue by Issue
 
+ * Add route to transcript. #208.
  * Rename `markLastest`. #119.
  * Remove `compareGovernment`. #117.
  * Upgrade Monotonic to 0.0.2. #114.

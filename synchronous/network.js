@@ -28,9 +28,10 @@ Network.prototype.post = function (route, index, envelopes) {
     var machine = this.machines.filter(function (machine) {
         return machine.legislator.id == route.path[index]
     }).shift()
-    var serialized = transcript.serialize(serializer.flatten(envelopes))
-    var buffers = machine.receive(route, index, serialized)
-    var returns = serializer.expand(transcript.deserialize(buffers))
+    var serialized = transcript.serialize(route, index, serializer.flatten(envelopes))
+    var buffers = machine.receive(serialized)
+    var deserialized = transcript.deserialize(buffers)
+    var returns = serializer.expand(deserialized.messages)
     this.gremlins.forEach(function (gremlin) {
         if (gremlin('after', route, index, envelopes)) {
             returns = []

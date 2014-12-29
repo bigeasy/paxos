@@ -365,15 +365,17 @@ Legislator.prototype.returns = function (path, index) {
     return envelopes
 }
 
-Legislator.prototype.inbox = function (envelopes) {
-    var pulse = false, pulsable = this.government.majority.slice(1).indexOf(this.id)
-    envelopes.forEach(function (envelope) {
-        if (pulsable && envelope.route != '-' && !pulse) {
-            var route = this.routeOf(envelope.route)
-            pulse = this.government.majority.every(function (id, index) {
-                return route.path[index] == id
-            })
+Legislator.prototype.inbox = function (route, envelopes) {
+    if (route.id != '-') {
+        var route = this.routeOf(route.path)
+        var pulse = this.government.majority.every(function (id, index) {
+            return route.path[index] == id
+        })
+        if (pulse) {
+            this.schedule({ type: 'reelect', to: this.id, delay: this.timeout })
         }
+    }
+    envelopes.forEach(function (envelope) {
         this.dispatch({
             route: envelope.route,
             from: envelope.from,
@@ -381,9 +383,6 @@ Legislator.prototype.inbox = function (envelopes) {
             message: envelope.message
         })
     }, this)
-    if (pulse) {
-        this.schedule({ type: 'reelect', to: this.id, delay: this.timeout })
-    }
 }
 
 Legislator.prototype.bootstrap = function () {
