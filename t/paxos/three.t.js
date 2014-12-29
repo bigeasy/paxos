@@ -50,7 +50,7 @@ function prove (assert) {
 
     network.machines.push(new Machine(network, new Legislator('1', options)))
 
-    assert(network.machines[0].legislator.naturalize(1).posted, 'naturalize')
+    assert(network.machines[0].legislator.naturalize('1').posted, 'naturalize')
     network.tick()
 
     assert(legislators[0].government, {
@@ -58,7 +58,7 @@ function prove (assert) {
     }, 'grow')
 
     network.machines.push(new Machine(network, new Legislator('2', options)))
-    network.machines[0].legislator.naturalize(2)
+    network.machines[0].legislator.naturalize('2')
     network.tick()
 
     assert(network.machines[1].legislator.government, {

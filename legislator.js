@@ -72,7 +72,7 @@ function Legislator (id, options) {
     this.unrouted = {}
 
     this.government = { id: '0/0', minority: [], majority: [] }
-    this.citizens = {}
+    this.citizens = []
     this.greatest = {}
     this.greatest[id] = {
         learned: '0/1',
@@ -382,7 +382,7 @@ Legislator.prototype.bootstrap = function () {
         majority: [ this.id ],
         minority: []
     }
-    this.citizens[this.id] = this.naturalized = '0/0'
+    this.citizens = [ this.id ]
     this.proposeGovernment(government)
     this.prepare()
 }
@@ -892,7 +892,7 @@ Legislator.prototype.propagation = function () {
     var parliament = this.parliament = this.government.majority.concat(this.government.minority)
     this.constituency = []
     // todo: remove the `constituents` variable.
-    var constituents = this.constituents = Object.keys(this.citizens).filter(function (id) {
+    var constituents = this.constituents = this.citizens.filter(function (id) {
         return !~parliament.indexOf(id)
     }).sort()
     if (parliament.length == 1) {
@@ -930,17 +930,20 @@ Legislator.prototype.decideConvene = function (entry) {
 }
 
 Legislator.prototype.naturalize = function (id) {
+    assert(typeof id == 'string', 'id must be a hexidecmimal string')
     return this.post({ type: 'naturalize', id: id }, true)
 }
 
 Legislator.prototype.decideNaturalize = function (entry) {
-    var before = Object.keys(this.citizens).length
-    this.citizens[entry.value.id] = entry.id
+    var before = this.citizens.length
+    if (!~this.citizens.indexOf(entry.value.id)) {
+        this.citizens.push(entry.value.id)
+    }
     this.propagation()
     if (entry.value.id == this.id) {
         this.naturalized = entry.id
     }
-    var after = Object.keys(this.citizens).length
+    var after = this.citizens.length
     if (this.government.majority[0] == this.id && after > before && after <= this.idealGovernmentSize) {
         this.proposeEntry({
             internal: true,
@@ -962,10 +965,9 @@ Legislator.prototype.majoritySize = function (parliamentSize, citizenCount) {
 
 Legislator.prototype.decideInaugurate = function (entry) {
     if (this.government.majority[0] == this.id) {
-        var citizens = Object.keys(this.citizens)
         var majority = this.government.majority.slice()
-        var parliamentSize = Math.min(this.idealGovernmentSize, citizens.length)
-        var majoritySize = this.majoritySize(parliamentSize, citizens.length)
+        var parliamentSize = Math.min(this.idealGovernmentSize, this.citizens.length)
+        var majoritySize = this.majoritySize(parliamentSize, this.citizens.length)
         var minority = this.government.minority.slice()
         var constituents = this.constituents.slice()
         minority.push(constituents.pop())
