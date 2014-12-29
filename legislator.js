@@ -180,15 +180,13 @@ Legislator.prototype.receivePrepare = function (envelope, message) {
 }
 
 Legislator.prototype.receivePromise = function (envelope, message) {
-    var entry = this.log.max(), compare = Id.compare(entry.id, message.promise)
-    // todo: test receiving a stale promise.
-    if (compare == 0) {
-        assert(~entry.quorum.indexOf(envelope.from))
-        assert(!~entry.promises.indexOf(envelope.from))
-        entry.promises.push(envelope.from)
-        if (entry.promises.length == entry.quorum.length) {
-            this.accept()
-        }
+    var entry = this.log.max()
+    assert(Id.compare(entry.id, message.promise) == 0, 'unexpected promise')
+    assert(~entry.quorum.indexOf(envelope.from))
+    assert(!~entry.promises.indexOf(envelope.from))
+    entry.promises.push(envelope.from)
+    if (entry.promises.length == entry.quorum.length) {
+        this.accept()
     }
 }
 
