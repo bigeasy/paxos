@@ -168,7 +168,6 @@ Legislator.prototype.receivePrepare = function (envelope, message) {
     } else {
         // todo: test this by having two majority members first seek promises
         // from each other.
-        throw new Error
         this.dispatch({
             to: envelope.from,
             message: {

@@ -1,5 +1,5 @@
 
-require('proof')(1, prove)
+require('proof')(4, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -86,13 +86,46 @@ function prove (assert) {
 
     network.removeGremlin(gremlin)
 
-    return
+    time++
+    network.tick()
+
+    assert(network.machines[4].legislator.government, {
+        majority: [ '1', '3', '2' ],
+        minority: [ '0', '4' ],
+        id: '6/0'
+    }, 'caught up')
+
     var gremlin = network.addGremlin(function (when, route, index) {
         return route.path[index] == '4'
     })
 
     for (var i = 0; i < 31; i++) {
-        network.machines[0].legislator.post({ value: i })
+        network.machines[1].legislator.post({ value: i })
     }
     network.tick()
+
+    network.removeGremlin(gremlin)
+
+    time++
+    network.machines[3].legislator.newGovernment({
+        majority: [ '3', '0', '4' ],
+        minority: [ '1', '2' ]
+    })
+    network.tick()
+
+    assert(network.machines[3].legislator.government, {
+        majority: [ '1', '3', '2' ],
+        minority: [ '0', '4' ],
+        id: '6/0'
+    }, 'proposal out of sync')
+    network.machines[3].legislator.newGovernment({
+        majority: [ '3', '0', '4' ],
+        minority: [ '1', '2' ]
+    })
+    network.tick()
+    assert(network.machines[3].legislator.government, {
+        majority: [ '3', '0', '4' ],
+        minority: [ '1', '2' ],
+        id: '8/0'
+    }, 'proposal synced')
 }
