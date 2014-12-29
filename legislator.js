@@ -784,16 +784,8 @@ Legislator.prototype.post = function (value, internal) {
     }
 }
 
-// todo: Need to be sure about this. Yes, there will be times when it is false,
-// that an isolated leader has lost the leadership position, but it needs to be
-// true enough.
-// todo: Isn't this really a property I set?
-Legislator.prototype.__defineGetter__('isLeader', function () {
-    return this.naturalized && this.government.majority[0] == this.id
-})
-
 Legislator.prototype.decideInaugurate = function (entry) {
-    if (this.isLeader) {
+    if (this.government.majority[0] == this.id) {
         var citizens = Object.keys(this.citizens)
         var majority = this.government.majority.slice()
         var parliamentSize = Math.min(this.idealGovernmentSize, citizens.length)
@@ -821,7 +813,7 @@ Legislator.prototype.decideNaturalize = function (entry) {
         this.naturalized = entry.id
     }
     var after = Object.keys(this.citizens).length
-    if (this.isLeader && after > before && after <= this.idealGovernmentSize) {
+    if (this.government.majority[0] == this.id && after > before && after <= this.idealGovernmentSize) {
         this.proposeEntry({
             internal: true,
             value: {
