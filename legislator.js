@@ -71,8 +71,6 @@ function Legislator (id, options) {
     this.ticks = {}
     this.timeout = options.timeout || 5000
     this.promise = { id: '0/0', quorum: [] }
-    var motion = {}
-    this.queue = motion.prev = motion.next = motion
     this.retry = 2
     this.sleep = 1
 
