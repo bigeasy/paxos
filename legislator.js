@@ -56,7 +56,6 @@ function Legislator (id, options) {
     this.log = new RBTree(function (a, b) { return Id.compare(a.id, b.id) })
     this.government = { id: '0/0', minority: [], majority: [] }
     this.greatest = {}
-    this.voting = false
     this.lastPromisedId = '0/0'
     this.proposals = []
     this.citizens = {}
