@@ -237,24 +237,6 @@ Legislator.prototype.sent = function (route, sent, received) {
     }
 }
 
-Legislator.prototype.returns = function (path, index) {
-    var route = this.routeOf(path)
-    var envelopes = []
-    consume(route.envelopes, function (envelope) {
-        var i = route.path.indexOf(envelope.to)
-        if (i < index) {
-            envelopes.push(envelope)
-            return true
-        }
-        return false
-    })
-    path.slice(0, index).forEach(function (id) {
-        push.apply(envelopes, this.unrouted[id] || [])
-        delete this.unrouted[id]
-    }, this)
-    return envelopes
-}
-
 Legislator.prototype.forwards = function (path, index) {
     var route = this.routeOf(path)
     var envelopes = []
@@ -270,6 +252,24 @@ Legislator.prototype.forwards = function (path, index) {
         }
         return false
     })
+    return envelopes
+}
+
+Legislator.prototype.returns = function (path, index) {
+    var route = this.routeOf(path)
+    var envelopes = []
+    consume(route.envelopes, function (envelope) {
+        var i = route.path.indexOf(envelope.to)
+        if (i < index) {
+            envelopes.push(envelope)
+            return true
+        }
+        return false
+    })
+    path.slice(0, index).forEach(function (id) {
+        push.apply(envelopes, this.unrouted[id] || [])
+        delete this.unrouted[id]
+    }, this)
     return envelopes
 }
 
