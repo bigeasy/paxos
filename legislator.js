@@ -363,14 +363,13 @@ Legislator.prototype.returns = function (path, index) {
 }
 
 Legislator.prototype.inbox = function (route, envelopes) {
-    if (route.id != '-') {
-        var route = this.routeOf(route.path)
-        var pulse = this.government.majority.every(function (id, index) {
-            return route.path[index] == id
-        })
-        if (pulse) {
-            this.schedule({ type: 'reelect', id: this.id, delay: this.timeout })
-        }
+    assert(route.id != '-', 'no route id')
+    var route = this.routeOf(route.path)
+    var pulse = this.government.majority.every(function (id, index) {
+        return route.path[index] == id
+    })
+    if (pulse) {
+        this.schedule({ type: 'reelect', id: this.id, delay: this.timeout })
     }
     envelopes.forEach(function (envelope) {
         this.dispatch({
