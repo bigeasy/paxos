@@ -837,7 +837,6 @@ Legislator.prototype.receiveSynchronize = function (envelope, message) {
     }
 
     this.dispatch({
-        route: envelope.route,
         to: envelope.from,
         message: {
             type: 'ping',
@@ -847,7 +846,6 @@ Legislator.prototype.receiveSynchronize = function (envelope, message) {
 
     function createLearned (entry) {
         this.dispatch({
-            route: envelope.route,
             from: entry.learns,
             to: envelope.from,
             message: {
@@ -876,7 +874,6 @@ Legislator.prototype.whenPing = function (event) {
 Legislator.prototype.receivePing = function (envelope, message) {
     this.greatest[envelope.from] = message.greatest
     this.dispatch({
-        route: envelope.route,
         to: envelope.from,
         message: {
             type: 'pong',
