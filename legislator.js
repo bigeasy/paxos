@@ -36,11 +36,10 @@ var Id = {
             next[1] = [ 0 ]
         }
         return Id.toString(next)
+    },
+    isGovernment: function (record) {
+        return Id.compare('0/0', record.id, 1) == 0
     }
-}
-
-function isGovernment (record) {
-    return Id.compare('0/0', record.id, 1) == 0
 }
 
 function Legislator (id, options) {
@@ -453,7 +452,7 @@ Legislator.prototype.post = function (value, internal) {
         }
     }
 
-    if (this.proposals.length && isGovernment(this.proposals[0])) {
+    if (this.proposals.length && Id.isGovernment(this.proposals[0])) {
         return {
             posted: false,
             leader: null
