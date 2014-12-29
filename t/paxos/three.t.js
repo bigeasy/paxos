@@ -242,4 +242,6 @@ function prove (assert) {
     assert(network.machines[0].legislator.post({ value: 1 }).leader, 1, 'post not leader')
 
     network.tick()
+
+    console.log(network.machines[1].legislator.funnel)
 }

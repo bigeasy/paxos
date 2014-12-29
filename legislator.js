@@ -75,6 +75,7 @@ function Legislator (id, options) {
     this.ticks = {}
     this.retry = 2
     this.sleep = 1
+    this.funnel = {}
 
     var entry = this.entry('0/1', {
         id: '0/1',
@@ -259,6 +260,14 @@ Legislator.prototype.returns = function (path, index) {
     var route = this.routeOf(path)
     var envelopes = []
     path.slice(0, index).forEach(function (id) {
+        for (var key in this.funnel) {
+            this.dispatch({
+                from: key,
+                to: this.government.majority[0],
+                message: this.funnel[key]
+            })
+            delete this.funnel[key]
+        }
         push.apply(envelopes, this.unrouted[id] || [])
         delete this.unrouted[id]
     }, this)
@@ -766,13 +775,22 @@ Legislator.prototype.receivePing = function (envelope, message) {
         to: envelope.from,
         message: {
             type: 'pong',
-            greatest: this.greatestOf(this.id)
+            greatest: this.greatestOf(this.id),
+            when: this.clock()
         }
     })
 }
 
 Legislator.prototype.receivePong = function (envelope, message) {
     this.greatest[envelope.from] = message.greatest
+    var when = this.clock(), pong = this.funnel[envelope.from] || { when: -1 }
+    if (pong.when < message.when) {
+        this.funnel[envelope.from] = {
+            type: 'pong',
+            greatest: message.greatest,
+            when: this.clock()
+        }
+    }
 }
 
 Legislator.prototype.propagation = function () {
