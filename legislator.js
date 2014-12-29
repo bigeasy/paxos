@@ -77,8 +77,8 @@ function Legislator (id, options) {
     }
 
     this.ticks = {}
-    this.retry = 2
-    this.sleep = [ 1, 1 ]
+    this.retry = options.retry || 2
+    this.sleep = options.sleep || [ 1, 1 ]
     this.funnel = {}
 
     var entry = this.entry('0/1', {

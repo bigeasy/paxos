@@ -12,7 +12,9 @@ function prove (assert) {
         clock: function () { return time },
         timeout: 1,
         size: 3,
-        filter: logger
+        filter: logger,
+        sleep: [ 1, 1 ],
+        retry: 2
     }
 
     var count = 0
