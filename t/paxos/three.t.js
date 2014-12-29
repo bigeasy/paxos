@@ -1,5 +1,5 @@
 
-require('proof')(38, prove)
+require('proof')(47, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -269,7 +269,7 @@ function prove (assert) {
     assert(route.id, '2 -> 3', 'ping route')
     var forwards = network.machines[2].legislator.forwards(route.path, 0)
     assert(forwards[0].message.type, 'ping', 'ping message')
-    var forwards = network.machines[2].legislator.sent(route, forwards, [])
+    network.machines[2].legislator.sent(route, forwards, [])
 
     assert(network.machines[2].legislator.outbox().length, 0, 'ping done')
 
@@ -280,7 +280,39 @@ function prove (assert) {
     assert(route.id, '2 -> 3', 'retry route')
     var forwards = network.machines[2].legislator.forwards(route.path, 0)
     assert(forwards[0].message.type, 'ping', 'retry message')
-    var forwards = network.machines[2].legislator.sent(route, forwards, [])
+    network.machines[2].legislator.sent(route, forwards, [])
 
     assert(network.machines[2].legislator.outbox().length, 0, 'retry done')
+
+    assert(network.machines[1].legislator.checkSchedule(), 'leader ping scheduled')
+    var route = network.machines[1].legislator.outbox().shift()
+    assert(route.id, '1 -> 0', 'leader ping route')
+    var forwards = network.machines[1].legislator.forwards(route.path, 0)
+    assert(forwards[0].message.type, 'ping', 'retry message')
+    network.machines[1].legislator.sent(route, forwards, [])
+
+    assert(!network.machines[1].legislator.checkSchedule(), 'leader reelection with no schedule')
+    var route = network.machines[1].legislator.outbox().shift()
+    assert(route.id, '1 -> 2', 'leader relect route')
+    var forwards = network.machines[1].legislator.forwards(route.path, 0)
+    network.machines[1].legislator.sent(route, forwards, [])
+
+    time++
+
+    assert(network.machines[1].legislator.checkSchedule(), 'leader reelection retry')
+    var route = network.machines[1].legislator.outbox().shift()
+    assert(route.id, '1 -> 2', 'leader relect retry route')
+    var forwards = network.machines[1].legislator.forwards(route.path, 0)
+    network.machines[1].legislator.sent(route, forwards, [])
+
+    time++
+
+    assert(network.machines[1].legislator.checkSchedule(), 'leader reelection second retry')
+    network.tick()
+
+    assert(network.machines[0].legislator.government, {
+        majority: [ '1', '2' ],
+        minority: [ '0' ],
+        id: 'b/0'
+    }, 'automatic relection')
 }

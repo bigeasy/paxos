@@ -298,7 +298,6 @@ Legislator.prototype.sent = function (route, sent, received) {
         this.schedule({ type: 'ping', id: pulse ? this.id : route.path[1], delay: this.timeout })
     } else {
         if (pulse) {
-            throw new Error
             if (wasGovernment) {
                 this.schedule({ type: 'reelect', id: this.id, delay: this.sleep })
             } else {
@@ -308,10 +307,7 @@ Legislator.prototype.sent = function (route, sent, received) {
             var schedule = this.schedule({ type: 'ping', id: route.path[1], delay: this.sleep })
             route.sleep = schedule.when
         } else {
-            this.funnel = {
-                type: 'failed',
-                from: route.path[1]
-            }
+            this.funnel[route.path[1]] = { type: 'failed' }
         }
     }
 
@@ -870,7 +866,7 @@ Legislator.prototype.receiveSynchronize = function (envelope, message) {
 }
 
 Legislator.prototype.whenPing = function (event) {
-    if (this.government.majority[0] == this.id) {
+    if (this.government.majority[0] == this.id && event.id == this.id) {
         this.nothing()
     } else if (~this.constituency.indexOf(event.id)) {
         this.dispatch({
@@ -895,16 +891,12 @@ Legislator.prototype.receivePing = function (envelope, message) {
     })
 }
 
+Legislator.prototype.receiveFailed = function (envelope, message) {
+    this.funnel[envelope.from] = { type: 'failed' }
+}
+
 Legislator.prototype.receivePong = function (envelope, message) {
     this.greatest[envelope.from] = message.greatest
-    var when = this.clock(), pong = this.funnel[envelope.from] || { when: -1 }
-    if (pong.when < message.when) {
-        this.funnel[envelope.from] = {
-            type: 'pong',
-            greatest: message.greatest,
-            when: this.clock()
-        }
-    }
 }
 
 Legislator.prototype.propagation = function () {
