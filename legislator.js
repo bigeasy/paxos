@@ -421,14 +421,6 @@ Legislator.prototype.newGovernment = function (government) {
     this.prepare()
 }
 
-Legislator.prototype.majoritySize = function (parliamentSize, citizenCount) {
-    var size = Math.min(parliamentSize, citizenCount)
-    if (size % 2 == 0) {
-        size++
-    }
-    return Math.ceil(size / 2)
-}
-
 Legislator.prototype.proposeGovernment = function (government) {
     var iterator = this.log.findIter(this.log.max()), current = iterator.data()
     // todo: unlikely, maybe an assertion.
@@ -847,6 +839,14 @@ Legislator.prototype.decideNaturalize = function (entry) {
             }
         })
     }
+}
+
+Legislator.prototype.majoritySize = function (parliamentSize, citizenCount) {
+    var size = Math.min(parliamentSize, citizenCount)
+    if (size % 2 == 0) {
+        size++
+    }
+    return Math.ceil(size / 2)
 }
 
 Legislator.prototype.decideInaugurate = function (entry) {
