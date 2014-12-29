@@ -366,7 +366,14 @@ Legislator.prototype.returns = function (path, index) {
 }
 
 Legislator.prototype.inbox = function (envelopes) {
+    var pulse = false, pulsable = this.government.majority.slice(1).indexOf(this.id)
     envelopes.forEach(function (envelope) {
+        if (pulsable && envelope.route != '-' && !pulse) {
+            var route = this.routeOf(envelope.route)
+            pulse = this.government.majority.every(function (id, index) {
+                return route.path[index] == id
+            })
+        }
         this.dispatch({
             route: envelope.route,
             from: envelope.from,
@@ -374,6 +381,9 @@ Legislator.prototype.inbox = function (envelopes) {
             message: envelope.message
         })
     }, this)
+    if (pulse) {
+        this.schedule({ type: 'reelect', to: this.id, delay: this.timeout })
+    }
 }
 
 Legislator.prototype.bootstrap = function () {
