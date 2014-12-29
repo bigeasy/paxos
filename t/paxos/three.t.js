@@ -1,5 +1,5 @@
 
-require('proof')(30, prove)
+require('proof')(38, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -259,4 +259,28 @@ function prove (assert) {
         this.legislator.inbox({ id: '2 -> 1', path: [ '2', '1' ] }, returns)
         this.legislator.sent(route, forwards, returns)
     }, network.machines[1])
+
+    network.tick()
+
+    time++
+
+    assert(network.machines[2].legislator.checkSchedule(), 'ping scheduled')
+    var route = network.machines[2].legislator.outbox().shift()
+    assert(route.id, '2 -> 3', 'ping route')
+    var forwards = network.machines[2].legislator.forwards(route.path, 0)
+    assert(forwards[0].message.type, 'ping', 'ping message')
+    var forwards = network.machines[2].legislator.sent(route, forwards, [])
+
+    assert(network.machines[2].legislator.outbox().length, 0, 'ping done')
+
+    time++
+
+    assert(network.machines[2].legislator.checkSchedule(), 'retry scheduled')
+    var route = network.machines[2].legislator.outbox().shift()
+    assert(route.id, '2 -> 3', 'retry route')
+    var forwards = network.machines[2].legislator.forwards(route.path, 0)
+    assert(forwards[0].message.type, 'ping', 'retry message')
+    var forwards = network.machines[2].legislator.sent(route, forwards, [])
+
+    assert(network.machines[2].legislator.outbox().length, 0, 'retry done')
 }

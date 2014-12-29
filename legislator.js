@@ -152,9 +152,9 @@ Legislator.prototype.checkSchedule = function () {
             break
         }
         happening = true
-        this.schedule.remove(date)
+        this.events.when.remove(date)
         date.events.forEach(function (event) {
-            delete this.schedule[event.to]
+            delete this.events.what[event.id]
             var type = event.type
             var method = 'when' + type[0].toUpperCase() + type.substring(1)
             this[method](event)
@@ -239,11 +239,9 @@ Legislator.prototype.outbox = function () {
     }
 
     this.constituency.forEach(function (id) {
-        if (Id.compare(this.greatestOf(id).uniform, this.greatestOf(this.id).uniform) < 0) {
-            var route = this.routeOf([ this.id, id ])
-            if (!route.sending && route.retry && route.sleep <= this.clock()) {
-                route.sending = true
-                route.retry = this.retry
+        var route = this.routeOf([ this.id, id ])
+        if (!route.sending && route.retry && route.sleep <= this.clock()) {
+            if (Id.compare(this.greatestOf(id).uniform, this.greatestOf(this.id).uniform) < 0) {
                 this.dispatch({
                     from: id,
                     to: this.id,
@@ -254,7 +252,10 @@ Legislator.prototype.outbox = function () {
                         learned: true
                     }
                 })
+            }
+            if (this.unrouted[id]) {
                 routes.push(route)
+                route.sending = true
             }
         }
     }, this)
@@ -304,7 +305,7 @@ Legislator.prototype.sent = function (route, sent, received) {
                 this.reelect()
             }
         } else if (route.retry) {
-            var schedule = this.schedule({ type: 'retry', id: route.path[1], delay: this.sleep })
+            var schedule = this.schedule({ type: 'ping', id: route.path[1], delay: this.sleep })
             route.sleep = schedule.when
         } else {
             this.funnel = {
@@ -372,7 +373,7 @@ Legislator.prototype.inbox = function (route, envelopes) {
             return route.path[index] == id
         })
         if (pulse) {
-            this.schedule({ type: 'reelect', to: this.id, delay: this.timeout })
+            this.schedule({ type: 'reelect', id: this.id, delay: this.timeout })
         }
     }
     envelopes.forEach(function (envelope) {
@@ -871,11 +872,13 @@ Legislator.prototype.receiveSynchronize = function (envelope, message) {
 Legislator.prototype.whenPing = function (event) {
     if (this.government.majority[0] == this.id) {
         this.nothing()
-    } else if (~this.constituency.indexOf(event.to)) {
+    } else if (~this.constituency.indexOf(event.id)) {
         this.dispatch({
-            type: 'ping',
-            to: event.to,
-            greatest: this.greatestOf(this.id)
+            to: event.id,
+            message: {
+                type: 'ping',
+                greatest: this.greatestOf(this.id)
+            }
         })
     }
 }
