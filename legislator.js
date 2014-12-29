@@ -907,12 +907,11 @@ Legislator.prototype.receivePong = function (envelope, message) {
 Legislator.prototype.propagation = function () {
     var parliament = this.parliament = this.government.majority.concat(this.government.minority)
     this.constituency = []
-    // todo: remove the `constituents` variable.
-    var constituents = this.constituents = this.citizens.filter(function (id) {
+    this.constituents = this.citizens.filter(function (id) {
         return !~parliament.indexOf(id)
     }).sort()
     if (parliament.length == 1) {
-        this.constituency = constituents.slice()
+        this.constituency = this.constituents.slice()
     } else {
         var index = this.government.majority.slice(1).indexOf(this.id)
         if (~index) {
@@ -921,13 +920,13 @@ Legislator.prototype.propagation = function () {
                 return i % length == index
             })
             if (this.government.minority.length == 0) {
-                push.apply(this.constituency, constituents)
+                push.apply(this.constituency, this.constituents)
             }
         } else {
             var index = this.government.minority.indexOf(this.id)
             if (~index) {
                 var length = this.government.minority.length
-                this.constituency = constituents.filter(function (id, i) {
+                this.constituency = this.constituents.filter(function (id, i) {
                     return i % length == index
                 })
             }
