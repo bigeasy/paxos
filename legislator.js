@@ -517,6 +517,16 @@ Legislator.prototype.newGovernment = function (government) {
                 learned: true
             }
         })
+        this.dispatch({
+            from: this.id,
+            to: id,
+            message: {
+                type: 'synchronize',
+                count: 20,
+                greatest: this.greatestOf(this.id),
+                learned: true
+            }
+        })
     }, this)
     this.prepare()
 }
