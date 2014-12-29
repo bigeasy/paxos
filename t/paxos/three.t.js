@@ -1,5 +1,5 @@
 
-require('proof')(29, prove)
+require('proof')(30, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -36,7 +36,7 @@ function prove (assert) {
     assert(Date.now() - defaults.clock() < 250, 'default clock')
 
     var legislators = [ new Legislator('0', options) ]
-    assert(!legislators[0].checkSchedule(), 'nothing happening yet')
+    assert(!legislators[0].checkSchedule(), 'empty schedule')
     legislators[0].bootstrap()
 
     var network = new Network
@@ -73,6 +73,8 @@ function prove (assert) {
     network.machines.push(new Machine(network, new Legislator('3', options)))
     network.machines[0].legislator.naturalize('3')
     network.tick()
+
+    assert(!network.machines[0].legislator.checkSchedule(), 'unexpired schedule')
 
     assert(network.machines[3].legislator.government, {
         id: '3/0', majority: [ '0', '1' ], minority: [ '2' ]
