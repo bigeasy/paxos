@@ -147,7 +147,7 @@ Legislator.prototype.schedule = function (event) {
 Legislator.prototype.checkSchedule = function () {
     var happening = false
     for (;;) {
-        var date = this.schedule.min()
+        var date = this.events.when.min()
         if (!date || date > this.clock()) {
             break
         }

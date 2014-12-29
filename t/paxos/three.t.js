@@ -1,5 +1,5 @@
 
-require('proof')(28, prove)
+require('proof')(29, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -36,6 +36,7 @@ function prove (assert) {
     assert(Date.now() - defaults.clock() < 250, 'default clock')
 
     var legislators = [ new Legislator('0', options) ]
+    assert(!legislators[0].checkSchedule(), 'nothing happening yet')
     legislators[0].bootstrap()
 
     var network = new Network
