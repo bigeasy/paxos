@@ -1,5 +1,5 @@
 
-require('proof')(27, prove)
+require('proof')(28, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -245,5 +245,15 @@ function prove (assert) {
 
     network.tick()
 
-    console.log(network.machines[1].legislator.funnel)
+    network.machines[1].legislator.post({ value: 1 })
+
+    network.machines[1].legislator.outbox().forEach(function (route, index) {
+        if (!index) {
+            assert(this.legislator.outbox().length, 0, 'double outbox')
+        }
+        var forwards = this.legislator.forwards(route.path, 0)
+        var returns = this.network.post(route, 1, forwards)
+        this.legislator.inbox(returns)
+        this.legislator.sent(route, forwards, returns)
+    }, network.machines[1])
 }
