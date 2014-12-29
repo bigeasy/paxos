@@ -294,17 +294,17 @@ Legislator.prototype.sent = function (route, sent, received) {
     if (route.path.slice(1).every(function (id) { return seen[id] })) {
         route.retry = this.retry
         route.sleep = this.clock()
-        this.schedule({ type: 'ping', to: pulse ? this.id : route.path[1], delay: this.timeout })
+        this.schedule({ type: 'ping', id: pulse ? this.id : route.path[1], delay: this.timeout })
     } else {
         if (pulse) {
             throw new Error
             if (wasGovernment) {
-                this.schedule({ type: 'reelect', to: this.id, delay: this.sleep })
+                this.schedule({ type: 'reelect', id: this.id, delay: this.sleep })
             } else {
                 this.reelect()
             }
         } else if (route.retry) {
-            var schedule = this.schedule({ type: 'retry', to: route.path[1], delay: this.sleep })
+            var schedule = this.schedule({ type: 'retry', id: route.path[1], delay: this.sleep })
             route.sleep = schedule.when
         } else {
             this.funnel = {
@@ -932,6 +932,28 @@ Legislator.prototype.propagation = function () {
             }
         }
     }
+    if (~this.government.majority.indexOf(this.id)) {
+        if (this.government.majority[0] == this.id) {
+            this.schedule({
+                type: 'ping',
+                id: this.id,
+                delay: this.timeout
+            })
+        } else {
+            this.schedule({
+                type: 'reelect',
+                id: this.id,
+                delay: this.timeout
+            })
+        }
+    }
+    this.constituency.forEach(function (id) {
+        this.schedule({
+            type: 'ping',
+            id: id,
+            delay: this.timeout
+        })
+    }, this)
 }
 
 Legislator.prototype.decideConvene = function (entry) {
