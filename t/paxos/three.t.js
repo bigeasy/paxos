@@ -46,7 +46,10 @@ function prove (assert) {
     network.tick()
 
     assert(legislators[0].government, {
-        id: '1/0', majority: [ '0' ], minority: []
+        majority: [ '0' ],
+        minority: [],
+        constituents: [],
+        id: '1/0'
     }, 'bootstrap')
 
     network.machines.push(new Machine(network, new Legislator('1', options)))
@@ -55,7 +58,10 @@ function prove (assert) {
     network.tick()
 
     assert(legislators[0].government, {
-        id: '2/0', majority: [ '0', '1' ], minority: []
+        majority: [ '0', '1' ],
+        minority: [],
+        constituents: [],
+        id: '2/0'
     }, 'grow')
 
     network.machines.push(new Machine(network, new Legislator('2', options)))
@@ -63,11 +69,17 @@ function prove (assert) {
     network.tick()
 
     assert(network.machines[1].legislator.government, {
-        id: '3/0', majority: [ '0', '1' ], minority: [ '2' ]
+        majority: [ '0', '1' ],
+        minority: [ '2' ],
+        constituents: [],
+        id: '3/0'
     }, 'three member parliament')
 
     assert(network.machines[2].legislator.government, {
-        id: '3/0', majority: [ '0', '1' ], minority: [ '2' ]
+        majority: [ '0', '1' ],
+        minority: [ '2' ],
+        constituents: [],
+        id: '3/0'
     }, 'minority learning')
 
     network.machines.push(new Machine(network, new Legislator('3', options)))
@@ -77,7 +89,10 @@ function prove (assert) {
     assert(!network.machines[0].legislator.checkSchedule(), 'unexpired schedule')
 
     assert(network.machines[3].legislator.government, {
-        id: '3/0', majority: [ '0', '1' ], minority: [ '2' ]
+        majority: [ '0', '1' ],
+        minority: [ '2' ],
+        constituents: [],
+        id: '3/0'
     }, 'citizen learning')
 
     assert(network.machines[2].legislator.log.max(), {
@@ -97,7 +112,10 @@ function prove (assert) {
     network.tick()
 
     assert(network.machines[1].legislator.government, {
-        id: '4/0', majority: [ '1', '2' ], minority: [ '0' ]
+        majority: [ '1', '2' ],
+        minority: [ '0' ],
+        constituents: [ '3' ],
+        id: '4/0'
     }, 'reelection')
 
     var post = network.machines[1].legislator.post({ greeting: 'Hello, World!' })
@@ -149,6 +167,7 @@ function prove (assert) {
             government: {
                 majority: [ '2', '0' ],
                 minority: [ '1' ],
+                constituents: [ '3' ],
                 id: '5/0'
             }, terminus: '4/2'
         },
@@ -186,12 +205,14 @@ function prove (assert) {
     assert(network.machines[1].legislator.government, {
         majority: [ '0', '1' ],
         minority: [ '2' ],
+        constituents: [ '3' ],
         id: '6/0'
     }, 'race resolved')
 
     assert(network.machines[2].legislator.government, {
         majority: [ 0, 1 ],
         minority: [ 2 ],
+        constituents: [ '3' ],
         id: '6/0'
     }, 'race resolved, old majority member learned')
 
@@ -201,6 +222,7 @@ function prove (assert) {
     assert(network.machines[2].legislator.government, {
         majority: [ 0, 1 ],
         minority: [ 2 ],
+        constituents: [ '3' ],
         id: '6/0'
     }, 'no reelection, nothing stale')
 
@@ -210,6 +232,7 @@ function prove (assert) {
     assert(network.machines[2].legislator.government, {
         majority: [ 0, 1 ],
         minority: [ 2 ],
+        constituents: [ '3' ],
         id: '6/0'
     }, 'no reelection, not in majority')
 
@@ -226,6 +249,7 @@ function prove (assert) {
     assert(network.machines[0].legislator.government, {
         majority: [ 0, 1 ],
         minority: [ 2 ],
+        constituents: [ '3' ],
         id: '6/0'
     }, 'leader isolated')
 
@@ -235,6 +259,7 @@ function prove (assert) {
     assert(network.machines[0].legislator.government, {
         majority: [ 1, 2 ],
         minority: [ 0 ],
+        constituents: [ '3' ],
         id: '7/0'
     }, 'leader updated on pulse')
 
@@ -313,6 +338,7 @@ function prove (assert) {
     assert(network.machines[0].legislator.government, {
         majority: [ '1', '2' ],
         minority: [ '0' ],
+        constituents: [ '3' ],
         id: 'b/0'
     }, 'automatic relection')
 }

@@ -372,7 +372,6 @@ Legislator.prototype.inbox = function (route, envelopes) {
 
 Legislator.prototype.bootstrap = function () {
     var government = {
-        id: '0/0',
         majority: [ this.id ],
         minority: []
     }
@@ -517,6 +516,10 @@ Legislator.prototype.newGovernment = function (government) {
 }
 
 Legislator.prototype.proposeGovernment = function (government) {
+    government.constituents = this.citizens.filter(function (id) {
+        return !~government.majority.indexOf(id)
+            && !~government.minority.indexOf(id)
+    })
     var iterator = this.log.findIter(this.log.max()), current = iterator.data()
     while (!current.learned) {
         current = iterator.prev()

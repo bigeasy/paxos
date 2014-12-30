@@ -68,8 +68,12 @@ function prove (assert) {
     network.machines[0].legislator.naturalize('3')
     network.tick()
 
-    assert(network.machines[0].legislator.government,
-        { majority: [ 0, 1, 3 ], minority: [ 2, 4 ], id: '5/0' }, 'five and two')
+    assert(network.machines[0].legislator.government, {
+        majority: [ 0, 1, 3 ],
+        minority: [ 2, 4 ],
+        constituents: [],
+        id: '5/0'
+    }, 'five and two')
 
     var gremlin = network.addGremlin(function (when, route, index) {
         return route.path[index] == 4
@@ -95,6 +99,7 @@ function prove (assert) {
     assert(network.machines[4].legislator.government, {
         majority: [ '1', '3', '2' ],
         minority: [ '0', '4' ],
+        constituents: [ '5', '6' ],
         id: '6/0'
     }, 'caught up')
 
@@ -120,6 +125,7 @@ function prove (assert) {
     assert(network.machines[3].legislator.government, {
         majority: [ '1', '3', '2' ],
         minority: [ '0', '4' ],
+        constituents: [ '5', '6' ],
         id: '6/0'
     }, 'proposal out of sync')
     network.machines[3].legislator.newGovernment({
@@ -130,6 +136,7 @@ function prove (assert) {
     assert(network.machines[3].legislator.government, {
         majority: [ '3', '0', '4' ],
         minority: [ '1', '2' ],
+        constituents: [ '5', '6' ],
         id: '12/0'
     }, 'proposal synced')
 }
