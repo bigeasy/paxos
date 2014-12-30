@@ -225,10 +225,6 @@ Legislator.prototype.dispatch = function (options) {
 Legislator.prototype.outbox = function () {
     var routes = []
 
-    if (this.sending) {
-        return routes
-    }
-
     if (this.promise.quorum[0] == this.id) {
         var route = this.routeOf(this.promise.quorum)
         if (route.envelopes.length && !route.sending && route.retry && route.sleep <= this.clock()) {
@@ -259,8 +255,6 @@ Legislator.prototype.outbox = function () {
             }
         }
     }, this)
-
-    this.sending = routes.length
 
     return routes
 }
@@ -310,8 +304,6 @@ Legislator.prototype.sent = function (route, sent, received) {
             this.funnel[route.path[1]] = { type: 'failed' }
         }
     }
-
-    this.sending--
 }
 
 Legislator.prototype.forwards = function (path, index) {
