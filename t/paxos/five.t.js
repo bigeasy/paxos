@@ -80,7 +80,7 @@ function prove (assert) {
     network.machines[1].legislator.ticks[3] = time
     network.machines[1].legislator.ticks[2] = time
 
-    network.machines[1].legislator.reelect()
+    network.machines[1].legislator.whenReelect()
 
     network.machines[3].legislator.ticks[1] = time
     network.machines[3].legislator.ticks[2] = time

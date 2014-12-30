@@ -3,7 +3,7 @@ var Monotonic = require('monotonic')
 var cadence = require('cadence')
 var push = [].push
 var slice = [].slice
-var RBTree = require('bintrees').RBTree;
+var RBTree = require('bintrees').RBTree
 var Cache = require('magazine')
 
 var consume = require('./consume')
@@ -301,7 +301,7 @@ Legislator.prototype.sent = function (route, sent, received) {
             if (wasGovernment) {
                 this.schedule({ type: 'reelect', id: this.id, delay: this.sleep })
             } else {
-                this.reelect()
+                this.whenReelect()
             }
         } else if (route.retry) {
             var schedule = this.schedule({ type: 'ping', id: route.path[1], delay: this.sleep })
@@ -312,10 +312,6 @@ Legislator.prototype.sent = function (route, sent, received) {
     }
 
     this.sending--
-}
-
-Legislator.prototype.whenReelect = function () {
-    this.reelect()
 }
 
 Legislator.prototype.forwards = function (path, index) {
@@ -1008,7 +1004,7 @@ Legislator.prototype.decideInaugurate = function (entry) {
     }
 }
 
-Legislator.prototype.reelect = function () {
+Legislator.prototype.whenReelect = function () {
     if (~this.government.majority.indexOf(this.id)) {
         this.ticks[this.id] = this.clock()
         var majority = this.government.majority.filter(function (id) {
@@ -1019,7 +1015,7 @@ Legislator.prototype.reelect = function () {
             var minority = this.government.minority.slice()
             var index = majority.indexOf(this.id)
             majority.unshift(majority.splice(index, 1)[0])
-            var i = 0, I = this.government.minority.length;
+            var i = 0, I = this.government.minority.length
             while (i < I && this.government.majority.length != majority.length) {
                 if (this.clock() - (this.ticks[minority[i]] || 0) < this.timeout[0]) {
                     majority.push(minority.splice(i, 1)[0])
