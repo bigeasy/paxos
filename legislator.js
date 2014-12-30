@@ -72,6 +72,7 @@ function Legislator (id, options) {
     this.unrouted = {}
 
     this.government = { id: '0/0', minority: [], majority: [] }
+    this.administration = {}
     this.citizens = []
     this.greatest = {}
     this.greatest[id] = {
@@ -941,6 +942,7 @@ Legislator.prototype.decideConvene = function (entry) {
     assert(Id.compare(this.government.id, entry.id) < 0, 'governments out of order')
     this.government = entry.value.government
     this.government.id = entry.id
+    this.administration = {}
     this.propagation()
 }
 
@@ -1002,8 +1004,8 @@ Legislator.prototype.whenReelect = function () {
         var majority = this.government.majority.filter(function (id) {
             return this.clock() - (this.ticks[id] || 0) < this.timeout[0]
         }.bind(this))
-        if (this.government.failed || majority.length != this.government.majority.length) {
-            this.government.failed = true
+        if (this.administration.failed || majority.length != this.government.majority.length) {
+            this.administration.failed = true
             var minority = this.government.minority.slice()
             var index = majority.indexOf(this.id)
             majority.unshift(majority.splice(index, 1)[0])
