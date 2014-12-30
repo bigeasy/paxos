@@ -91,7 +91,7 @@ function prove (assert) {
     assert(network.machines[3].legislator.government, {
         majority: [ '0', '1' ],
         minority: [ '2' ],
-        constituents: [],
+        constituents: [ '3' ],
         id: '3/0'
     }, 'citizen learning')
 

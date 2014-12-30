@@ -887,13 +887,12 @@ Legislator.prototype.receivePong = function (envelope, message) {
 }
 
 Legislator.prototype.propagation = function () {
-    var parliament = this.parliament = this.government.majority.concat(this.government.minority)
+    this.citizens = this.government.majority.concat(this.government.minority)
+                                            .concat(this.government.constituents)
+    this.parliament = this.government.majority.concat(this.government.minority)
     this.constituency = []
-    this.constituents = this.citizens.filter(function (id) {
-        return !~parliament.indexOf(id)
-    }).sort()
-    if (parliament.length == 1) {
-        this.constituency = this.constituents.slice()
+    if (this.parliament.length == 1) {
+        this.constituency = this.government.constituents.slice()
     } else {
         var index = this.government.majority.slice(1).indexOf(this.id)
         if (~index) {
@@ -908,7 +907,7 @@ Legislator.prototype.propagation = function () {
             var index = this.government.minority.indexOf(this.id)
             if (~index) {
                 var length = this.government.minority.length
-                this.constituency = this.constituents.filter(function (id, i) {
+                this.constituency = this.government.constituents.filter(function (id, i) {
                     return i % length == index
                 })
             }
@@ -957,7 +956,7 @@ Legislator.prototype.naturalize = function (id) {
 Legislator.prototype.decideNaturalize = function (entry) {
     var before = this.citizens.length
     if (!~this.citizens.indexOf(entry.value.id)) {
-        this.citizens.push(entry.value.id)
+        this.government.constituents.push(entry.value.id)
     }
     this.propagation()
     if (entry.value.id == this.id) {
@@ -989,7 +988,7 @@ Legislator.prototype.decideInaugurate = function (entry) {
         var parliamentSize = Math.min(this.idealGovernmentSize, this.citizens.length)
         var majoritySize = this.majoritySize(parliamentSize, this.citizens.length)
         var minority = this.government.minority.slice()
-        var constituents = this.constituents.slice()
+        var constituents = this.government.constituents.slice()
         minority.push(constituents.pop())
         if (majority.length < majoritySize) {
             majority.push(minority.pop())

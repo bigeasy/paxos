@@ -14,7 +14,12 @@ function prove (assert) {
             quorum: [ 0 ],
             value: {
                 type: 'convene',
-                government: { id: i + '/0', majority: [ 0 ], minority: [] },
+                government: {
+                    id: i + '/0',
+                    majority: [ 0 ],
+                    minority: [],
+                    constituents: []
+                },
                 terminus: (i - 1) + '/0'
             },
             internal: true,
