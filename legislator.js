@@ -731,13 +731,11 @@ Legislator.prototype.playUniform = function () {
             if (!terminus) {
                 break OUTER
             }
-            // todo: test multiple links.
             if (Id.compare(current.id, terminus.id, 0) >= 0) {
                 break
             }
         }
 
-        // todo: test a break in log.
         if (Id.compare(terminus.id, current.id) != 0 && Id.compare(terminus.id, previous.id) != 0) {
             break
         }
@@ -746,7 +744,6 @@ Legislator.prototype.playUniform = function () {
         for (;;) {
             terminus = this.log.find({ id: terminus.value.terminus })
             uniform.push(terminus)
-            // todo: test multiple links.
             if (Id.compare(current.id, terminus.id, 0) >= 0) {
                 break
             }
