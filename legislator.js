@@ -529,7 +529,6 @@ Legislator.prototype.newGovernment = function (government) {
 
 Legislator.prototype.proposeGovernment = function (government) {
     var iterator = this.log.findIter(this.log.max()), current = iterator.data()
-    // todo: unlikely, maybe an assertion.
     while (!current.learned) {
         current = iterator.prev()
     }
