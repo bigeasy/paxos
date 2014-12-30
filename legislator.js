@@ -235,27 +235,33 @@ Legislator.prototype.outbox = function () {
         }
     }
 
-    this.constituency.forEach(function (id) {
-        var route = this.routeOf([ this.id, id ])
-        if (!route.sending && route.retry && route.sleep <= this.clock()) {
-            if (Id.compare(this.greatestOf(id).uniform, this.greatestOf(this.id).uniform) < 0) {
-                this.dispatch({
-                    from: id,
-                    to: this.id,
-                    message: {
-                        type: 'synchronize',
-                        count: 20,
-                        greatest: this.greatestOf(id),
-                        learned: true
-                    }
-                })
+    if (routes.length == 0) {
+        var now = this.clock()
+        this.constituency.forEach(function (id) {
+            var route = this.routeOf([ this.id, id ])
+            if (!route.sending && route.retry && route.sleep <= now) {
+                if (Id.compare(this.greatestOf(id).uniform, this.greatestOf(this.id).uniform) < 0) {
+                    this.dispatch({
+                        from: id,
+                        to: this.id,
+                        message: {
+                            type: 'synchronize',
+                            count: 20,
+                            greatest: this.greatestOf(id),
+                            learned: true
+                        }
+                    })
+                }
             }
-            if (this.unrouted[id]) {
+        }, this)
+        for (var id in this.unrouted) {
+            var route = this.routeOf([ this.id, id ])
+            if (!route.sending && route.retry && route.sleep <= now) {
                 routes.push(route)
                 route.sending = true
             }
         }
-    }, this)
+    }
 
     return routes
 }
