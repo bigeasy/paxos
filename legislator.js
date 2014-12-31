@@ -275,6 +275,9 @@ Legislator.prototype.sent = function (route, sent, received) {
         return route.path[index] == id
     })
 
+    // pongs get trapped in a prospective leader when a promise is rejected, so
+    // we need to see if we're actually sending a message that expects a
+    // response, or clearing out crufty pongs.
     var wasGovernment = false, expecting = false
     sent.forEach(function (envelope) {
         switch (envelope.message.type) {
