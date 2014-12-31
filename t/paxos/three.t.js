@@ -177,7 +177,7 @@ function prove (assert) {
     network.machines[2].legislator.post({ value: 3 })
 
     assert(network.machines[2].legislator.log.max().id, '5/1', 'rounds started')
-    assert(network.machines[2].legislator.proposals.length, 3, 'queued')
+    assert(network.machines[2].legislator.proposals.length, 2, 'queued')
 
     network.tick()
 

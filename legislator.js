@@ -301,6 +301,7 @@ Legislator.prototype.sent = function (route, sent, received) {
         this.schedule({ type: 'ping', id: pulse ? this.id : route.path[1], delay: this.timeout })
     } else {
         if (pulse) {
+            delete this.log.max().working
             if (wasGovernment) {
                 this.schedule({ type: 'reelect', id: this.id, delay: this.sleep })
             } else {
@@ -512,7 +513,6 @@ Legislator.prototype.newGovernment = function (quorum, government) {
     while (!current.learned) {
         current = iterator.prev()
     }
-    this.proposals.length = 0
     var proposal = this.createProposal(0, quorum, {
         internal: true,
         value: {
@@ -523,7 +523,7 @@ Legislator.prototype.newGovernment = function (quorum, government) {
     })
     var entry = this.entry(proposal.id, proposal)
     entry.promises = []
-    this.proposals.push(proposal)
+    entry.working = true
     quorum.slice(1).forEach(function (id) {
         this.dispatch({
             from: id,
@@ -549,12 +549,6 @@ Legislator.prototype.newGovernment = function (quorum, government) {
     this.prepare()
 }
 
-Legislator.prototype.proposeEntry = function (message) {
-    var proposal = this.createProposal(1, this.government.majority, message)
-    this.proposals.push(proposal)
-    return proposal
-}
-
 Legislator.prototype.post = function (value, internal) {
     if (this.government.majority[0] != this.id) {
         return {
@@ -563,22 +557,24 @@ Legislator.prototype.post = function (value, internal) {
         }
     }
 
-    if (this.proposals.length && Id.isGovernment(this.proposals[0].id)) {
+    var max = this.log.max()
+    if (max.working && Id.isGovernment(max.id)) {
         return {
             posted: false,
             leader: null
         }
     }
 
-    var proposal = this.proposeEntry({
+    var proposal = this.createProposal(1, this.government.majority, {
         internal: internal,
         value: value
     })
 
-
-    if (this.proposals.length == 1) {
-        this.entry(proposal.id, proposal)
+    if (!max.working) {
+        this.entry(proposal.id, proposal).working = true
         this.accept()
+    } else {
+        this.proposals.push(proposal)
     }
 
     return {
@@ -778,16 +774,16 @@ Legislator.prototype.receiveLearned = function (envelope, message) {
         }
         this.playUniform()
         // Shift the next entry or else send final learning pulse.
-        var shift = true
-        shift = shift && entry.decided
+        var shift = true, max = this.log.max()
+        shift = shift && !! entry.decided
         shift = shift && this.government.majority[0] == this.id
-        shift = shift && this.proposals.length
-        shift = shift && Id.compare(this.proposals[0].id, entry.id) <= 0
+        shift = shift && !! max.working
+        shift = shift && Id.compare(max.id, entry.id) <= 0
         if (shift) {
-            this.proposals.shift()
-            var proposal = this.proposals[0]
+            delete max.working
+            var proposal = this.proposals.shift()
             if (proposal) {
-                this.entry(proposal.id, proposal)
+                this.entry(proposal.id, proposal).working = true
                 this.accept()
             } else {
                 this.nothing()
