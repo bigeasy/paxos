@@ -505,7 +505,26 @@ Legislator.prototype.createProposal = function (index, quorum, message) {
 
 Legislator.prototype.newGovernment = function (quorum, government) {
     assert(arguments.length == 2, 'length')
-    var proposal = this.proposeGovernment(quorum, government)
+    government.constituents = this.citizens.filter(function (id) {
+        return !~government.majority.indexOf(id)
+            && !~government.minority.indexOf(id)
+    })
+    var iterator = this.log.findIter(this.log.max()), current = iterator.data()
+    while (!current.learned) {
+        current = iterator.prev()
+    }
+    this.proposals.length = 0
+    var proposal = this.createProposal(0, quorum, {
+        internal: true,
+        value: {
+            type: 'convene',
+            government: government,
+            terminus: current.id
+        }
+    })
+    var entry = this.entry(proposal.id, proposal)
+    entry.promises = []
+    this.proposals.push(proposal)
     quorum.slice(1).forEach(function (id) {
         this.dispatch({
             from: id,
@@ -529,30 +548,6 @@ Legislator.prototype.newGovernment = function (quorum, government) {
         })
     }, this)
     this.prepare()
-}
-
-Legislator.prototype.proposeGovernment = function (quroum, government) {
-    assert(arguments.length == 2, 'length')
-    government.constituents = this.citizens.filter(function (id) {
-        return !~government.majority.indexOf(id)
-            && !~government.minority.indexOf(id)
-    })
-    var iterator = this.log.findIter(this.log.max()), current = iterator.data()
-    while (!current.learned) {
-        current = iterator.prev()
-    }
-    this.proposals.length = 0
-    var proposal = this.createProposal(0, quroum, {
-        internal: true,
-        value: {
-            type: 'convene',
-            government: government,
-            terminus: current.id
-        }
-    })
-    var entry = this.entry(proposal.id, proposal)
-    entry.promises = []
-    this.proposals.push(proposal)
 }
 
 Legislator.prototype.proposeEntry = function (message) {
