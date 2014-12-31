@@ -1,5 +1,5 @@
 
-require('proof')(44, prove)
+require('proof')(48, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -286,38 +286,80 @@ function prove (assert) {
     time++
 
     assert(network.machines[3].legislator.checkSchedule(), 'ping scheduled')
-    var route = network.machines[3].legislator.outbox().shift()
+    var routes = network.machines[3].legislator.outbox()
     assert(network.machines[3].legislator.outbox().length, 0, 'double unrouted outbox')
-    assert(route.id, '3 -> 2', 'ping route')
-    var forwards = network.machines[3].legislator.forwards(route.path, 0)
+    assert(routes[0].id, '3 -> 2', 'ping route')
+    var forwards = network.machines[3].legislator.forwards(routes[0].path, 0)
     assert(forwards[0].message.type, 'ping', 'ping message')
-    network.machines[3].legislator.sent(route, forwards, [])
+    routes.forEach(function (route) {
+        network.machines[3].legislator.sent(route, forwards, [])
+    })
 
     assert(network.machines[3].legislator.outbox().length, 0, 'ping done')
 
     time++
 
     assert(network.machines[3].legislator.checkSchedule(), 'retry scheduled')
-    var route = network.machines[3].legislator.outbox().shift()
-    assert(route.id, '3 -> 2', 'retry route')
-    var forwards = network.machines[3].legislator.forwards(route.path, 0)
+    var routes = network.machines[3].legislator.outbox()
+    assert(routes[0].id, '3 -> 2', 'retry route')
+    var forwards = network.machines[3].legislator.forwards(routes[0].path, 0)
     assert(forwards[0].message.type, 'ping', 'retry message')
-    network.machines[3].legislator.sent(route, forwards, [])
+    routes.forEach(function (route) {
+        network.machines[3].legislator.sent(route, forwards, [])
+    })
 
     assert(network.machines[3].legislator.outbox().length, 0, 'retry done')
 
     assert(network.machines[0].legislator.checkSchedule(), 'leader ping scheduled')
-    var route = network.machines[0].legislator.outbox().shift()
-    assert(route.id, '0 -> 1', 'leader ping route')
-    var forwards = network.machines[0].legislator.forwards(route.path, 0)
+    var routes = network.machines[0].legislator.outbox()
+    assert(routes[0].id, '0 -> 1', 'leader ping route')
+    var forwards = network.machines[0].legislator.forwards(routes[0].path, 0)
     assert(forwards[0].message.type, 'ping', 'retry message')
-    network.machines[0].legislator.sent(route, forwards, [])
+    routes.forEach(function (route) {
+        network.machines[0].legislator.sent(route, forwards, [])
+    })
 
     assert(!network.machines[0].legislator.checkSchedule(), 'leader reelection with no schedule')
-    var route = network.machines[0].legislator.outbox().shift()
-    assert(route.id, '0 -> 1', 'leader relect route')
-    var forwards = network.machines[0].legislator.forwards(route.path, 0)
-    network.machines[0].legislator.sent(route, forwards, [])
+    var routes = network.machines[0].legislator.outbox()
+    assert(routes[0].id, '0 -> 1', 'leader relect route')
+    var forwards = network.machines[0].legislator.forwards(routes[0].path, 0)
+    routes.forEach(function (route) {
+        network.machines[0].legislator.sent(route, forwards, [])
+    })
+
+    /*
+    var gremlin = nework.addGremlin(function (when, route, index, envelopes) {
+        return when == 'before' && route[index - 1] == '1' && envelopes.some(function (envelope) {
+            return envelope.message.type == 'prepare'
+        })
+    })
+    */
+    time++
+    network.machines[0].legislator.checkSchedule()
+    network.tick()
+    var gremlin = network.addGremlin(function (when, route, index, envelopes) {
+        return route.path[index] == '0'
+    })
+    time++
+    assert(network.machines[1].legislator.checkSchedule(), 'majority relection scheduled')
+    network.tick()
+    network.removeGremlin(gremlin)
+
+    assert(network.machines[1].legislator.government, {
+        majority: [ '1', '2' ],
+        minority: [ '3' ],
+        constituents: [ '0' ],
+        id: 'a/0'
+    }, 'majority relection')
+
+    assert(network.machines[0].legislator.post({ value: 1 }).posted, 'leader isolated')
+    network.tick()
+    assert(network.machines[0].legislator.government, {
+        majority: [ '1', '2' ],
+        minority: [ '3' ],
+        constituents: [ '0' ],
+        id: 'a/0'
+    }, 'previous leader rejected, learned relection')
 
     return
     time++
