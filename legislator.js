@@ -271,7 +271,7 @@ Legislator.prototype.sent = function (route, sent, received) {
     route.sending = false
     route.retry--
 
-    var pulse = this.promise.quorum.every(function (id, index) {
+    var pulse = !this.election && this.promise.quorum.every(function (id, index) {
         return route.path[index] == id
     })
 
@@ -938,9 +938,8 @@ Legislator.prototype.pinged = function (reachable, from) {
                 majority: election.majority, minority: election.minority
             })
             delete this.election
-            // todo: else we're stuck.
         } else if (complete) {
-            throw new Error
+            this.schedule({ type: 'reelect', id: this.id, delay: this.sleep })
         }
     }
 }

@@ -1,5 +1,5 @@
 
-require('proof')(43, prove)
+require('proof')(44, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -146,6 +146,7 @@ function prove (assert) {
         value: { greeting: '¡hola mundo!' },
         internal: false
     }, 'leader unlearned')
+    assert(network.machines[1].legislator.events.what[1].type == 'reelect', 'reelection planned')
 
     time++
     network.machines[2].legislator.whenReelect()
