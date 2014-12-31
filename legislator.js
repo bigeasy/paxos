@@ -488,7 +488,6 @@ Legislator.prototype.entry = function (id, message) {
     return entry
 }
 
-// todo: figure out how to merge into queue.
 Legislator.prototype.createProposal = function (index, quorum, message) {
     var entry = this.log.max(), id = entry.id, proposal
     if (Id.compare(id, this.lastPromisedId) < 0) {
