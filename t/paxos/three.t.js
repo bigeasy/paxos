@@ -1,5 +1,5 @@
 
-require('proof')(59, prove)
+require('proof')(61, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -455,4 +455,53 @@ function prove (assert) {
         constituents: [ '2' ],
         id: '12/0'
     }, 'retired election')
+
+    network.machines[3].legislator.post({ value: 1 })
+    network.machines[3].legislator.post({ value: 2 })
+    network.machines[3].legislator.post({ value: 3 })
+    network.machines[3].legislator.reelection()
+    network.machines[3].legislator.post({ value: 4 })
+    network.machines[3].legislator.post({ value: 5 })
+    network.machines[3].legislator.post({ value: 6 })
+
+    network.tick()
+    assert(network.machines[3].legislator.log.find({ id: '13/0' }).value,
+    { type: 'convene',
+      government:
+       { majority: [ '3', '0' ],
+         minority: [ '1' ],
+         constituents: [ '2' ],
+         id: '13/0' },
+      terminus: '12/4',
+      map:
+       [ { was: '12/5', is: '13/1' },
+         { was: '12/6', is: '13/2' },
+         { was: '12/7', is: '13/3' } ] }, 'remapped')
+
+    var gremlin = network.addGremlin(function (when, route, index, envelopes) {
+        return envelopes.some(function (envelope) {
+            var value = envelope.message.value
+            return value && value.type == 'election'
+        })
+    })
+
+    network.machines[3].legislator.post({ value: 1 })
+    network.machines[3].legislator.post({ value: 2 })
+    network.machines[3].legislator.post({ value: 3 })
+    network.machines[3].legislator.reelection()
+    network.machines[3].legislator.post({ value: 4 })
+    network.machines[3].legislator.post({ value: 5 })
+    network.machines[3].legislator.post({ value: 6 })
+
+    network.tick()
+    network.removeGremlin(gremlin)
+
+    assert(network.machines[3].legislator.log.max().value,
+    { type: 'convene',
+      government:
+       { majority: [ '3', '0' ],
+         minority: [ '1' ],
+         constituents: [ '2' ],
+         id: '14/0' },
+      terminus: '13/6' }, 'not remapped')
 }

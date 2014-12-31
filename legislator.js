@@ -412,10 +412,6 @@ Legislator.prototype.receivePrepare = function (envelope, message) {
     if (Id.compare(this.greatestOf(this.id).decided, this.greatestOf(this.id).uniform) == 0) {
         var compare = Id.compare(this.promise.id, message.promise, 0)
         if (compare < 0) {
-            // todo: will this happen, or will it reject the prepare?
-            if (message.quorum[0] != this.id) {
-                this.proposals.length = 0
-            }
             this.promise = {
                 id: message.promise,
                 quorum: message.quorum
@@ -497,8 +493,7 @@ Legislator.prototype.nextProposalId = function (index) {
     return this.lastPromisedId = Id.increment(id, index)
 }
 
-Legislator.prototype.newGovernment = function (quorum, government) {
-    assert(arguments.length == 2, 'length')
+Legislator.prototype.newGovernment = function (quorum, government, remap) {
     government.constituents = this.citizens.filter(function (id) {
         return !~government.majority.indexOf(id)
             && !~government.minority.indexOf(id)
@@ -517,7 +512,18 @@ Legislator.prototype.newGovernment = function (quorum, government) {
             terminus: current.id
         }
     }
-    assert(!this.proposals.length, 'proposals')
+    if (remap) {
+        this.proposals = remap.map(function (proposal) {
+            proposal.was = proposal.id
+            proposal.id = this.nextProposalId(1)
+            return proposal
+        }.bind(this))
+        proposal.value.map = remap.map(function (proposal) {
+            return { was: proposal.was, is: proposal.id }
+        })
+    } else {
+        this.proposals.length = 0
+    }
     var entry = this.entry(proposal.id, proposal)
     entry.promises = []
     entry.working = true
@@ -928,7 +934,7 @@ Legislator.prototype.pinged = function (reachable, from) {
             }
             this.newGovernment(election.quorum, {
                 majority: election.majority, minority: election.minority
-            })
+            }, election.remap)
             delete this.election
         } else if (complete) {
             this.schedule({ type: 'elect', id: this.id, delay: this.sleep })
@@ -1036,6 +1042,10 @@ Legislator.prototype.parliamentSize = function () {
 }
 
 Legislator.prototype.whenElect = function () {
+    this.elect()
+}
+
+Legislator.prototype.elect = function (remap) {
     var failed
     if (this.government.majority[0] == this.id) {
         failed = true
@@ -1049,11 +1059,12 @@ Legislator.prototype.whenElect = function () {
         if (this.government.majority[0] != this.id) {
             receipts.push(this.id)
         }
+        var remap = remap && this.proposals.splice(0, this.proposals.length)
         var parliamentSize = this.parliamentSize()
         var majoritySize = Math.ceil(parliamentSize / 2)
         var minoritySize = parliamentSize - majoritySize
         this.election = {
-            failed: true,
+            remap: remap,
             quorum: [ this.id ],
             quorumSize: this.government.majority.length,
             majority: [ this.id ],
@@ -1075,6 +1086,20 @@ Legislator.prototype.whenElect = function () {
                 }
             })
         }, this)
+    }
+}
+
+Legislator.prototype.reelection = function () {
+    return this.post({ type: 'election' }, true)
+}
+
+Legislator.prototype.decideElection = function () {
+    var greatest = this.greatestOf(this.id)
+    var reelect = true
+    reelect = reelect && Id.compare(greatest.decided, greatest.uniform) == 0
+    reelect = reelect && this.government.majority[0] == this.id
+    if (reelect) {
+        this.elect(true)
     }
 }
 
