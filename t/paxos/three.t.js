@@ -11,7 +11,7 @@ function prove (assert) {
     var options = {
         clock: function () { return time },
         timeout: 1,
-        size: 3,
+        size: 5,
         filter: logger,
         sleep: [ 1, 1 ],
         retry: 2
