@@ -425,34 +425,33 @@ function prove (assert) {
     network.tick()
     network.removeGremlin(gremlin)
 
-    console.log(network.machines[3].legislator.government)
-    console.log(network.machines[3].legislator.log.max())
-    console.log(network.machines[1].legislator.log.max())
     network.machines[3].legislator.newGovernment([ '3', '1' ], {
         majority: [ '3', '1' ],
         minority: [ '0' ]
     })
     network.tick()
-    console.log(network.machines[3].legislator.government)
+    assert(network.machines[3].legislator.government, {
+        majority: [ '3', '0' ],
+        minority: [ '1' ],
+        constituents: [ '2' ],
+        id: '10/0'
+    }, 'retried election because member out of sync')
 
-    return
-    time++
-
-    assert(network.machines[0].legislator.checkSchedule(), 'leader reelection retry')
-    var route = network.machines[0].legislator.outbox().shift()
-    assert(route.id, '0 -> 1', 'leader relect retry route')
-    var forwards = network.machines[0].legislator.forwards(route.path, 0)
-    network.machines[0].legislator.sent(route, forwards, [])
-
-    time++
-
-    assert(network.machines[1].legislator.checkSchedule(), 'leader reelection second retry')
+    var gremlin = network.addGremlin(function (when, route, index, envelopes) {
+        return envelopes.some(function (envelope) { return envelope.message.type == 'prepare' })
+    })
+    network.machines[3].legislator.whenReelect()
     network.tick()
+    network.removeGremlin(gremlin)
+    assert(network.machines[3].legislator.events.what[3].type, 'reelect', 'failed to form government')
 
-    assert(network.machines[0].legislator.government, {
-        majority: [ '1', '2' ],
-        minority: [ '0' ],
-        constituents: [ '3' ],
-        id: 'b/0'
-    }, 'automatic relection')
+    time++
+    assert(network.machines[3].legislator.checkSchedule(), 'retry election')
+    network.tick()
+    assert(network.machines[3].legislator.government, {
+        majority: [ '3', '0' ],
+        minority: [ '1' ],
+        constituents: [ '2' ],
+        id: '12/0'
+    }, 'retired election')
 }
