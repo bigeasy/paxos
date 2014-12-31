@@ -849,6 +849,7 @@ Legislator.prototype.receiveSynchronize = function (envelope, message) {
     })
 
     function createLearned (entry) {
+        if (entry.id != '0/1') // <- todo: !!!
         this.dispatch({
             from: entry.learns,
             to: envelope.from,
