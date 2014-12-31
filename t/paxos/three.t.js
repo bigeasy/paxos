@@ -415,6 +415,26 @@ function prove (assert) {
         id: 'e/0'
     }, 'previous leader informed of promise greater than, learned relection')
 
+    var gremlin = network.addGremlin(function (when, route, index, envelopes) {
+        return route.path[index] == '1'
+    })
+
+    for (var i = 0; i < 30; i++) {
+        network.machines[3].legislator.post({ value: i })
+    }
+    network.tick()
+    network.removeGremlin(gremlin)
+
+    console.log(network.machines[3].legislator.government)
+    console.log(network.machines[3].legislator.log.max())
+    console.log(network.machines[1].legislator.log.max())
+    network.machines[3].legislator.newGovernment([ '3', '1' ], {
+        majority: [ '3', '1' ],
+        minority: [ '0' ]
+    })
+    network.tick()
+    console.log(network.machines[3].legislator.government)
+
     return
     time++
 

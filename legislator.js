@@ -275,24 +275,24 @@ Legislator.prototype.sent = function (route, sent, received) {
         return route.path[index] == id
     })
 
-    var wasGovernment = false
-    if (pulse) {
-        sent.forEach(function (envelope) {
-            switch (envelope.message.type) {
-                case 'prepare':
-                case 'accept':
-                    wasGovernment = Id.isGovernment(envelope.message.promise)
-                    break
-            }
-        })
-    }
+    var wasGovernment = false, expecting = false
+    sent.forEach(function (envelope) {
+        switch (envelope.message.type) {
+            case 'prepare':
+            case 'accept':
+                wasGovernment = Id.isGovernment(envelope.message.promise)
+            case 'ping':
+                expecting = true
+                break
+        }
+    })
 
     var seen = {}
     received.forEach(function (envelope) {
         seen[envelope.from] = true
     }, this)
 
-    if (route.path.slice(1).every(function (id) { return seen[id] })) {
+    if (!expecting || route.path.slice(1).every(function (id) { return seen[id] })) {
         route.retry = this.retry
         route.sleep = this.clock()
         this.schedule({ type: 'ping', id: pulse ? this.id : route.path[1], delay: this.timeout })
@@ -433,8 +433,6 @@ Legislator.prototype.receivePrepare = function (envelope, message) {
             })
         }
     } else {
-        // todo: test this by having two majority members first seek promises
-        // from each other.
         this.dispatch({
             to: envelope.from,
             message: {
@@ -459,6 +457,11 @@ Legislator.prototype.receivePromise = function (envelope, message) {
 Legislator.prototype.receivePromised = function (envelope, message) {
     if (Id.compare(this.lastPromisedId, message.promise) < 0) {
         this.lastPromisedId = message.promise
+    }
+    if (Id.compare(this.greatestOf(envelope.from).uniform, this.greatestOf(this.id).uniform) == 0) {
+        this.schedule({ type: 'reelect', id: this.id, delay: this.sleep })
+    } else {
+        this.whenReelect()
     }
 }
 
