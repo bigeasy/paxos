@@ -521,6 +521,7 @@ Legislator.prototype.newGovernment = function (quorum, government) {
             terminus: current.id
         }
     })
+    assert(!this.proposals.length, 'proposals')
     var entry = this.entry(proposal.id, proposal)
     entry.promises = []
     entry.working = true
