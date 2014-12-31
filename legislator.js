@@ -923,10 +923,6 @@ Legislator.prototype.pinged = function (reachable, from) {
         var complete = election.receipts.length == election.requests
         var quorum = election.quorum.length == election.quorumSize
         if (quorum && (minority || complete)) {
-            if (election.minority.length < election.minoritySize && election.quorumSize > 2) {
-                throw new Error
-            } else {
-            }
             if (election.majority.length < election.majoritySize) {
                 if (election.reachable.length) {
                     election.majority.push(election.reachable.shift())
