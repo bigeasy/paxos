@@ -489,18 +489,12 @@ Legislator.prototype.entry = function (id, message) {
     return entry
 }
 
-Legislator.prototype.createProposal = function (index, quorum, message) {
+Legislator.prototype.nextProposalId = function (index) {
     var entry = this.log.max(), id = entry.id, proposal
     if (Id.compare(id, this.lastPromisedId) < 0) {
         id = this.lastPromisedId
     }
-    id = this.lastPromisedId = Id.increment(id, index)
-    return {
-        id: id,
-        internal: !! message.internal,
-        value: message.value,
-        quorum: quorum
-    }
+    return this.lastPromisedId = Id.increment(id, index)
 }
 
 Legislator.prototype.newGovernment = function (quorum, government) {
@@ -513,14 +507,16 @@ Legislator.prototype.newGovernment = function (quorum, government) {
     while (!current.learned) {
         current = iterator.prev()
     }
-    var proposal = this.createProposal(0, quorum, {
+    var proposal = {
+        id: this.nextProposalId(0),
+        quorum: quorum,
         internal: true,
         value: {
             type: 'convene',
             government: government,
             terminus: current.id
         }
-    })
+    }
     assert(!this.proposals.length, 'proposals')
     var entry = this.entry(proposal.id, proposal)
     entry.promises = []
@@ -566,10 +562,12 @@ Legislator.prototype.post = function (value, internal) {
         }
     }
 
-    var proposal = this.createProposal(1, this.government.majority, {
-        internal: internal,
+    var proposal = {
+        id: this.nextProposalId(1),
+        quorum: this.government.majority,
+        internal: !! internal,
         value: value
-    })
+    }
 
     if (!max.working) {
         this.entry(proposal.id, proposal).working = true
