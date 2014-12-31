@@ -388,7 +388,7 @@ Legislator.prototype.bootstrap = function () {
         minority: []
     }
     this.citizens = [ this.id ]
-    this.proposeGovernment([ this.id ], government)
+    this.newGovernment([ this.id ], government)
     this.prepare()
 }
 
