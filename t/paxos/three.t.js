@@ -1,5 +1,5 @@
 
-require('proof')(42, prove)
+require('proof')(43, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -292,6 +292,7 @@ function prove (assert) {
 
     assert(network.machines[3].legislator.checkSchedule(), 'ping scheduled')
     var route = network.machines[3].legislator.outbox().shift()
+    assert(network.machines[3].legislator.outbox().length, 0, 'double unrouted outbox')
     assert(route.id, '3 -> 2', 'ping route')
     var forwards = network.machines[3].legislator.forwards(route.path, 0)
     assert(forwards[0].message.type, 'ping', 'ping message')
