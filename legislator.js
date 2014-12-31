@@ -303,9 +303,9 @@ Legislator.prototype.sent = function (route, sent, received) {
         if (pulse) {
             delete this.log.max().working
             if (wasGovernment) {
-                this.schedule({ type: 'reelect', id: this.id, delay: this.sleep })
+                this.schedule({ type: 'elect', id: this.id, delay: this.sleep })
             } else {
-                this.whenReelect()
+                this.whenElect()
             }
         } else if (this.election) {
             route.retry = this.retry // <- should?
@@ -371,7 +371,7 @@ Legislator.prototype.inbox = function (route, envelopes) {
         return route.path[index] == id
     })
     if (pulse) {
-        this.schedule({ type: 'reelect', id: this.id, delay: this.timeout })
+        this.schedule({ type: 'elect', id: this.id, delay: this.timeout })
     }
     envelopes.forEach(function (envelope) {
         this.dispatch({
@@ -463,9 +463,9 @@ Legislator.prototype.receivePromised = function (envelope, message) {
         this.lastPromisedId = message.promise
     }
     if (Id.compare(this.greatestOf(envelope.from).uniform, this.greatestOf(this.id).uniform) == 0) {
-        this.schedule({ type: 'reelect', id: this.id, delay: this.sleep })
+        this.schedule({ type: 'elect', id: this.id, delay: this.sleep })
     } else {
-        this.whenReelect()
+        this.whenElect()
     }
 }
 
@@ -932,7 +932,7 @@ Legislator.prototype.pinged = function (reachable, from) {
             })
             delete this.election
         } else if (complete) {
-            this.schedule({ type: 'reelect', id: this.id, delay: this.sleep })
+            this.schedule({ type: 'elect', id: this.id, delay: this.sleep })
         }
     }
 }
@@ -975,7 +975,7 @@ Legislator.prototype.propagation = function () {
             })
         } else {
             this.schedule({
-                type: 'reelect',
+                type: 'elect',
                 id: this.id,
                 delay: this.timeout
             })
@@ -1017,11 +1017,11 @@ Legislator.prototype.decideNaturalize = function (entry) {
     if (entry.value.id == this.id) {
         this.naturalized = entry.id
     }
-    var reelect
-    reelect = this.government.majority[0] == this.id
-    reelect = reelect && this.parliament.length < this.parliamentSize()
-    if (reelect) {
-        this.whenReelect()
+    var elect
+    elect = this.government.majority[0] == this.id
+    elect = elect && this.parliament.length < this.parliamentSize()
+    if (elect) {
+        this.whenElect()
     }
 }
 
@@ -1036,7 +1036,7 @@ Legislator.prototype.parliamentSize = function () {
     return parliamentSize
 }
 
-Legislator.prototype.whenReelect = function () {
+Legislator.prototype.whenElect = function () {
     var failed
     if (this.government.majority[0] == this.id) {
         failed = true
