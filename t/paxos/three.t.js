@@ -1,5 +1,5 @@
 
-require('proof')(58, prove)
+require('proof')(59, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -258,9 +258,9 @@ function prove (assert) {
         id: '7/0'
     }, 'leader updated on pulse')
 
-    network.machines[0].legislator.newGovernment([ '1', '3'], {
-        majority: [ '0', '3' ],
-        minority: [ '2' ]
+    network.machines[0].legislator.newGovernment([ '0', '1'], {
+        majority: [ '0', '1' ],
+        minority: [ '3' ]
     })
 
     assert(network.machines[0].legislator.post({ value: 1 }).leader == null, 'post during election')
@@ -272,13 +272,13 @@ function prove (assert) {
 
     network.machines[0].legislator.outbox().forEach(function (route, index) {
         if (!index) {
-            assert(this.legislator.outbox().length, 0, 'double outbox')
+            assert(network.machines[0].legislator.outbox().length, 0, 'double outbox')
         }
-        var forwards = this.legislator.forwards(route.path, 0)
-        var returns = this.network.post(route, 1, forwards)
-        this.legislator.inbox({ id: '0 -> 3', path: [ '0', '3' ] }, returns)
-        this.legislator.sent(route, forwards, returns)
-    }, network.machines[1])
+        var forwards = network.machines[0].legislator.forwards(route.path, 0)
+        var returns = network.machines[0].network.post(route, 1, forwards)
+        network.machines[0].legislator.inbox({ id: '0 -> 3', path: [ '0', '3' ] }, returns)
+        network.machines[0].legislator.sent(route, forwards, returns)
+    })
 
     network.tick()
 
@@ -334,6 +334,7 @@ function prove (assert) {
     })
     */
     time++
+    network.tick()
     network.machines[0].legislator.checkSchedule()
     network.tick()
     var gremlin = network.addGremlin(function (when, route, index, envelopes) {
