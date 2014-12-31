@@ -477,7 +477,7 @@ Legislator.prototype.entry = function (id, message) {
         }
         this.log.insert(entry)
     }
-    ([ 'quorum', 'value', 'previous', 'internal' ]).forEach(function (key) {
+    ([ 'value', 'internal' ]).forEach(function (key) {
         if (entry[key] == null && message[key] != null) {
             entry[key] = message[key]
         }
