@@ -304,7 +304,9 @@ Legislator.prototype.sent = function (route, sent, received) {
                 this.whenReelect()
             }
         } else if (this.election) {
-            throw new Error
+            route.retry = this.retry // <- should?
+            route.sleep = this.clock()
+            this.pinged(false, route.path[1])
         } else if (route.retry) {
             var schedule = this.schedule({ type: 'ping', id: route.path[1], delay: this.sleep })
             route.sleep = schedule.when

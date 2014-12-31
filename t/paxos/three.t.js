@@ -126,23 +126,17 @@ function prove (assert) {
 
     network.machines[1].legislator.post({ greeting: '¡hola mundo!' })
 
-    function dropper (envelope) {
-        if (envelope.to != 1 || envelope.from == 1) {
-            return logger.call(this, envelope)
-        } else {
-            return []
+    var direction = 'after'
+    var gremlin = network.addGremlin(function (when, route, index) {
+        if (direction == when && route.path[index - 1] == '1') {
+            direction = 'before'
+            return true
         }
-    }
-
-    network.machines.forEach(function (machine) {
-        machine.legislator.filter = dropper
     })
 
     network.tick()
 
-    network.machines.forEach(function (machine) {
-        machine.legislator.filter = logger
-    })
+    network.removeGremlin(gremlin)
 
     assert(network.machines[1].legislator.log.max(), {
         id: '4/2',
