@@ -971,6 +971,8 @@ Legislator.prototype.propagation = function () {
             }
         }
     }
+    this.events.what = {}
+    this.events.when.clear()
     if (~this.government.majority.indexOf(this.id)) {
         if (this.government.majority[0] == this.id) {
             this.schedule({
@@ -987,11 +989,14 @@ Legislator.prototype.propagation = function () {
         }
     }
     this.constituency.forEach(function (id) {
-        this.schedule({
+        var route = this.routeOf([ this.id, id ])
+        var event = this.schedule({
             type: 'ping',
             id: id,
             delay: this.timeout
         })
+        route.sleep = this.clock()
+        route.retry = this.retry
     }, this)
 }
 
