@@ -1014,8 +1014,9 @@ Legislator.prototype.pinged = function (reachable, from) {
             if (!parliament) {
                 // if we have the quorum, but we do not have the parliament, we
                 // form a government of quorum size, shrink the government.
-                election.majoritySize = Math.ceil(election.quorumSize / 2)
-                election.minoritySize = election.quorumSize - election.majoritySize
+                election.parliamentSize -= 2
+                election.majoritySize = Math.ceil(election.parliamentSize / 2)
+                election.minoritySize = election.parliamentSize - election.majoritySize
                 while (election.majority.length < election.majoritySize) {
                     election.majority.push(candidates.shift())
                 }
