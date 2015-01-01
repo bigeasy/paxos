@@ -60,6 +60,7 @@ function Legislator (id, options) {
 
     this.messageId = id + '/0'
     this.log = new RBTree(function (a, b) { return Id.compare(a.id, b.id) })
+    this.count = 0
     this.events = {
         what: {},
         when: new RBTree(function (a, b) { return a.when - b.when })
@@ -262,6 +263,22 @@ Legislator.prototype.initialize = function () {
     assert(Id.isGovernment(min.id), 'min not government')
     this.playUniform()
     assert(this.greatestOf(this.id).uniform == this.log.max().id)
+}
+
+Legislator.prototype.shift = function () {
+    var min = this.log.min(), max = this.log.max(), entry = min, removed = 0
+    if (Id.compare(min.id, max.id, 0) == 0) {
+        return removed
+    }
+    while (Id.compare(entry.id, min.id, 0) == 0) {
+        if (entry.uniform) {
+            removed++
+        }
+        this.log.remove(entry)
+        entry = this.log.min()
+    }
+    this.count -= removed
+    return removed
 }
 
 Legislator.prototype.outbox = function () {
@@ -743,6 +760,7 @@ Legislator.prototype.receiveRejected = function (envelope, message) {
 Legislator.prototype.markUniform = function (entry) {
     assert(entry.learns.length > 0)
     if (this.markAndSetGreatest(entry, 'uniform')) {
+        this.count++
         if (entry.internal) {
             var type = entry.value.type
             var method = 'decide' + type[0].toUpperCase() + type.slice(1)

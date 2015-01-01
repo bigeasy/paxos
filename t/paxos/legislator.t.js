@@ -1,5 +1,5 @@
 
-require('proof')(61, prove)
+require('proof')(69, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -510,4 +510,29 @@ function prove (assert) {
          constituents: [ '2' ],
          id: '14/0' },
       terminus: '13/6' }, 'not remapped')
+
+    // extract, inject and shift.
+    var extract
+    extract = network.machines[0].legislator.extract('forward')
+    assert(extract.next, '1/0', 'extract next')
+    assert(network.machines[0].legislator.count, 68, 'entry count')
+
+    assert(network.machines[0].legislator.shift(), 2, 'shift')
+    assert(network.machines[0].legislator.count, 66, 'entry count after shift')
+    extract = network.machines[0].legislator.extract('forward')
+    assert(extract.next, '2/0', 'extract next after shift')
+
+    extract = network.machines[0].legislator.extract('forward', 1, '1/0')
+    assert(!extract.found, 'extract not found')
+
+    network.machines.push(new Machine(network, new Legislator('4', options)))
+    extract = {}
+    do {
+        extract = network.machines[0].legislator.extract('backward', 20, extract.next)
+        network.machines[4].legislator.inject(extract.entries)
+    } while (extract.next)
+    network.machines[4].legislator.initialize()
+    assert(network.machines[4].legislator.count, 66, 'entry count after complete copy')
+    while (network.machines[0].legislator.shift() != 0) {}
+    assert(network.machines[0].legislator.count, 1, 'entry count after shift everything')
 }
