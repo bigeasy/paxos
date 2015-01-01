@@ -798,14 +798,11 @@ Legislator.prototype.playUniform = function () {
                 this.markUniform(current)
                 continue
             } else {
-                skip = this.log.findIter(current)
-                skip.next()
+                iterator.next()
             }
-        } else {
-            skip = this.log.findIter(current)
         }
 
-        terminus = skip.data()
+        terminus = iterator.data()
         for (;;) {
             if (!terminus || Id.compare(terminus.id, '0/0', 1) != 0) {
                 break OUTER
@@ -813,7 +810,7 @@ Legislator.prototype.playUniform = function () {
             if (terminus.decided) {
                 break
             }
-            terminus = skip.next()
+            terminus = iterator.next()
         }
 
         for (;;) {
@@ -830,7 +827,7 @@ Legislator.prototype.playUniform = function () {
             break
         }
 
-        var uniform = [ terminus = skip.data() ]
+        var uniform = [ terminus = iterator.data() ]
         for (;;) {
             terminus = this.log.find({ id: terminus.value.terminus })
             uniform.push(terminus)
@@ -845,8 +842,6 @@ Legislator.prototype.playUniform = function () {
             }
             this.markUniform(uniform.pop())
         }
-
-        iterator = skip
     }
 }
 
