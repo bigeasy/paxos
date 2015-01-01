@@ -69,7 +69,7 @@ function Legislator (id, options) {
     this.promise = { id: '0/0', quorum: [ null ] }
     this.lastPromisedId = '0/0'
     this.proposals = []
-    this._routed = {}
+    this.routed = {}
     this.unrouted = {}
 
     this.government = { id: '0/0', minority: [], majority: [] }
@@ -88,9 +88,9 @@ Legislator.prototype.routeOf = function (path) {
     if (typeof path == 'string') {
         path = path.split(' -> ')
     }
-    var id = path.join(' -> '), route = this._routed[id]
+    var id = path.join(' -> '), route = this.routed[id]
     if (!route) {
-        this._routed[id] = route = {
+        this.routed[id] = route = {
             retry: this.retry,
             sleep: this.clock(),
             id: id,
