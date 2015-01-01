@@ -87,7 +87,7 @@ function prove (assert) {
     }, 'minority learning')
 
     network.machines.push(new Machine(network, new Legislator('3', options)))
-    network.machines[3].legislator.inject(network.machines[0].legislator.extract('forward', 20).entries)
+    network.machines[3].legislator.inject(network.machines[0].legislator.extract('backward', 20).entries)
     network.machines[3].legislator.initialize()
     network.machines[0].legislator.naturalize('3')
     network.tick()

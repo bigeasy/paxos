@@ -225,7 +225,7 @@ Legislator.prototype.extract = function (direction, count, id) {
             id: entry.id,
             quorum: entry.quorum,
             internal: entry.internal,
-            value: entry.value
+            value: JSON.parse(JSON.stringify(entry.value))
         })
     }
     next = entry && entry.id
