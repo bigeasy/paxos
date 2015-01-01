@@ -846,7 +846,7 @@ Legislator.prototype.playUniform = function () {
             this.markUniform(uniform.pop())
         }
 
-        terminus = skip
+        iterator = skip
     }
 }
 

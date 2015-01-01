@@ -1,5 +1,5 @@
 
-require('proof')(71, prove)
+require('proof')(73, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -563,7 +563,32 @@ function prove (assert) {
     while (network.machines[0].legislator.shift() != 0) {}
     assert(network.machines[0].legislator.count, 1, 'entry count after shift everything')
 
+    network.machines[3].legislator.resend()
     network.machines[3].legislator.naturalize('4')
     network.tick()
-    console.log(network.machines[3].legislator.government)
+    assert(network.machines[3].legislator.government, {
+        majority: [ '3', '0', '1' ],
+        minority: [ '2', '4' ],
+        constituents: [],
+        id: '16/0'
+    }, 'five member parliament')
+
+    var gremlin = network.addGremlin(function (when, route, index, envelopes) {
+        return route.path[index] == '1'
+    })
+    network.machines[3].legislator.reelection()
+    network.tick()
+
+    network.removeGremlin(gremlin)
+    network.machines.forEach(function (machine) { machine.legislator.resend() })
+
+    assert(network.machines[3].legislator.government, {
+        majority: [ '3', '0' ],
+        minority: [ '2' ],
+        constituents: [ '1', '4' ],
+        id: '17/0'
+    }, 'shrink parliament from 5 to 3')
+
+    network.machines[3].legislator.reelection()
+    network.tick()
 }
