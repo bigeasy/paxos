@@ -330,9 +330,11 @@ Legislator.prototype.sent = function (route, sent, received) {
     route.sending = false
     route.retry--
 
-    var pulse = !this.election && this.promise.quorum.every(function (id, index) {
-        return route.path[index] == id
-    })
+    var pulse = !this.election &&
+                this.promise.quorum.length == route.path.length &&
+                this.promise.quorum.every(function (id, index) {
+                    return route.path[index] == id
+                })
 
     // pongs get trapped in a prospective leader when a promise is rejected, so
     // we need to see if we're actually sending a message that expects a
