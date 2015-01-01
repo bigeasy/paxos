@@ -328,7 +328,7 @@ Legislator.prototype.sent = function (route, sent, received) {
     var route = this.routeOf(route.path), types = {}
 
     route.sending = false
-    route.retry--
+    if (route.retry) route.retry--
 
     var pulse = !this.election &&
                 this.promise.quorum.length == route.path.length &&
@@ -369,8 +369,6 @@ Legislator.prototype.sent = function (route, sent, received) {
                 this.whenElect()
             }
         } else if (this.election) {
-            route.retry = this.retry // <- should?
-            route.sleep = this.clock()
             this.pinged(false, route.path[1])
         } else if (route.retry) {
             var schedule = this.schedule({ type: 'ping', id: route.path[1], delay: this.sleep })

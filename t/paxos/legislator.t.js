@@ -366,6 +366,7 @@ function prove (assert) {
         })
     })
     */
+    network.machines[0].legislator.resend()
     time++
     network.tick()
     network.machines[0].legislator.checkSchedule()
