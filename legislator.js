@@ -1137,7 +1137,7 @@ Legislator.prototype.decideNaturalize = function (entry) {
     elect = this.government.majority[0] == this.id
     elect = elect && this.parliament.length < this.parliamentSize()
     if (elect) {
-        this.whenElect()
+        this.elect(true)
     }
 }
 
