@@ -381,6 +381,17 @@ Legislator.prototype.sent = function (route, sent, received) {
     }
 }
 
+Legislator.prototype.resend = function () {
+    for (var key in this.routed) {
+        this.routed[key].retry = this.retry
+        this.routed[key].sleep = this.clock()
+    }
+    for (var key in this.unrouted) {
+        this.unrouted[key].retry = this.retry
+        this.unrouted[key].sleep = this.clock()
+    }
+}
+
 Legislator.prototype.forwards = function (path, index) {
     var route = this.routeOf(path)
     var envelopes = []
@@ -465,7 +476,6 @@ Legislator.prototype.bootstrap = function () {
     }
     this.citizens = [ this.id ]
     this.newGovernment([ this.id ], government)
-    this.prepare()
     this.log.remove(this.log.min())
 }
 
@@ -974,50 +984,65 @@ Legislator.prototype.receiveFailed = function (envelope, message) {
 Legislator.prototype.receivePong = function (envelope, message) {
     this.greatest[envelope.from] = message.greatest
     var successful = Id.compare(this.log.min().id, message.greatest.uniform) < 0
-    assert(successful, 'cannot catch up ping')
+    if (!successful) {
+        assert(successful, 'cannot catch up ping')
+    }
     this.pinged(true, envelope.from)
 }
 
 Legislator.prototype.pinged = function (reachable, from) {
-    var election = this.election
+    var election = this.election, parliament, quorum, minority, majority
     if (election && !~election.receipts.indexOf(from)) {
         election.receipts.push(from)
         if (reachable) {
-            var quorum
-            quorum = ~this.parliament.indexOf(from)
-            quorum = quorum && election.quorum.length < election.quorumSize
-            if (quorum) {
-                election.quorum.push(from)
-                election.majority.push(from)
-            } else if (election.minority.length < election.minoritySize) {
-                election.minority.push(from)
+            if (~this.parliament.indexOf(from)) {
+                election.parliament.push(from)
             } else {
-                election.reachable.push(from)
+                election.constituents.push(from)
             }
         }
-        var minority = election.minority.length == election.minoritySize
+        var legislators = election.quorum.length + election.parliament.length
+        var citizens = legislators + election.constituents.length
+        var quorum = election.quorumSize <= legislators
+        var parliament = election.parliamentSize <= citizens
         var complete = election.receipts.length == election.requests
-        var quorum = election.quorum.length == election.quorumSize
-        if (quorum && (minority || complete)) {
-            if (election.majority.length < election.majoritySize) {
-                if (election.reachable.length) {
-                    election.majority.push(election.reachable.shift())
-                    election.quorum = election.majority.slice()
-                } else if (election.minority.length) {
-                    election.majority.push(election.minority.shift())
-                    election.quorum = election.majority.slice()
-                } else {
-                    throw new Error
+        if (quorum && (parliament || complete)) {
+            var candidates = election.parliament.concat(election.constituents)
+            for (var i = 0; election.quorum.length < election.quorumSize; i++) {
+                election.quorum.push(candidates[i])
+            }
+            if (!parliament) {
+                // if we have the quorum, but we do not have the parliament, we
+                // form a government of quorum size, shrink the government.
+                election.majoritySize = Math.ceil(election.quorumSize / 2)
+                election.minoritySize = election.quorumSize - election.majoritySize
+                while (election.majority.length < election.majoritySize) {
+                    election.majority.push(candidates.shift())
+                }
+                while (election.minority.length < election.minoritySize) {
+                    election.minority.push(candidates.shift())
+                }
+            } else {
+                while (election.majority.length < election.majoritySize) {
+                    var candidate = candidates.shift()
+                    election.majority.push(candidate)
+                    if (election.quorum.length < election.majority.length) {
+                        election.quorum.push(candidate)
+                    }
+                }
+                while (election.minority.length < election.minoritySize) {
+                    election.minority.push(candidates.shift())
                 }
             }
+            delete this.election
             this.newGovernment(election.quorum, {
                 majority: election.majority, minority: election.minority
             }, election.remap)
-            delete this.election
         } else if (complete) {
             this.schedule({ type: 'elect', id: this.id, delay: this.sleep })
         }
     }
+
 }
 
 Legislator.prototype.propagation = function () {
@@ -1034,9 +1059,7 @@ Legislator.prototype.propagation = function () {
             this.constituency = this.government.minority.filter(function (id, i) {
                 return i % length == index
             })
-            if (this.government.minority.length == 0) {
-                push.apply(this.constituency, this.constituents)
-            }
+            assert(this.government.minority.length != 0, 'no minority')
         } else {
             var index = this.government.minority.indexOf(this.id)
             if (~index) {
@@ -1047,6 +1070,7 @@ Legislator.prototype.propagation = function () {
             }
         }
     }
+    assert(!this.constituency.length || this.constituency[0] != null)
     this.events.what = {}
     this.events.when.clear()
     if (~this.government.majority.indexOf(this.id)) {
@@ -1078,12 +1102,20 @@ Legislator.prototype.propagation = function () {
 
 Legislator.prototype.decideConvene = function (entry) {
     delete this.election
+
     var min = this.log.min()
     var terminus = this.log.find({ id: entry.value.terminus })
+
     assert(min.id == entry.id || (terminus && terminus.learns.length > 0))
     assert(Id.compare(this.government.id, entry.id) < 0, 'governments out of order')
+
+    // when we vote to shrink the government, the initial vote has a greater
+    // quorum than the resulting government.
+    this.promise.quorum = entry.value.government.majority
+
     this.government = entry.value.government
     this.government.id = entry.id
+
     this.propagation()
 }
 
@@ -1110,11 +1142,8 @@ Legislator.prototype.decideNaturalize = function (entry) {
 
 Legislator.prototype.parliamentSize = function () {
     var parliamentSize = Math.min(this.citizens.length, this.idealGovernmentSize)
-    if (parliamentSize > 3 && parliamentSize % 2 == 0) {
-        parliamentSize--
-    }
     if (parliamentSize % 2 == 0) {
-        parliamentSize++
+        parliamentSize--
     }
     return parliamentSize
 }
@@ -1143,6 +1172,7 @@ Legislator.prototype.elect = function (remap) {
         var minoritySize = parliamentSize - majoritySize
         this.election = {
             remap: remap,
+            parliamentSize: parliamentSize,
             quorum: [ this.id ],
             quorumSize: this.government.majority.length,
             majority: [ this.id ],
@@ -1151,7 +1181,9 @@ Legislator.prototype.elect = function (remap) {
             minoritySize: minoritySize,
             reachable: [],
             receipts: receipts,
-            requests: this.citizens.length
+            requests: this.citizens.length,
+            parliament: [],
+            constituents: []
         }
         this.citizens.filter(function (id) {
             return id != this.id && id != this.government.majority[0]

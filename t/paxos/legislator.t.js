@@ -1,12 +1,12 @@
 
-require('proof')(69, prove)
+require('proof')(71, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
         Network = require('../../synchronous/network'),
         Machine = require('../../synchronous/machine')
 
-    var time = 0
+    var time = 0, gremlin
 
     var options = {
         clock: function () { return time },
@@ -60,31 +60,58 @@ function prove (assert) {
     network.tick()
 
     assert(legislators[0].government, {
-        majority: [ '0', '1' ],
+        majority: [ '0' ],
         minority: [],
-        constituents: [],
-        id: '2/0'
-    }, 'grow')
+        constituents: [ '1' ],
+        id: '1/0'
+    }, 'leader and constituent pair')
 
     network.machines.push(new Machine(network, new Legislator('2', options)))
     network.machines[2].legislator.inject(network.machines[0].legislator.extract('forward', 20).entries)
     network.machines[2].legislator.initialize()
     network.machines[0].legislator.naturalize('2')
+    network.machines[0].legislator.resend() // test of resend for coverage
     network.tick()
 
     assert(network.machines[1].legislator.government, {
         majority: [ '0', '1' ],
         minority: [ '2' ],
         constituents: [],
-        id: '3/0'
+        id: '2/0'
     }, 'three member parliament')
 
     assert(network.machines[2].legislator.government, {
         majority: [ '0', '1' ],
         minority: [ '2' ],
         constituents: [],
-        id: '3/0'
+        id: '2/0'
     }, 'minority learning')
+
+    // todo: is when necessary?
+    gremlin = network.addGremlin(function (when, route, index) {
+        return route.path[index] == '2'
+    })
+    network.machines[0].legislator.reelection()
+    network.tick()
+    network.removeGremlin(gremlin)
+
+    assert(network.machines[1].legislator.government, {
+        majority: [ '0' ],
+        minority: [],
+        constituents: [ '1', '2' ],
+        id: '3/0'
+    }, 'shrink parliament from 3 to 1')
+
+    network.machines[0].legislator.resend()
+    network.machines[0].legislator.reelection()
+    network.tick()
+
+    assert(network.machines[1].legislator.government, {
+        majority: [ '0', '1' ],
+        minority: [ '2' ],
+        constituents: [],
+        id: '4/0'
+    }, 'regrow')
 
     network.machines.push(new Machine(network, new Legislator('3', options)))
     network.machines[3].legislator.inject(network.machines[0].legislator.extract('backward', 20).entries)
@@ -98,11 +125,11 @@ function prove (assert) {
         majority: [ '0', '1' ],
         minority: [ '2' ],
         constituents: [ '3' ],
-        id: '3/0'
+        id: '4/0'
     }, 'citizen learning')
 
     assert(network.machines[2].legislator.log.max(), {
-        id: '3/1',
+        id: '4/1',
         accepts: [],
         learns: [ '1', '0' ],
         quorum: [ '0', '1' ],
@@ -121,7 +148,7 @@ function prove (assert) {
         majority: [ '1', '2' ],
         minority: [ '3' ],
         constituents: [ '0' ],
-        id: '4/0'
+        id: '5/0'
     }, 'election')
 
     var post = network.machines[1].legislator.post({ greeting: 'Hello, World!' })
@@ -145,7 +172,7 @@ function prove (assert) {
     network.removeGremlin(gremlin)
 
     assert(network.machines[1].legislator.log.max(), {
-        id: '4/2',
+        id: '5/2',
         accepts: [ '1' ],
         learns: [],
         quorum: [ '1', '2' ],
@@ -159,7 +186,7 @@ function prove (assert) {
     network.tick()
 
     assert(network.machines[1].legislator.log.max(), {
-        id: '5/0',
+        id: '6/0',
         accepts: [],
         learns: [ '3', '2' ],
         quorum: [ '2', '3' ],
@@ -169,8 +196,8 @@ function prove (assert) {
                 majority: [ '2', '3' ],
                 minority: [ '0' ],
                 constituents: [ '1' ],
-                id: '5/0'
-            }, terminus: '4/2'
+                id: '6/0'
+            }, terminus: '5/2'
         },
         internal: true,
         learned: true,
@@ -182,12 +209,12 @@ function prove (assert) {
     network.machines[2].legislator.post({ value: 2 })
     network.machines[2].legislator.post({ value: 3 })
 
-    assert(network.machines[2].legislator.log.max().id, '5/1', 'rounds started')
+    assert(network.machines[2].legislator.log.max().id, '6/1', 'rounds started')
     assert(network.machines[2].legislator.proposals.length, 2, 'queued')
 
     network.tick()
 
-    assert(network.machines[2].legislator.log.max().id, '5/3', 'rounds complete')
+    assert(network.machines[2].legislator.log.max().id, '6/3', 'rounds complete')
     assert(network.machines[2].legislator.proposals.length, 0, 'queued')
 
     network.tick()
@@ -207,14 +234,14 @@ function prove (assert) {
         majority: [ '2', '0' ],
         minority: [ '1' ],
         constituents: [ '3' ],
-        id: '6/0'
+        id: '7/0'
     }, 'race resolved')
 
     assert(network.machines[3].legislator.government, {
         majority: [ '2', '0' ],
         minority: [ '1' ],
         constituents: [ '3' ],
-        id: '6/0'
+        id: '7/0'
     }, 'race resolved, old majority member learned')
 
     network.machines[1].legislator.whenElect()
@@ -224,7 +251,7 @@ function prove (assert) {
         majority: [ '2', '0' ],
         minority: [ '1' ],
         constituents: [ '3' ],
-        id: '6/0'
+        id: '7/0'
     }, 'no election, nothing stale')
 
     network.machines[1].legislator.whenElect()
@@ -234,7 +261,7 @@ function prove (assert) {
         majority: [ '2', '0' ],
         minority: [ '1' ],
         constituents: [ '3' ],
-        id: '6/0'
+        id: '7/0'
     }, 'no election, not in majority')
 
     time++
@@ -251,7 +278,7 @@ function prove (assert) {
         majority: [ '2', '0' ],
         minority: [ '1' ],
         constituents: [ '3' ],
-        id: '6/0'
+        id: '7/0'
     }, 'leader isolated')
 
     network.machines[0].legislator.post({ value: 1 })
@@ -261,7 +288,7 @@ function prove (assert) {
         majority: [ '0', '1' ],
         minority: [ '3' ],
         constituents: [ '2' ],
-        id: '7/0'
+        id: '8/0'
     }, 'leader updated on pulse')
 
     network.machines[0].legislator.newGovernment([ '0', '1'], {
@@ -355,7 +382,7 @@ function prove (assert) {
         majority: [ '1', '2' ],
         minority: [ '3' ],
         constituents: [ '0' ],
-        id: 'a/0'
+        id: 'b/0'
     }, 'reject election')
 
     assert(network.machines[0].legislator.post({ value: 1 }).posted, 'leader isolated')
@@ -364,7 +391,7 @@ function prove (assert) {
         majority: [ '1', '2' ],
         minority: [ '3' ],
         constituents: [ '0' ],
-        id: 'a/0'
+        id: 'b/0'
     }, 'previous leader rejected, learned election')
 
     var gremlin = network.addGremlin(function (when, route, index, envelopes) {
@@ -379,7 +406,7 @@ function prove (assert) {
         majority: [ '2', '3' ],
         minority: [ '0' ],
         constituents: [ '1' ],
-        id: 'b/0'
+        id: 'c/0'
     }, 'promised election')
 
     network.machines[1].legislator.whenElect()
@@ -389,7 +416,7 @@ function prove (assert) {
         majority: [ '2', '3' ],
         minority: [ '0' ],
         constituents: [ '1' ],
-        id: 'b/0'
+        id: 'c/0'
     }, 'previous leader informed of promise, learned election')
 
     var gremlin = network.addGremlin(function (when, route, index, envelopes) {
@@ -409,7 +436,7 @@ function prove (assert) {
         majority: [ '3', '0' ],
         minority: [ '1' ],
         constituents: [ '2' ],
-        id: 'e/0'
+        id: 'f/0'
     }, 'promised greater than election')
 
     network.machines[2].legislator.whenElect()
@@ -419,7 +446,7 @@ function prove (assert) {
         majority: [ '3', '0' ],
         minority: [ '1' ],
         constituents: [ '2' ],
-        id: 'e/0'
+        id: 'f/0'
     }, 'previous leader informed of promise greater than, learned election')
 
     var gremlin = network.addGremlin(function (when, route, index, envelopes) {
@@ -441,7 +468,7 @@ function prove (assert) {
         majority: [ '3', '0' ],
         minority: [ '1' ],
         constituents: [ '2' ],
-        id: '10/0'
+        id: '11/0'
     }, 'retried election because member out of sync')
 
     var gremlin = network.addGremlin(function (when, route, index, envelopes) {
@@ -459,7 +486,7 @@ function prove (assert) {
         majority: [ '3', '0' ],
         minority: [ '1' ],
         constituents: [ '2' ],
-        id: '12/0'
+        id: '13/0'
     }, 'retired election')
 
     network.machines[3].legislator.post({ value: 1 })
@@ -471,18 +498,18 @@ function prove (assert) {
     network.machines[3].legislator.post({ value: 6 })
 
     network.tick()
-    assert(network.machines[3].legislator.log.find({ id: '13/0' }).value,
+    assert(network.machines[3].legislator.log.find({ id: '14/0' }).value,
     { type: 'convene',
       government:
        { majority: [ '3', '0' ],
          minority: [ '1' ],
          constituents: [ '2' ],
-         id: '13/0' },
-      terminus: '12/4',
+         id: '14/0' },
+      terminus: '13/4',
       map:
-       [ { was: '12/5', is: '13/1' },
-         { was: '12/6', is: '13/2' },
-         { was: '12/7', is: '13/3' } ] }, 'remapped')
+       [ { was: '13/5', is: '14/1' },
+         { was: '13/6', is: '14/2' },
+         { was: '13/7', is: '14/3' } ] }, 'remapped')
 
     var gremlin = network.addGremlin(function (when, route, index, envelopes) {
         return envelopes.some(function (envelope) {
@@ -508,17 +535,17 @@ function prove (assert) {
        { majority: [ '3', '0' ],
          minority: [ '1' ],
          constituents: [ '2' ],
-         id: '14/0' },
-      terminus: '13/6' }, 'not remapped')
+         id: '15/0' },
+      terminus: '14/6' }, 'not remapped')
 
     // extract, inject and shift.
     var extract
     extract = network.machines[0].legislator.extract('forward')
     assert(extract.next, '1/0', 'extract next')
-    assert(network.machines[0].legislator.count, 68, 'entry count')
+    assert(network.machines[0].legislator.count, 71, 'entry count')
 
-    assert(network.machines[0].legislator.shift(), 2, 'shift')
-    assert(network.machines[0].legislator.count, 66, 'entry count after shift')
+    assert(network.machines[0].legislator.shift(), 3, 'shift')
+    assert(network.machines[0].legislator.count, 68, 'entry count after shift')
     extract = network.machines[0].legislator.extract('forward')
     assert(extract.next, '2/0', 'extract next after shift')
 
@@ -532,7 +559,11 @@ function prove (assert) {
         network.machines[4].legislator.inject(extract.entries)
     } while (extract.next)
     network.machines[4].legislator.initialize()
-    assert(network.machines[4].legislator.count, 66, 'entry count after complete copy')
+    assert(network.machines[4].legislator.count, 68, 'entry count after complete copy')
     while (network.machines[0].legislator.shift() != 0) {}
     assert(network.machines[0].legislator.count, 1, 'entry count after shift everything')
+
+    network.machines[3].legislator.naturalize('4')
+    network.tick()
+    console.log(network.machines[3].legislator.government)
 }
