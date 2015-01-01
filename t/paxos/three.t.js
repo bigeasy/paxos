@@ -53,6 +53,8 @@ function prove (assert) {
     }, 'bootstrap')
 
     network.machines.push(new Machine(network, new Legislator('1', options)))
+    network.machines[1].legislator.inject(network.machines[0].legislator.extract('forward', 20).entries)
+    network.machines[1].legislator.initialize()
 
     assert(network.machines[0].legislator.naturalize('1').posted, 'naturalize')
     network.tick()
@@ -65,6 +67,8 @@ function prove (assert) {
     }, 'grow')
 
     network.machines.push(new Machine(network, new Legislator('2', options)))
+    network.machines[2].legislator.inject(network.machines[0].legislator.extract('forward', 20).entries)
+    network.machines[2].legislator.initialize()
     network.machines[0].legislator.naturalize('2')
     network.tick()
 
@@ -83,6 +87,8 @@ function prove (assert) {
     }, 'minority learning')
 
     network.machines.push(new Machine(network, new Legislator('3', options)))
+    network.machines[3].legislator.inject(network.machines[0].legislator.extract('forward', 20).entries)
+    network.machines[3].legislator.initialize()
     network.machines[0].legislator.naturalize('3')
     network.tick()
 

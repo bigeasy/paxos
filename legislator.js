@@ -73,27 +73,12 @@ function Legislator (id, options) {
 
     this.government = { id: '0/0', minority: [], majority: [] }
     this.citizens = []
-    this.greatest = {}
-    this.greatest[id] = {
-        learned: '0/1',
-        decided: '0/1',
-        uniform: '0/1'
-    }
 
     this.ticks = {}
     this.retry = options.retry || 2
     this.sleep = options.sleep || [ 1, 1 ]
     this.funnel = {}
 
-    var entry = this.entry('0/1', {
-        id: '0/1',
-        value: 0,
-        quorum: [ id ]
-    })
-    entry.learns = [ id ]
-    entry.learned = true
-    entry.decided = true
-    entry.uniform = true
 
     this.propagation()
 }
@@ -220,6 +205,63 @@ Legislator.prototype.dispatch = function (options) {
         route = this.routeOf(route)
         push.apply(route.envelopes, this.stuff(from, to, route.id, message))
     }
+}
+
+Legislator.prototype.extract = function (direction, count, id) {
+    var most = direction == 'forward' ? 'min' : 'max'
+    var next = direction == 'forward' ? 'next' : 'prev'
+    var entries = [], entry, iterator, next
+    id || (id = this.log[most]().id)
+    iterator = this.log.findIter({ id: id })
+    if (!iterator) {
+        return { found: false }
+    }
+    entry = iterator.data(), id = entry.id
+    for (entry = iterator.data(); entry; entry = iterator[next]()) {
+        if (!entry.uniform) continue // not wasteful, it will be the leader that syncs
+        if (Id.compare(entry.id, id, 0) != 0) break
+        if (!count--) break
+        entries.push({
+            id: entry.id,
+            quorum: entry.quorum,
+            internal: entry.internal,
+            value: entry.value
+        })
+    }
+    next = entry && entry.id
+    return {
+        found: true,
+        entries: entries,
+        next: next
+    }
+}
+
+Legislator.prototype.inject = function (entries) {
+    entries.forEach(function (entry) {
+        this.log.insert({
+            id: entry.id,
+            quorum: entry.quorum.slice(),
+            learns: entry.quorum.slice(),
+            internal: entry.internal,
+            value: entry.value,
+            learned: true,
+            decided: true
+        })
+    }, this)
+}
+
+Legislator.prototype.initialize = function () {
+    var min = this.log.min()
+    this.greatest = {}
+    this.greatest[this.id] = {
+        learned: min.id,
+        decided: min.id,
+        uniform: min.id
+    }
+    this.markUniform(min)
+    assert(Id.isGovernment(min.id), 'min not government')
+    this.playUniform()
+    assert(this.greatestOf(this.id).uniform == this.log.max().id)
 }
 
 Legislator.prototype.outbox = function () {
@@ -384,6 +426,20 @@ Legislator.prototype.inbox = function (route, envelopes) {
 }
 
 Legislator.prototype.bootstrap = function () {
+    var entry = this.entry('0/1', {
+        id: '0/1',
+        value: 0,
+        quorum: [ this.id ]
+    })
+    entry.learns = [ this.id ]
+    entry.learned = true
+    entry.uniform = true
+    this.greatest = {}
+    this.greatest[this.id] = {
+        learned: '0/1',
+        decided: '0/1',
+        uniform: '0/1'
+    }
     var government = {
         majority: [ this.id ],
         minority: []
@@ -391,6 +447,7 @@ Legislator.prototype.bootstrap = function () {
     this.citizens = [ this.id ]
     this.newGovernment([ this.id ], government)
     this.prepare()
+    this.log.remove(this.log.min())
 }
 
 Legislator.prototype.prepare = function () {
@@ -897,6 +954,8 @@ Legislator.prototype.receiveFailed = function (envelope, message) {
 
 Legislator.prototype.receivePong = function (envelope, message) {
     this.greatest[envelope.from] = message.greatest
+    var successful = Id.compare(this.log.min().id, message.greatest.uniform) < 0
+    assert(successful, 'cannot catch up ping')
     this.pinged(true, envelope.from)
 }
 
@@ -1000,9 +1059,9 @@ Legislator.prototype.propagation = function () {
 
 Legislator.prototype.decideConvene = function (entry) {
     delete this.election
+    var min = this.log.min()
     var terminus = this.log.find({ id: entry.value.terminus })
-    assert(terminus)
-    assert(terminus.learns.length > 0)
+    assert(min.id == entry.id || (terminus && terminus.learns.length > 0))
     assert(Id.compare(this.government.id, entry.id) < 0, 'governments out of order')
     this.government = entry.value.government
     this.government.id = entry.id
