@@ -311,17 +311,6 @@ Legislator.prototype.sent = function (route, sent, received) {
     }
 }
 
-Legislator.prototype.resend = function () {
-    for (var key in this.routed) {
-        this.routed[key].retry = this.retry
-        this.routed[key].sleep = this.clock()
-    }
-    for (var key in this.unrouted) {
-        this.unrouted[key].retry = this.retry
-        this.unrouted[key].sleep = this.clock()
-    }
-}
-
 Legislator.prototype.forwards = function (path, index) {
     var route = this.routeOf(path)
     var envelopes = []
