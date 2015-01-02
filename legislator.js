@@ -364,9 +364,10 @@ Legislator.prototype.returns = function (path, index) {
 Legislator.prototype.inbox = function (route, envelopes) {
     assert(route.id != '-', 'no route id')
     var route = this.routeOf(route.path)
-    var pulse = this.government.majority.every(function (id, index) {
-        return route.path[index] == id
-    })
+    var pulse = this.government.majority.length == route.path.length
+             && this.government.majority.every(function (id, index) {
+                    return route.path[index] == id
+                })
     if (pulse) {
         this.schedule({ type: 'elect', id: this.id, delay: this.timeout })
     }
