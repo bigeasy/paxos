@@ -40,6 +40,14 @@ Network.prototype.post = function (route, index, envelopes) {
     return returns
 }
 
+Network.prototype.schedule = function () {
+    var scheduled = false
+    this.machines.forEach(function (machine) {
+        scheduled = machine.legislator.checkSchedule() || scheduled
+    })
+    return scheduled
+}
+
 Network.prototype.tick = function () {
     var ticked, looped = true
     while (looped) {

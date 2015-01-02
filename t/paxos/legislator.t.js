@@ -10,11 +10,11 @@ function prove (assert) {
 
     var options = {
         clock: function () { return time },
-        timeout: 1,
         size: 5,
         filter: logger,
-        sleep: [ 1, 1 ],
-        retry: 2
+        ping: [ 1, 1 ],
+        timeout: [ 1, 1 ],
+        retry: 5
     }
 
     var count = 0
@@ -70,7 +70,6 @@ function prove (assert) {
     network.machines[2].legislator.inject(network.machines[0].legislator.extract('forward', 20).entries)
     network.machines[2].legislator.initialize()
     network.machines[0].legislator.naturalize('2')
-    network.machines[0].legislator.resend() // test of resend for coverage
     network.tick()
 
     assert(network.machines[1].legislator.government, {
@@ -102,7 +101,9 @@ function prove (assert) {
         id: '3/0'
     }, 'shrink parliament from 3 to 1')
 
-    network.machines[0].legislator.resend()
+    time++
+    network.schedule()
+    network.tick()
     network.machines[0].legislator.reelection()
     network.tick()
 
@@ -140,6 +141,7 @@ function prove (assert) {
         uniform: true
     }, 'citizen naturalized')
 
+    time++
     time++
     network.machines[1].legislator.whenElect()
     network.tick()
@@ -333,12 +335,12 @@ function prove (assert) {
 
     assert(network.machines[3].legislator.checkSchedule(), 'retry scheduled')
     var routes = network.machines[3].legislator.outbox()
+    if (routes.length > 1) throw new Error
     assert(routes[0].id, '3 -> 2', 'retry route')
     var forwards = network.machines[3].legislator.forwards(routes[0].path, 0)
+    var returns = network.post(routes[0], 1, forwards)
     assert(forwards[0].message.type, 'ping', 'retry message')
-    routes.forEach(function (route) {
-        network.machines[3].legislator.sent(route, forwards, [])
-    })
+    network.machines[3].legislator.sent(routes[0], forwards, returns)
 
     assert(network.machines[3].legislator.outbox().length, 0, 'retry done')
 
@@ -564,7 +566,6 @@ function prove (assert) {
     while (network.machines[0].legislator.shift() != 0) {}
     assert(network.machines[0].legislator.count, 1, 'entry count after shift everything')
 
-    network.machines[3].legislator.resend()
     network.machines[3].legislator.naturalize('4')
     network.tick()
     assert(network.machines[3].legislator.government, {
@@ -581,7 +582,6 @@ function prove (assert) {
     network.tick()
 
     network.removeGremlin(gremlin)
-    network.machines.forEach(function (machine) { machine.legislator.resend() })
 
     assert(network.machines[3].legislator.government, {
         majority: [ '3', '0' ],

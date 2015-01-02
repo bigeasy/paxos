@@ -53,7 +53,6 @@ function Legislator (id, options) {
 
     this.id = id
     this.idealGovernmentSize = options.size || 5
-    this.timeout = options.timeout ? [ options.timeout, options.timeout ] : [ 5000, 5000 ]
 
     this.filter = options.filter || function (envelopes) { return [ envelopes ] }
     this.clock = options.clock || function () { return Date.now() }
@@ -77,7 +76,8 @@ function Legislator (id, options) {
 
     this.ticks = {}
     this.retry = options.retry || 2
-    this.sleep = options.sleep || [ 1, 1 ]
+    this.ping = options.ping || [ 1, 1 ]
+    this.timeout = options.timeout || [ 1, 1 ]
     this.funnel = {}
 
 
@@ -286,22 +286,26 @@ Legislator.prototype.sent = function (route, sent, received) {
     if (!expecting || route.path.slice(1).every(function (id) { return seen[id] })) {
         route.retry = this.retry
         route.sleep = this.clock()
-        this.schedule({ type: 'ping', id: pulse ? this.id : route.path[1], delay: this.timeout })
+        this.schedule({ type: 'ping', id: pulse ? this.id : route.path[1], delay: this.ping })
     } else {
         if (pulse) {
             delete this.log.max().working
             if (wasGovernment) {
-                this.schedule({ type: 'elect', id: this.id, delay: this.sleep })
+                this.schedule({ type: 'elect', id: this.id, delay: this.timeout })
             } else {
                 this.whenElect()
             }
-        } else if (this.election) {
-            this.pinged(false, route.path[1])
-        } else if (route.retry) {
-            var schedule = this.schedule({ type: 'ping', id: route.path[1], delay: this.sleep })
-            route.sleep = schedule.when
         } else {
-            this.funnel[route.path[1]] = { type: 'failed' }
+            if (route.retry) {
+                var schedule = this.schedule({ type: 'ping', id: route.path[1], delay: this.ping })
+                route.sleep = schedule.when
+            } else {
+                throw new Error
+                //this.funnel[route.path[1]] = { type: 'failed' }
+            }
+            if (this.election) {
+                this.pinged(false, route.path[1])
+            }
         }
     }
 }
@@ -631,7 +635,7 @@ Legislator.prototype.receivePromised = function (envelope, message) {
         this.lastPromisedId = message.promise
     }
     if (Id.compare(this.greatestOf(envelope.from).uniform, this.greatestOf(this.id).uniform) == 0) {
-        this.schedule({ type: 'elect', id: this.id, delay: this.sleep })
+        this.schedule({ type: 'elect', id: this.id, delay: this.timeout })
     } else {
         this.whenElect()
     }
@@ -1035,7 +1039,7 @@ Legislator.prototype.pinged = function (reachable, from) {
                 majority: election.majority, minority: election.minority
             }, election.remap)
         } else if (complete) {
-            this.schedule({ type: 'elect', id: this.id, delay: this.sleep })
+            this.schedule({ type: 'elect', id: this.id, delay: this.timeout })
         }
     }
 
