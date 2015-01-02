@@ -1,5 +1,5 @@
 
-require('proof')(78, prove)
+require('proof')(80, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -643,4 +643,38 @@ function prove (assert) {
     assert(network.machines.every(function (machine) {
         return Object.keys(machine.legislator.failed).length == 0
     }), 'failures learned')
+
+    network.machines[1].legislator.immigrate('1')
+    network.machines[3].legislator.naturalize('1')
+    network.machines[4].legislator.immigrate('4')
+    network.machines[3].legislator.naturalize('4')
+    network.tick()
+
+    assert(network.machines[3].legislator.government, {
+        majority: [ '3', '0', '2' ],
+        minority: [ '1', '4' ],
+        constituents: [],
+        id: '1c/0'
+    }, 'renaturalize')
+
+    network.machines[3].legislator.emigrate('3')
+    network.tick()
+
+    assert(network.machines[0].legislator.government, {
+        majority: [ '0', '2' ],
+        minority: [ '1' ],
+        constituents: [ '4' ],
+        id: '1d/0'
+    }, 'leader emigrate')
+
+    return
+    network.machines[0].legislator.emigrate('2')
+    network.tick()
+
+    assert(network.machines[0].legislator.government, {
+        majority: [ '0', 'x' ],
+        minority: [ '1' ],
+        constituents: [ '4' ],
+        id: '1d/0'
+    }, 'majority emigrate')
 }
