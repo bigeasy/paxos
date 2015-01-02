@@ -255,7 +255,8 @@ Legislator.prototype.sent = function (route, sent, received) {
     var route = this.routeOf(route.path), types = {}
 
     route.sending = false
-    if (route.retry) route.retry--
+    assert(route.retry, 'retrying failed route')
+    route.retry--
 
     var pulse = !this.election &&
                 this.promise.quorum.length == route.path.length &&
