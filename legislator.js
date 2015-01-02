@@ -212,7 +212,7 @@ Legislator.prototype.outbox = function () {
 
     if (this.promise.quorum[0] == this.id) {
         var route = this.routeOf(this.promise.quorum)
-        if (route.envelopes.length && !route.sending && route.retry && route.sleep <= this.clock()) {
+        if (route.envelopes.length && !route.sending) {
             route.sending = true
             route.retry = this.retry
             routes.push({ id: route.id, path: route.path })
