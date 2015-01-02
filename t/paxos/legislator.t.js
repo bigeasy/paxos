@@ -365,6 +365,7 @@ function prove (assert) {
     network.tick()
     network.machines[0].legislator.checkSchedule()
     network.tick()
+
     var gremlin = network.addGremlin(function (when, route, index, envelopes) {
         return route.path[index] == '0'
     })
@@ -419,7 +420,6 @@ function prove (assert) {
     })
     time++
     assert(network.machines[3].legislator.checkSchedule(), 'schedule election to test promised greater than')
-    network.machines[3].legislator.whenElect()
     network.tick()
     network.machines[3].legislator.whenElect()
     network.tick()

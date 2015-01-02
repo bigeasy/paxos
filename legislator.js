@@ -105,19 +105,9 @@ Legislator.prototype.greatestOf = function (id) {
 }
 
 Legislator.prototype.schedule = function (event) {
+    this.unschedule(event.id)
+
     event.when = this.clock() + random.apply(null, event.delay)
-    var scheduled = this.events.what[event.id]
-
-    if (scheduled) {
-        var date = this.events.when.find({ when: scheduled.when })
-        var index = date.events.indexOf(scheduled)
-        assert(~index, 'cannot find scheduled event')
-        date.events.splice(index, 1)
-        if (date.events.length == 0) {
-            this.events.when.remove(date)
-        }
-    }
-
     var date = this.events.when.find({ when: event.when })
     if (date == null) {
         date = { when: event.when, events: [] }
@@ -127,6 +117,20 @@ Legislator.prototype.schedule = function (event) {
     this.events.what[event.id] = event
 
     return event
+}
+
+Legislator.prototype.unschedule = function (id) {
+    var scheduled = this.events.what[id]
+    if (scheduled) {
+        delete this.events.what[id]
+        var date = this.events.when.find({ when: scheduled.when })
+        var index = date.events.indexOf(scheduled)
+        assert(~index, 'cannot find scheduled event')
+        date.events.splice(index, 1)
+        if (date.events.length == 0) {
+            this.events.when.remove(date)
+        }
+    }
 }
 
 Legislator.prototype.checkSchedule = function () {
@@ -293,6 +297,7 @@ Legislator.prototype.sent = function (route, sent, received) {
             if (wasGovernment) {
                 this.schedule({ type: 'elect', id: this.id, delay: this.timeout })
             } else {
+                this.unschedule(this.id)
                 this.whenElect()
             }
         } else {
@@ -365,7 +370,7 @@ Legislator.prototype.inbox = function (route, envelopes) {
              && this.government.majority.every(function (id, index) {
                     return route.path[index] == id
                 })
-    if (pulse) {
+    if (pulse && !this.election) {
         this.schedule({ type: 'elect', id: this.id, delay: this.timeout })
     }
     envelopes.forEach(function (envelope) {
@@ -1087,6 +1092,7 @@ Legislator.prototype.pinged = function (reachable, from) {
                 minority: election.minority
             }, election.remap)
         } else if (complete) {
+            delete this.election
             this.schedule({ type: 'elect', id: this.id, delay: this.timeout })
         }
     }
@@ -1242,6 +1248,7 @@ Legislator.prototype.whenElect = function () {
         assert(this.ticks[this.government.majority[0]] != null, 'null ticks')
         failed = !! this.election
         failed = failed || this.clock() - this.ticks[this.government.majority[0]] >= this.timeout[0]
+        failed = true
     }
     if (failed) {
         this.elect()
@@ -1262,6 +1269,13 @@ Legislator.prototype.candidates = function () {
 }
 
 Legislator.prototype.elect = function (remap) {
+    if (this.election) {
+        throw new Error
+        return
+    }
+    if (!~this.government.majority.indexOf(this.id)) {
+        return
+    }
     var receipts = [ this.id ]
     var candidates = this.candidates()
     var remap = remap && this.proposals.splice(0, this.proposals.length)
