@@ -208,79 +208,6 @@ Legislator.prototype.dispatch = function (options) {
     }
 }
 
-Legislator.prototype.extract = function (direction, count, id) {
-    var most = direction == 'forward' ? 'min' : 'max'
-    var next = direction == 'forward' ? 'next' : 'prev'
-    var entries = [], entry, iterator, next
-    id || (id = this.log[most]().id)
-    iterator = this.log.findIter({ id: id })
-    if (!iterator) {
-        return { found: false }
-    }
-    entry = iterator.data(), id = entry.id
-    for (entry = iterator.data(); entry; entry = iterator[next]()) {
-        if (!entry.uniform) continue // not wasteful, it will be the leader that syncs
-        if (Id.compare(entry.id, id, 0) != 0) break
-        if (!count--) break
-        entries.push({
-            id: entry.id,
-            quorum: entry.quorum,
-            internal: entry.internal,
-            value: JSON.parse(JSON.stringify(entry.value))
-        })
-    }
-    next = entry && entry.id
-    return {
-        found: true,
-        entries: entries,
-        next: next
-    }
-}
-
-Legislator.prototype.inject = function (entries) {
-    entries.forEach(function (entry) {
-        this.log.insert({
-            id: entry.id,
-            quorum: entry.quorum.slice(),
-            learns: entry.quorum.slice(),
-            internal: entry.internal,
-            value: entry.value,
-            learned: true,
-            decided: true
-        })
-    }, this)
-}
-
-Legislator.prototype.initialize = function () {
-    var min = this.log.min()
-    this.greatest = {}
-    this.greatest[this.id] = {
-        learned: min.id,
-        decided: min.id,
-        uniform: min.id
-    }
-    this.markUniform(min)
-    assert(Id.isGovernment(min.id), 'min not government')
-    this.playUniform()
-    assert(this.greatestOf(this.id).uniform == this.log.max().id)
-}
-
-Legislator.prototype.shift = function () {
-    var min = this.log.min(), max = this.log.max(), entry = min, removed = 0
-    if (Id.compare(min.id, max.id, 0) == 0) {
-        return removed
-    }
-    while (Id.compare(entry.id, min.id, 0) == 0) {
-        if (entry.uniform) {
-            removed++
-        }
-        this.log.remove(entry)
-        entry = this.log.min()
-    }
-    this.count -= removed
-    return removed
-}
-
 Legislator.prototype.outbox = function () {
     var routes = []
 
@@ -453,6 +380,26 @@ Legislator.prototype.inbox = function (route, envelopes) {
     }, this)
 }
 
+Legislator.prototype.entry = function (id, message) {
+    var entry = this.log.find({ id: id })
+    if (!entry) {
+        var entry = {
+            id: id,
+            accepts: [],
+            learns: [],
+            quorum: message.quorum,
+            value: message.value
+        }
+        this.log.insert(entry)
+    }
+    ([ 'value', 'internal' ]).forEach(function (key) {
+        if (entry[key] == null && message[key] != null) {
+            entry[key] = message[key]
+        }
+    })
+    return entry
+}
+
 Legislator.prototype.bootstrap = function () {
     var entry = this.entry('0/1', {
         id: '0/1',
@@ -475,6 +422,146 @@ Legislator.prototype.bootstrap = function () {
     this.citizens = [ this.id ]
     this.newGovernment([ this.id ], government)
     this.log.remove(this.log.min())
+}
+
+Legislator.prototype.extract = function (direction, count, id) {
+    var most = direction == 'forward' ? 'min' : 'max'
+    var next = direction == 'forward' ? 'next' : 'prev'
+    var entries = [], entry, iterator, next
+    id || (id = this.log[most]().id)
+    iterator = this.log.findIter({ id: id })
+    if (!iterator) {
+        return { found: false }
+    }
+    entry = iterator.data(), id = entry.id
+    for (entry = iterator.data(); entry; entry = iterator[next]()) {
+        if (!entry.uniform) continue // not wasteful, it will be the leader that syncs
+        if (Id.compare(entry.id, id, 0) != 0) break
+        if (!count--) break
+        entries.push({
+            id: entry.id,
+            quorum: entry.quorum,
+            internal: entry.internal,
+            value: JSON.parse(JSON.stringify(entry.value))
+        })
+    }
+    next = entry && entry.id
+    return {
+        found: true,
+        entries: entries,
+        next: next
+    }
+}
+
+Legislator.prototype.inject = function (entries) {
+    entries.forEach(function (entry) {
+        this.log.insert({
+            id: entry.id,
+            quorum: entry.quorum.slice(),
+            learns: entry.quorum.slice(),
+            internal: entry.internal,
+            value: entry.value,
+            learned: true,
+            decided: true
+        })
+    }, this)
+}
+
+Legislator.prototype.initialize = function () {
+    var min = this.log.min()
+    this.greatest = {}
+    this.greatest[this.id] = {
+        learned: min.id,
+        decided: min.id,
+        uniform: min.id
+    }
+    this.markUniform(min)
+    assert(Id.isGovernment(min.id), 'min not government')
+    this.playUniform()
+    assert(this.greatestOf(this.id).uniform == this.log.max().id)
+}
+
+Legislator.prototype.shift = function () {
+    var min = this.log.min(), max = this.log.max(), entry = min, removed = 0
+    if (Id.compare(min.id, max.id, 0) == 0) {
+        return removed
+    }
+    while (Id.compare(entry.id, min.id, 0) == 0) {
+        if (entry.uniform) {
+            removed++
+        }
+        this.log.remove(entry)
+        entry = this.log.min()
+    }
+    this.count -= removed
+    return removed
+}
+
+Legislator.prototype.nextProposalId = function (index) {
+    var entry = this.log.max(), id = entry.id, proposal
+    if (Id.compare(id, this.lastPromisedId) < 0) {
+        id = this.lastPromisedId
+    }
+    return this.lastPromisedId = Id.increment(id, index)
+}
+
+Legislator.prototype.newGovernment = function (quorum, government, remap) {
+    government.constituents = this.citizens.filter(function (id) {
+        return !~government.majority.indexOf(id)
+            && !~government.minority.indexOf(id)
+    })
+    var iterator = this.log.findIter(this.log.max()), current = iterator.data()
+    while (!current.learned) {
+        current = iterator.prev()
+    }
+    var proposal = {
+        id: this.nextProposalId(0),
+        quorum: quorum,
+        internal: true,
+        value: {
+            type: 'convene',
+            government: government,
+            terminus: current.id
+        }
+    }
+    if (remap) {
+        this.proposals = remap.map(function (proposal) {
+            proposal.was = proposal.id
+            proposal.id = this.nextProposalId(1)
+            return proposal
+        }.bind(this))
+        proposal.value.map = remap.map(function (proposal) {
+            return { was: proposal.was, is: proposal.id }
+        })
+    } else {
+        this.proposals.length = 0
+    }
+    var entry = this.entry(proposal.id, proposal)
+    entry.promises = []
+    entry.working = true
+    quorum.slice(1).forEach(function (id) {
+        this.dispatch({
+            from: id,
+            to: this.id,
+            message: {
+                type: 'synchronize',
+                count: 20,
+                greatest: this.greatestOf(id),
+                learned: true // <- ?
+            }
+        })
+        this.dispatch({
+            from: this.id,
+            to: id,
+            message: {
+                type: 'synchronize',
+                count: 20,
+                greatest: this.greatestOf(this.id),
+                learned: true
+            }
+        })
+    }, this)
+    this.prepare()
 }
 
 Legislator.prototype.prepare = function () {
@@ -547,93 +634,6 @@ Legislator.prototype.receivePromised = function (envelope, message) {
     } else {
         this.whenElect()
     }
-}
-
-Legislator.prototype.entry = function (id, message) {
-    var entry = this.log.find({ id: id })
-    if (!entry) {
-        var entry = {
-            id: id,
-            accepts: [],
-            learns: [],
-            quorum: message.quorum,
-            value: message.value
-        }
-        this.log.insert(entry)
-    }
-    ([ 'value', 'internal' ]).forEach(function (key) {
-        if (entry[key] == null && message[key] != null) {
-            entry[key] = message[key]
-        }
-    })
-    return entry
-}
-
-Legislator.prototype.nextProposalId = function (index) {
-    var entry = this.log.max(), id = entry.id, proposal
-    if (Id.compare(id, this.lastPromisedId) < 0) {
-        id = this.lastPromisedId
-    }
-    return this.lastPromisedId = Id.increment(id, index)
-}
-
-Legislator.prototype.newGovernment = function (quorum, government, remap) {
-    government.constituents = this.citizens.filter(function (id) {
-        return !~government.majority.indexOf(id)
-            && !~government.minority.indexOf(id)
-    })
-    var iterator = this.log.findIter(this.log.max()), current = iterator.data()
-    while (!current.learned) {
-        current = iterator.prev()
-    }
-    var proposal = {
-        id: this.nextProposalId(0),
-        quorum: quorum,
-        internal: true,
-        value: {
-            type: 'convene',
-            government: government,
-            terminus: current.id
-        }
-    }
-    if (remap) {
-        this.proposals = remap.map(function (proposal) {
-            proposal.was = proposal.id
-            proposal.id = this.nextProposalId(1)
-            return proposal
-        }.bind(this))
-        proposal.value.map = remap.map(function (proposal) {
-            return { was: proposal.was, is: proposal.id }
-        })
-    } else {
-        this.proposals.length = 0
-    }
-    var entry = this.entry(proposal.id, proposal)
-    entry.promises = []
-    entry.working = true
-    quorum.slice(1).forEach(function (id) {
-        this.dispatch({
-            from: id,
-            to: this.id,
-            message: {
-                type: 'synchronize',
-                count: 20,
-                greatest: this.greatestOf(id),
-                learned: true // <- ?
-            }
-        })
-        this.dispatch({
-            from: this.id,
-            to: id,
-            message: {
-                type: 'synchronize',
-                count: 20,
-                greatest: this.greatestOf(this.id),
-                learned: true
-            }
-        })
-    }, this)
-    this.prepare()
 }
 
 Legislator.prototype.post = function (value, internal) {
