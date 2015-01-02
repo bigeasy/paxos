@@ -593,7 +593,7 @@ Legislator.prototype.receivePrepare = function (envelope, message) {
                 quorum: message.quorum
             }
             this.dispatch({
-                route: envelope.from,
+                to: envelope.from,
                 message: {
                     type: 'promise',
                     promise: this.promise.id
