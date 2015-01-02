@@ -258,8 +258,7 @@ Legislator.prototype.sent = function (route, sent, received) {
     var route = this.routeOf(route.path), types = {}
 
     route.sending = false
-    assert(route.retry, 'retrying failed route')
-    route.retry--
+    if (route.retry) route.retry--
 
     var pulse = !this.election &&
                 this.promise.quorum.length == route.path.length &&
@@ -1264,7 +1263,14 @@ Legislator.prototype.elect = function (remap) {
     if (!~this.government.majority.indexOf(this.id)) {
         return
     }
-    var receipts = [ this.id ]
+    // need to use: now = this.clock() or else the races.
+    var receipts = this.citizens.filter(function (citizen) {
+        if (citizen == this.id || citizen == this.government.majority[0]) {
+            return true
+        }
+        var route = this.routeOf([ this.id, citizen ])
+        return !route.retry || route.sleep > this.clock()
+    }.bind(this))
     var candidates = this.candidates()
     var remap = remap && this.proposals.splice(0, this.proposals.length)
     var parliamentSize = this.parliamentSize(candidates.length + 1)
@@ -1281,7 +1287,7 @@ Legislator.prototype.elect = function (remap) {
         minoritySize: minoritySize,
         reachable: [],
         receipts: receipts,
-        requests: candidates.length + 1,
+        requests: receipts.length + candidates.length,
         parliament: [],
         constituents: []
     }
