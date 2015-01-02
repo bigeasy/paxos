@@ -702,7 +702,7 @@ Legislator.prototype.receiveAccept = function (envelope, message) {
     if (compare == 0) {
         var entry = this.entry(message.promise, message)
         this.dispatch({
-            route: entry.quorum,
+            to: entry.quorum,
             message: {
                 type: 'accepted',
                 promise: message.promise,
