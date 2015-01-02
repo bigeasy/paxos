@@ -361,13 +361,6 @@ function prove (assert) {
         network.machines[0].legislator.sent(route, forwards, [])
     })
 
-    /*
-    var gremlin = nework.addGremlin(function (when, route, index, envelopes) {
-        return when == 'before' && route[index - 1] == '1' && envelopes.some(function (envelope) {
-            return envelope.message.type == 'prepare'
-        })
-    })
-    */
     time++
     network.tick()
     network.machines[0].legislator.checkSchedule()
