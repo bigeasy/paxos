@@ -740,6 +740,7 @@ Legislator.prototype.markAndSetGreatest = function (entry, type) {
     return false
 }
 
+// todo: do not learn something if the promise is less than your uniform id.
 Legislator.prototype.receiveAccepted = function (envelope, message) {
     var entry = this.entry(message.promise, message)
     assert(!~entry.accepts.indexOf(envelope.from))
