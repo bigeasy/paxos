@@ -1,5 +1,5 @@
 
-require('proof')(75, prove)
+require('proof')(78, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -602,4 +602,45 @@ function prove (assert) {
         constituents: [],
         id: '19/0'
     }, 'regrow')
+
+    gremlin = network.addGremlin(function (when, route, index) {
+        return route.path[index] == 4
+    })
+    for (var i = 0; i < 4; i++ ) {
+        time++
+        network.machines[3].legislator.post({ value: 1 })
+        network.tick()
+    }
+    time++
+    network.machines[3].legislator.post({ value: 1 })
+    network.machines[2].tick()
+    network.machines[3].tick()
+    network.machines[3].tick()
+    network.machines[3].tick()
+    network.machines[3].tick()
+    network.machines[0].legislator.emigrate('1')
+    network.machines[3].tick()
+    network.machines[3].tick()
+    network.removeGremlin(gremlin)
+
+    assert(network.machines[3].legislator.government, {
+        majority: [ '3', '0' ],
+        minority: [ '2', ],
+        constituents: [ '1' ],
+        id: '1a/0'
+    }, 'legislator emigrate')
+
+    network.machines[2].legislator.emigrate('7')
+    network.tick()
+
+    assert(network.machines[3].legislator.government, {
+        majority: [ '3', '0' ],
+        minority: [ '2', ],
+        constituents: [],
+        id: '1b/0'
+    }, 'constituent emigrate')
+
+    assert(network.machines.every(function (machine) {
+        return Object.keys(machine.legislator.failed).length == 0
+    }), 'failures learned')
 }

@@ -78,8 +78,7 @@ function Legislator (id, options) {
     this.retry = options.retry || 2
     this.ping = options.ping || [ 1, 1 ]
     this.timeout = options.timeout || [ 1, 1 ]
-    this.funnel = {}
-
+    this.failed = {}
 
     this.propagation()
 }
@@ -301,8 +300,7 @@ Legislator.prototype.sent = function (route, sent, received) {
                 var schedule = this.schedule({ type: 'ping', id: route.path[1], delay: this.ping })
                 route.sleep = schedule.when
             } else {
-                throw new Error
-                //this.funnel[route.path[1]] = { type: 'failed' }
+                this.failed[route.path[1]] = {}
             }
             if (this.election) {
                 this.pinged(false, route.path[1])
@@ -330,16 +328,21 @@ Legislator.prototype.forwards = function (path, index) {
 }
 
 Legislator.prototype.returns = function (path, index) {
-    var route = this.routeOf(path)
-    var envelopes = []
+    var route = this.routeOf(path),
+        envelopes = [],
+        greatest = this.greatestOf(this.id),
+        failures = greatest.decided == greatest.uniform
     path.slice(0, index).forEach(function (id) {
-        for (var key in this.funnel) {
-            this.dispatch({
-                from: key,
-                to: this.government.majority[0],
-                message: this.funnel[key]
-            })
-            delete this.funnel[key]
+        if (failures) {
+            for (var key in this.failed) {
+                this.dispatch({
+                    from: key,
+                    to: id,
+                    message: {
+                        type: 'failed'
+                    }
+                })
+            }
         }
         push.apply(envelopes, this.unrouted[id] || [])
         delete this.unrouted[id]
@@ -501,10 +504,13 @@ Legislator.prototype.nextProposalId = function (index) {
 }
 
 Legislator.prototype.newGovernment = function (quorum, government, remap) {
-    government.constituents = this.citizens.filter(function (id) {
-        return !~government.majority.indexOf(id)
-            && !~government.minority.indexOf(id)
-    })
+    assert(!government.constituents)
+    government.constituents = this.citizens.filter(function (citizen) {
+        return !~government.majority.indexOf(citizen)
+            && !~government.minority.indexOf(citizen)
+    }).filter(function (constituent) {
+        return !this.failed[constituent]
+    }.bind(this))
     var iterator = this.log.findIter(this.log.max()), current = iterator.data()
     while (!current.learned) {
         current = iterator.prev()
@@ -557,6 +563,24 @@ Legislator.prototype.newGovernment = function (quorum, government, remap) {
         })
     }, this)
     this.prepare()
+}
+
+Legislator.prototype.propose = function (value, internal, accept) {
+    var proposal = {
+        id: this.nextProposalId(1),
+        quorum: this.government.majority,
+        internal: !! internal,
+        value: value
+    }
+
+    if (accept) {
+        this.entry(proposal.id, proposal).working = true
+        this.accept()
+    } else {
+        this.proposals.push(proposal)
+    }
+
+    return proposal
 }
 
 Legislator.prototype.prepare = function () {
@@ -647,19 +671,7 @@ Legislator.prototype.post = function (value, internal) {
         }
     }
 
-    var proposal = {
-        id: this.nextProposalId(1),
-        quorum: this.government.majority,
-        internal: !! internal,
-        value: value
-    }
-
-    if (!max.working) {
-        this.entry(proposal.id, proposal).working = true
-        this.accept()
-    } else {
-        this.proposals.push(proposal)
-    }
+    var proposal = this.propose(value, internal, !max.working)
 
     return {
         posted: true,
@@ -966,7 +978,36 @@ Legislator.prototype.receivePing = function (envelope, message) {
 }
 
 Legislator.prototype.receiveFailed = function (envelope, message) {
-    this.funnel[envelope.from] = { type: 'failed' }
+    if (!~this.citizens.indexOf(envelope.from)) {
+        return
+    }
+    if (envelope.from == 1)
+
+    if (this.id != envelope.from) {
+        this.routeOf([ this.id, envelope.from ]).retry = 0
+    }
+
+    var failed = this.failed[envelope.from]
+
+    if (!failed) {
+        failed = this.failed[envelope.from] = {}
+    }
+
+    if (this.government.majority[0] == this.id) {
+        var election = false
+        election = election || !! this.election
+
+        var max = this.log.max()
+        election = election || max.working && Id.isGovernment(max.id)
+
+        var promise = failed.election || '0/0'
+        var uniform = this.greatestOf(this.id).uniform
+        election = election || Id.compare(promise, uniform) >= 0
+
+        if (!election) {
+            this.failed[envelope.from].election = this.reelection().promise
+        }
+    }
 }
 
 Legislator.prototype.receivePong = function (envelope, message) {
@@ -1025,19 +1066,54 @@ Legislator.prototype.pinged = function (reachable, from) {
             }
             delete this.election
             this.newGovernment(election.quorum, {
-                majority: election.majority, minority: election.minority
+                majority: election.majority,
+                minority: election.minority
             }, election.remap)
         } else if (complete) {
             this.schedule({ type: 'elect', id: this.id, delay: this.timeout })
         }
     }
+}
 
+Legislator.prototype.emigrate = function (id) {
+    this.dispatch({
+        from: id,
+        to: this.id,
+        message: {
+            type: 'failed',
+            value: {}
+        }
+    })
 }
 
 Legislator.prototype.propagation = function () {
     this.citizens = this.government.majority.concat(this.government.minority)
                                             .concat(this.government.constituents)
     this.parliament = this.government.majority.concat(this.government.minority)
+
+    for (var failed in this.failed) {
+        if (!~this.citizens.indexOf(failed)) {
+            delete this.unrouted[failed]
+            for (var id in this.routed) {
+                var route = this.routed[id]
+                if (~route.path.indexOf(failed)) {
+                    delete this.routed[id]
+                }
+            }
+            delete this.failed[failed]
+        } else if (this.government.majority[0] == this.id) {
+            // send it out so it will keep coming back.
+            this.dispatch({
+                from: failed,
+                to: this.government.majority,
+                message: {
+                    type: 'failed',
+                    value: {}
+                }
+            })
+        }
+    }
+
     this.constituency = []
     if (this.parliament.length == 1) {
         this.constituency = this.government.constituents.slice()
