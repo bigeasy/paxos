@@ -817,9 +817,8 @@ Legislator.prototype.playUniform = function () {
             }
         }
 
-        if (Id.compare(terminus.id, current.id) != 0 && Id.compare(terminus.id, previous.id) != 0) {
-            break
-        }
+        assert(Id.compare(terminus.id, current.id) == 0
+            || Id.compare(terminus.id, previous.id) == 0, 'terminus does not exist')
 
         var uniform = [ terminus = iterator.data() ]
         for (;;) {
