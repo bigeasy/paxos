@@ -1123,14 +1123,14 @@ Legislator.prototype.decideNaturalize = function (entry) {
     }
     var elect
     elect = this.government.majority[0] == this.id
-    elect = elect && this.parliament.length < this.parliamentSize()
+    elect = elect && this.parliament.length < this.parliamentSize(this.candidates().length + 1)
     if (elect) {
         this.elect(true)
     }
 }
 
-Legislator.prototype.parliamentSize = function () {
-    var parliamentSize = Math.min(this.citizens.length, this.idealGovernmentSize)
+Legislator.prototype.parliamentSize = function (citizens) {
+    var parliamentSize = Math.min(citizens, this.idealGovernmentSize)
     if (parliamentSize % 2 == 0) {
         parliamentSize--
     }
@@ -1139,6 +1139,19 @@ Legislator.prototype.parliamentSize = function () {
 
 Legislator.prototype.whenElect = function () {
     this.elect()
+}
+
+Legislator.prototype.reachable = function () {
+    return this.citizens.filter(function (citizen) {
+        var route = this.routeOf([ this.id, citizen ])
+        return route.retry && route.sleep <= this.clock()
+    }.bind(this))
+}
+
+Legislator.prototype.candidates = function () {
+    return this.reachable().filter(function (id) {
+        return id != this.id && id != this.government.majority[0]
+    }.bind(this))
 }
 
 Legislator.prototype.elect = function (remap) {
@@ -1151,12 +1164,10 @@ Legislator.prototype.elect = function (remap) {
         failed = failed || this.clock() - this.ticks[this.government.majority[0]] >= this.timeout[0]
     }
     if (failed) {
-        var receipts = [ this.government.majority[0] ]
-        if (this.government.majority[0] != this.id) {
-            receipts.push(this.id)
-        }
+        var receipts = [ this.id ]
+        var candidates = this.candidates()
         var remap = remap && this.proposals.splice(0, this.proposals.length)
-        var parliamentSize = this.parliamentSize()
+        var parliamentSize = this.parliamentSize(candidates.length + 1)
         var majoritySize = Math.ceil(parliamentSize / 2)
         var minoritySize = parliamentSize - majoritySize
         this.election = {
@@ -1170,13 +1181,11 @@ Legislator.prototype.elect = function (remap) {
             minoritySize: minoritySize,
             reachable: [],
             receipts: receipts,
-            requests: this.citizens.length,
+            requests: candidates.length + 1,
             parliament: [],
             constituents: []
         }
-        this.citizens.filter(function (id) {
-            return id != this.id && id != this.government.majority[0]
-        }.bind(this)).forEach(function (id) {
+        candidates.forEach(function (id) {
             this.dispatch({
                 to: id,
                 message: {
