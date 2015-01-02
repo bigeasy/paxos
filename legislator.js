@@ -1241,18 +1241,7 @@ Legislator.prototype.parliamentSize = function (citizens) {
 }
 
 Legislator.prototype.whenElect = function () {
-    var failed
-    if (this.government.majority[0] == this.id) {
-        failed = true
-    } else if (~this.government.majority.indexOf(this.id)) {
-        assert(this.ticks[this.government.majority[0]] != null, 'null ticks')
-        failed = !! this.election
-        failed = failed || this.clock() - this.ticks[this.government.majority[0]] >= this.timeout[0]
-        failed = true
-    }
-    if (failed) {
-        this.elect()
-    }
+    this.elect()
 }
 
 Legislator.prototype.reachable = function () {
@@ -1270,7 +1259,6 @@ Legislator.prototype.candidates = function () {
 
 Legislator.prototype.elect = function (remap) {
     if (this.election) {
-        throw new Error
         return
     }
     if (!~this.government.majority.indexOf(this.id)) {
