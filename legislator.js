@@ -224,24 +224,27 @@ Legislator.prototype.outbox = function () {
     }
 
     if (routes.length == 0) {
+        var greatest = this.greatestOf(this.id)
         var now = this.clock()
-        this.constituency.forEach(function (id) {
-            var route = this.routeOf([ this.id, id ])
-            if (!route.sending && route.retry && route.sleep <= now) {
-                if (Id.compare(this.greatestOf(id).uniform, this.greatestOf(this.id).uniform) < 0) {
-                    this.dispatch({
-                        from: id,
-                        to: this.id,
-                        message: {
-                            type: 'synchronize',
-                            count: 20,
-                            greatest: this.greatestOf(id),
-                            learned: true
-                        }
-                    })
+        if (greatest.uniform == greatest.decided) {
+            this.constituency.forEach(function (id) {
+                var route = this.routeOf([ this.id, id ])
+                if (!route.sending && route.retry && route.sleep <= now) {
+                    if (Id.compare(this.greatestOf(id).uniform, greatest.uniform) < 0) {
+                        this.dispatch({
+                            from: id,
+                            to: this.id,
+                            message: {
+                                type: 'synchronize',
+                                count: 20,
+                                greatest: this.greatestOf(id),
+                                learned: true
+                            }
+                        })
+                    }
                 }
-            }
-        }, this)
+            }, this)
+        }
         for (var id in this.unrouted) {
             var route = this.routeOf([ this.id, id ])
             if (!route.sending && route.retry && route.sleep <= now) {
