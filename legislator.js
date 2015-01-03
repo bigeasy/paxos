@@ -55,6 +55,7 @@ function Legislator (id, options) {
     this.idealGovernmentSize = options.size || 5
 
     this.filter = options.filter || function (envelopes) { return [ envelopes ] }
+    this.prefer = options.prefer || function () { return false }
     this.clock = options.clock || function () { return Date.now() }
 
     this.messageId = id + '/0'
@@ -1057,17 +1058,32 @@ Legislator.prototype.pinged = function (reachable, from) {
             } else {
                 election.constituents.push(from)
             }
+            if (this.prefer(from)) {
+                election.preferred.push(from)
+            }
         }
         var legislators = election.quorum.length + election.parliament.length
         var citizens = legislators + election.constituents.length
         var quorum = election.quorumSize <= legislators
         var parliament = election.parliamentSize <= citizens
+        var preferable = election.parliamentSize <= election.preferred.filter(function (citizen) {
+                             return ~this.parliament.indexOf(citizen)
+                         }.bind(this)).length
+                      || election.preferred.length == election.preferences
         var complete = election.receipts.length == election.requests
-        if (quorum && (parliament || complete)) {
+        if (quorum && ((preferable && parliament) || complete)) {
+            var prefer = function (a, b) {
+                a = ~election.preferred.indexOf(a) ? 0 : 1
+                b = ~election.preferred.indexOf(b) ? 0 : 1
+                return a - b
+            }
+            election.parliament.sort(prefer)
+            election.constituents.sort(prefer)
             var candidates = election.parliament.concat(election.constituents)
             for (var i = 0; election.quorum.length < election.quorumSize; i++) {
-                election.quorum.push(candidates[i])
+                election.quorum.push(candidates.shift())
             }
+            candidates = election.quorum.concat(candidates.sort(prefer))
             if (!parliament) {
                 // if we have the quorum, but we do not have the parliament, we
                 // form a government of quorum size, shrink the government.
@@ -1279,6 +1295,9 @@ Legislator.prototype.elect = function (remap) {
         return !route.retry || route.sleep > this.clock()
     }.bind(this))
     var candidates = this.candidates()
+    var preferences = candidates.filter(function (citizen) {
+        this.prefer(citizen)
+    }.bind(this)).length
     var remap = remap && this.proposals.splice(0, this.proposals.length)
     var parliamentSize = this.parliamentSize(candidates.length + 1)
     var majoritySize = Math.ceil(parliamentSize / 2)
@@ -1288,12 +1307,14 @@ Legislator.prototype.elect = function (remap) {
         parliamentSize: parliamentSize,
         quorum: [ this.id ],
         quorumSize: this.government.majority.length,
-        majority: [ this.id ],
+        majority: [],
         majoritySize: majoritySize,
         minority: [],
         minoritySize: minoritySize,
         reachable: [],
         receipts: receipts,
+        preferences: preferences,
+        preferred: [],
         requests: receipts.length + candidates.length,
         parliament: [],
         constituents: []

@@ -1,5 +1,5 @@
 
-require('proof')(85, prove)
+require('proof')(92, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -689,7 +689,7 @@ function prove (assert) {
         while (machine.legislator.shift()) { }
     })
 
-    network.machines[2].legislator = new Legislator('2')
+    network.machines[2].legislator = new Legislator('2', options)
     network.machines[2].legislator.inject(extract.entries)
     network.machines[2].legislator.initialize()
     network.machines[0].legislator.naturalize('2')
@@ -722,4 +722,106 @@ function prove (assert) {
     assert([ 0, 1, 4 ].every(function (index) {
         return Object.keys(network.machines[index].legislator.failed).length == 0
     }), 'gap failures learned')
+
+    network.machines[2].legislator = new Legislator('2', options)
+    network.machines[2].legislator.inject(network.machines[0].legislator.extract('backward', 9).entries)
+    network.machines[2].legislator.initialize()
+    network.machines[0].legislator.naturalize('2')
+    network.machines[3].legislator = new Legislator('3', options)
+    network.machines[3].legislator.inject(network.machines[0].legislator.extract('backward', 9).entries)
+    network.machines[3].legislator.initialize()
+    network.machines[0].legislator.naturalize('3')
+    network.tick()
+    assert(network.machines[0].legislator.government, {
+        majority: [ '0', '1', '4' ],
+        minority: [ '2', '3' ],
+        constituents: [],
+        id: '21/0'
+    }, 'restore five member parliament')
+
+    for (var i = 0; i < 16; i++) {
+        var index = network.machines.length
+        network.machines.push(new Machine(network, new Legislator(String(index), options)))
+        network.machines[index].legislator.inject(network.machines[0].legislator.extract('backward', 9).entries)
+        network.machines[index].legislator.initialize()
+        network.machines[0].legislator.naturalize(String(index))
+    }
+    network.tick()
+    assert(network.machines[0].legislator.government, {
+        majority: [ '0', '1', '4' ],
+        minority: [ '2', '3' ],
+        constituents: [
+            '5', '6', '7', '8', '9', '10', '11', '12',
+            '13', '14', '15', '16', '17', '18', '19', '20'
+        ],
+        id: '21/0'
+    }, 'add a bunch of citizens')
+    // prefer odd numbered citizens
+    network.machines.forEach(function (machine) {
+        machine.legislator.prefer = function (citizen) {
+            return (+citizen) % 2
+        }
+    })
+    network.machines[0].legislator.reelection()
+    network.tick()
+    assert(network.machines[0].legislator.government, {
+        majority: [ '0', '1', '3' ],
+        minority: [ '15', '13' ],
+        constituents: [
+            '4', '2', '5', '6', '7', '8', '9', '10',
+            '11', '12', '14', '16', '17', '18', '19', '20'
+        ],
+        id: '22/0'
+    }, 'odd parliament, even leader')
+    network.machines[0].legislator.reelection('1')
+    network.tick()
+    assert(network.machines[0].legislator.government, {
+        majority: [ '1', '3', '13' ],
+        minority: [ '15', '5' ],
+        constituents: [
+            '0', '4', '2', '6', '7', '8', '9', '10',
+            '11', '12', '14', '16', '17', '18', '19', '20'
+        ],
+        id: '23/0'
+    }, 'all even parliament')
+    // prefer even numbered citizens
+    network.machines.forEach(function (machine) {
+        machine.legislator.prefer = function (citizen) {
+            return (+citizen) % 2 == 0
+        }
+    })
+    // first relection is going to change the minority
+    network.machines[1].legislator.reelection()
+    network.tick()
+    assert(network.machines[0].legislator.government, {
+        majority: [ '1', '3', '13' ],
+        minority: [ '18', '10' ],
+        constituents: [
+            '15', '5', '0', '4', '2', '6', '7', '8', '9',
+            '11', '12', '14', '16', '17', '19', '20'
+        ],
+        id: '24/0'
+    }, 'even minority')
+    network.machines[1].legislator.reelection()
+    network.tick()
+    assert(network.machines[0].legislator.government, {
+        majority: [ '1', '10', '18' ],
+        minority: [ '12', '0' ],
+        constituents: [
+            '3', '13', '15', '5', '4', '2', '6', '7', '8', '9',
+            '11', '14', '16', '17', '19', '20'
+        ],
+        id: '25/0'
+    }, 'even minority is now in majority, more even minority')
+    network.machines[1].legislator.reelection('10')
+    network.tick()
+    assert(network.machines[0].legislator.government, {
+        majority: [ '10', '18', '0' ],
+        minority: [ '12', '20' ],
+        constituents: [
+            '1', '3', '13', '15', '5', '4', '2', '6', '7', '8', '9',
+            '11', '14', '16', '17', '19'
+        ],
+        id: '26/0'
+    }, 'even leader')
 }
