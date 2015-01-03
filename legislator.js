@@ -987,8 +987,7 @@ Legislator.prototype.receivePing = function (envelope, message) {
         to: envelope.from,
         message: {
             type: 'pong',
-            greatest: this.greatestOf(this.id),
-            when: this.clock()
+            greatest: this.greatestOf(this.id)
         }
     })
 }
