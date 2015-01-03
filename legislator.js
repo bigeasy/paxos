@@ -219,7 +219,7 @@ Legislator.prototype.outbox = function () {
         if (route.envelopes.length && !route.sending) {
             route.sending = true
             route.retry = this.retry
-            routes.push({ id: route.id, path: route.path })
+            routes.push({ id: route.id, path: route.path, pulse: true })
         }
     }
 
@@ -248,7 +248,7 @@ Legislator.prototype.outbox = function () {
         for (var id in this.unrouted) {
             var route = this.routeOf([ this.id, id ])
             if (!route.sending && route.retry && route.sleep <= now) {
-                routes.push(route)
+                routes.push({ id: route.id, path: route.path, pulse: false })
                 route.sending = true
             }
         }
@@ -258,16 +258,10 @@ Legislator.prototype.outbox = function () {
 }
 
 Legislator.prototype.sent = function (route, sent, received) {
-    var route = this.routeOf(route.path), types = {}
+    var pulse = route.pulse, route = this.routeOf(route.path), types = {}
 
     route.sending = false
     if (route.retry) route.retry--
-
-    var pulse = !this.election &&
-                this.promise.quorum.length == route.path.length &&
-                this.promise.quorum.every(function (id, index) {
-                    return route.path[index] == id
-                })
 
     // pongs get trapped in a prospective leader when a promise is rejected, so
     // we need to see if we're actually sending a message that expects a
@@ -367,11 +361,7 @@ Legislator.prototype.returns = function (path, index) {
 
 Legislator.prototype.inbox = function (route, envelopes) {
     assert(route.id != '-', 'no route id')
-    var route = this.routeOf(route.path)
-    var pulse = this.government.majority.length == route.path.length
-             && this.government.majority.every(function (id, index) {
-                    return route.path[index] == id
-                })
+    var pulse = route.pulse, route = this.routeOf(route.path)
     if (pulse && !this.election) {
         this.schedule({ type: 'elect', id: this.id, delay: this.timeout })
     }
