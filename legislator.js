@@ -150,13 +150,13 @@ Legislator.prototype.checkSchedule = function () {
     return happening
 }
 
-Legislator.prototype.consume = function (envelope) {
+Legislator.prototype.consume = function (envelope, route) {
     assert(envelope.to == this.id, 'consume not self')
     var type = envelope.message.type
     var method = 'receive' + type[0].toUpperCase() + type.substring(1)
     this.filter(envelope, envelope.message).forEach(function (envelope) {
         this.ticks[envelope.from] = this.clock()
-        this[method](envelope, envelope.message)
+        this[method](envelope, envelope.message, route)
     }, this)
 }
 
@@ -172,7 +172,7 @@ Legislator.prototype.stuff = function (from, to, route, message) {
                 message: message
             }
             if (this.id == envelope.to) {
-                this.consume(envelope)
+                this.consume(envelope, route)
             } else {
                 envelopes.push(envelope)
             }
@@ -263,27 +263,35 @@ Legislator.prototype.sent = function (route, sent, received) {
     route.sending = false
     if (route.retry) route.retry--
 
-    // pongs get trapped in a prospective leader when a promise is rejected, so
-    // we need to see if we're actually sending a message that expects a
-    // response, or clearing out crufty pongs.
-    var wasGovernment = false, expecting = false
-    sent.forEach(function (envelope) {
-        switch (envelope.message.type) {
-            case 'prepare':
-            case 'accept':
-                wasGovernment = Id.isGovernment(envelope.message.promise)
-            case 'ping':
-                expecting = true
-                break
+    var success = false
+    if (pulse || !this.failed[route.path[1]]) {
+        // pongs get trapped in a prospective leader when a promise is rejected, so
+        // we need to see if we're actually sending a message that expects a
+        // response, or clearing out crufty pongs.
+        var wasGovernment = false, expecting = false
+        sent.forEach(function (envelope) {
+            switch (envelope.message.type) {
+                case 'prepare':
+                case 'accept':
+                    wasGovernment = Id.isGovernment(envelope.message.promise)
+                case 'ping':
+                    expecting = true
+                    break
+            }
+        })
+
+        if (expecting) {
+            var seen = {}
+            received.forEach(function (envelope) {
+                seen[envelope.from] = true
+            }, this)
+            success = route.path.slice(1).every(function (id) { return seen[id] })
+        } else {
+            success = true
         }
-    })
+    }
 
-    var seen = {}
-    received.forEach(function (envelope) {
-        seen[envelope.from] = true
-    }, this)
-
-    if (!expecting || route.path.slice(1).every(function (id) { return seen[id] })) {
+    if (success) {
         route.retry = this.retry
         route.sleep = this.clock()
         this.schedule({ type: 'ping', id: pulse ? this.id : route.path[1], delay: this.ping })
@@ -495,6 +503,9 @@ Legislator.prototype.shift = function () {
         }
         this.log.remove(entry)
         entry = this.log.min()
+    }
+    if (!removed) {
+        return this.shift()
     }
     this.count -= removed
     return removed
@@ -1024,13 +1035,17 @@ Legislator.prototype.receiveFailed = function (envelope, message) {
     }
 }
 
-Legislator.prototype.receivePong = function (envelope, message) {
+Legislator.prototype.receivePong = function (envelope, message, route) {
     this.greatest[envelope.from] = message.greatest
-    var successful = Id.compare(this.log.min().id, message.greatest.uniform) < 0
-    if (!successful) {
-        assert(successful, 'cannot catch up ping')
+    var impossible = Id.compare(this.log.min().id, message.greatest.uniform) > 0
+    if (impossible) {
+        this.dispatch({
+            from: envelope.from,
+            to: this.id,
+            message: { type: 'failed' }
+        })
     }
-    this.pinged(true, envelope.from)
+    this.pinged(!impossible, envelope.from)
 }
 
 Legislator.prototype.pinged = function (reachable, from) {

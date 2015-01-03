@@ -1,5 +1,5 @@
 
-require('proof')(81, prove)
+require('proof')(85, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -17,7 +17,7 @@ function prove (assert) {
         retry: 5
     }
 
-    var count = 0
+    var count = 0, util = require('util')
     function logger (envelope) {
         var message = {}
         for (var key in envelope) {
@@ -28,7 +28,7 @@ function prove (assert) {
         for (var key in envelope.message) {
             message[key] = envelope.message[key]
         }
-        // console.log(++count, message)
+        // process.stdout.write((++count) + ' ' + util.inspect(message, null, Infinity) + '\n')
         return [ envelope ]
     }
 
@@ -683,4 +683,43 @@ function prove (assert) {
         constituents: [],
         id: '1f/0'
     }, 'majority emigrate')
+
+    var extract = network.machines[0].legislator.extract('forward', 20)
+    network.machines.forEach(function (machine) {
+        while (machine.legislator.shift()) { }
+    })
+
+    network.machines[2].legislator = new Legislator('2')
+    network.machines[2].legislator.inject(extract.entries)
+    network.machines[2].legislator.initialize()
+    network.machines[0].legislator.naturalize('2')
+    network.tick()
+
+    assert(network.machines[0].legislator.government, {
+        majority: [ '0', '1' ],
+        minority: [ '4' ],
+        constituents: [ '2' ],
+        id: '1f/0'
+    }, 'cannot make constituent uniform, not propagated yet')
+    assert(network.machines[4].legislator.failed, { '2': {} }, 'cannot make constituent uniform')
+    time++
+    ; [ 0, 1, 4 ].forEach(function (index) {
+        network.machines[index].legislator.checkSchedule()
+    })
+    network.tick()
+    time++
+    ; [ 0, 1, 4 ].forEach(function (index) {
+        network.machines[index].legislator.checkSchedule()
+    })
+    network.tick()
+    assert(network.machines[0].legislator.government, {
+        majority: [ '0', '1' ],
+        minority: [ '4' ],
+        constituents: [],
+        id: '20/0'
+    }, 'cannot make constituent uniform, propagated')
+
+    assert([ 0, 1, 4 ].every(function (index) {
+        return Object.keys(network.machines[index].legislator.failed).length == 0
+    }), 'gap failures learned')
 }
