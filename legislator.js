@@ -84,9 +84,7 @@ function Legislator (id, options) {
 }
 
 Legislator.prototype.routeOf = function (path) {
-    if (typeof path == 'string') {
-        path = path.split(' -> ')
-    }
+    assert(typeof path != 'string', 'paths are no longer strings')
     var id = path.join(' -> '), route = this.routed[id]
     if (!route) {
         this.routed[id] = route = {
@@ -184,21 +182,23 @@ Legislator.prototype.stuff = function (from, to, route, message) {
 }
 
 Legislator.prototype.dispatch = function (options) {
-    var route = options.route || '-'
+    var route = options.route || null
     var from = options.from
     var to = options.to
     var message = options.message
 
+    assert(typeof route != 'string')
+
     if (from == null) from = [ this.id ]
     if (to == null) to = route
 
-    assert(to != '-', 'to is missing')
+    assert(to != null, 'to is missing')
 
     if (!Array.isArray(to)) to = [ to ]
     if (!Array.isArray(from)) from = [ from ]
 
-    if (route == '-') {
-        this.stuff(from, to, '-', message).forEach(function (envelope) {
+    if (route == null) {
+        this.stuff(from, to, null, message).forEach(function (envelope) {
             var envelopes = this.unrouted[envelope.to]
             if (!envelopes) {
                 envelopes = this.unrouted[envelope.to] = []
@@ -207,7 +207,7 @@ Legislator.prototype.dispatch = function (options) {
         }, this)
     } else {
         route = this.routeOf(route)
-        push.apply(route.envelopes, this.stuff(from, to, route.id, message))
+        push.apply(route.envelopes, this.stuff(from, to, route.path, message))
     }
 }
 
