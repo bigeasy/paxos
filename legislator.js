@@ -1246,9 +1246,9 @@ Legislator.prototype.decideNaturalize = function (entry) {
     if (entry.value.id == this.id) {
         this.naturalized = entry.id
     }
-    var elect
+    var elect, now = this.clock()
     elect = this.government.majority[0] == this.id
-    elect = elect && this.parliament.length < this.parliamentSize(this.candidates().length + 1)
+    elect = elect && this.parliament.length < this.parliamentSize(this.candidates(now).length + 1)
     if (elect) {
         this.elect(true)
     }
@@ -1266,15 +1266,16 @@ Legislator.prototype.whenElect = function () {
     this.elect()
 }
 
-Legislator.prototype.reachable = function () {
+Legislator.prototype.reachable = function (now) {
+    assert(now != null, 'now is requried to reachable')
     return this.citizens.filter(function (citizen) {
         var route = this.routeOf([ this.id, citizen ])
-        return route.retry && route.sleep <= this.clock()
+        return route.retry && route.sleep <= now
     }.bind(this))
 }
 
-Legislator.prototype.candidates = function () {
-    return this.reachable().filter(function (id) {
+Legislator.prototype.candidates = function (now) {
+    return this.reachable(now).filter(function (id) {
         return id != this.id && id != this.government.majority[0]
     }.bind(this))
 }
@@ -1286,15 +1287,15 @@ Legislator.prototype.elect = function (remap) {
     if (!~this.government.majority.indexOf(this.id)) {
         return
     }
-    // need to use: now = this.clock() or else the races.
+    var now = this.clock()
     var receipts = this.citizens.filter(function (citizen) {
         if (citizen == this.id || citizen == this.government.majority[0]) {
             return true
         }
         var route = this.routeOf([ this.id, citizen ])
-        return !route.retry || route.sleep > this.clock()
+        return !route.retry || route.sleep > now
     }.bind(this))
-    var candidates = this.candidates()
+    var candidates = this.candidates(now)
     var preferences = candidates.filter(function (citizen) {
         this.prefer(citizen)
     }.bind(this)).length
