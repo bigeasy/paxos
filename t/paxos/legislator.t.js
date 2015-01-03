@@ -13,7 +13,7 @@ function prove (assert) {
         size: 5,
         filter: logger,
         ping: [ 1, 1 ],
-        timeout: [ 1, 1 ],
+        timeout: [ 2, 2 ],
         retry: 5
     }
 
@@ -362,6 +362,7 @@ function prove (assert) {
     })
 
     time++
+    time++
     network.tick()
     network.machines[0].legislator.checkSchedule()
     network.tick()
@@ -369,6 +370,7 @@ function prove (assert) {
     var gremlin = network.addGremlin(function (when, route, index, envelopes) {
         return route.path[index] == '0'
     })
+    time++
     time++
     assert(network.machines[1].legislator.checkSchedule(), 'schedule election to test reject')
     network.tick()
@@ -394,6 +396,7 @@ function prove (assert) {
         return route.path[index] == '1'
     })
     time++
+    time++
     assert(network.machines[2].legislator.checkSchedule(), 'schedule election to test promised')
     network.tick()
     network.removeGremlin(gremlin)
@@ -418,6 +421,7 @@ function prove (assert) {
     var gremlin = network.addGremlin(function (when, route, index, envelopes) {
         return route.path[index] == '2'
     })
+    time++
     time++
     assert(network.machines[3].legislator.checkSchedule(), 'schedule election to test promised greater than')
     network.tick()
@@ -476,6 +480,7 @@ function prove (assert) {
     network.removeGremlin(gremlin)
     assert(network.machines[3].legislator.events.what[3].type, 'elect', 'failed to form government')
 
+    time++
     time++
     assert(network.machines[3].legislator.checkSchedule(), 'retry election')
     network.tick()
