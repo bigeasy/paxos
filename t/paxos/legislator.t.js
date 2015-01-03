@@ -1,5 +1,5 @@
 
-require('proof')(80, prove)
+require('proof')(81, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -669,14 +669,13 @@ function prove (assert) {
         id: '1d/0'
     }, 'leader emigrate')
 
-    return
     network.machines[0].legislator.emigrate('2')
     network.tick()
 
     assert(network.machines[0].legislator.government, {
-        majority: [ '0', 'x' ],
-        minority: [ '1' ],
-        constituents: [ '4' ],
-        id: '1d/0'
+        majority: [ '0', '1' ],
+        minority: [ '4' ],
+        constituents: [],
+        id: '1f/0'
     }, 'majority emigrate')
 }
