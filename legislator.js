@@ -916,6 +916,8 @@ Legislator.prototype.nothing = function () {
 Legislator.prototype.receiveSynchronize = function (envelope, message) {
     assert(message.greatest, 'message must have greatest')
     this.greatest[envelope.from] = message.greatest
+    var unknown = this.greatestOf(envelope.from).learned == '0/0'
+    var count = unknown ? 1 : message.count
 
     assert(message.from != this.id, 'synchronize with self')
 
@@ -931,8 +933,8 @@ Legislator.prototype.receiveSynchronize = function (envelope, message) {
     var lastUniformId = this.greatestOf(this.id).uniform
     if (lastUniformId != this.greatestOf(envelope.from).uniform) {
         createLearned.call(this, this.log.find({ id: lastUniformId }))
+        count--
 
-        var count = message.count - 1
         var iterator = this.log.lowerBound({ id: this.greatestOf(envelope.from).uniform }), entry
         var greatest = this.greatestOf(envelope.from).uniform
 
