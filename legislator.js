@@ -396,7 +396,7 @@ Legislator.prototype.entry = function (id, message) {
         }
         this.log.insert(entry)
     }
-    ([ 'value', 'internal' ]).forEach(function (key) {
+    ([ 'cookie', 'value', 'internal' ]).forEach(function (key) {
         if (entry[key] == null && message[key] != null) {
             entry[key] = message[key]
         }
@@ -582,9 +582,10 @@ Legislator.prototype.newGovernment = function (quorum, government, remap) {
     this.prepare()
 }
 
-Legislator.prototype.propose = function (value, internal, accept) {
+Legislator.prototype.propose = function (cookie, value, internal, accept) {
     var proposal = {
         id: this.nextProposalId(1),
+        cookie: cookie,
         quorum: this.government.majority,
         internal: !! internal,
         value: value
@@ -672,7 +673,7 @@ Legislator.prototype.receivePromised = function (envelope, message) {
     }
 }
 
-Legislator.prototype.post = function (value, internal) {
+Legislator.prototype.post = function (cookie, value, internal) {
     if (this.government.majority[0] != this.id) {
         return {
             posted: false,
@@ -688,7 +689,7 @@ Legislator.prototype.post = function (value, internal) {
         }
     }
 
-    var proposal = this.propose(value, internal, !max.working)
+    var proposal = this.propose(cookie, value, internal, !max.working)
 
     return {
         posted: true,
@@ -704,6 +705,7 @@ Legislator.prototype.accept = function () {
         message: {
             type: 'accept',
             internal: entry.internal,
+            cookie: entry.cookie,
             quorum: entry.quorum,
             promise: entry.id,
             value: entry.value
@@ -1237,7 +1239,7 @@ Legislator.prototype.decideConvene = function (entry) {
 
 Legislator.prototype.naturalize = function (id) {
     assert(typeof id == 'string', 'id must be a hexidecmimal string')
-    return this.post({ type: 'naturalize', id: id }, true)
+    return this.post(null, { type: 'naturalize', id: id }, true)
 }
 
 Legislator.prototype.decideNaturalize = function (entry) {
@@ -1334,7 +1336,7 @@ Legislator.prototype.elect = function (remap) {
 }
 
 Legislator.prototype.reelection = function (id) {
-    return this.post({ type: 'election', id: id || this.id }, true)
+    return this.post(null, { type: 'election', id: id || this.id }, true)
 }
 
 Legislator.prototype.decideElection = function (entry) {
