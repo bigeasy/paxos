@@ -827,4 +827,16 @@ function prove (assert) {
         ],
         id: '26/0'
     }, 'even leader')
+
+    network.machines[10].legislator.reelection('1')
+    network.tick()
+    assert(network.machines[10].legislator.government, {
+        majority: [ '10', '18', '0' ],
+        minority: [ '12', '20' ],
+        constituents: [
+            '1', '3', '13', '15', '5', '4', '2', '6', '7', '8', '9',
+            '11', '14', '16', '17', '19'
+        ],
+        id: '26/0'
+    }, 'election not called')
 }

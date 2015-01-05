@@ -1304,12 +1304,10 @@ Legislator.prototype.reelection = function (id) {
 
 Legislator.prototype.decideElection = function (entry) {
     var greatest = this.greatestOf(this.id)
-    var reelect = true
-    reelect = reelect && Id.compare(greatest.decided, greatest.uniform) == 0
-    reelect = reelect && entry.value.id == this.id
-    if (reelect) {
-        assert(~this.government.majority.indexOf(this.id), 'cannot call an election')
-        this.elect(true)
+    if (entry.value.id == this.id) {
+        if (~this.government.majority.indexOf(this.id)) {
+            this.elect(true)
+        }
     }
 }
 
