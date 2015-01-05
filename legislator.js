@@ -1259,14 +1259,10 @@ Legislator.prototype.elect = function (remap) {
         return
     }
     var now = this.clock()
-    var receipts = this.citizens.filter(function (citizen) {
-        if (citizen == this.id || citizen == this.government.majority[0]) {
-            return true
-        }
-        var route = this.routeOf([ this.id, citizen ])
-        return !route.retry || route.sleep > now
-    }.bind(this))
     var candidates = this.candidates(now)
+    var receipts = this.citizens.filter(function (citizen) {
+        return !~candidates.indexOf(citizen)
+    }.bind(this))
     var preferences = candidates.filter(function (citizen) {
         this.prefer(citizen)
     }.bind(this)).length
