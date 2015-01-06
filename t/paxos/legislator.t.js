@@ -183,7 +183,7 @@ function prove (assert) {
         value: { greeting: '¡hola mundo!' },
         internal: false
     }, 'leader unlearned')
-    assert(network.machines[1].legislator.events.what[1].type == 'elect', 'election planned')
+    assert(network.machines[1].legislator.scheduler.what[1].value.type == 'elect', 'election planned')
 
     time++
     network.machines[2].legislator.elect()
@@ -480,7 +480,7 @@ function prove (assert) {
     network.machines[3].legislator.elect()
     network.tick()
     network.removeGremlin(gremlin)
-    assert(network.machines[3].legislator.events.what[3].type, 'elect', 'failed to form government')
+    assert(network.machines[3].legislator.scheduler.what[3].value.type, 'elect', 'failed to form government')
 
     time++
     time++

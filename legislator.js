@@ -1,6 +1,7 @@
 var assert = require('assert')
 var Monotonic = require('monotonic')
 var cadence = require('cadence')
+var Scheduler = require('happenstance')
 var push = [].push
 var slice = [].slice
 var RBTree = require('bintrees').RBTree
@@ -8,10 +9,6 @@ var Cache = require('magazine')
 
 var consume = require('./consume')
 var Id = require('./id')
-
-function random (min, max) {
-    return Math.floor(Math.random() * (max - min)) + min
-}
 
 function Legislator (id, options) {
     options || (options = {})
@@ -28,10 +25,7 @@ function Legislator (id, options) {
     this.messageId = id + '/0'
     this.log = new RBTree(function (a, b) { return Id.compare(a.id, b.id) })
     this.count = 0
-    this.events = {
-        what: {},
-        when: new RBTree(function (a, b) { return a.when - b.when })
-    }
+    this.scheduler = new Scheduler(this.clock)
 
     this.promise = { id: '0/0', quorum: [ null ] }
     this.lastPromisedId = '0/0'
@@ -71,51 +65,26 @@ Legislator.prototype.greatestOf = function (id) {
 }
 
 Legislator.prototype.schedule = function (event) {
-    this.unschedule(event.id)
-
-    event.when = this.clock() + random.apply(null, event.delay)
-    var date = this.events.when.find({ when: event.when })
-    if (date == null) {
-        date = { when: event.when, events: [] }
-        this.events.when.insert(date)
-    }
-    date.events.push(event)
-    this.events.what[event.id] = event
-
-    return event
+    return this.scheduler.schedule({
+        id: event.id,
+        delay: event.delay,
+        value: event
+    })
 }
 
 Legislator.prototype.unschedule = function (id) {
-    var scheduled = this.events.what[id]
-    if (scheduled) {
-        delete this.events.what[id]
-        var date = this.events.when.find({ when: scheduled.when })
-        var index = date.events.indexOf(scheduled)
-        assert(~index, 'cannot find scheduled event')
-        date.events.splice(index, 1)
-        if (date.events.length == 0) {
-            this.events.when.remove(date)
-        }
-    }
+    this.scheduler.unschedule(id)
 }
 
 Legislator.prototype.checkSchedule = function () {
-    var happening = false
-    for (;;) {
-        var date = this.events.when.min()
-        if (!date || date.when > this.clock()) {
-            break
-        }
-        happening = true
-        this.events.when.remove(date)
-        date.events.forEach(function (event) {
-            delete this.events.what[event.id]
-            var type = event.type
-            var method = 'when' + type[0].toUpperCase() + type.substring(1)
-            this[method](event)
-        }, this)
-    }
-    return happening
+    var happened = false
+    this.scheduler.check().forEach(function (event) {
+        happened = true
+        var type = event.type
+        var method = 'when' + type[0].toUpperCase() + type.substring(1)
+        this[method](event)
+    }, this)
+    return happened
 }
 
 Legislator.prototype.consume = function (envelope, route) {
@@ -1187,8 +1156,7 @@ Legislator.prototype.propagation = function () {
         }
     }
     assert(!this.constituency.length || this.constituency[0] != null)
-    this.events.what = {}
-    this.events.when.clear()
+    this.scheduler.clear()
     if (~this.government.majority.indexOf(this.id)) {
         if (this.government.majority[0] == this.id) {
             this.schedule({
