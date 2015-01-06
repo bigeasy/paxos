@@ -9,6 +9,7 @@ function Client (id) {
     this.cookie = id + '/' + 0
     this.sent = { ordered: [], indexed: {} }
     this.pending = { ordered: [], indexed: {} }
+    this.length = 0
     this.log = new RBTree(function (a, b) { return Id.compare(a.promise, b.promise) })
 }
 
@@ -84,6 +85,7 @@ Client.prototype.playUniform = function (entries) {
             break
         }
         this.uniform = current.promise
+        this.length++
         var request = this.sent.ordered[0] || {}, boundary = this.boundary
         if (request.cookie == current.cookie) {
             assert(request.promise == null
@@ -145,6 +147,15 @@ Client.prototype.each = function (marker, callback) {
     while ((entry = iterator.next()) && entry.uniform) {
         callback(entry)
     }
+}
+
+Client.prototype.shift = function () {
+    if (this.length > 1) {
+        this.log.remove(this.log.min())
+        this.length--
+        return true
+    }
+    return false
 }
 
 module.exports = Client
