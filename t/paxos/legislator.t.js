@@ -134,6 +134,7 @@ function prove (assert) {
         accepts: [],
         learns: [ '1', '0' ],
         quorum: [ '0', '1' ],
+        cookie: null,
         value: { type: 'naturalize', id: '3' },
         internal: true,
         learned: true,
@@ -178,6 +179,7 @@ function prove (assert) {
         accepts: [ '1' ],
         learns: [],
         quorum: [ '1', '2' ],
+        cookie: null,
         value: { greeting: '¡hola mundo!' },
         internal: false
     }, 'leader unlearned')

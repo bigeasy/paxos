@@ -358,13 +358,12 @@ Legislator.prototype.entry = function (id, message) {
             id: id,
             accepts: [],
             learns: [],
-            quorum: message.quorum,
-            value: message.value
+            quorum: message.quorum
         }
         this.log.insert(entry)
     }
     ([ 'cookie', 'value', 'internal' ]).forEach(function (key) {
-        if (entry[key] == null && message[key] != null) {
+        if (!(key in entry) && (key in message)) {
             entry[key] = message[key]
         }
     })
@@ -932,6 +931,7 @@ Legislator.prototype.receiveSynchronize = function (envelope, message) {
                 type: 'learned',
                 promise: entry.id,
                 quorum: entry.quorum,
+                cookie: entry.cookie,
                 value: entry.value,
                 internal: entry.internal
             }
