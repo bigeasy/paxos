@@ -1,5 +1,5 @@
 
-require('proof')(94, prove)
+require('proof')(99, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -545,6 +545,17 @@ function prove (assert) {
          id: '15/0' },
       terminus: '14/6' }, 'not remapped')
 
+    // min and since.
+    assert(network.machines[1].legislator.min(), '1/0', 'min')
+    assert(network.machines[1].legislator.since('4/0', 1), [
+        { promise: '4/1', previous: '4/0', cookie: null, internal: true,
+            value: { type: 'naturalize', id: '3' }
+        }
+    ], 'since')
+    assert(network.machines[1].legislator.since('4/0').length, 24, 'since default count')
+    assert(network.machines[1].legislator.since('1/0', 1024).length, 70, 'since visit all')
+    assert(!network.machines[3].legislator.since('1/0', 1024), 'since not found')
+
     // extract, inject and shift.
     var extract
     extract = network.machines[0].legislator.extract('forward')
@@ -638,7 +649,7 @@ function prove (assert) {
     }, 'legislator emigrate')
 
     network.machines[1].legislator.emigrate('7')
-    network.machines[0].legislator.post({ value: 1 })
+    network.machines[0].legislator.post(null, { value: 1 })
     network.tick()
 
     assert(network.machines[3].legislator.government, {

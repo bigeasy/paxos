@@ -423,6 +423,32 @@ Legislator.prototype.extract = function (direction, count, id) {
     }
 }
 
+Legislator.prototype.since = function (promise, count) {
+    count = count || 24
+    var iterator = this.log.findIter({ id: promise })
+    if (!iterator) {
+        return null
+    }
+    var entry, since = [], uniform = this.greatestOf(this.id).uniform, previous = promise
+    while (count && (entry = iterator.next()) && Id.compare(entry.id, uniform) <= 0) {
+        if (entry.uniform) {
+            since.push({
+                promise: entry.id,
+                previous: previous,
+                cookie: entry.cookie,
+                internal: entry.internal,
+                value: entry.value
+            })
+            count--
+        }
+    }
+    return since
+}
+
+Legislator.prototype.min = function () {
+    return this.log.min().id
+}
+
 Legislator.prototype.inject = function (entries) {
     entries.forEach(function (entry) {
         this.log.insert({
