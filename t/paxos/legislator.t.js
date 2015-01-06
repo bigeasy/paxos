@@ -1,5 +1,5 @@
 
-require('proof')(93, prove)
+require('proof')(94, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -607,8 +607,8 @@ function prove (assert) {
     network.tick()
 
     assert(network.machines[3].legislator.government, {
-        majority: [ '3', '0', '2' ],
-        minority: [ '1', '4' ],
+        majority: [ '3', '0', '1' ],
+        minority: [ '2', '4' ],
         constituents: [],
         id: '19/0'
     }, 'regrow')
@@ -616,7 +616,7 @@ function prove (assert) {
     gremlin = network.addGremlin(function (when, route, index) {
         return route.path[index] == 4
     })
-    for (var i = 0; i < 4; i++ ) {
+    for (var i = 0; i < 5; i++ ) {
         time++
         network.machines[3].legislator.post(null, { value: 1 })
         network.tick()
@@ -624,28 +624,24 @@ function prove (assert) {
     time++
     network.machines[3].legislator.post(null, { value: 1 })
     network.machines[2].tick()
-    network.machines[3].tick()
-    network.machines[3].tick()
-    network.machines[3].tick()
-    network.machines[3].tick()
-    network.machines[0].legislator.emigrate('1')
-    network.machines[3].tick()
+    network.machines[0].legislator.emigrate('2')
     network.machines[3].tick()
     network.removeGremlin(gremlin)
 
     assert(network.machines[3].legislator.government, {
         majority: [ '3', '0' ],
-        minority: [ '2', ],
-        constituents: [ '1' ],
+        minority: [ '1', ],
+        constituents: [ '2' ],
         id: '1a/0'
     }, 'legislator emigrate')
 
-    network.machines[2].legislator.emigrate('7')
+    network.machines[1].legislator.emigrate('7')
+    network.machines[0].legislator.post({ value: 1 })
     network.tick()
 
     assert(network.machines[3].legislator.government, {
         majority: [ '3', '0' ],
-        minority: [ '2', ],
+        minority: [ '1', ],
         constituents: [],
         id: '1b/0'
     }, 'constituent emigrate')
@@ -654,15 +650,15 @@ function prove (assert) {
         return Object.keys(machine.legislator.failed).length == 0
     }), 'failures learned')
 
-    network.machines[1].legislator.immigrate('1')
-    network.machines[3].legislator.naturalize('1')
+    network.machines[2].legislator.immigrate('2')
+    network.machines[3].legislator.naturalize('2')
     network.machines[4].legislator.immigrate('4')
     network.machines[3].legislator.naturalize('4')
     network.tick()
 
     assert(network.machines[3].legislator.government, {
-        majority: [ '3', '0', '2' ],
-        minority: [ '1', '4' ],
+        majority: [ '3', '0', '1' ],
+        minority: [ '2', '4' ],
         constituents: [],
         id: '1c/0'
     }, 'renaturalize')
@@ -671,17 +667,17 @@ function prove (assert) {
     network.tick()
 
     assert(network.machines[0].legislator.government, {
-        majority: [ '0', '2' ],
-        minority: [ '1' ],
+        majority: [ '0', '1' ],
+        minority: [ '2' ],
         constituents: [ '4' ],
         id: '1d/0'
     }, 'leader emigrate')
 
-    network.machines[0].legislator.emigrate('2')
+    network.machines[0].legislator.emigrate('1')
     network.tick()
 
     assert(network.machines[0].legislator.government, {
-        majority: [ '0', '1' ],
+        majority: [ '0', '2' ],
         minority: [ '4' ],
         constituents: [],
         id: '1f/0'
@@ -692,52 +688,52 @@ function prove (assert) {
         while (machine.legislator.shift()) { }
     })
 
-    network.machines[2].legislator = new Legislator('2', options)
-    network.machines[2].legislator.inject(extract.entries)
-    network.machines[2].legislator.initialize()
-    network.machines[0].legislator.naturalize('2')
+    network.machines[1].legislator = new Legislator('1', options)
+    network.machines[1].legislator.inject(extract.entries)
+    network.machines[1].legislator.initialize()
+    network.machines[0].legislator.naturalize('1')
     network.tick()
 
     assert(network.machines[0].legislator.government, {
-        majority: [ '0', '1' ],
+        majority: [ '0', '2' ],
         minority: [ '4' ],
-        constituents: [ '2' ],
+        constituents: [ '1' ],
         id: '1f/0'
     }, 'cannot make constituent uniform, not propagated yet')
-    assert(network.machines[4].legislator.failed, { '2': {} }, 'cannot make constituent uniform')
+    assert(network.machines[4].legislator.failed, { '1': {} }, 'cannot make constituent uniform')
     time++
-    ; [ 0, 1, 4 ].forEach(function (index) {
+    ; [ 0, 2, 4 ].forEach(function (index) {
         network.machines[index].legislator.checkSchedule()
     })
     network.tick()
     time++
-    ; [ 0, 1, 4 ].forEach(function (index) {
+    ; [ 0, 2, 4 ].forEach(function (index) {
         network.machines[index].legislator.checkSchedule()
     })
     network.tick()
     assert(network.machines[0].legislator.government, {
-        majority: [ '0', '1' ],
+        majority: [ '0', '2' ],
         minority: [ '4' ],
         constituents: [],
         id: '20/0'
     }, 'cannot make constituent uniform, propagated')
 
-    assert([ 0, 1, 4 ].every(function (index) {
+    assert([ 0, 2, 4 ].every(function (index) {
         return Object.keys(network.machines[index].legislator.failed).length == 0
     }), 'gap failures learned')
 
-    network.machines[2].legislator = new Legislator('2', options)
-    network.machines[2].legislator.inject(network.machines[0].legislator.extract('backward', 9).entries)
-    network.machines[2].legislator.initialize()
-    network.machines[0].legislator.naturalize('2')
+    network.machines[1].legislator = new Legislator('1', options)
+    network.machines[1].legislator.inject(network.machines[0].legislator.extract('backward', 9).entries)
+    network.machines[1].legislator.initialize()
+    network.machines[0].legislator.naturalize('1')
     network.machines[3].legislator = new Legislator('3', options)
     network.machines[3].legislator.inject(network.machines[0].legislator.extract('backward', 9).entries)
     network.machines[3].legislator.initialize()
     network.machines[0].legislator.naturalize('3')
     network.tick()
     assert(network.machines[0].legislator.government, {
-        majority: [ '0', '1', '4' ],
-        minority: [ '2', '3' ],
+        majority: [ '0', '2', '1' ],
+        minority: [ '3', '4' ],
         constituents: [],
         id: '21/0'
     }, 'restore five member parliament')
@@ -751,8 +747,8 @@ function prove (assert) {
     }
     network.tick()
     assert(network.machines[0].legislator.government, {
-        majority: [ '0', '1', '4' ],
-        minority: [ '2', '3' ],
+        majority: [ '0', '2', '1' ],
+        minority: [ '3', '4' ],
         constituents: [
             '5', '6', '7', '8', '9', '10', '11', '12',
             '13', '14', '15', '16', '17', '18', '19', '20'
@@ -769,21 +765,21 @@ function prove (assert) {
     network.tick()
     assert(network.machines[0].legislator.government, {
         majority: [ '0', '1', '3' ],
-        minority: [ '15', '13' ],
+        minority: [ '5', '7' ],
         constituents: [
-            '4', '2', '5', '6', '7', '8', '9', '10',
-            '11', '12', '14', '16', '17', '18', '19', '20'
+            '2', '4', '6', '8', '9', '10',
+            '11', '12', '13', '14', '15', '16', '17', '18', '19', '20'
         ],
         id: '22/0'
     }, 'odd parliament, even leader')
     network.machines[0].legislator.reelection('1')
     network.tick()
     assert(network.machines[0].legislator.government, {
-        majority: [ '1', '3', '13' ],
-        minority: [ '15', '5' ],
+        majority: [ '1', '3', '5' ],
+        minority: [ '7', '9' ],
         constituents: [
-            '0', '4', '2', '6', '7', '8', '9', '10',
-            '11', '12', '14', '16', '17', '18', '19', '20'
+            '0', '2', '4', '6', '8', '10',
+            '11', '12', '13', '14', '15', '16', '17', '18', '19', '20'
         ],
         id: '23/0'
     }, 'all even parliament')
@@ -797,45 +793,45 @@ function prove (assert) {
     network.machines[1].legislator.reelection()
     network.tick()
     assert(network.machines[0].legislator.government, {
-        majority: [ '1', '3', '13' ],
-        minority: [ '18', '10' ],
+        majority: [ '1', '3', '5' ],
+        minority: [ '0', '2' ],
         constituents: [
-            '15', '5', '0', '4', '2', '6', '7', '8', '9',
-            '11', '12', '14', '16', '17', '19', '20'
+            '7', '9', '4', '6', '8', '10', '11', '12', '13', '14',
+            '15', '16', '17', '18', '19', '20'
         ],
         id: '24/0'
     }, 'even minority')
     network.machines[1].legislator.reelection()
     network.tick()
     assert(network.machines[0].legislator.government, {
-        majority: [ '1', '10', '18' ],
-        minority: [ '12', '0' ],
+        majority: [ '1', '0', '2' ],
+        minority: [ '4', '6' ],
         constituents: [
-            '3', '13', '15', '5', '4', '2', '6', '7', '8', '9',
-            '11', '14', '16', '17', '19', '20'
+            '3', '5', '7', '9', '8', '10', '11', '12', '13', '14',
+            '15', '16', '17', '18', '19', '20'
         ],
         id: '25/0'
     }, 'even minority is now in majority, more even minority')
-    network.machines[1].legislator.reelection('10')
+    network.machines[1].legislator.reelection('0')
     network.tick()
     assert(network.machines[0].legislator.government, {
-        majority: [ '10', '18', '0' ],
-        minority: [ '12', '20' ],
+        majority: [ '0', '2', '4' ],
+        minority: [ '6', '8' ],
         constituents: [
-            '1', '3', '13', '15', '5', '4', '2', '6', '7', '8', '9',
-            '11', '14', '16', '17', '19'
+            '1', '3', '5', '7', '9', '10', '11', '12', '13', '14',
+            '15', '16', '17', '18', '19', '20'
         ],
         id: '26/0'
     }, 'even leader')
 
-    network.machines[10].legislator.reelection('1')
+    network.machines[0].legislator.reelection('6')
     network.tick()
     assert(network.machines[10].legislator.government, {
-        majority: [ '10', '18', '0' ],
-        minority: [ '12', '20' ],
+        majority: [ '0', '2', '4' ],
+        minority: [ '6', '8' ],
         constituents: [
-            '1', '3', '13', '15', '5', '4', '2', '6', '7', '8', '9',
-            '11', '14', '16', '17', '19'
+            '1', '3', '5', '7', '9', '10', '11', '12', '13', '14',
+            '15', '16', '17', '18', '19', '20'
         ],
         id: '26/0'
     }, 'election not called')

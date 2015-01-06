@@ -22,7 +22,7 @@ function Legislator (id, options) {
     this.idealGovernmentSize = options.size || 5
 
     this.filter = options.filter || function (envelopes) { return [ envelopes ] }
-    this.prefer = options.prefer || function () { return false }
+    this.prefer = options.prefer || function () { return true }
     this.clock = options.clock || function () { return Date.now() }
 
     this.messageId = id + '/0'
@@ -1023,39 +1023,48 @@ Legislator.prototype.pinged = function (reachable, from) {
     var election = this.election, parliament, quorum, minority, majority
     if (election && !~election.receipts.indexOf(from)) {
         election.receipts.push(from)
-        if (reachable) {
-            if (~this.parliament.indexOf(from)) {
-                election.parliament.push(from)
-            } else {
-                election.constituents.push(from)
-            }
-            if (this.prefer(from)) {
-                election.preferred.push(from)
-            }
+        var group = this.prefer(from) ? election.preferred : election.ordinary
+        var index = group.quorum.sought.indexOf(from)
+        if (~index) {
+            group.quorum.sought.splice(index, 1)
+            var seen = group.quorum.seen
+        } else {
+            var seen = group.constituents
         }
-        var legislators = election.quorum.length + election.parliament.length
-        var citizens = legislators + election.constituents.length
-        var quorum = election.quorumSize <= legislators
-        var parliament = election.parliamentSize <= citizens
-        var preferable = election.parliamentSize <= election.preferred.filter(function (citizen) {
-                             return ~this.parliament.indexOf(citizen)
-                         }.bind(this)).length
-                      || election.preferred.length == election.preferences
-        var complete = election.receipts.length == election.requests
-        if (quorum && ((preferable && parliament) || complete)) {
+        if (reachable) {
+            seen.push(from)
+            election.reachable++
+            group.sought--
+        }
+        var quorum = {}
+        quorum.preferred = election.preferred.quorum.seen.length == election.quorumSize - 1
+        quorum.ordinary = election.preferred.quorum.seen.length +
+                          election.ordinary.quorum.seen.length >= election.quorumSize - 1
+        if (quorum.preferred) {
+            election.preferred.quorum.sought.length = 0
+        } else if (election.preferred.quorum.sought.length == 0) {
+            quorum.preferred = true
+        }
+        var parliament = {}
+        parliament.preferred = quorum.preferred &&
+                              (election.preferred.constituents.length >= election.minoritySize ||
+                               election.preferred.sought == 0)
+        parliament.ordinary = quorum.ordinary && election.reachable >= election.parliamentSize
+        var complete = election.requests == election.receipts.length
+        if ((parliament.preferred && parliament.ordinary) || (quorum.ordinary && complete)) {
             var prefer = function (a, b) {
-                a = ~election.preferred.indexOf(a) ? 0 : 1
-                b = ~election.preferred.indexOf(b) ? 0 : 1
+                a = this.prefer(a) ? 0 : 1
+                b = this.prefer(b) ? 0 : 1
                 return a - b
-            }
-            election.parliament.sort(prefer)
-            election.constituents.sort(prefer)
-            var candidates = election.parliament.concat(election.constituents)
+            }.bind(this)
+            var candidates = election.preferred.quorum.seen.concat(election.ordinary.quorum.seen)
+                                                           .concat(election.preferred.constituents)
+                                                           .concat(election.ordinary.constituents)
             for (var i = 0; election.quorum.length < election.quorumSize; i++) {
                 election.quorum.push(candidates.shift())
             }
             candidates = election.quorum.concat(candidates.sort(prefer))
-            if (!parliament) {
+            if (election.reachable < election.parliamentSize) {
                 // if we have the quorum, but we do not have the parliament, we
                 // form a government of quorum size, shrink the government.
                 election.parliamentSize -= 2
@@ -1263,13 +1272,40 @@ Legislator.prototype.elect = function (remap) {
     var receipts = this.citizens.filter(function (citizen) {
         return !~candidates.indexOf(citizen)
     }.bind(this))
-    var preferences = candidates.filter(function (citizen) {
-        this.prefer(citizen)
-    }.bind(this)).length
     var remap = remap && this.proposals.splice(0, this.proposals.length)
     var parliamentSize = this.parliamentSize(candidates.length + 1)
     var majoritySize = Math.ceil(parliamentSize / 2)
     var minoritySize = parliamentSize - majoritySize
+    var quorum = this.parliament.filter(function (citizen) {
+        return ~candidates.indexOf(citizen)
+    }, this)
+    var constituents = candidates.filter(function (citizen) {
+        return !~quorum.indexOf(citizen)
+    })
+    var preferred = {
+        quorum: {
+            sought: quorum.filter(function (citizen) {
+                return this.prefer(citizen)
+            }, this),
+            seen: []
+        },
+        sought: candidates.filter(function (citizen) {
+            return this.prefer(citizen)
+        }, this).length,
+        constituents: []
+    }
+    var ordinary = {
+        quorum: {
+            sought: quorum.filter(function (citizen) {
+                return !this.prefer(citizen)
+            }, this),
+            seen: []
+        },
+        sought: constituents.filter(function (citizen) {
+            return !this.prefer(citizen)
+        }, this).length,
+        constituents: []
+    }
     this.election = {
         remap: remap,
         parliamentSize: parliamentSize,
@@ -1281,11 +1317,12 @@ Legislator.prototype.elect = function (remap) {
         minoritySize: minoritySize,
         reachable: [],
         receipts: receipts,
-        preferences: preferences,
-        preferred: [],
+        preferred: preferred,
+        ordinary: ordinary,
         requests: receipts.length + candidates.length,
         parliament: [],
-        constituents: []
+        constituents: [],
+        reachable: 1
     }
     candidates.forEach(function (id) {
         this.dispatch({
