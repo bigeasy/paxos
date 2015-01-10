@@ -1,10 +1,13 @@
 
-require('proof')(28, prove)
+require('proof')(29, prove)
 
 function prove (assert) {
     var Client = require('../../client')
 
     var client = new Client('0')
+
+    client.prime()
+    assert(client.length, 0, 'empty prime array')
 
     client.prime([{ value: null, promise: '1/0' }])
     var marker = client.receive([
