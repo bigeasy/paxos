@@ -422,6 +422,7 @@ Legislator.prototype.since = function (promise, count) {
                 internal: entry.internal,
                 value: entry.value
             })
+            previous = entry.id
             count--
         }
     }
