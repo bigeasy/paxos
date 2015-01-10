@@ -56,10 +56,13 @@ Client.prototype.published = function (receipts) {
 }
 
 Client.prototype.prime = function (entries) {
-    this._ingest(entries)
-    this.uniform = this.log.min().promise
-    this.log.min().uniform = true
-    this.playUniform()
+    if (entries.length) {
+        this._ingest(entries)
+        this.uniform = this.log.min().promise
+        this.length = 1
+        this.log.min().uniform = true
+        this.playUniform()
+    }
 }
 
 Client.prototype.retry = function () {
