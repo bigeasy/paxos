@@ -392,6 +392,20 @@ Legislator.prototype.extract = function (direction, count, id) {
     }
 }
 
+Legislator.prototype.prime = function (promise) {
+    var entry = this.log.find({ id: promise })
+    if (entry == null) {
+        return []
+    } else {
+        return [{
+            promise: entry.id,
+            previous: null,
+            internal: entry.internal,
+            value: entry.value
+        }]
+    }
+}
+
 Legislator.prototype.since = function (promise, count) {
     count = count || 24
     var iterator = this.log.findIter({ id: promise })

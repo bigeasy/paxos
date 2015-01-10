@@ -1,5 +1,5 @@
 
-require('proof')(99, prove)
+require('proof')(101, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -557,6 +557,23 @@ function prove (assert) {
     assert(!network.machines[3].legislator.since('1/0', 1024), 'since not found')
 
     // extract, inject and shift.
+    assert(network.machines[0].legislator.prime('0/0'), [], 'prime not found')
+    assert(network.machines[0].legislator.prime('1/0')[0], [{
+        promise: '1/0',
+        previous: null,
+        internal: true,
+        value: {
+            type: 'convene',
+            government: {
+                majority: [ '0' ],
+                minority: [],
+                constituents: [ '1', '2' ],
+                id: '1/0'
+            },
+            terminus: '0/1'
+        }
+    }][0], 'prime')
+
     var extract
     extract = network.machines[0].legislator.extract('forward')
     assert(extract.next, '1/0', 'extract next')
