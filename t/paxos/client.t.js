@@ -1,5 +1,5 @@
 
-require('proof')(29, prove)
+require('proof')(30, prove)
 
 function prove (assert) {
     var Client = require('../../client')
@@ -53,6 +53,13 @@ function prove (assert) {
         { cookie: '0/1', promise: '1/3', value: 2, previous: '1/2', uniform: true },
         { cookie: '0/2', promise: '1/4', value: 2, previous: '1/3', uniform: true }
     ], 'each')
+
+    var array = client.since(marker)
+    assert(array, [
+        { cookie: '1/1', promise: '1/2', value: 1, previous: '1/1', uniform: true },
+        { cookie: '0/1', promise: '1/3', value: 2, previous: '1/2', uniform: true },
+        { cookie: '0/2', promise: '1/4', value: 2, previous: '1/3', uniform: true }
+    ], 'since')
 
     assert(client.outbox(), [], 'outbox is empty after publshing')
 
