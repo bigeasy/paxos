@@ -143,6 +143,16 @@ Client.prototype.receive = function (entries) {
     return this.playUniform()
 }
 
+Client.prototype.since = function (marker, callback) {
+    var iterator = this.log.findIter({ promise: marker })
+    assert(iterator, 'promise not found')
+    var entries = [], entry
+    while ((entry = iterator.next()) && entry.uniform) {
+        entries.push(entry)
+    }
+    return entries
+}
+
 Client.prototype.each = function (marker, callback) {
     var iterator = this.log.findIter({ promise: marker })
     assert(iterator, 'promise not found')
