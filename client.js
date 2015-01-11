@@ -13,9 +13,9 @@ function Client (id) {
     this.log = new RBTree(function (a, b) { return Id.compare(a.promise, b.promise) })
 }
 
-Client.prototype.publish = function (value) {
+Client.prototype.publish = function (value, internal) {
     var cookie = this.nextCookie()
-    var request = { cookie: cookie, value: value }
+    var request = { cookie: cookie, value: value, internal: !!internal }
     this.pending.ordered.push(request)
     this.pending.indexed[cookie] = request
     return cookie
@@ -32,7 +32,7 @@ Client.prototype.outbox = function () {
     } else if (!this.boundary && this.sent.ordered.length == 0 && this.pending.ordered.length != 0) {
         this.sent = this.pending
         outbox = this.sent.ordered.map(function (request) {
-            return { cookie: request.cookie, value: request.value }
+            return { cookie: request.cookie, value: request.value, internal: request.internal }
         }, this)
         this.pending = { ordered: [], indexed: {} }
     }
