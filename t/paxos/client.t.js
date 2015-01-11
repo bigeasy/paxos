@@ -20,8 +20,8 @@ function prove (assert) {
     assert(client.publish(1), '0/1', 'cookie')
     assert(client.publish(2), '0/2', 'second cookie')
     assert(client.outbox(), [
-        { cookie: '0/1', value: 1 },
-        { cookie: '0/2', value: 2 }
+        { cookie: '0/1', value: 1, internal: false },
+        { cookie: '0/2', value: 2, internal: false }
     ], 'outbox is not empty')
 
     client.published([
@@ -67,9 +67,9 @@ function prove (assert) {
     client.publish(2)
     client.publish(3)
     assert(client.outbox(), [
-        { cookie: '0/3', value: 1 },
-        { cookie: '0/4', value: 2 },
-        { cookie: '0/5', value: 3 }
+        { cookie: '0/3', value: 1, internal: false },
+        { cookie: '0/4', value: 2, internal: false },
+        { cookie: '0/5', value: 3, internal: false }
     ], 'outbox for boundary')
     client.publish(4)
     client.publish(5)
@@ -95,9 +95,9 @@ function prove (assert) {
     ])
     assert(client.boundary == null, 'boundary cleared')
     assert(client.outbox(), [
-        { cookie: '0/6', value: 4 },
-        { cookie: '0/7', value: 5 },
-        { cookie: '0/8', value: 6 }
+        { cookie: '0/6', value: 4, internal: false },
+        { cookie: '0/7', value: 5, internal: false },
+        { cookie: '0/8', value: 6, internal: false }
     ], 'boundary cleared outbox')
     client.published(null)
     assert(client.outbox(), [
@@ -113,10 +113,10 @@ function prove (assert) {
         { cookie: '0/0', promise: '2/0', value: 0, previous: '1/b' },
     ])
     assert(client.outbox(), [
-        { cookie: '0/8', value: 6 },
-        { cookie: '0/c', value: 7 },
-        { cookie: '0/d', value: 8 },
-        { cookie: '0/e', value: 9 }
+        { cookie: '0/8', value: 6, internal: false },
+        { cookie: '0/c', value: 7, internal: false },
+        { cookie: '0/d', value: 8, internal: false },
+        { cookie: '0/e', value: 9, internal: false }
     ], 'second boundary resend outbox')
     client.published(null)
     assert(client.outbox(), [
@@ -146,9 +146,9 @@ function prove (assert) {
     client.publish(2)
     client.publish(3)
     assert(client.outbox(), [
-        { cookie: '0/10', value: 1 },
-        { cookie: '0/11', value: 2 },
-        { cookie: '0/12', value: 3 }
+        { cookie: '0/10', value: 1, internal: false },
+        { cookie: '0/11', value: 2, internal: false },
+        { cookie: '0/12', value: 3, internal: false }
     ], 'fourth outbox')
     client.published([
         { cookie: '0/10', promise: '3/6' },
