@@ -6,7 +6,7 @@ function prove (assert) {
 
     var client = new Client('0')
 
-    client.prime()
+    client.prime([])
     assert(client.length, 0, 'empty prime array')
 
     client.prime([{ value: null, promise: '1/0' }])
