@@ -32,6 +32,7 @@ function Legislator (id, options) {
     this.proposals = []
     this.routed = {}
     this.unrouted = {}
+    this.location = {}
 
     this.government = { id: '0/0', minority: [], majority: [] }
     this.citizens = []
@@ -1128,6 +1129,7 @@ Legislator.prototype.propagation = function () {
 
     for (var failed in this.failed) {
         if (!~this.citizens.indexOf(failed)) {
+            delete this.location[failed]
             delete this.unrouted[failed]
             for (var id in this.routed) {
                 var route = this.routed[id]
@@ -1235,6 +1237,7 @@ Legislator.prototype.decideNaturalize = function (entry) {
     if (entry.value.id == this.id) {
         this.naturalized = entry.id
     }
+    this.location[entry.value.id] = entry.value.location
     var elect, now = this.clock()
     elect = this.government.majority[0] == this.id
     elect = elect && this.parliament.length < this.parliamentSize(this.candidates(now).length + 1)
