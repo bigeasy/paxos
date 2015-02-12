@@ -7,8 +7,15 @@ var slice = [].slice
 var RBTree = require('bintrees').RBTree
 var Cache = require('magazine')
 
-var consume = require('./consume')
 var Id = require('./id')
+
+function consume (array, f, context) {
+    var index = 0
+    while (index < array.length) {
+        if (f.call(context, array[index])) { array.splice(index, 1) }
+        else { index++ }
+    }
+}
 
 function Legislator (id, options) {
     options || (options = {})

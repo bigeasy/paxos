@@ -1,4 +1,3 @@
-var consume = require('../consume')
 var serializer = require('../serializer')
 var transcript = require('../transcript')
 
