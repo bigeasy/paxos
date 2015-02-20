@@ -53,11 +53,13 @@ function Legislator (id, options) {
     this.propagation()
 }
 
-Legislator.prototype.routeOf = function (path) {
+Legislator.prototype.routeOf = function (path, pulse) {
     assert(typeof path != 'string', 'paths are no longer strings')
-    var id = path.join(' -> '), route = this.routed[id]
+    assert(pulse != null, 'pulse must not be null')
+    var id = [ pulse ? '!' : '.' ].concat(path).join(' -> '), route = this.routed[id]
     if (!route) {
         this.routed[id] = route = {
+            pulse: !! pulse,
             retry: this.retry,
             sleep: this.clock(),
             id: id,
@@ -105,12 +107,13 @@ Legislator.prototype.consume = function (envelope, route) {
     }, this)
 }
 
-Legislator.prototype.stuff = function (from, to, route, message) {
+Legislator.prototype.stuff = function (from, to, pulse, route, message) {
     var envelopes = []
     message.id = this.messageId = Id.increment(this.messageId, 1)
     from.forEach(function (from) {
         to.forEach(function (to) {
             var envelope = {
+                pulse: pulse,
                 from: from,
                 to: to,
                 route: route,
@@ -127,6 +130,10 @@ Legislator.prototype.stuff = function (from, to, route, message) {
 }
 
 Legislator.prototype.dispatch = function (options) {
+    if (options.message.type !== 'failed') {
+        assert(options.route, 'route is now required')
+        assert(options.pulse != null, 'pulse is now required')
+    }
     var route = options.route || null
     var from = options.from
     var to = options.to
@@ -142,8 +149,8 @@ Legislator.prototype.dispatch = function (options) {
     if (!Array.isArray(to)) to = [ to ]
     if (!Array.isArray(from)) from = [ from ]
 
-    if (route == null) {
-        this.stuff(from, to, null, message).forEach(function (envelope) {
+    if (route === null) {
+        this.stuff(from, to, false, null, message).forEach(function (envelope) {
             var envelopes = this.unrouted[envelope.to]
             if (!envelopes) {
                 envelopes = this.unrouted[envelope.to] = []
@@ -151,8 +158,8 @@ Legislator.prototype.dispatch = function (options) {
             envelopes.push(envelope)
         }, this)
     } else {
-        route = this.routeOf(route)
-        push.apply(route.envelopes, this.stuff(from, to, route.path, message))
+        route = this.routeOf(route, options.pulse)
+        push.apply(route.envelopes, this.stuff(from, to, route.pulse, route.path, message))
     }
 }
 
@@ -160,7 +167,7 @@ Legislator.prototype.outbox = function () {
     var routes = []
 
     if (this.promise.quorum[0] == this.id) {
-        var route = this.routeOf(this.promise.quorum)
+        var route = this.routeOf(this.promise.quorum, true)
         if (route.envelopes.length && !route.sending) {
             route.sending = true
             route.retry = this.retry
@@ -173,10 +180,12 @@ Legislator.prototype.outbox = function () {
         var now = this.clock()
         if (greatest.uniform == greatest.decided) {
             this.constituency.forEach(function (id) {
-                var route = this.routeOf([ this.id, id ])
+                var route = this.routeOf([ this.id, id ], false)
                 if (!route.sending && route.retry && route.sleep <= now) {
                     if (Id.compare(this.greatestOf(id).uniform, greatest.uniform) < 0) {
                         this.dispatch({
+                            pulse: false,
+                            route: [ this.id, id ],
                             from: id,
                             to: this.id,
                             message: {
@@ -190,11 +199,17 @@ Legislator.prototype.outbox = function () {
                 }
             }, this)
         }
-        for (var id in this.unrouted) {
-            var route = this.routeOf([ this.id, id ])
-            if (!route.sending && route.retry && route.sleep <= now) {
-                routes.push({ id: route.id, path: route.path, pulse: false })
-                route.sending = true
+        for (var id in this.routed) {
+            var route = this.routed[id]
+            if (route.path[0] === this.id && !route.pulse) {
+                if (!route.sending && route.retry && route.sleep <= now) {
+                    if (route.envelopes.length === 0) {
+                        delete this.routed[id]
+                    } else {
+                        routes.push({ id: route.id, path: route.path, pulse: false })
+                        route.sending = true
+                    }
+                }
             }
         }
     }
@@ -203,7 +218,7 @@ Legislator.prototype.outbox = function () {
 }
 
 Legislator.prototype.sent = function (route, sent, received) {
-    var pulse = route.pulse, route = this.routeOf(route.path), types = {}
+    var pulse = route.pulse, route = this.routeOf(route.path, route.pulse), types = {}
 
     route.sending = false
     if (route.retry) route.retry--
@@ -263,13 +278,9 @@ Legislator.prototype.sent = function (route, sent, received) {
     }
 }
 
-Legislator.prototype.forwards = function (path, index) {
-    var route = this.routeOf(path)
+Legislator.prototype.forwards = function (route, index) {
+    var route = this.routeOf(route.path, route.pulse)
     var envelopes = []
-    path.slice(index + 1).forEach(function (id) {
-        push.apply(envelopes, this.unrouted[id] || [])
-        delete this.unrouted[id]
-    }, this)
     consume(route.envelopes, function (envelope) {
         var i = route.path.indexOf(envelope.to)
         if (index < i) {
@@ -281,12 +292,12 @@ Legislator.prototype.forwards = function (path, index) {
     return envelopes
 }
 
-Legislator.prototype.returns = function (path, index) {
-    var route = this.routeOf(path),
+Legislator.prototype.returns = function (route, index) {
+    var route = this.routeOf(route.path, route.pulse),
         envelopes = [],
         greatest = this.greatestOf(this.id),
         failures = greatest.decided == greatest.uniform
-    path.slice(0, index).forEach(function (id) {
+    route.path.slice(0, index).forEach(function (id) {
         if (failures) {
             for (var key in this.failed) {
                 this.dispatch({
@@ -314,12 +325,13 @@ Legislator.prototype.returns = function (path, index) {
 
 Legislator.prototype.inbox = function (route, envelopes) {
     assert(route.id != '-', 'no route id')
-    var pulse = route.pulse, route = this.routeOf(route.path)
-    if (pulse && !this.election) {
+    var route = this.routeOf(route.path, route.pulse)
+    if (route.pulse && !this.election) {
         this.schedule({ type: 'elect', id: this.id, delay: this.timeout })
     }
     envelopes.forEach(function (envelope) {
         this.dispatch({
+            pulse: route.pulse,
             route: envelope.route,
             from: envelope.from,
             to: envelope.to,
@@ -543,6 +555,8 @@ Legislator.prototype.newGovernment = function (quorum, government, remap) {
     entry.working = true
     quorum.slice(1).forEach(function (id) {
         this.dispatch({
+            pulse: true,
+            route: entry.quorum,
             from: id,
             to: this.id,
             message: {
@@ -553,6 +567,8 @@ Legislator.prototype.newGovernment = function (quorum, government, remap) {
             }
         })
         this.dispatch({
+            pulse: true,
+            route: entry.quorum,
             from: this.id,
             to: id,
             message: {
@@ -588,6 +604,7 @@ Legislator.prototype.propose = function (cookie, value, internal, accept) {
 Legislator.prototype.prepare = function () {
     var entry = this.log.max(), quorum = entry.quorum
     this.dispatch({
+        pulse: true,
         route: quorum,
         message: {
             type: 'prepare',
@@ -609,6 +626,8 @@ Legislator.prototype.receivePrepare = function (envelope, message) {
                 quorum: message.quorum
             }
             this.dispatch({
+                pulse: true,
+                route: envelope.route,
                 to: envelope.from,
                 message: {
                     type: 'promise',
@@ -617,6 +636,8 @@ Legislator.prototype.receivePrepare = function (envelope, message) {
             })
         } else {
             this.dispatch({
+                pulse: true,
+                route: envelope.route,
                 to: envelope.from,
                 message: {
                     type: 'promised',
@@ -626,6 +647,8 @@ Legislator.prototype.receivePrepare = function (envelope, message) {
         }
     } else {
         this.dispatch({
+            pulse: true,
+            route: envelope.route,
             to: envelope.from,
             message: {
                 type: 'promised',
@@ -685,6 +708,7 @@ Legislator.prototype.post = function (cookie, value, internal) {
 Legislator.prototype.accept = function () {
     var entry = this.log.max()
     this.dispatch({
+        pulse: true,
         route: entry.quorum,
         message: {
             type: 'accept',
@@ -712,6 +736,7 @@ Legislator.prototype.receiveAccept = function (envelope, message) {
     if (compare == 0) {
         var entry = this.entry(message.promise, message)
         this.dispatch({
+            pulse: true,
             route: entry.quorum,
             message: {
                 type: 'accepted',
@@ -721,6 +746,8 @@ Legislator.prototype.receiveAccept = function (envelope, message) {
         })
     } else {
         this.dispatch({
+            pulse: true,
+            route: envelope.route,
             from: envelope.from,
             to: this.id,
             message: {
@@ -730,6 +757,8 @@ Legislator.prototype.receiveAccept = function (envelope, message) {
             }
         })
         this.dispatch({
+            pulse: true,
+            route: envelope.route,
             to: envelope.from,
             message: {
                 type: 'rejected',
@@ -760,6 +789,7 @@ Legislator.prototype.receiveAccepted = function (envelope, message) {
     if (entry.accepts.length >= entry.quorum.length)  {
         this.markAndSetGreatest(entry, 'learned')
         this.dispatch({
+            pulse: true,
             route: entry.quorum,
             message: {
                 type: 'learned',
@@ -891,6 +921,7 @@ Legislator.prototype.receiveLearned = function (envelope, message) {
 // rename it to "route", but "nothing" is good enough.
 Legislator.prototype.nothing = function () {
     this.dispatch({
+        pulse: true,
         route: this.promise.quorum,
         message: {
             type: 'ping',
@@ -934,6 +965,8 @@ Legislator.prototype.receiveSynchronize = function (envelope, message) {
     }
 
     this.dispatch({
+        pulse: envelope.pulse,
+        route: envelope.route,
         to: envelope.from,
         message: {
             type: 'ping',
@@ -943,6 +976,8 @@ Legislator.prototype.receiveSynchronize = function (envelope, message) {
 
     function createLearned (entry) {
         this.dispatch({
+            pulse: envelope.pulse,
+            route: envelope.route,
             from: entry.learns,
             to: envelope.from,
             message: {
@@ -962,6 +997,8 @@ Legislator.prototype.whenPing = function (event) {
         this.nothing()
     } else if (~this.constituency.indexOf(event.id)) {
         this.dispatch({
+            pulse: false,
+            route: [ this.id, event.id ],
             to: event.id,
             message: {
                 type: 'ping',
@@ -974,6 +1011,8 @@ Legislator.prototype.whenPing = function (event) {
 Legislator.prototype.receivePing = function (envelope, message) {
     this.greatest[envelope.from] = message.greatest
     this.dispatch({
+        pulse: envelope.pulse,
+        route: envelope.route,
         to: envelope.from,
         message: {
             type: 'pong',
@@ -988,7 +1027,8 @@ Legislator.prototype.receiveFailed = function (envelope, message) {
     }
 
     if (this.id != envelope.from) {
-        this.routeOf([ this.id, envelope.from ]).retry = 0
+        this.routeOf([ this.id, envelope.from ], true).retry = 0
+        this.routeOf([ this.id, envelope.from ], false).retry = 0
     }
 
     var failed = this.failed[envelope.from]
@@ -1014,6 +1054,8 @@ Legislator.prototype.receiveFailed = function (envelope, message) {
                 assert(this.government.majority.length > 1, 'single leader cannot succeed')
                 leader = this.government.majority[1]
                 this.dispatch({
+                    pulse: true,
+                    route: this.government.majority,
                     from: this.id,
                     to: leader,
                     message: { type: 'failed' }
@@ -1145,16 +1187,6 @@ Legislator.prototype.propagation = function () {
                 }
             }
             delete this.failed[failed]
-        } else if (this.government.majority[0] == this.id) {
-            // send it out so it will keep coming back.
-            this.dispatch({
-                from: failed,
-                to: this.government.majority,
-                message: {
-                    type: 'failed',
-                    value: {}
-                }
-            })
         }
     }
 
@@ -1197,7 +1229,7 @@ Legislator.prototype.propagation = function () {
         }
     }
     this.constituency.forEach(function (id) {
-        var route = this.routeOf([ this.id, id ])
+        var route = this.routeOf([ this.id, id ], false)
         var event = this.schedule({
             type: 'ping',
             id: id,
@@ -1268,7 +1300,7 @@ Legislator.prototype.whenElect = function () {
 Legislator.prototype.reachable = function (now) {
     assert(now != null, 'now is requried to reachable')
     return this.citizens.filter(function (citizen) {
-        var route = this.routeOf([ this.id, citizen ])
+        var route = this.routeOf([ this.id, citizen ], false)
         return route.retry && route.sleep <= now
     }.bind(this))
 }
@@ -1345,6 +1377,8 @@ Legislator.prototype.elect = function (remap) {
     }
     candidates.forEach(function (id) {
         this.dispatch({
+            pulse: false,
+            route: [ this.id, id ],
             to: id,
             message: {
                 type: 'ping',

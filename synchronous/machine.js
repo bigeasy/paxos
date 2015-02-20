@@ -13,14 +13,14 @@ Machine.prototype.receive = function (buffers) {
     var route = work.route, index = work.index, expanded = serializer.expand(work.messages)
     this.legislator.inbox(route, expanded)
 
-    var route = this.legislator.routeOf(route.path)
+    var route = this.legislator.routeOf(route.path, route.pulse)
 
     if (index + 1 < route.path.length) {
-        var forwards = this.legislator.forwards(route.path, index)
+        var forwards = this.legislator.forwards(route, index)
         this.legislator.inbox(route, this.network.post(route, index + 1, forwards))
     }
 
-    var returns = this.legislator.returns(route.path, index)
+    var returns = this.legislator.returns(route, index)
     return transcript.serialize(work.route, work.index, serializer.flatten(returns))
 }
 
@@ -28,7 +28,7 @@ Machine.prototype.tick = function () {
     var ticked = false
 
     this.legislator.outbox().forEach(function (route) {
-        var forwards = this.legislator.forwards(route.path, 0)
+        var forwards = this.legislator.forwards(route, 0)
         assert(forwards.length, 'no forwards')
         var returns = this.network.post(route, 1, forwards)
         this.legislator.inbox(route, returns)
