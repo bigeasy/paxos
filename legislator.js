@@ -262,7 +262,7 @@ Legislator.prototype.sent = function (route, sent, received) {
                 this.schedule({ type: 'elect', id: this.id, delay: this.timeout })
             } else {
                 this.unschedule(this.id)
-                this.whenElect()
+                this.elect()
             }
         } else {
             if (route.retry) {
@@ -676,7 +676,7 @@ Legislator.prototype.receivePromised = function (envelope, message) {
     if (Id.compare(this.greatestOf(envelope.from).uniform, this.greatestOf(this.id).uniform) == 0) {
         this.schedule({ type: 'elect', id: this.id, delay: this.timeout })
     } else {
-        this.whenElect()
+        this.elect()
     }
 }
 
