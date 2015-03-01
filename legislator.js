@@ -1218,7 +1218,7 @@ Legislator.prototype.propagation = function () {
             this.schedule({
                 type: 'ping',
                 id: this.id,
-                delay: this.timeout
+                delay: this.ping
             })
         } else {
             this.schedule({
@@ -1233,7 +1233,7 @@ Legislator.prototype.propagation = function () {
         var event = this.schedule({
             type: 'ping',
             id: id,
-            delay: this.timeout
+            delay: this.ping
         })
         route.sleep = this.clock()
         route.retry = this.retry
