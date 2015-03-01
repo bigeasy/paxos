@@ -1215,6 +1215,28 @@ Legislator.prototype.propagation = function () {
     this.scheduler.clear()
     if (~this.government.majority.indexOf(this.id)) {
         if (this.government.majority[0] == this.id) {
+            if (!this.prefer(this.id) && this.government.majority.some(this.prefer)) {
+                this.schedule({
+                    type: 'defer',
+                    id: '!',
+                    delay: this.timeout
+                })
+            } else {
+                var preferred = {
+                    parliament: this.parliament.filter(this.prefer).length,
+                    citizens: this.citizens.filter(this.prefer).length
+                }
+                if (
+                    preferred.parliament < this.idealGovernmentSize &&
+                    preferred.citizens > preferred.parliament
+                ) {
+                    this.schedule({
+                        type: 'elect',
+                        id: '!',
+                        delay: this.timeout
+                    })
+                }
+            }
             this.schedule({
                 type: 'ping',
                 id: this.id,
@@ -1295,6 +1317,15 @@ Legislator.prototype.parliamentSize = function (citizens) {
 
 Legislator.prototype.whenElect = function () {
     this.elect()
+}
+
+Legislator.prototype.whenDefer = function () {
+    if (this.government.majority[0] === this.id) {
+        var successor = this.government.majority.filter(this.prefer).shift()
+        assert(successor, 'poorly choosen successor')
+        this.schedule({ type: 'elect', id: '!', delay: this.timeout })
+        this.reelection(successor)
+    }
 }
 
 Legislator.prototype.reachable = function (now) {

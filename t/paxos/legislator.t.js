@@ -1,5 +1,5 @@
 
-require('proof')(101, prove)
+require('proof')(102, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -864,5 +864,51 @@ function prove (assert) {
         ],
         id: '25/0'
     }, 'election not called')
-    return
+    // prefer odd numbered citizens
+    network.machines.forEach(function (machine) {
+        machine.legislator.prefer = function (citizen) {
+            return (+citizen) % 2 == 1
+        }
+    })
+    network.machines[3].legislator.whenDefer()
+    network.machines[0].legislator.propagation()
+    time++
+    network.schedule()
+    network.tick()
+    time++
+    network.schedule()
+    network.tick()
+    time++
+    network.schedule()
+    network.tick()
+    time++
+    network.schedule()
+    network.tick()
+    time++
+    network.schedule()
+    network.tick()
+    time++
+    network.schedule()
+    network.tick()
+    assert(
+        { majority: [ '3', '5', '1' ],
+          minority: [ '7', '9' ],
+          constituents:
+           [ '0',
+             '4',
+             '2',
+             '6',
+             '8',
+             '10',
+             '11',
+             '12',
+             '13',
+             '14',
+             '15',
+             '16',
+             '17',
+             '18',
+             '19',
+             '20' ],
+          id: '28/0' }, network.machines[3].legislator.government, 'schedule preferred government')
 }
