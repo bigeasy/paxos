@@ -489,6 +489,8 @@ Legislator.prototype.immigrate = function (id) {
     this.government = { id: '0/0', minority: [], majority: [] }
 }
 
+// todo: count here by length in client
+
 Legislator.prototype.shift = function () {
     var min = this.log.min(), max = this.log.max(), entry = min, removed = 0
     if (Id.compare(min.id, max.id, 0) == 0) {
