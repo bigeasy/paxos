@@ -691,7 +691,7 @@ Legislator.prototype.post = function (cookie, value, internal) {
     }
 
     var max = this.log.max()
-    if (max.working && Id.isGovernment(max.id)) {
+    if ((max.working && Id.isGovernment(max.id)) || this.election) {
         return {
             posted: false,
             leader: null
