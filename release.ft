@@ -1,5 +1,6 @@
 ### Issue by Issue
 
+ * Defeat comparison of nulls in Client. #248.
  * Upgrade Transcript to 0.0.6. #226.
  * Add route to transcript. #208.
  * Rename `markLastest`. #119.

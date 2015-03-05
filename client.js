@@ -89,7 +89,7 @@ Client.prototype.playUniform = function (entries) {
         }
         this.uniform = current.promise
         this.length++
-        var request = this.sent.ordered[0] || {}, boundary = this.boundary
+        var request = this.sent.ordered[0] || { cookie: '/' }, boundary = this.boundary
         if (request.cookie == current.cookie) {
             assert(request.promise == null
                 || Id.compare(request.promise, current.promise) == 0, 'cookie/promise mismatch')
