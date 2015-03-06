@@ -31,7 +31,7 @@ function Legislator (id, options) {
 
     this.messageId = id + '/0'
     this.log = new RBTree(function (a, b) { return Id.compare(a.id, b.id) })
-    this.count = 0
+    this.length = 0
     this.scheduler = new Scheduler(this.clock)
 
     this.promise = { id: '0/0', quorum: [ null ] }
@@ -506,7 +506,7 @@ Legislator.prototype.shift = function () {
     if (!removed) {
         return this.shift()
     }
-    this.count -= removed
+    this.length -= removed
     return removed
 }
 
@@ -813,7 +813,7 @@ Legislator.prototype.receiveRejected = function (envelope, message) {
 Legislator.prototype.markUniform = function (entry) {
     assert(entry.learns.length > 0)
     if (this.markAndSetGreatest(entry, 'uniform')) {
-        this.count++
+        this.length++
         if (entry.internal) {
             var type = entry.value.type
             var method = 'decide' + type[0].toUpperCase() + type.slice(1)

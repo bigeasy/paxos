@@ -577,10 +577,10 @@ function prove (assert) {
     var extract
     extract = network.machines[0].legislator.extract('forward')
     assert(extract.next, '1/0', 'extract next')
-    assert(network.machines[0].legislator.count, 71, 'entry count')
+    assert(network.machines[0].legislator.length, 71, 'entry count')
 
     assert(network.machines[0].legislator.shift(), 3, 'shift')
-    assert(network.machines[0].legislator.count, 68, 'entry count after shift')
+    assert(network.machines[0].legislator.length, 68, 'entry count after shift')
     extract = network.machines[0].legislator.extract('forward')
     assert(extract.next, '2/0', 'extract next after shift')
 
@@ -594,9 +594,9 @@ function prove (assert) {
         network.machines[4].legislator.inject(extract.entries)
     } while (extract.next)
     network.machines[4].legislator.initialize()
-    assert(network.machines[4].legislator.count, 68, 'entry count after complete copy')
+    assert(network.machines[4].legislator.length, 68, 'entry count after complete copy')
     while (network.machines[0].legislator.shift() != 0) {}
-    assert(network.machines[0].legislator.count, 1, 'entry count after shift everything')
+    assert(network.machines[0].legislator.length, 1, 'entry count after shift everything')
 
     network.machines[2].legislator.naturalize('4')
     network.tick()

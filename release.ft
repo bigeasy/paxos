@@ -1,5 +1,6 @@
 ### Issue by Issue
 
+ * Rename `Legislator.count` to `length`. #251.
  * Empty to array for client failure. #250.
  * Defeat comparison of nulls in Client. #248.
  * Upgrade Transcript to 0.0.6. #226.
