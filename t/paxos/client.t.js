@@ -1,5 +1,5 @@
 
-require('proof')(30, prove)
+require('proof')(31, prove)
 
 function prove (assert) {
     var Client = require('../../client')
@@ -191,4 +191,11 @@ function prove (assert) {
     while (client.shift()) { }
 
     assert(client.length, 1, 'shift')
+
+    client.publish(2)
+    assert(client.clear(),
+    [ { cookie: '0/11', value: 2, internal: false, promise: '4/3' },
+      { cookie: '0/12', value: 3, internal: false, promise: '4/4' },
+      { cookie: '0/13', value: 2, internal: false } ]
+    , 'clear')
 }

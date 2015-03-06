@@ -6,6 +6,8 @@ var unshift = [].unshift
 
 function Client (id) {
     this.id = id
+    this.boundary = null
+    this.flush = false
     this.cookie = id + '/' + 0
     this.sent = { ordered: [], indexed: {} }
     this.pending = { ordered: [], indexed: {} }
@@ -171,8 +173,10 @@ Client.prototype.shift = function () {
     return false
 }
 
-Client.prototype.waiting = function () {
-    return this.pending.ordered.concat(this.sent.ordered)
+Client.prototype.clear = function () {
+    var waiting = this.sent.ordered.concat(this.pending.ordered)
+    Client.call(this)
+    return waiting
 }
 
 module.exports = Client
