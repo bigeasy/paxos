@@ -40,7 +40,7 @@ Client.prototype.outbox = function () {
 }
 
 Client.prototype.published = function (receipts) {
-    if (receipts == null) {
+    if (receipts.length === 0) {
         this.flush = true
     } else if (this.flush) {
         assert(receipts.length == 1, 'too many receipts')

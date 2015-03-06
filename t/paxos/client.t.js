@@ -74,9 +74,9 @@ function prove (assert) {
     client.publish(4)
     client.publish(5)
     client.publish(6)
-    client.published(null)
+    client.published([])
     assert(client.outbox(), [{ cookie: '0/9', value: 0 }], 'boundary outbox will fail')
-    client.published(null)
+    client.published([])
     assert(client.outbox(), [{ cookie: '0/a', value: 0 }], 'boundary outbox')
     client.published([{ cookie: '0/a', promise: '1/9' }])
     assert(client.outbox(), [], 'boundary outbox published')
@@ -99,7 +99,7 @@ function prove (assert) {
         { cookie: '0/7', value: 5, internal: false },
         { cookie: '0/8', value: 6, internal: false }
     ], 'boundary cleared outbox')
-    client.published(null)
+    client.published([])
     assert(client.outbox(), [
         { cookie: '0/b', value: 0 }
     ], 'second boundary outbox')
@@ -118,7 +118,7 @@ function prove (assert) {
         { cookie: '0/d', value: 8, internal: false },
         { cookie: '0/e', value: 9, internal: false }
     ], 'second boundary resend outbox')
-    client.published(null)
+    client.published([])
     assert(client.outbox(), [
         { cookie: '0/f', value: 0 }
     ], 'third boundary')
