@@ -1,5 +1,6 @@
 ### Issue by Issue
 
+ * Get a list of waiting messages from Client. #252.
  * Rename `Legislator.count` to `length`. #251.
  * Empty to array for client failure. #250.
  * Defeat comparison of nulls in Client. #248.

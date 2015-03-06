@@ -171,4 +171,8 @@ Client.prototype.shift = function () {
     return false
 }
 
+Client.prototype.waiting = function () {
+    return this.pending.ordered.concat(this.sent.ordered)
+}
+
 module.exports = Client
