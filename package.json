@@ -1,6 +1,6 @@
 {
     "name":         "paxos",
-    "version":      "0.0.7",
+    "version":      "0.0.8",
     "description":  "A Multi-Paxos implementation in pure JavaScript.",
     "author":       "Alan Gutierrez <alan@prettyrobots.com>",
     "homepage":     "https://bigeasy.github.io/paxos",
