@@ -1,5 +1,5 @@
 
-require('proof')(31, prove)
+require('proof')(35, prove)
 
 function prove (assert) {
     var Client = require('../../client')
@@ -198,4 +198,38 @@ function prove (assert) {
       { cookie: '0/12', value: 3, internal: false, promise: '4/4' },
       { cookie: '0/13', value: 2, internal: false } ]
     , 'clear')
+
+    client.prime([{ value: null, promise: '1/0' }])
+
+    client.publish(1)
+    client.publish(2)
+    client.publish(3)
+    assert(client.outbox(), [
+        { cookie: '0/1', value: 1, internal: false },
+        { cookie: '0/2', value: 2, internal: false },
+        { cookie: '0/3', value: 3, internal: false } ], 'reset')
+    client.published([
+        { cookie: '0/1', promise: '1/1' },
+        { cookie: '0/2', promise: '1/2' },
+        { cookie: '0/3', promise: '1/3' }
+    ])
+    assert(client.outbox(), [], 'outbox again')
+    client.receive([
+        { promise: '2/0', previous: '1/0', value: {} }
+    ])
+    assert(client.outbox(), [
+        { cookie: '0/1', value: 1, internal: false },
+        { cookie: '0/2', value: 2, internal: false },
+        { cookie: '0/3', value: 3, internal: false } ], 'outbox overshot')
+    client.published([
+        { cookie: '0/1', promise: '2/1' },
+        { cookie: '0/2', promise: '2/2' },
+        { cookie: '0/3', promise: '2/3' }
+    ])
+    client.receive([
+        { cookie: '0/1', promise: '2/1', value: 1, previous: '2/0' },
+        { cookie: '0/2', promise: '2/2', value: 2, previous: '2/1' },
+        { cookie: '0/3', promise: '2/3', value: 3, previous: '2/2' }
+    ])
+    assert(client.outbox(), [], 'outbox cleared')
 }

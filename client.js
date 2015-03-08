@@ -70,9 +70,10 @@ Client.prototype.prime = function (entries) {
 Client.prototype.retry = function () {
     unshift.apply(this.pending.ordered, this.sent.ordered)
     this.sent.ordered.forEach(function (request) {
+        delete request.promise
         this.pending.indexed[request.cookie] = request
     }, this)
-    this.sent.ordered.length = 0
+    this.sent = { ordered: [], indexed: {} }
 }
 
 Client.prototype.playUniform = function (entries) {
@@ -175,7 +176,7 @@ Client.prototype.shift = function () {
 
 Client.prototype.clear = function () {
     var waiting = this.sent.ordered.concat(this.pending.ordered)
-    Client.call(this)
+    Client.call(this, this.id)
     return waiting
 }
 
