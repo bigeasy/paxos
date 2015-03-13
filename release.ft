@@ -1,5 +1,6 @@
 ### Issue by Issue
 
+ * Rename `parliamentSize` property. #259.
  * Correctly reset Client on retry. #257.
  * Implement `Client.clear`. #254.
  * Get a list of waiting messages from Client. #252.

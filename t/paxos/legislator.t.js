@@ -10,7 +10,7 @@ function prove (assert) {
 
     var options = {
         clock: function () { return time },
-        size: 5,
+        parliamentSize: 5,
         filter: logger,
         ping: [ 1, 1 ],
         timeout: [ 2, 2 ],

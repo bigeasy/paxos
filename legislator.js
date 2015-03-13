@@ -23,7 +23,7 @@ function Legislator (id, options) {
     assert(typeof id == 'string', 'id must be hexidecimal string')
 
     this.id = id
-    this.idealGovernmentSize = options.size || 5
+    this.parliamentSize = options.parliamentSize || 5
 
     this.filter = options.filter || function (envelopes) { return [ envelopes ] }
     this.prefer = options.prefer || function () { return true }
@@ -1229,7 +1229,7 @@ Legislator.prototype.propagation = function () {
                     citizens: this.citizens.filter(this.prefer).length
                 }
                 if (
-                    preferred.parliament < this.idealGovernmentSize &&
+                    preferred.parliament < this.parliamentSize &&
                     preferred.citizens > preferred.parliament
                 ) {
                     this.schedule({
@@ -1303,14 +1303,14 @@ Legislator.prototype.decideNaturalize = function (entry) {
     this.location[entry.value.id] = entry.value.location
     var elect, now = this.clock()
     elect = this.government.majority[0] == this.id
-    elect = elect && this.parliament.length < this.parliamentSize(this.candidates(now).length + 1)
+    elect = elect && this.parliament.length < this.maxParliamentSize(this.candidates(now).length + 1)
     if (elect) {
         this.elect(true)
     }
 }
 
-Legislator.prototype.parliamentSize = function (citizens) {
-    var parliamentSize = Math.min(citizens, this.idealGovernmentSize)
+Legislator.prototype.maxParliamentSize = function (citizens) {
+    var parliamentSize = Math.min(citizens, this.parliamentSize)
     if (parliamentSize % 2 == 0) {
         parliamentSize--
     }
@@ -1357,7 +1357,7 @@ Legislator.prototype.elect = function (remap) {
         return !~candidates.indexOf(citizen)
     }.bind(this))
     var remap = remap && this.proposals.splice(0, this.proposals.length)
-    var parliamentSize = this.parliamentSize(candidates.length + 1)
+    var parliamentSize = this.maxParliamentSize(candidates.length + 1)
     var majoritySize = Math.ceil(parliamentSize / 2)
     var minoritySize = parliamentSize - majoritySize
     var quorum = this.parliament.filter(function (citizen) {
