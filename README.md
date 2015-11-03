@@ -1,15 +1,10 @@
-Paxos
+In-memory Paxos in pure-JavaScript. No disk writes necessary.
 
-Paxos in JavaScript.
+Sketch of what to say.
 
-    Documentation:  http://bigeasy.github.io/paxos
-    Source:         http://github.io/bigeasy/paxos
-    Issues:         http://github.com/bigeasy/paxos/issues
+ * Reproducable events for unit testing, but still a true Paxos.
+ * In-memory so that no disk writes are necessary.
+ * Blindingly fast.
+ * Write a proof that shows how this variation works.
 
-    Install:        `npm install paxos`
-
-    License:        MIT
-
-To learn everything you want to know about Paxos start here:
-
-    http://bigeasy.github.io/paxos
+**TK: Documentation.**
