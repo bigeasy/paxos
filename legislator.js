@@ -5,7 +5,6 @@ var Scheduler = require('happenstance')
 var push = [].push
 var slice = [].slice
 var RBTree = require('bintrees').RBTree
-var Cache = require('magazine')
 
 var Id = require('./id')
 
