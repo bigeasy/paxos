@@ -1,6 +1,5 @@
 var assert = require('assert')
 var Monotonic = require('monotonic')
-var cadence = require('cadence')
 var Scheduler = require('happenstance')
 var push = [].push
 var slice = [].slice
