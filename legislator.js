@@ -25,12 +25,12 @@ function Legislator (id, options) {
 
     this.filter = options.filter || function (envelopes) { return [ envelopes ] }
     this.prefer = options.prefer || function () { return true }
-    this.clock = options.clock || function () { return Date.now() }
+    this._Date = options.Date || Date
 
     this.messageId = id + '/0'
     this.log = new RBTree(function (a, b) { return Id.compare(a.id, b.id) })
     this.length = 0
-    this.scheduler = new Scheduler(this.clock)
+    this.scheduler = new Scheduler({ Date: this._Date })
 
     this.promise = { id: '0/0', quorum: [ null ] }
     this.lastPromisedId = '0/0'
@@ -59,7 +59,7 @@ Legislator.prototype.routeOf = function (path, pulse) {
         this.routed[id] = route = {
             pulse: !! pulse,
             retry: this.retry,
-            sleep: this.clock(),
+            sleep: this._Date.now(),
             id: id,
             path: path,
             envelopes: []
@@ -74,9 +74,7 @@ Legislator.prototype.greatestOf = function (id) {
 
 Legislator.prototype.schedule = function (event) {
     return this.scheduler.schedule({
-        id: event.id,
-        delay: event.delay,
-        value: event
+        key: event.id, value: event, delay: event.delay
     })
 }
 
@@ -100,7 +98,7 @@ Legislator.prototype.consume = function (envelope, route) {
     var type = envelope.message.type
     var method = 'receive' + type[0].toUpperCase() + type.substring(1)
     this.filter(envelope, envelope.message).forEach(function (envelope) {
-        this.ticks[envelope.from] = this.clock()
+        this.ticks[envelope.from] = this._Date.now()
         this[method](envelope, envelope.message, route)
     }, this)
 }
@@ -175,7 +173,7 @@ Legislator.prototype.outbox = function () {
 
     if (routes.length == 0) {
         var greatest = this.greatestOf(this.id)
-        var now = this.clock()
+        var now = this._Date.now()
         if (greatest.uniform == greatest.decided) {
             this.constituency.forEach(function (id) {
                 var route = this.routeOf([ this.id, id ], false)
@@ -251,7 +249,7 @@ Legislator.prototype.sent = function (route, sent, received) {
 
     if (success) {
         route.retry = this.retry
-        route.sleep = this.clock()
+        route.sleep = this._Date.now()
         this.schedule({ type: 'ping', id: pulse ? this.id : route.path[1], delay: this.ping })
     } else {
         if (pulse) {
@@ -1257,7 +1255,7 @@ Legislator.prototype.propagation = function () {
             id: id,
             delay: this.ping
         })
-        route.sleep = this.clock()
+        route.sleep = this._Date.now()
         route.retry = this.retry
     }, this)
 }
@@ -1299,7 +1297,7 @@ Legislator.prototype.decideNaturalize = function (entry) {
         this.naturalized = entry.id
     }
     this.location[entry.value.id] = entry.value.location
-    var elect, now = this.clock()
+    var elect, now = this._Date.now()
     elect = this.government.majority[0] == this.id
     elect = elect && this.parliament.length < this.maxParliamentSize(this.candidates(now).length + 1)
     if (elect) {
@@ -1349,7 +1347,7 @@ Legislator.prototype.elect = function (remap) {
     if (!~this.government.majority.indexOf(this.id)) {
         return
     }
-    var now = this.clock()
+    var now = this._Date.now()
     var candidates = this.candidates(now)
     var receipts = this.citizens.filter(function (citizen) {
         return !~candidates.indexOf(citizen)

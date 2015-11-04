@@ -9,7 +9,7 @@ function prove (assert) {
     var time = 0, gremlin
 
     var options = {
-        clock: function () { return time },
+        Date: { now: function () { return time } },
         parliamentSize: 5,
         filter: logger,
         ping: [ 1, 1 ],
@@ -33,7 +33,7 @@ function prove (assert) {
     }
 
     var defaults = new Legislator('0')
-    assert(Date.now() - defaults.clock() < 250, 'default clock')
+    assert(Date.now() - defaults._Date.now() < 250, 'default clock')
 
     var legislators = [ new Legislator('0', options) ]
     assert(!legislators[0].checkSchedule(), 'empty schedule')
