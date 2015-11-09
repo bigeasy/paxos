@@ -312,9 +312,9 @@ function prove (assert) {
 
     network.machines[3].legislator.post(null, { value: 1 })
 
-    network.machines[3].legislator.outbox().forEach(function (route, index) {
+    network.machines[3].legislator.outbox(time).forEach(function (route, index) {
         if (!index) {
-            assert(network.machines[3].legislator.outbox().length, 0, 'double outbox')
+            assert(network.machines[3].legislator.outbox(time).length, 0, 'double outbox')
         }
         var forwards = network.machines[3].legislator.forwards(route, 0)
         var returns = network.machines[3].network.post(time, route, 1, forwards)
@@ -327,8 +327,8 @@ function prove (assert) {
     time++
 
     assert(network.machines[1].legislator.checkSchedule(time), 'ping scheduled')
-    var routes = network.machines[1].legislator.outbox()
-    assert(network.machines[1].legislator.outbox().length, 0, 'double unrouted outbox')
+    var routes = network.machines[1].legislator.outbox(time)
+    assert(network.machines[1].legislator.outbox(time).length, 0, 'double unrouted outbox')
     assert(routes[0].id, '. -> 1 -> 2', 'ping route')
     var forwards = network.machines[1].legislator.forwards(routes[0], 0)
     assert(forwards[0].message.type, 'ping', 'ping message')
@@ -336,12 +336,12 @@ function prove (assert) {
         network.machines[1].legislator.sent(time, route, forwards, [])
     })
 
-    assert(network.machines[1].legislator.outbox().length, 0, 'ping done')
+    assert(network.machines[1].legislator.outbox(time).length, 0, 'ping done')
 
     time++
 
     assert(network.machines[1].legislator.checkSchedule(time), 'retry scheduled')
-    var routes = network.machines[1].legislator.outbox()
+    var routes = network.machines[1].legislator.outbox(time)
     if (routes.length > 1) throw new Error
     assert(routes[0].id, '. -> 1 -> 2', 'retry route')
     var forwards = network.machines[1].legislator.forwards(routes[0], 0)
@@ -349,10 +349,10 @@ function prove (assert) {
     assert(forwards[0].message.type, 'ping', 'retry message')
     network.machines[1].legislator.sent(time, routes[0], forwards, returns)
 
-    assert(network.machines[1].legislator.outbox().length, 0, 'retry done')
+    assert(network.machines[1].legislator.outbox(time).length, 0, 'retry done')
 
     assert(network.machines[3].legislator.checkSchedule(time), 'leader ping scheduled')
-    var routes = network.machines[3].legislator.outbox()
+    var routes = network.machines[3].legislator.outbox(time)
     assert(routes[0].id, '! -> 3 -> 0', 'leader ping route')
     var forwards = network.machines[3].legislator.forwards(routes[0], 0)
     assert(forwards[0].message.type, 'ping', 'retry message')
@@ -361,7 +361,7 @@ function prove (assert) {
     })
 
     assert(!network.machines[3].legislator.checkSchedule(time), 'leader election with no schedule')
-    var routes = network.machines[3].legislator.outbox()
+    var routes = network.machines[3].legislator.outbox(time)
     assert(routes[0].id, '. -> 3 -> 0', 'leader elect route')
     var forwards = network.machines[3].legislator.forwards(routes[0], 0)
     routes.forEach(function (route) {

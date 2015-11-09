@@ -27,7 +27,7 @@ Machine.prototype.receive = function (now, buffers) {
 Machine.prototype.tick = function (now) {
     var ticked = false
 
-    this.legislator.outbox().forEach(function (route) {
+    this.legislator.outbox(now).forEach(function (route) {
         var forwards = this.legislator.forwards(route, 0)
         assert(forwards.length, 'no forwards')
         var returns = this.network.post(now, route, 1, forwards)

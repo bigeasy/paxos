@@ -169,7 +169,8 @@ Legislator.prototype.dispatch = function (options) {
     }
 }
 
-Legislator.prototype.outbox = function () {
+Legislator.prototype.outbox = function (now) {
+    assert(now != null, 'now missing')
     var routes = []
 
     if (this.promise.quorum[0] == this.id) {
