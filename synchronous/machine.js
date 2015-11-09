@@ -16,11 +16,11 @@ Machine.prototype.receive = function (now, buffers) {
     var route = this.legislator.routeOf(route.path, route.pulse)
 
     if (index + 1 < route.path.length) {
-        var forwards = this.legislator.forwards(route, index)
+        var forwards = this.legislator.forwards(now, route, index)
         this.legislator.inbox(now, route, this.network.post(now, route, index + 1, forwards))
     }
 
-    var returns = this.legislator.returns(route, index)
+    var returns = this.legislator.returns(now, route, index)
     return transcript.serialize(work.route, work.index, serializer.flatten(returns))
 }
 
@@ -28,7 +28,7 @@ Machine.prototype.tick = function (now) {
     var ticked = false
 
     this.legislator.outbox(now).forEach(function (route) {
-        var forwards = this.legislator.forwards(route, 0)
+        var forwards = this.legislator.forwards(now, route, 0)
         assert(forwards.length, 'no forwards')
         var returns = this.network.post(now, route, 1, forwards)
         this.legislator.inbox(now, route, returns)
