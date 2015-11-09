@@ -46,6 +46,9 @@ function Legislator (id, options) {
     this.retry = options.retry || 2
     this.ping = options.ping || [ 1, 1 ]
     this.timeout = options.timeout || [ 1, 1 ]
+    if (!Array.isArray(this.timeout)) {
+        this.timeout = [ this.timeout ]
+    }
     this.failed = {}
 
     this.propagation()
@@ -73,9 +76,8 @@ Legislator.prototype.greatestOf = function (id) {
 }
 
 Legislator.prototype.schedule = function (event) {
-    return this.scheduler.schedule({
-        key: event.id, value: event, delay: event.delay
-    })
+    var when = this._Date.now() + event.delay[0]
+    return this.scheduler.schedule(event.id, event, when)
 }
 
 Legislator.prototype.unschedule = function (id) {
@@ -84,7 +86,7 @@ Legislator.prototype.unschedule = function (id) {
 
 Legislator.prototype.checkSchedule = function () {
     var happened = false
-    this.scheduler.check().forEach(function (event) {
+    this.scheduler.check(this._Date.now()).forEach(function (event) {
         happened = true
         var type = event.type
         var method = 'when' + type[0].toUpperCase() + type.substring(1)

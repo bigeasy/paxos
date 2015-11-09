@@ -56,8 +56,10 @@ function prove (assert) {
     network.machines[1].legislator.inject(network.machines[0].legislator.extract('forward', 20).entries)
     network.machines[1].legislator.initialize()
 
+    console.log('here')
     assert(network.machines[0].legislator.naturalize('1').posted, 'naturalize')
     network.tick()
+    console.log('there')
 
     assert(legislators[0].government, {
         majority: [ '0' ],
