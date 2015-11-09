@@ -571,7 +571,6 @@ Legislator.prototype._nextProposalId = function (index) {
 }
 
 Legislator.prototype.newGovernment = function (quorum, government, remap) {
-    console.log(new Error().stack)
     ; (this.recorder)('newGovernment', quorum, government, remap)
     assert(!government.constituents)
     government.constituents = this.citizens.filter(function (citizen) {

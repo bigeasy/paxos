@@ -9,7 +9,7 @@ function prove (assert) {
     legislator.bootstrap(Date.now())
 
     for (var i = 2; i < 5; i++) {
-        var entry = legislator.entry(i + '/0', {
+        var entry = legislator._entry(i + '/0', {
             id: i + '/0',
             quorum: [ 0 ],
             value: {
@@ -30,7 +30,7 @@ function prove (assert) {
 
     legislator.log.max().decided = true
 
-    legislator.playUniform()
+    legislator._playUniform()
 
-    assert(legislator.entry('2/0', {}).uniform, 'terminus uniform linked list')
+    assert(legislator._entry('2/0', {}).uniform, 'terminus uniform linked list')
 }
