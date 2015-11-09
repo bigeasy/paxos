@@ -222,8 +222,9 @@ Legislator.prototype.outbox = function () {
     return routes
 }
 
-Legislator.prototype.sent = function (route, sent, received) {
-    (this.recorder)('sent', route, sent, received)
+Legislator.prototype.sent = function (now, route, sent, received) {
+    (this.recorder)('sent', now, route, sent, received)
+    this.now = now
     var pulse = route.pulse, route = this.routeOf(route.path, route.pulse), types = {}
 
     route.sending = false

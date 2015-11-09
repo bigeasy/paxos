@@ -32,7 +32,7 @@ Machine.prototype.tick = function (now) {
         assert(forwards.length, 'no forwards')
         var returns = this.network.post(now, route, 1, forwards)
         this.legislator.inbox(now, route, returns)
-        this.legislator.sent(route, forwards, returns)
+        this.legislator.sent(now, route, forwards, returns)
         ticked = true
     }, this)
 

@@ -323,7 +323,7 @@ function prove (assert) {
         var forwards = network.machines[3].legislator.forwards(route, 0)
         var returns = network.machines[3].network.post(time, route, 1, forwards)
         network.machines[3].legislator.inbox(time, route, returns)
-        network.machines[3].legislator.sent(route, forwards, returns)
+        network.machines[3].legislator.sent(time, route, forwards, returns)
     })
 
     network.tick(time)
@@ -337,7 +337,7 @@ function prove (assert) {
     var forwards = network.machines[1].legislator.forwards(routes[0], 0)
     assert(forwards[0].message.type, 'ping', 'ping message')
     routes.forEach(function (route) {
-        network.machines[1].legislator.sent(route, forwards, [])
+        network.machines[1].legislator.sent(time, route, forwards, [])
     })
 
     assert(network.machines[1].legislator.outbox().length, 0, 'ping done')
@@ -351,7 +351,7 @@ function prove (assert) {
     var forwards = network.machines[1].legislator.forwards(routes[0], 0)
     var returns = network.post(time, routes[0], 1, forwards)
     assert(forwards[0].message.type, 'ping', 'retry message')
-    network.machines[1].legislator.sent(routes[0], forwards, returns)
+    network.machines[1].legislator.sent(time, routes[0], forwards, returns)
 
     assert(network.machines[1].legislator.outbox().length, 0, 'retry done')
 
@@ -361,7 +361,7 @@ function prove (assert) {
     var forwards = network.machines[3].legislator.forwards(routes[0], 0)
     assert(forwards[0].message.type, 'ping', 'retry message')
     routes.forEach(function (route) {
-        network.machines[3].legislator.sent(route, forwards, [])
+        network.machines[3].legislator.sent(time, route, forwards, [])
     })
 
     assert(!network.machines[3].legislator.checkSchedule(time), 'leader election with no schedule')
@@ -369,7 +369,7 @@ function prove (assert) {
     assert(routes[0].id, '. -> 3 -> 0', 'leader elect route')
     var forwards = network.machines[3].legislator.forwards(routes[0], 0)
     routes.forEach(function (route) {
-        network.machines[3].legislator.sent(route, forwards, [])
+        network.machines[3].legislator.sent(time, route, forwards, [])
     })
 
     time++
