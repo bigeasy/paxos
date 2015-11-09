@@ -1,3 +1,4 @@
+Error.stackTraceLimit = Infinity
 var assert = require('assert')
 var Monotonic = require('monotonic')
 var Scheduler = require('happenstance')
@@ -17,6 +18,8 @@ function consume (array, f, context) {
 
 function Legislator (id, options) {
     options || (options = {})
+
+    this.now = Infinity
 
     assert(typeof id == 'string', 'id must be hexidecimal string')
 
@@ -81,7 +84,7 @@ Legislator.prototype.greatestOf = function (id) {
 // todo: to make replayable, we need to create a scheduler that accepts a now so
 // that the caller can replay the schedule, this should probably be the default.
 Legislator.prototype.schedule = function (event) {
-    var when = this._Date.now() + event.delay
+    var when = this.now + event.delay
     return this.scheduler.schedule(event.id, event, when)
 }
 
@@ -331,8 +334,9 @@ Legislator.prototype.returns = function (route, index) {
 }
 
 Legislator.prototype.inbox = function (now, route, envelopes) {
+    (this.recorder)('inbox', now, route, envelopes)
     assert(route.id != '-', 'no route id')
-    ; (this.recorder)('inbox', route, envelopes)
+    this.now = now
     var route = this.routeOf(route.path, route.pulse)
     if (route.pulse && !this.election) {
         this.schedule({ type: 'elect', id: this.id, delay: this.timeout })
@@ -368,7 +372,8 @@ Legislator.prototype.entry = function (id, message) {
     return entry
 }
 
-Legislator.prototype.bootstrap = function () {
+Legislator.prototype.bootstrap = function (now) {
+    this.now = now
     var entry = this.entry('0/1', {
         id: '0/1',
         value: 0,
@@ -476,7 +481,9 @@ Legislator.prototype.inject = function (entries) {
     }, this)
 }
 
-Legislator.prototype.initialize = function () {
+Legislator.prototype.initialize = function (now) {
+    (this.recorder)('initialize', now)
+    this.now = now
     var min = this.log.min()
     this.greatest = {}
     this.greatest[this.id] = {

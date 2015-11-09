@@ -42,9 +42,9 @@ function prove (assert) {
     //        console.log(JSON.stringify(arguments))
         }
     }
+    assert(! new Legislator('0').checkSchedule(time), 'empty schedule')
     var legislators = [ new Legislator('0', copiedOptions) ]
-    assert(!legislators[0].checkSchedule(time), 'empty schedule')
-    legislators[0].bootstrap()
+    legislators[0].bootstrap(time)
 
     var network = new Network
     var machine = new Machine(network, legislators[0])
@@ -61,7 +61,7 @@ function prove (assert) {
 
     network.machines.push(new Machine(network, new Legislator('1', options)))
     network.machines[1].legislator.inject(network.machines[0].legislator.extract('forward', 20).entries)
-    network.machines[1].legislator.initialize()
+    network.machines[1].legislator.initialize(time)
 
     console.log('here')
     assert(network.machines[0].legislator.naturalize('1').posted, 'naturalize')
@@ -77,7 +77,7 @@ function prove (assert) {
 
     network.machines.push(new Machine(network, new Legislator('2', options)))
     network.machines[2].legislator.inject(network.machines[0].legislator.extract('forward', 20).entries)
-    network.machines[2].legislator.initialize()
+    network.machines[2].legislator.initialize(time)
     network.machines[0].legislator.naturalize('2')
     network.tick(time)
 
@@ -125,7 +125,7 @@ function prove (assert) {
 
     network.machines.push(new Machine(network, new Legislator('3', options)))
     network.machines[3].legislator.inject(network.machines[0].legislator.extract('backward', 20).entries)
-    network.machines[3].legislator.initialize()
+    network.machines[3].legislator.initialize(time)
     network.machines[0].legislator.naturalize('3')
     network.tick(time)
 
@@ -602,7 +602,7 @@ function prove (assert) {
         extract = network.machines[0].legislator.extract('backward', 20, extract.next)
         network.machines[4].legislator.inject(extract.entries)
     } while (extract.next)
-    network.machines[4].legislator.initialize()
+    network.machines[4].legislator.initialize(time)
     assert(network.machines[4].legislator.length, 68, 'entry count after complete copy')
     while (network.machines[0].legislator.shift() != 0) {}
     assert(network.machines[0].legislator.length, 1, 'entry count after shift everything')
@@ -728,7 +728,7 @@ function prove (assert) {
 
     network.machines[1].legislator = new Legislator('1', options)
     network.machines[1].legislator.inject(extract.entries)
-    network.machines[1].legislator.initialize()
+    network.machines[1].legislator.initialize(time)
     network.machines[3].legislator.naturalize('1')
     network.tick(time)
 
@@ -762,11 +762,11 @@ function prove (assert) {
 
     network.machines[1].legislator = new Legislator('1', options)
     network.machines[1].legislator.inject(network.machines[3].legislator.extract('backward', 9).entries)
-    network.machines[1].legislator.initialize()
+    network.machines[1].legislator.initialize(time)
     network.machines[3].legislator.naturalize('1')
     network.machines[2].legislator = new Legislator('2', options)
     network.machines[2].legislator.inject(network.machines[3].legislator.extract('backward', 9).entries)
-    network.machines[2].legislator.initialize()
+    network.machines[2].legislator.initialize(time)
     network.machines[3].legislator.naturalize('2')
     network.tick(time)
     assert(network.machines[0].legislator.government, {
@@ -780,7 +780,7 @@ function prove (assert) {
         var index = network.machines.length
         network.machines.push(new Machine(network, new Legislator(String(index), options)))
         network.machines[index].legislator.inject(network.machines[3].legislator.extract('backward', 9).entries)
-        network.machines[index].legislator.initialize()
+        network.machines[index].legislator.initialize(time)
         network.machines[3].legislator.naturalize(String(index))
     }
     network.tick(time)

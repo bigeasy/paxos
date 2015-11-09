@@ -6,7 +6,7 @@ function prove (assert) {
 
     var legislator = new Legislator('0')
 
-    legislator.bootstrap()
+    legislator.bootstrap(Date.now())
 
     for (var i = 2; i < 5; i++) {
         var entry = legislator.entry(i + '/0', {
