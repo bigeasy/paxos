@@ -18,7 +18,7 @@ Network.prototype.removeGremlin = function (gremlin) {
     })
 }
 
-Network.prototype.post = function (route, index, envelopes) {
+Network.prototype.post = function (now, route, index, envelopes) {
     this.gremlins.forEach(function (gremlin) {
         if (gremlin('before', route, index, envelopes)) {
             envelopes = []
@@ -28,7 +28,7 @@ Network.prototype.post = function (route, index, envelopes) {
         return machine.legislator.id == route.path[index]
     }).shift()
     var serialized = transcript.serialize(route, index, serializer.flatten(envelopes))
-    var buffers = machine.receive(serialized)
+    var buffers = machine.receive(now, serialized)
     var deserialized = transcript.deserialize(buffers)
     var returns = serializer.expand(deserialized.messages)
     this.gremlins.forEach(function (gremlin) {
@@ -47,12 +47,12 @@ Network.prototype.schedule = function (now) {
     return scheduled
 }
 
-Network.prototype.tick = function () {
+Network.prototype.tick = function (now) {
     var ticked, looped = true
     while (looped) {
         looped = false
         this.machines.forEach(function (machine) {
-            if (machine.tick()) {
+            if (machine.tick(now)) {
                 looped = true
                 ticked = true
             }

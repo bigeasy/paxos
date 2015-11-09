@@ -329,7 +329,7 @@ Legislator.prototype.returns = function (route, index) {
     return envelopes
 }
 
-Legislator.prototype.inbox = function (route, envelopes) {
+Legislator.prototype.inbox = function (now, route, envelopes) {
     assert(route.id != '-', 'no route id')
     ; (this.recorder)('inbox', route, envelopes)
     var route = this.routeOf(route.path, route.pulse)
