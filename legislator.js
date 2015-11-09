@@ -86,9 +86,10 @@ Legislator.prototype.unschedule = function (id) {
     this.scheduler.unschedule(id)
 }
 
-Legislator.prototype.checkSchedule = function () {
+Legislator.prototype.checkSchedule = function (now) {
+    this.now = now
     var happened = false
-    this.scheduler.check(this._Date.now()).forEach(function (event) {
+    this.scheduler.check(this.now).forEach(function (event) {
         happened = true
         var type = event.type
         var method = 'when' + type[0].toUpperCase() + type.substring(1)

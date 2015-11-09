@@ -36,7 +36,7 @@ function prove (assert) {
     assert(Date.now() - defaults._Date.now() < 250, 'default clock')
 
     var legislators = [ new Legislator('0', options) ]
-    assert(!legislators[0].checkSchedule(), 'empty schedule')
+    assert(!legislators[0].checkSchedule(time), 'empty schedule')
     legislators[0].bootstrap()
 
     var network = new Network
@@ -104,7 +104,7 @@ function prove (assert) {
     }, 'shrink parliament from 3 to 1')
 
     time++
-    network.schedule()
+    network.schedule(time)
     network.tick()
     network.machines[0].legislator.reelection()
     network.tick()
@@ -122,7 +122,7 @@ function prove (assert) {
     network.machines[0].legislator.naturalize('3')
     network.tick()
 
-    assert(!network.machines[0].legislator.checkSchedule(), 'unexpired schedule')
+    assert(!network.machines[0].legislator.checkSchedule(time), 'unexpired schedule')
 
     assert(network.machines[3].legislator.government, {
         majority: [ '0', '1' ],
@@ -323,7 +323,7 @@ function prove (assert) {
 
     time++
 
-    assert(network.machines[1].legislator.checkSchedule(), 'ping scheduled')
+    assert(network.machines[1].legislator.checkSchedule(time), 'ping scheduled')
     var routes = network.machines[1].legislator.outbox()
     assert(network.machines[1].legislator.outbox().length, 0, 'double unrouted outbox')
     assert(routes[0].id, '. -> 1 -> 2', 'ping route')
@@ -337,7 +337,7 @@ function prove (assert) {
 
     time++
 
-    assert(network.machines[1].legislator.checkSchedule(), 'retry scheduled')
+    assert(network.machines[1].legislator.checkSchedule(time), 'retry scheduled')
     var routes = network.machines[1].legislator.outbox()
     if (routes.length > 1) throw new Error
     assert(routes[0].id, '. -> 1 -> 2', 'retry route')
@@ -348,7 +348,7 @@ function prove (assert) {
 
     assert(network.machines[1].legislator.outbox().length, 0, 'retry done')
 
-    assert(network.machines[3].legislator.checkSchedule(), 'leader ping scheduled')
+    assert(network.machines[3].legislator.checkSchedule(time), 'leader ping scheduled')
     var routes = network.machines[3].legislator.outbox()
     assert(routes[0].id, '! -> 3 -> 0', 'leader ping route')
     var forwards = network.machines[3].legislator.forwards(routes[0], 0)
@@ -357,7 +357,7 @@ function prove (assert) {
         network.machines[3].legislator.sent(route, forwards, [])
     })
 
-    assert(!network.machines[3].legislator.checkSchedule(), 'leader election with no schedule')
+    assert(!network.machines[3].legislator.checkSchedule(time), 'leader election with no schedule')
     var routes = network.machines[3].legislator.outbox()
     assert(routes[0].id, '. -> 3 -> 0', 'leader elect route')
     var forwards = network.machines[3].legislator.forwards(routes[0], 0)
@@ -368,7 +368,7 @@ function prove (assert) {
     time++
     time++
     network.tick()
-    network.machines[3].legislator.checkSchedule()
+    network.machines[3].legislator.checkSchedule(time)
     network.tick()
 
     var gremlin = network.addGremlin(function (when, route, index, envelopes) {
@@ -376,7 +376,7 @@ function prove (assert) {
     })
     time++
     time++
-    assert(network.machines[0].legislator.checkSchedule(), 'schedule election to test reject')
+    assert(network.machines[0].legislator.checkSchedule(time), 'schedule election to test reject')
     network.tick()
     network.removeGremlin(gremlin)
 
@@ -401,7 +401,7 @@ function prove (assert) {
     })
     time++
     time++
-    assert(network.machines[1].legislator.checkSchedule(), 'schedule election to test promised')
+    assert(network.machines[1].legislator.checkSchedule(time), 'schedule election to test promised')
     network.tick()
     network.removeGremlin(gremlin)
 
@@ -427,7 +427,7 @@ function prove (assert) {
     })
     time++
     time++
-    assert(network.machines[2].legislator.checkSchedule(), 'schedule election to test promised greater than')
+    assert(network.machines[2].legislator.checkSchedule(time), 'schedule election to test promised greater than')
     network.tick()
     network.machines[2].legislator.elect()
     network.machines[2].legislator.elect() // test elect during election
@@ -486,7 +486,7 @@ function prove (assert) {
 
     time++
     time++
-    assert(network.machines[2].legislator.checkSchedule(), 'retry election')
+    assert(network.machines[2].legislator.checkSchedule(time), 'retry election')
     network.tick()
     assert(network.machines[2].legislator.government, {
         majority: [ '2', '3' ],
@@ -734,12 +734,12 @@ function prove (assert) {
     assert(network.machines[4].legislator.failed, { '1': {} }, 'cannot make constituent uniform')
     time++
     ; [ 3, 0, 4 ].forEach(function (index) {
-        network.machines[index].legislator.checkSchedule()
+        network.machines[index].legislator.checkSchedule(time)
     })
     network.tick()
     time++
     ; [ 3, 0, 4 ].forEach(function (index) {
-        network.machines[index].legislator.checkSchedule()
+        network.machines[index].legislator.checkSchedule(time)
     })
     network.tick()
     assert(network.machines[3].legislator.government, {
@@ -875,22 +875,22 @@ function prove (assert) {
     network.machines[3].legislator.whenDefer()
     network.machines[0].legislator.propagation()
     time++
-    network.schedule()
+    network.schedule(time)
     network.tick()
     time++
-    network.schedule()
+    network.schedule(time)
     network.tick()
     time++
-    network.schedule()
+    network.schedule(time)
     network.tick()
     time++
-    network.schedule()
+    network.schedule(time)
     network.tick()
     time++
-    network.schedule()
+    network.schedule(time)
     network.tick()
     time++
-    network.schedule()
+    network.schedule(time)
     network.tick()
     assert(
         { majority: [ '3', '5', '1' ],

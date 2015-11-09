@@ -39,10 +39,10 @@ Network.prototype.post = function (route, index, envelopes) {
     return returns
 }
 
-Network.prototype.schedule = function () {
+Network.prototype.schedule = function (now) {
     var scheduled = false
     this.machines.forEach(function (machine) {
-        scheduled = machine.legislator.checkSchedule() || scheduled
+        scheduled = machine.legislator.checkSchedule(now) || scheduled
     })
     return scheduled
 }
