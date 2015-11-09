@@ -35,7 +35,14 @@ function prove (assert) {
     var defaults = new Legislator('0')
     assert(Date.now() - defaults._Date.now() < 250, 'default clock')
 
-    var legislators = [ new Legislator('0', options) ]
+    var copiedOptions = {}
+    for (var key in options) {
+        copiedOptions[key] = options[key]
+        copiedOptions.recorder = function () {
+            console.log(JSON.stringify(arguments))
+        }
+    }
+    var legislators = [ new Legislator('0', copiedOptions) ]
     assert(!legislators[0].checkSchedule(time), 'empty schedule')
     legislators[0].bootstrap()
 

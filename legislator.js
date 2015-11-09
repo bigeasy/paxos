@@ -52,6 +52,7 @@ function Legislator (id, options) {
     this.ping = options.ping || 1
     this.timeout = options.timeout || 1
     this.failed = {}
+    this.recorder = options.recorder || function () {}
 
     this.propagation()
 }
@@ -77,6 +78,8 @@ Legislator.prototype.greatestOf = function (id) {
     return this.greatest[id] || { learned: '0/0', decided: '0/0', uniform: '0/0' }
 }
 
+// todo: to make replayable, we need to create a scheduler that accepts a now so
+// that the caller can replay the schedule, this should probably be the default.
 Legislator.prototype.schedule = function (event) {
     var when = this._Date.now() + event.delay
     return this.scheduler.schedule(event.id, event, when)
@@ -215,10 +218,12 @@ Legislator.prototype.outbox = function () {
         }
     }
 
+    (this.recorder)('outbox', routes)
     return routes
 }
 
 Legislator.prototype.sent = function (route, sent, received) {
+    (this.recorder)('sent', route, sent, received)
     var pulse = route.pulse, route = this.routeOf(route.path, route.pulse), types = {}
 
     route.sending = false
@@ -326,11 +331,13 @@ Legislator.prototype.returns = function (route, index) {
 
 Legislator.prototype.inbox = function (route, envelopes) {
     assert(route.id != '-', 'no route id')
+    ; (this.recorder)('inbox', route, envelopes)
     var route = this.routeOf(route.path, route.pulse)
     if (route.pulse && !this.election) {
         this.schedule({ type: 'elect', id: this.id, delay: this.timeout })
     }
     envelopes.forEach(function (envelope) {
+        (this.recorder)('receive', route, envelope)
         this.dispatch({
             pulse: route.pulse,
             route: envelope.route,
@@ -1069,6 +1076,7 @@ Legislator.prototype.receiveFailed = function (envelope, message) {
     }
 }
 
+// todo: what was the gap that made it impossible?
 Legislator.prototype.receivePong = function (envelope, message, route) {
     this.greatest[envelope.from] = message.greatest
     var impossible = Id.compare(this.log.min().id, message.greatest.uniform) > 0
