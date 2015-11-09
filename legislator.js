@@ -42,13 +42,15 @@ function Legislator (id, options) {
     this.government = { id: '0/0', minority: [], majority: [] }
     this.citizens = []
 
+
+    assert(!Array.isArray(options.retry), 'retry no longer accepts range')
+    assert(!Array.isArray(options.ping), 'retry no longer accepts range')
+    assert(!Array.isArray(options.timeout), 'retry no longer accepts range')
+
     this.ticks = {}
     this.retry = options.retry || 2
-    this.ping = options.ping || [ 1, 1 ]
-    this.timeout = options.timeout || [ 1, 1 ]
-    if (!Array.isArray(this.timeout)) {
-        this.timeout = [ this.timeout ]
-    }
+    this.ping = options.ping || 1
+    this.timeout = options.timeout || 1
     this.failed = {}
 
     this.propagation()
@@ -76,7 +78,7 @@ Legislator.prototype.greatestOf = function (id) {
 }
 
 Legislator.prototype.schedule = function (event) {
-    var when = this._Date.now() + event.delay[0]
+    var when = this._Date.now() + event.delay
     return this.scheduler.schedule(event.id, event, when)
 }
 

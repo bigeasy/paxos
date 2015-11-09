@@ -12,8 +12,8 @@ function prove (assert) {
         Date: { now: function () { return time } },
         parliamentSize: 5,
         filter: logger,
-        ping: [ 1, 1 ],
-        timeout: [ 2, 2 ],
+        ping: 1,
+        timeout: 2,
         retry: 5
     }
 
