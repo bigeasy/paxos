@@ -28,12 +28,11 @@ function Legislator (id, options) {
 
     this.filter = options.filter || function (envelopes) { return [ envelopes ] }
     this.prefer = options.prefer || function () { return true }
-    this._Date = options.Date || Date
 
     this.messageId = id + '/0'
     this.log = new RBTree(function (a, b) { return Id.compare(a.id, b.id) })
     this.length = 0
-    this.scheduler = new Scheduler({ Date: this._Date })
+    this.scheduler = new Scheduler
 
     this.promise = { id: '0/0', quorum: [ null ] }
     this.lastPromisedId = '0/0'
@@ -68,7 +67,7 @@ Legislator.prototype.routeOf = function (path, pulse) {
         this.routed[id] = route = {
             pulse: !! pulse,
             retry: this.retry,
-            sleep: this._Date.now(),
+            sleep: this.now,
             id: id,
             path: path,
             envelopes: []
@@ -109,7 +108,7 @@ Legislator.prototype.consume = function (envelope, route) {
     var type = envelope.message.type
     var method = 'receive' + type[0].toUpperCase() + type.substring(1)
     this.filter(envelope, envelope.message).forEach(function (envelope) {
-        this.ticks[envelope.from] = this._Date.now()
+        this.ticks[envelope.from] = this.now
         this[method](envelope, envelope.message, route)
     }, this)
 }
@@ -184,7 +183,7 @@ Legislator.prototype.outbox = function () {
 
     if (routes.length == 0) {
         var greatest = this.greatestOf(this.id)
-        var now = this._Date.now()
+        var now = this.now
         if (greatest.uniform == greatest.decided) {
             this.constituency.forEach(function (id) {
                 var route = this.routeOf([ this.id, id ], false)
@@ -263,7 +262,7 @@ Legislator.prototype.sent = function (now, route, sent, received) {
 
     if (success) {
         route.retry = this.retry
-        route.sleep = this._Date.now()
+        route.sleep = this.now
         this.schedule({ type: 'ping', id: pulse ? this.id : route.path[1], delay: this.ping })
     } else {
         if (pulse) {
@@ -1276,7 +1275,7 @@ Legislator.prototype.propagation = function () {
             id: id,
             delay: this.ping
         })
-        route.sleep = this._Date.now()
+        route.sleep = this.now
         route.retry = this.retry
     }, this)
 }
@@ -1318,7 +1317,7 @@ Legislator.prototype.decideNaturalize = function (entry) {
         this.naturalized = entry.id
     }
     this.location[entry.value.id] = entry.value.location
-    var elect, now = this._Date.now()
+    var elect, now = this.now
     elect = this.government.majority[0] == this.id
     elect = elect && this.parliament.length < this.maxParliamentSize(this.candidates(now).length + 1)
     if (elect) {
@@ -1368,7 +1367,7 @@ Legislator.prototype.elect = function (remap) {
     if (!~this.government.majority.indexOf(this.id)) {
         return
     }
-    var now = this._Date.now()
+    var now = this.now
     var candidates = this.candidates(now)
     var receipts = this.citizens.filter(function (citizen) {
         return !~candidates.indexOf(citizen)

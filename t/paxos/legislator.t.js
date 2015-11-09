@@ -1,5 +1,5 @@
 
-require('proof')(102, prove)
+require('proof')(101, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -9,7 +9,6 @@ function prove (assert) {
     var time = 0, gremlin
 
     var options = {
-        Date: { now: function () { return time } },
         parliamentSize: 5,
         filter: logger,
         ping: 1,
@@ -31,9 +30,6 @@ function prove (assert) {
         // process.stdout.write((++count) + ' ' + util.inspect(message, null, Infinity) + '\n')
         return [ envelope ]
     }
-
-    var defaults = new Legislator('0')
-    assert(Date.now() - defaults._Date.now() < 250, 'default clock')
 
     var copiedOptions = {}
     for (var key in options) {
