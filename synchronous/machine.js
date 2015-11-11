@@ -1,17 +1,13 @@
 var assert = require('assert')
 var push = [].push
-var serializer = require('../serializer')
-var transcript = require('../transcript')
 
 function Machine (network, legislator) {
     this.network = network
     this.legislator = legislator
 }
 
-Machine.prototype.receive = function (now, buffers) {
-    var work = transcript.deserialize(buffers)
-    var route = work.route, index = work.index, expanded = serializer.expand(work.messages)
-    this.legislator.inbox(now, route, expanded)
+Machine.prototype.receive = function (now, route, index, envelopes) {
+    this.legislator.inbox(now, route, envelopes)
 
     var route = this.legislator.routeOf(route.path, route.pulse)
 
@@ -20,8 +16,7 @@ Machine.prototype.receive = function (now, buffers) {
         this.legislator.inbox(now, route, this.network.post(now, route, index + 1, forwards))
     }
 
-    var returns = this.legislator.returns(now, route, index)
-    return transcript.serialize(work.route, work.index, serializer.flatten(returns))
+    return this.legislator.returns(now, route, index)
 }
 
 Machine.prototype.tick = function (now) {

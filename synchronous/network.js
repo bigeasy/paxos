@@ -1,6 +1,3 @@
-var serializer = require('../serializer')
-var transcript = require('../transcript')
-
 function Network () {
     this.machines = []
     this.gremlins = []
@@ -19,6 +16,12 @@ Network.prototype.removeGremlin = function (gremlin) {
 }
 
 Network.prototype.post = function (now, route, index, envelopes) {
+    var post = JSON.parse(JSON.stringify({ route: route, index: index, envelopes: envelopes }))
+    var returns =  this._post(now, post.route, post.index, post.envelopes)
+    return JSON.parse(JSON.stringify(returns))
+}
+
+Network.prototype._post = function (now, route, index, envelopes) {
     this.gremlins.forEach(function (gremlin) {
         if (gremlin('before', route, index, envelopes)) {
             envelopes = []
@@ -27,12 +30,9 @@ Network.prototype.post = function (now, route, index, envelopes) {
     var machine = this.machines.filter(function (machine) {
         return machine.legislator.id == route.path[index]
     }).shift()
-    var serialized = transcript.serialize(route, index, serializer.flatten(envelopes))
-    var buffers = machine.receive(now, serialized)
-    var deserialized = transcript.deserialize(buffers)
-    var returns = serializer.expand(deserialized.messages)
+    var returns = machine.receive(now, route, index, envelopes)
     this.gremlins.forEach(function (gremlin) {
-        if (gremlin('after', route, index, envelopes)) {
+        if (gremlin('after', route, index, returns)) {
             returns = []
         }
     }, this)

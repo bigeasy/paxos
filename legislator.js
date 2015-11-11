@@ -357,8 +357,6 @@ Legislator.prototype.returns = function (now, route, index) {
 }
 
 Legislator.prototype.inbox = function (now, route, envelopes) {
-    // todo: someone is reusing an envelopes array.
-    envelopes = JSON.parse(JSON.stringify(envelopes))
     ; (this.recorder)('inbox', now, route, envelopes)
     envelopes.forEach(function (envelope) {
         ; (this.recorder)('envelope', envelope)
