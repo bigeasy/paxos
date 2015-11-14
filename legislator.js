@@ -27,7 +27,6 @@ function Legislator (id, options) {
     this.parliamentSize = options.parliamentSize || 5
     this._Date = options.Date || Date
 
-    this.filter = options.filter || function (envelopes) { return [ envelopes ] }
     this.prefer = options.prefer || function () { return true }
 
     this.messageId = id + '/0'
@@ -118,10 +117,8 @@ Legislator.prototype._consume = function (envelope, route) {
     assert(envelope.to == this.id, 'consume not self')
     var type = envelope.message.type
     var method = '_receive' + type[0].toUpperCase() + type.substring(1)
-    this.filter(envelope, envelope.message).forEach(function (envelope) {
-        this.ticks[envelope.from] = this.now
-        this[method](envelope, envelope.message, route)
-    }, this)
+    this.ticks[envelope.from] = this.now
+    this[method](envelope, envelope.message, route)
 }
 
 Legislator.prototype._stuff = function (from, to, pulse, route, message) {

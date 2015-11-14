@@ -11,26 +11,12 @@ function prove (assert) {
     var options = {
         Date: { now: function () { return time } },
         parliamentSize: 5,
-        filter: logger,
         ping: 1,
         timeout: 2,
         retry: 5
     }
 
     var count = 0, util = require('util')
-    function logger (envelope) {
-        var message = {}
-        for (var key in envelope) {
-            if (key != 'message') {
-                message[key] = envelope[key]
-            }
-        }
-        for (var key in envelope.message) {
-            message[key] = envelope.message[key]
-        }
-        // process.stdout.write((++count) + ' ' + util.inspect(message, null, Infinity) + '\n')
-        return [ envelope ]
-    }
 
     var slice = [].slice
     var copiedOptions = {}
