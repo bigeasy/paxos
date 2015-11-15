@@ -489,3 +489,16 @@ flagged for leadership. We are using Paxos here, but it is not important that
 the log be up to date before we act. If we detect that a leader has failed, then
 any one of the legislators will attempt to seize control of parliament by
 nominating itself as the strong leader and calling a round of Paxos.
+
+
+### Diary
+
+This can go in the release notes:
+
+Removing the notion of `prefer` which adds state when this can be done just as
+easily externally by calling `newGovernment` with a light adjustment. Indeed,
+how do you suggest a new government for the sake of creating a break to flush
+the logs? The user needs the ability to call elections. I'm sure it is already
+there, I just can't see it. We can add to that ability the ability to appoint
+a constituent to the minority, move a minority member to the majority, and make
+a member of the majority the leader.
