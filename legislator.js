@@ -1137,38 +1137,39 @@ Legislator.prototype._pinged = function (reachable, from) {
     var election = this.election, parliament, quorum, minority, majority
     if (election && !~election.receipts.indexOf(from)) {
         election.receipts.push(from)
-        var group = election.preferred
-        var index = group.quorum.sought.indexOf(from)
+        var index = election.incumbent.quorum.sought.indexOf(from)
         if (~index) {
-            group.quorum.sought.splice(index, 1)
-            var seen = group.quorum.seen
+            election.incumbent.quorum.sought.splice(index, 1)
+            var seen = election.incumbent.quorum.seen
         } else {
-            var seen = group.constituents
+            var seen = election.incumbent.constituents
         }
         if (reachable) {
             seen.push(from)
             election.reachable++
-            group.sought--
+            election.incumbent.sought--
         }
         var quorum = {}
-        quorum.preferred = election.preferred.quorum.seen.length == election.quorumSize - 1
-        quorum.ordinary = election.preferred.quorum.seen.length + 0 >= election.quorumSize - 1
-        if (quorum.preferred) {
-            election.preferred.quorum.sought.length = 0
-        } else if (election.preferred.quorum.sought.length == 0) {
-            quorum.preferred = true
+        quorum.incumbent = election.incumbent.quorum.seen.length == election.quorumSize - 1
+        quorum.ordinary = election.incumbent.quorum.seen.length + 0 >= election.quorumSize - 1
+        if (quorum.incumbent) {
+            election.incumbent.quorum.sought.length = 0
+        } else if (election.incumbent.quorum.sought.length == 0) {
+            quorum.incumbent = true
         }
         var parliament = {}
-        parliament.preferred = quorum.preferred &&
-                              (election.preferred.constituents.length >= election.minoritySize ||
-                               election.preferred.sought == 0)
+        parliament.incumbent = quorum.incumbent &&
+                              (election.incumbent.constituents.length >= election.minoritySize ||
+                               election.incumbent.sought == 0)
         parliament.ordinary = quorum.ordinary && election.reachable >= election.parliamentSize
         var complete = election.requests == election.receipts.length
+
         // form on quorum size, so we will never shrink below quorum, never go
         // from parliament size two to one.
-        if ((parliament.preferred && parliament.ordinary) || (quorum.ordinary && complete)) {
-            var candidates = election.preferred.quorum.seen.concat(election.ordinary.quorum.seen)
-                                                           .concat(election.preferred.constituents)
+
+        if ((parliament.incumbent && parliament.ordinary) || (quorum.ordinary && complete)) {
+            var candidates = election.incumbent.quorum.seen.concat(election.ordinary.quorum.seen)
+                                                           .concat(election.incumbent.constituents)
                                                            .concat(election.ordinary.constituents)
             for (var i = 0; election.quorum.length < election.quorumSize; i++) {
                 election.quorum.push(candidates.shift())
@@ -1405,7 +1406,7 @@ Legislator.prototype._elect = function (remap) {
     var constituents = candidates.filter(function (citizen) {
         return !~quorum.indexOf(citizen)
     })
-    var preferred = {
+    var incumbent = {
         quorum: {
             sought: quorum.slice(),
             seen: []
@@ -1432,7 +1433,7 @@ Legislator.prototype._elect = function (remap) {
         minoritySize: minoritySize,
         reachable: [],
         receipts: receipts,
-        preferred: preferred,
+        incumbent: incumbent,
         ordinary: ordinary,
         requests: receipts.length + candidates.length,
         parliament: [],
