@@ -1230,11 +1230,6 @@ Legislator.prototype.emigrate = function (now, id) {
     })
 }
 
-Legislator.prototype.propagation = function () {
-    ; (this.recorder)('propagation')
-    this._propagation()
-}
-
 Legislator.prototype._propagation = function () {
     this.citizens = this.government.majority.concat(this.government.minority)
                                             .concat(this.government.constituents)
@@ -1279,27 +1274,19 @@ Legislator.prototype._propagation = function () {
     this.scheduler.clear()
     if (~this.government.majority.indexOf(this.id)) {
         if (this.government.majority[0] == this.id) {
-            if (!this.prefer(this.id) && this.government.majority.some(this.prefer)) {
+            var preferred = {
+                parliament: this.parliament.filter(this.prefer).length,
+                citizens: this.citizens.filter(this.prefer).length
+            }
+            if (
+                preferred.parliament < this.parliamentSize &&
+                preferred.citizens > preferred.parliament
+            ) {
                 this._schedule({
-                    type: 'defer',
+                    type: 'elect',
                     id: '!',
                     delay: this.timeout
                 })
-            } else {
-                var preferred = {
-                    parliament: this.parliament.filter(this.prefer).length,
-                    citizens: this.citizens.filter(this.prefer).length
-                }
-                if (
-                    preferred.parliament < this.parliamentSize &&
-                    preferred.citizens > preferred.parliament
-                ) {
-                    this._schedule({
-                        type: 'elect',
-                        id: '!',
-                        delay: this.timeout
-                    })
-                }
             }
             this._schedule({
                 type: 'ping',
@@ -1383,20 +1370,6 @@ Legislator.prototype._maxParliamentSize = function (citizens) {
 
 Legislator.prototype._whenElect = function () {
     this._elect()
-}
-
-Legislator.prototype.defer = function () {
-    ; (this.recorder)('defer')
-    this._whenDefer()
-}
-
-Legislator.prototype._whenDefer = function () {
-    if (this.government.majority[0] === this.id) {
-        var successor = this.government.majority.filter(this.prefer).shift()
-        assert(successor, 'poorly choosen successor')
-        this._schedule({ type: 'elect', id: '!', delay: this.timeout })
-        this.reelection(this.now, successor)
-    }
 }
 
 Legislator.prototype._reachable = function (now) {
