@@ -1151,7 +1151,7 @@ Legislator.prototype._pinged = function (reachable, from) {
         }
         var quorum = {}
         quorum.incumbent = election.incumbent.quorum.seen.length == election.quorumSize - 1
-        quorum.ordinary = election.incumbent.quorum.seen.length + 0 >= election.quorumSize - 1
+        quorum.ordinary = quorum.incumbent
         if (quorum.incumbent) {
             election.incumbent.quorum.sought.length = 0
         } else if (election.incumbent.quorum.sought.length == 0) {
@@ -1171,13 +1171,21 @@ Legislator.prototype._pinged = function (reachable, from) {
             var candidates = election.incumbent.quorum.seen.concat(election.ordinary.quorum.seen)
                                                            .concat(election.incumbent.constituents)
                                                            .concat(election.ordinary.constituents)
+
+            // we've primed the election quorum with ourselves as leader.
             for (var i = 0; election.quorum.length < election.quorumSize; i++) {
                 election.quorum.push(candidates.shift())
             }
+
+            // we now have incumbants up top, followed by whomever.
             candidates = election.quorum.concat(candidates)
+
+            // do we have enough citizens for a full parliament?
             if (election.reachable < election.parliamentSize) {
                 // if we have the quorum, but we do not have the parliament, we
                 // form a government of quorum size, shrink the government.
+                // todo: come back and convince myself that we won't shrink
+                // below size of two.
                 election.parliamentSize -= 2
                 election.majoritySize = Math.ceil(election.parliamentSize / 2)
                 election.minoritySize = election.parliamentSize - election.majoritySize
@@ -1188,6 +1196,7 @@ Legislator.prototype._pinged = function (reachable, from) {
                     election.minority.push(candidates.shift())
                 }
             } else {
+                // with a quorum of incumbants up top, build a majority.
                 while (election.majority.length < election.majoritySize) {
                     var candidate = candidates.shift()
                     election.majority.push(candidate)
@@ -1195,11 +1204,16 @@ Legislator.prototype._pinged = function (reachable, from) {
                         election.quorum.push(candidate)
                     }
                 }
+                // fill in the minority with any whomever.
                 while (election.minority.length < election.minoritySize) {
                     election.minority.push(candidates.shift())
                 }
             }
+
+            // election complete.
             delete this.election
+
+            // propose the new governent.
             this.newGovernment(election.quorum, {
                 majority: election.majority,
                 minority: election.minority

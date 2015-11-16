@@ -22,7 +22,7 @@ function prove (assert) {
     for (var key in options) {
         copiedOptions[key] = options[key]
         copiedOptions.recorder = function () {
-            console.log(JSON.stringify(slice.call(arguments)))
+            // console.log(JSON.stringify(slice.call(arguments)))
         }
     }
     assert(! new Legislator('0').checkSchedule(time), 'empty schedule')
