@@ -1157,6 +1157,7 @@ Legislator.prototype._pinged = function (reachable, from) {
         } else if (election.incumbent.quorum.sought.length == 0) {
             quorum.incumbent = true
         }
+
         var parliament = {}
         parliament.incumbent = quorum.incumbent &&
                               (election.incumbent.constituents.length >= election.minoritySize ||
@@ -1168,6 +1169,23 @@ Legislator.prototype._pinged = function (reachable, from) {
         // from parliament size two to one.
 
         if ((parliament.incumbent && parliament.ordinary) || (quorum.ordinary && complete)) {
+
+        // todo: What if they are not all reachable? How would you ever be
+        // complete if you cannot get the entire set to respond? You could go
+        // into this knowing that you'll have to shrink the parliament if you
+        // could always trust the normal winnowing process. We need to add an
+        // election timeout, which would invoke this branch.
+        //
+        // Basically, when you ping, you might fail to reach, and if you do fail
+        // to reach, then your peers are suspect, so we try to run the election
+        // noting who fails to respond and if they fail to respond twice, we go
+        // ahead and form a smaller government without them.
+        //
+        // How are we identifying pod people? By id, I suppose, internally, so
+        // if someone has crashed and resurrected, we're not going to get their
+        // same id back, and they are not going to be able to join this
+        // government, it will have to shrink and then grow.
+
             var candidates = election.incumbent.quorum.seen.concat(election.ordinary.quorum.seen)
                                                            .concat(election.incumbent.constituents)
                                                            .concat(election.ordinary.constituents)
