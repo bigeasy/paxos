@@ -1152,8 +1152,7 @@ Legislator.prototype._pinged = function (reachable, from) {
         }
         var quorum = {}
         quorum.preferred = election.preferred.quorum.seen.length == election.quorumSize - 1
-        quorum.ordinary = election.preferred.quorum.seen.length +
-                          election.ordinary.quorum.seen.length >= election.quorumSize - 1
+        quorum.ordinary = election.preferred.quorum.seen.length + 0 >= election.quorumSize - 1
         if (quorum.preferred) {
             election.preferred.quorum.sought.length = 0
         } else if (election.preferred.quorum.sought.length == 0) {
@@ -1165,6 +1164,8 @@ Legislator.prototype._pinged = function (reachable, from) {
                                election.preferred.sought == 0)
         parliament.ordinary = quorum.ordinary && election.reachable >= election.parliamentSize
         var complete = election.requests == election.receipts.length
+        // form on quorum size, so we will never shrink below quorum, never go
+        // from parliament size two to one.
         if ((parliament.preferred && parliament.ordinary) || (quorum.ordinary && complete)) {
             var candidates = election.preferred.quorum.seen.concat(election.ordinary.quorum.seen)
                                                            .concat(election.preferred.constituents)
