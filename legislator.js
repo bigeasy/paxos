@@ -27,8 +27,6 @@ function Legislator (id, options) {
     this.parliamentSize = options.parliamentSize || 5
     this._Date = options.Date || Date
 
-    this.prefer = options.prefer || function () { return true }
-
     this.messageId = id + '/0'
     this.log = new RBTree(function (a, b) { return Id.compare(a.id, b.id) })
     this.length = 0
@@ -1269,13 +1267,9 @@ Legislator.prototype._propagation = function () {
     this.scheduler.clear()
     if (~this.government.majority.indexOf(this.id)) {
         if (this.government.majority[0] == this.id) {
-            var preferred = {
-                parliament: this.parliament.filter(this.prefer).length,
-                citizens: this.citizens.filter(this.prefer).length
-            }
             if (
-                preferred.parliament < this.parliamentSize &&
-                preferred.citizens > preferred.parliament
+                this.parliament.length < this.parliamentSize &&
+                this.citizens.length > this.parliament.length
             ) {
                 this._schedule({
                     type: 'elect',
@@ -1412,26 +1406,18 @@ Legislator.prototype._elect = function (remap) {
     })
     var preferred = {
         quorum: {
-            sought: quorum.filter(function (citizen) {
-                return this.prefer(citizen)
-            }, this),
+            sought: quorum.slice(),
             seen: []
         },
-        sought: candidates.filter(function (citizen) {
-            return this.prefer(citizen)
-        }, this).length,
+        sought: candidates.length,
         constituents: []
     }
     var ordinary = {
         quorum: {
-            sought: quorum.filter(function (citizen) {
-                return !this.prefer(citizen)
-            }, this),
+            sought: [],
             seen: []
         },
-        sought: constituents.filter(function (citizen) {
-            return !this.prefer(citizen)
-        }, this).length,
+        sought: 0,
         constituents: []
     }
     this.election = {
