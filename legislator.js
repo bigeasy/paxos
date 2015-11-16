@@ -1139,7 +1139,7 @@ Legislator.prototype._pinged = function (reachable, from) {
     var election = this.election, parliament, quorum, minority, majority
     if (election && !~election.receipts.indexOf(from)) {
         election.receipts.push(from)
-        var group = this.prefer(from) ? election.preferred : election.ordinary
+        var group = election.preferred
         var index = group.quorum.sought.indexOf(from)
         if (~index) {
             group.quorum.sought.splice(index, 1)
@@ -1168,18 +1168,13 @@ Legislator.prototype._pinged = function (reachable, from) {
         parliament.ordinary = quorum.ordinary && election.reachable >= election.parliamentSize
         var complete = election.requests == election.receipts.length
         if ((parliament.preferred && parliament.ordinary) || (quorum.ordinary && complete)) {
-            var prefer = function (a, b) {
-                a = this.prefer(a) ? 0 : 1
-                b = this.prefer(b) ? 0 : 1
-                return a - b
-            }.bind(this)
             var candidates = election.preferred.quorum.seen.concat(election.ordinary.quorum.seen)
                                                            .concat(election.preferred.constituents)
                                                            .concat(election.ordinary.constituents)
             for (var i = 0; election.quorum.length < election.quorumSize; i++) {
                 election.quorum.push(candidates.shift())
             }
-            candidates = election.quorum.concat(candidates.sort(prefer))
+            candidates = election.quorum.concat(candidates)
             if (election.reachable < election.parliamentSize) {
                 // if we have the quorum, but we do not have the parliament, we
                 // form a government of quorum size, shrink the government.
