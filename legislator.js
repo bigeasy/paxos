@@ -1185,6 +1185,12 @@ Legislator.prototype._pinged = function (reachable, from) {
         // if someone has crashed and resurrected, we're not going to get their
         // same id back, and they are not going to be able to join this
         // government, it will have to shrink and then grow.
+        //
+        // todo: Okay, ignore the above. Pings are done via HTTP/S so they are
+        // definitive. The response here includes whether or not they are
+        // reachable, whether or not there was a 200 response. Complete means
+        // that all pings where attempted and reachable is the count of pings
+        // that responded.
 
             var candidates = election.incumbent.quorum.seen.concat(election.ordinary.quorum.seen)
                                                            .concat(election.incumbent.constituents)
@@ -1195,7 +1201,7 @@ Legislator.prototype._pinged = function (reachable, from) {
                 election.quorum.push(candidates.shift())
             }
 
-            // we now have incumbants up top, followed by whomever.
+            // we now have incumbents up top, followed by whomever.
             candidates = election.quorum.concat(candidates)
 
             // do we have enough citizens for a full parliament?
