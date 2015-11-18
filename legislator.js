@@ -1460,7 +1460,6 @@ Legislator.prototype.reelection = function (now, id) {
 }
 
 Legislator.prototype._decideElection = function (entry) {
-    var greatest = this._greatestOf(this.id)
     if (entry.value.id == this.id) {
         if (~this.government.majority.indexOf(this.id)) {
             this._elect(true)
