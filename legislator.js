@@ -1134,6 +1134,12 @@ Legislator.prototype._receivePong = function (envelope, message, route) {
 
 Legislator.prototype._pinged = function (reachable, from) {
     ; (this.recorder)('_pinged', reachable, from)
+
+    // Pings are done via HTTP/S so they are definitive. The response here
+    // includes whether or not they are reachable, whether or not there was a
+    // 200 response. Complete means that all pings where attempted and reachable
+    // is the count of pings that responded.
+
     var election = this.election, parliament, quorum, minority, majority
     if (election && !~election.receipts.indexOf(from)) {
         election.receipts.push(from)
@@ -1149,52 +1155,19 @@ Legislator.prototype._pinged = function (reachable, from) {
             election.reachable++
             election.incumbent.sought--
         }
-        var quorum = {}
-        quorum.incumbent = election.incumbent.quorum.seen.length == election.quorumSize - 1
-        quorum.ordinary = quorum.incumbent
-        if (quorum.incumbent) {
+        quorum = election.incumbent.quorum.seen.length == election.quorumSize - 1
+        if (quorum) {
             election.incumbent.quorum.sought.length = 0
-        } else if (election.incumbent.quorum.sought.length == 0) {
-            quorum.incumbent = true
         }
 
-        var parliament = {}
-        parliament.incumbent = quorum.incumbent &&
-                              (election.incumbent.constituents.length >= election.minoritySize ||
-                               election.incumbent.sought == 0)
-        parliament.ordinary = quorum.ordinary && election.reachable >= election.parliamentSize
+        var parliament = quorum && election.reachable == election.parliamentSize
         var complete = election.requests == election.receipts.length
 
         // form on quorum size, so we will never shrink below quorum, never go
         // from parliament size two to one.
 
-        if ((parliament.incumbent && parliament.ordinary) || (quorum.ordinary && complete)) {
-
-        // todo: What if they are not all reachable? How would you ever be
-        // complete if you cannot get the entire set to respond? You could go
-        // into this knowing that you'll have to shrink the parliament if you
-        // could always trust the normal winnowing process. We need to add an
-        // election timeout, which would invoke this branch.
-        //
-        // Basically, when you ping, you might fail to reach, and if you do fail
-        // to reach, then your peers are suspect, so we try to run the election
-        // noting who fails to respond and if they fail to respond twice, we go
-        // ahead and form a smaller government without them.
-        //
-        // How are we identifying pod people? By id, I suppose, internally, so
-        // if someone has crashed and resurrected, we're not going to get their
-        // same id back, and they are not going to be able to join this
-        // government, it will have to shrink and then grow.
-        //
-        // todo: Okay, ignore the above. Pings are done via HTTP/S so they are
-        // definitive. The response here includes whether or not they are
-        // reachable, whether or not there was a 200 response. Complete means
-        // that all pings where attempted and reachable is the count of pings
-        // that responded.
-
-            var candidates = election.incumbent.quorum.seen.concat(election.ordinary.quorum.seen)
-                                                           .concat(election.incumbent.constituents)
-                                                           .concat(election.ordinary.constituents)
+        if (parliament || (quorum && complete)) {
+            var candidates = election.incumbent.quorum.seen.concat(election.incumbent.constituents)
 
             // we've primed the election quorum with ourselves as leader.
             for (var i = 0; election.quorum.length < election.quorumSize; i++) {
@@ -1452,14 +1425,6 @@ Legislator.prototype._elect = function (remap) {
         sought: candidates.length,
         constituents: []
     }
-    var ordinary = {
-        quorum: {
-            sought: [],
-            seen: []
-        },
-        sought: 0,
-        constituents: []
-    }
     this.election = {
         remap: remap,
         parliamentSize: parliamentSize,
@@ -1472,7 +1437,6 @@ Legislator.prototype._elect = function (remap) {
         reachable: [],
         receipts: receipts,
         incumbent: incumbent,
-        ordinary: ordinary,
         requests: receipts.length + candidates.length,
         parliament: [],
         constituents: [],
