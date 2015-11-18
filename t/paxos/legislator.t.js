@@ -1,4 +1,4 @@
-require('proof')(94, prove)
+require('proof')(95, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -774,6 +774,21 @@ function prove (assert) {
         ],
         id: '20/0'
     }, 'add a bunch of citizens')
+
+    time++
+    network.machines[3].legislator.reelection(time, '1')
+    network.tick(time)
+
+    assert(network.machines[0].legislator.government, {
+        majority: [ '3', '0', '4' ],
+        minority: [ '1', '2' ],
+        constituents: [
+            '5', '6', '7', '8', '9', '10', '11', '12',
+            '13', '14', '15', '16', '17', '18', '19', '20'
+        ],
+        id: '20/0'
+    }, 'call election with invalid member')
+
     return
     // prefer odd numbered citizens
     console.log(JSON.stringify([ 'prefer odd' ]))
