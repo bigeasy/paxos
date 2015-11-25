@@ -13,6 +13,8 @@ if [ "$TRAVIS" = "true" ]; then
   echo "submitting to coveralls.io"
   (cat coverage/lcov.info | node_modules/.bin/coveralls) > /dev/null 2>&1
 
+  echo ""
+  echo "coverage"
   node_modules/.bin/istanbul report --format text
 fi
 
