@@ -21,7 +21,6 @@
     "dependencies":
     {
                     "bintrees": "1.0.1",
-                    "transcript": "0.0.6",
                     "happenstance": "0.0.13",
                     "monotonic": "0.0.2"
     },
