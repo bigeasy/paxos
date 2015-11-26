@@ -1,3 +1,4 @@
+[![Stories in Ready](https://badge.waffle.io/bigeasy/paxos.png?label=ready&title=Ready)](https://waffle.io/bigeasy/paxos)
 In-memory Paxos in pure-JavaScript. No disk writes necessary.
 
 Sketch of what to say.
