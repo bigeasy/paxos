@@ -282,6 +282,7 @@ Legislator.prototype.sent = function (now, route, sent, received) {
     if (success) {
         route.retry = this.retry
         route.sleep = this.now
+        this.visited = this.now
         this._schedule({ type: 'ping', id: pulse ? this.id : route.path[1], delay: this.ping })
     } else {
         if (pulse) {
@@ -364,6 +365,7 @@ Legislator.prototype.inbox = function (now, route, envelopes) {
     }, this)
     assert(route.id != '-', 'no route id')
     this.now = now
+    this.visited = now
     var route = this.routeOf(route.path, route.pulse)
     if (route.pulse && !this.election) {
         this._schedule({ type: 'elect', id: this.id, delay: this.timeout })
