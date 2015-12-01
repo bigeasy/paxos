@@ -5,6 +5,7 @@ var Scheduler = require('happenstance')
 var push = [].push
 var slice = [].slice
 var RBTree = require('bintrees').RBTree
+var signal = require('signal')
 
 var Id = require('./id')
 
@@ -53,13 +54,18 @@ function Legislator (id, options) {
     this.timeout = options.timeout || 1
     this.failed = {}
 
-    this.recorder = options.recorder || function () {}
-
     this._propagation()
 }
 
+Legislator.prototype._signal = function (method, vargs) {
+    var subscribers = signal.subscribers([ '', 'bigeasy', 'paxos', 'invoke' ])
+    for (var i = 0, I = subscribers.length; i < I; i++) {
+        subscribers[i](this.id, method, vargs)
+    }
+}
+
 Legislator.prototype.routeOf = function (path, pulse) {
-    ; (this.recorder)('routeOf', path, pulse)
+    this._signal('routeOf', [ path, pulse ])
     assert(typeof path != 'string', 'paths are no longer strings')
     assert(pulse != null, 'pulse must not be null')
     var id = [ pulse ? '!' : '.' ].concat(path).join(' -> '), route = this.routed[id]
@@ -88,17 +94,17 @@ Legislator.prototype._schedule = function (event) {
 }
 
 Legislator.prototype._actualSchedule = function (key, value, when) {
-    ; (this.recorder)('_actualSchedule', key, value, when)
+    this._signal('_actualSchedule', [ key, value, when ])
     return this.scheduler.schedule(key, value, when)
 }
 
 Legislator.prototype._unschedule = function (id) {
-    ; (this.recorder)('_unschedule', id)
+    this._signal('_unschedule', [ id ])
     this.scheduler.unschedule(id)
 }
 
 Legislator.prototype.checkSchedule = function (now) {
-    ; (this.recorder)('checkSchedule', now)
+    this._signal('checkSchedule', [ now ])
     this.now = now
     var happened = false
     this.scheduler.check(this.now).forEach(function (event) {
@@ -111,7 +117,7 @@ Legislator.prototype.checkSchedule = function (now) {
 }
 
 Legislator.prototype._consume = function (envelope, route) {
-    ; (this.recorder)('_consume', envelope, route)
+    this._signal('_consume', [ envelope, route ])
     assert(envelope.to == this.id, 'consume not self')
     var type = envelope.message.type
     var method = '_receive' + type[0].toUpperCase() + type.substring(1)
@@ -122,7 +128,7 @@ Legislator.prototype._consume = function (envelope, route) {
 Legislator.prototype._stuff = function (from, to, pulse, route, message) {
     var envelopes = []
     message.id = this.messageId = Id.increment(this.messageId, 1)
-    ; (this.recorder)('_stuff', from, to, pulse, route, message)
+    this._signal('_stuff', [ from, to, pulse, route, message ])
     from.forEach(function (from) {
         to.forEach(function (to) {
             var envelope = {
@@ -139,13 +145,13 @@ Legislator.prototype._stuff = function (from, to, pulse, route, message) {
             }
         }, this)
     }, this)
-    ; (this.recorder)('_stuff', envelopes)
+    this._signal('_stuff', [ envelopes ])
     return envelopes
 }
 
 Legislator.prototype._dispatch = function (options) {
 //    if (options.message.id == '0/95') throw new Error
-    ; (this.recorder)('_dispatch', options)
+    this._signal('_dispatch', [ options ])
     if (options.message.type !== 'failed') {
         assert(options.route, 'route is now required')
         assert(options.pulse != null, 'pulse is now required')
@@ -180,7 +186,7 @@ Legislator.prototype._dispatch = function (options) {
 }
 
 Legislator.prototype.outbox = function (now) {
-    ; (this.recorder)('outbox', now)
+    this._signal('outbox', [ now ])
 
     var routes = []
 
@@ -232,13 +238,13 @@ Legislator.prototype.outbox = function (now) {
         }
     }
 
-    ; (this.recorder)('outbox', routes)
+    this._signal('outbox', [ routes ])
 
     return routes
 }
 
 Legislator.prototype.sent = function (now, route, sent, received) {
-    ; (this.recorder)('sent', now, route, sent, received)
+    this._signal('sent', [ now, route, sent, received ])
     this.now = now
     var pulse = route.pulse, route = this.routeOf(route.path, route.pulse), types = {}
 
@@ -301,7 +307,7 @@ Legislator.prototype.sent = function (now, route, sent, received) {
 }
 
 Legislator.prototype.forwards = function (now, route, index) {
-    ; (this.recorder)('forwards', now, route, index)
+    this._signal('forwards', [ now, route, index ])
     this.now = now
     var route = this.routeOf(route.path, route.pulse)
     var envelopes = []
@@ -313,12 +319,12 @@ Legislator.prototype.forwards = function (now, route, index) {
         }
         return false
     })
-    ; (this.recorder)('forwards', envelopes)
+    this._signal('forwards', [ envelopes ])
     return envelopes
 }
 
 Legislator.prototype.returns = function (now, route, index) {
-    ; (this.recorder)('returns', now, route, index)
+    this._signal('returns', [ now, route, index ])
     this.now = now
     var route = this.routeOf(route.path, route.pulse),
         envelopes = [],
@@ -347,14 +353,14 @@ Legislator.prototype.returns = function (now, route, index) {
         }
         return false
     })
-    ; (this.recorder)('returns', envelopes)
+    this._signal('returns', [ envelopes ])
     return envelopes
 }
 
 Legislator.prototype.inbox = function (now, route, envelopes) {
-    ; (this.recorder)('inbox', now, route, envelopes)
+    this._signal('inbox', [ now, route, envelopes ])
     envelopes.forEach(function (envelope) {
-        ; (this.recorder)('envelope', envelope)
+        this._signal('envelope', [ envelope ])
     }, this)
     assert(route.id != '-', 'no route id')
     this.now = now
@@ -363,7 +369,7 @@ Legislator.prototype.inbox = function (now, route, envelopes) {
         this._schedule({ type: 'elect', id: this.id, delay: this.timeout })
     }
     envelopes.forEach(function (envelope) {
-        ; (this.recorder)('envelope', envelope)
+        this._signal('envelope', [ envelope ])
         this._dispatch({
             pulse: route.pulse,
             route: envelope.route,
@@ -394,7 +400,7 @@ Legislator.prototype._entry = function (id, message) {
 }
 
 Legislator.prototype.bootstrap = function (now) {
-    ; (this.recorder)('bootstrap', now)
+    this._signal('bootstrap', [ now ])
     this.now = now
     var entry = this._entry('0/1', {
         id: '0/1',
@@ -420,7 +426,7 @@ Legislator.prototype.bootstrap = function (now) {
 }
 
 Legislator.prototype.extract = function (direction, count, id) {
-    ; (this.recorder)('extract', direction, count, id)
+    this._signal('extract', [ direction, count, id ])
     var most = direction == 'forward' ? 'min' : 'max'
     var next = direction == 'forward' ? 'next' : 'prev'
     var entries = [], entry, iterator, next
@@ -450,7 +456,7 @@ Legislator.prototype.extract = function (direction, count, id) {
 }
 
 Legislator.prototype.prime = function (promise) {
-    ; (this.recorder)('prime', promise)
+    this._signal('prime', [ promise ])
     var entry = this.log.find({ id: promise })
     if (entry == null) {
         return []
@@ -465,7 +471,7 @@ Legislator.prototype.prime = function (promise) {
 }
 
 Legislator.prototype.since = function (promise, count) {
-    ; (this.recorder)('since', promise)
+    this._signal('since', [ promise ])
     count = count || 24
     var iterator = this.log.findIter({ id: promise })
     if (!iterator) {
@@ -489,12 +495,12 @@ Legislator.prototype.since = function (promise, count) {
 }
 
 Legislator.prototype.min = function () {
-    ; (this.recorder)('min')
+    this._signal('min', [])
     return this.log.min().id
 }
 
 Legislator.prototype.inject = function (entries) {
-    ; (this.recorder)('inject', entries)
+    this._signal('inject', [ entries ])
     entries.forEach(function (entry) {
         this.log.insert({
             id: entry.id,
@@ -509,7 +515,7 @@ Legislator.prototype.inject = function (entries) {
 }
 
 Legislator.prototype.initialize = function (now) {
-    ; (this.recorder)('initialize', now)
+    this._signal('initialize', [ now ])
     this.now = now
     var min = this.log.min()
     this.greatest = {}
@@ -525,7 +531,7 @@ Legislator.prototype.initialize = function (now) {
 }
 
 Legislator.prototype.immigrate = function (id) {
-    ; (this.recorder)('immigrate', id)
+    this._signal('immigrate', [ id ])
     this.id = id
     this.failed = {}
     this.routed = {}
@@ -536,7 +542,7 @@ Legislator.prototype.immigrate = function (id) {
 // todo: count here by length in client
 
 Legislator.prototype.shift = function () {
-    ; (this.recorder)('shift')
+    this._signal('shift', [])
     var min = this.log.min(), max = this.log.max(), entry = min, removed = 0
     if (Id.compare(min.id, max.id, 0) == 0) {
         return removed
@@ -564,7 +570,8 @@ Legislator.prototype._nextProposalId = function (index) {
 }
 
 Legislator.prototype.newGovernment = function (quorum, government, remap) {
-    ; (this.recorder)('newGovernment', quorum, government, remap)
+    // todo: need a copy government befor sharing it in this way.
+    this._signal('newGovernment', [ quorum, government, remap ])
     assert(!government.constituents)
     government.constituents = this.citizens.filter(function (citizen) {
         return !~government.majority.indexOf(citizen)
@@ -729,7 +736,7 @@ Legislator.prototype._receivePromised = function (envelope, message) {
 }
 
 Legislator.prototype.post = function (now, cookie, value, internal) {
-    ; (this.recorder)('post', now, cookie, value, internal)
+    this._signal('post', [ now, cookie, value, internal ])
     if (this.government.majority[0] != this.id) {
         return {
             posted: false,
@@ -755,7 +762,7 @@ Legislator.prototype.post = function (now, cookie, value, internal) {
 }
 
 Legislator.prototype._accept = function () {
-    ; (this.recorder)('_accept')
+    this._signal('_accept', [])
     var entry = this.log.max()
     this._dispatch({
         pulse: true,
@@ -934,7 +941,7 @@ Legislator.prototype._playUniform = function () {
 }
 
 Legislator.prototype._receiveLearned = function (envelope, message) {
-    ; (this.recorder)('_receiveLearned', envelope, message)
+    this._signal('_receiveLearned', [ envelope, message ])
     var entry = this._entry(message.promise, message)
     if (message.quorum && message.quorum[0] != entry.quorum[0]) {
         assert(entry.learns.length == 0, 'replace not learned')
@@ -971,7 +978,7 @@ Legislator.prototype._receiveLearned = function (envelope, message) {
 // This merely asserts that a message follows a certain route. Maybe I'll
 // rename it to "route", but "nothing" is good enough.
 Legislator.prototype._nothing = function () {
-    ; (this.recorder)('_nothing')
+    this._signal('_nothing', [])
     this._dispatch({
         pulse: true,
         route: this.promise.quorum,
@@ -1133,7 +1140,7 @@ Legislator.prototype._receivePong = function (envelope, message, route) {
 }
 
 Legislator.prototype._pinged = function (reachable, from) {
-    ; (this.recorder)('_pinged', reachable, from)
+    this._signal('_pinged', [ reachable, from ])
 
     // Pings are done via HTTP/S so they are definitive. The response here
     // includes whether or not they are reachable, whether or not there was a
@@ -1223,7 +1230,7 @@ Legislator.prototype._pinged = function (reachable, from) {
 }
 
 Legislator.prototype.emigrate = function (now, id) {
-    ; (this.recorder)('emigrate', now, id)
+    this._signal('emigrate', [ now, id ])
     assert(this._Date.now() == now, 'now is wrong')
     this.now = now
     this._dispatch({
@@ -1316,7 +1323,7 @@ Legislator.prototype._propagation = function () {
 }
 
 Legislator.prototype._decideConvene = function (entry) {
-    ; (this.recorder)('_decideConvene', entry)
+    this._signal('_decideConvene', [ entry ])
     delete this.election
 
     var min = this.log.min()
@@ -1340,7 +1347,7 @@ Legislator.prototype._decideConvene = function (entry) {
 }
 
 Legislator.prototype.naturalize = function (now, id) {
-    ; (this.recorder)('naturalize', now, id)
+    this._signal('naturalize', [ now, id ])
     assert(typeof id == 'string', 'id must be a hexidecmimal string')
     return this.post(now, null, { type: 'naturalize', id: id }, true)
 }
@@ -1389,13 +1396,13 @@ Legislator.prototype._candidates = function (now) {
 }
 
 Legislator.prototype.elect = function (now) {
-    ; (this.recorder)('elect', now)
+    this._signal('elect', [ now ])
     this.now = now
     this._elect()
 }
 
 Legislator.prototype._elect = function (remap) {
-    ; (this.recorder)('elect', remap)
+    this._signal('elect', [ remap ])
     if (this.election) {
         return
     }

@@ -12,6 +12,14 @@ entries.pop()
 var slice = [].slice
 var recorded = []
 
+var signal = require('signal')
+
+signal.subscribe('.bigeasy.paxos.invoke'.split('.'), function (id, method, vargs) {
+    if (id == '0') {
+        recorded.push({ method: method, vargs: JSON.parse(JSON.stringify(vargs)) })
+    }
+})
+
 var Legislator = require('./legislator')
 var legislator = new Legislator('0', {
     parliamentSize: 5,
@@ -25,7 +33,7 @@ var legislator = new Legislator('0', {
 
 var i = 0
 while (i < entries.length) {
-    var entry = entries[i], vargs = JSON.parse(JSON.stringify(entry)), method = vargs.shift()
+    var entry = entries[i], vargs = JSON.parse(JSON.stringify(entry.vargs)), method = entry.method
     if (method == 'prefer odd') {
         legislator.prefer = function (citizen) {
             return (+citizen) % 2
@@ -37,6 +45,7 @@ while (i < entries.length) {
         }
         i++
     } else {
+        console.log(method, vargs)
         legislator[method].apply(legislator, vargs)
         if (false) recorded.forEach(function (record) {
             console.log('    ' + JSON.stringify(record))

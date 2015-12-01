@@ -3,7 +3,14 @@ require('proof')(95, prove)
 function prove (assert) {
     var Legislator = require('../../legislator'),
         Network = require('../../synchronous/network'),
-        Machine = require('../../synchronous/machine')
+        Machine = require('../../synchronous/machine'),
+        signal = require('signal')
+
+    signal.subscribe('.bigeasy.paxos.invoke'.split('.'), function (id, method, vargs) {
+         if (id == '0') {
+            console.log(JSON.stringify({ method: method, vargs: vargs }))
+        }
+    })
 
     var time = 0, gremlin
 
@@ -17,16 +24,8 @@ function prove (assert) {
 
     var count = 0, util = require('util')
 
-    var slice = [].slice
-    var copiedOptions = {}
-    for (var key in options) {
-        copiedOptions[key] = options[key]
-        copiedOptions.recorder = function () {
-            console.log(JSON.stringify(slice.call(arguments)))
-        }
-    }
     assert(! new Legislator('0').checkSchedule(time), 'empty schedule')
-    var legislators = [ new Legislator('0', copiedOptions) ]
+    var legislators = [ new Legislator('0', options) ]
     legislators[0].bootstrap(time)
 
     var network = new Network
