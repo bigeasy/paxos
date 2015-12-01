@@ -26,7 +26,7 @@ function prove (assert) {
 
     assert(! new Legislator('0').checkSchedule(time), 'empty schedule')
     var legislators = [ new Legislator('0', options) ]
-    legislators[0].bootstrap(time)
+    legislators[0].bootstrap(time, '0')
 
     var network = new Network
     var machine = new Machine(network, legislators[0])
@@ -45,7 +45,7 @@ function prove (assert) {
     network.machines[1].legislator.inject(network.machines[0].legislator.extract('forward', 20).entries)
     network.machines[1].legislator.initialize(time)
 
-    assert(network.machines[0].legislator.naturalize(time, '1').posted, 'naturalize')
+    assert(network.machines[0].legislator.naturalize(time, '1', '1').posted, 'naturalize')
     network.tick(time)
 
     assert(legislators[0].government, {
@@ -58,7 +58,7 @@ function prove (assert) {
     network.machines.push(new Machine(network, new Legislator('2', options)))
     network.machines[2].legislator.inject(network.machines[0].legislator.extract('forward', 20).entries)
     network.machines[2].legislator.initialize(time)
-    network.machines[0].legislator.naturalize(time, '2')
+    network.machines[0].legislator.naturalize(time, '2', '2')
     network.tick(time)
 
     assert(network.machines[1].legislator.government, {
@@ -106,7 +106,7 @@ function prove (assert) {
     network.machines.push(new Machine(network, new Legislator('3', options)))
     network.machines[3].legislator.inject(network.machines[0].legislator.extract('backward', 20).entries)
     network.machines[3].legislator.initialize(time)
-    network.machines[0].legislator.naturalize(time, '3')
+    network.machines[0].legislator.naturalize(time, '3', '3')
     network.tick(time)
 
     assert(!network.machines[0].legislator.checkSchedule(time), 'unexpired schedule')
@@ -124,7 +124,7 @@ function prove (assert) {
         learns: [ '1', '0' ],
         quorum: [ '0', '1' ],
         cookie: null,
-        value: { type: 'naturalize', id: '3' },
+        value: { type: 'naturalize', id: '3', location: '3' },
         internal: true,
         learned: true,
         decided: true,
@@ -188,9 +188,10 @@ function prove (assert) {
             government: {
                 majority: [ '2', '3' ],
                 minority: [ '0' ],
-                constituents: [ '1' ],
-                id: '6/0'
-            }, terminus: '5/2'
+                constituents: [ '1' ]
+            },
+            locations: { 0: '0', 1: '1', 2: '2', 3: '3' },
+            terminus: '5/2'
         },
         internal: true,
         learned: true,
@@ -496,8 +497,9 @@ function prove (assert) {
       government:
        { majority: [ '2', '3' ],
          minority: [ '1' ],
-         constituents: [ '0' ],
-         id: '14/0' },
+         constituents: [ '0' ]
+       },
+      locations: { 0: '0', 1: '1', 2: '2', 3: '3' },
       terminus: '13/4',
       map:
        [ { was: '13/5', is: '14/1' },
@@ -528,17 +530,18 @@ function prove (assert) {
     assert(network.machines[2].legislator.log.max().value,
     { type: 'convene',
       government:
-       { majority: [ '2', '3' ],
+      {  majority: [ '2', '3' ],
          minority: [ '1' ],
-         constituents: [ '0' ],
-         id: '15/0' },
+         constituents: [ '0' ]
+      },
+      locations: { 0: '0', 1: '1', 2: '2', 3: '3' },
       terminus: '14/6' }, 'not remapped')
 
     // min and since.
     assert(network.machines[2].legislator.min(), '1/0', 'min')
     assert(network.machines[2].legislator.since('4/0', 1), [
         { promise: '4/1', previous: '4/0', cookie: null, internal: true,
-            value: { type: 'naturalize', id: '3' }
+            value: { type: 'naturalize', id: '3', location: '3' }
         }
     ], 'since')
     assert(network.machines[2].legislator.since('4/0').length, 24, 'since default count')
@@ -556,9 +559,9 @@ function prove (assert) {
             government: {
                 majority: [ '0' ],
                 minority: [],
-                constituents: [ '1', '2' ],
-                id: '1/0'
+                constituents: []
             },
+            locations: { 0: '0' },
             terminus: '0/1'
         }
     }][0], 'prime')
@@ -587,7 +590,7 @@ function prove (assert) {
     while (network.machines[0].legislator.shift() != 0) {}
     assert(network.machines[0].legislator.length, 1, 'entry count after shift everything')
 
-    network.machines[2].legislator.naturalize(time, '4')
+    network.machines[2].legislator.naturalize(time, '4', '4')
     network.tick(time)
     assert(network.machines[2].legislator.government, {
         majority: [ '2', '3', '1' ],
@@ -669,9 +672,9 @@ function prove (assert) {
     }), 'failures learned')
 
     network.machines[0].legislator.immigrate('0')
-    network.machines[2].legislator.naturalize(time, '0')
+    network.machines[2].legislator.naturalize(time, '0', '0')
     network.machines[4].legislator.immigrate('4')
-    network.machines[2].legislator.naturalize(time, '4')
+    network.machines[2].legislator.naturalize(time, '4', '4')
     network.tick(time)
 
     assert(network.machines[2].legislator.government, {
@@ -709,7 +712,7 @@ function prove (assert) {
     network.machines[1].legislator = new Legislator('1', options)
     network.machines[1].legislator.inject(extract.entries)
     network.machines[1].legislator.initialize(time)
-    network.machines[3].legislator.naturalize(time, '1')
+    network.machines[3].legislator.naturalize(time, '1', '1')
     network.tick(time)
 
     assert(network.machines[0].legislator.government, {
@@ -743,11 +746,11 @@ function prove (assert) {
     network.machines[1].legislator = new Legislator('1', options)
     network.machines[1].legislator.inject(network.machines[3].legislator.extract('backward', 9).entries)
     network.machines[1].legislator.initialize(time)
-    network.machines[3].legislator.naturalize(time, '1')
+    network.machines[3].legislator.naturalize(time, '1', '1')
     network.machines[2].legislator = new Legislator('2', options)
     network.machines[2].legislator.inject(network.machines[3].legislator.extract('backward', 9).entries)
     network.machines[2].legislator.initialize(time)
-    network.machines[3].legislator.naturalize(time, '2')
+    network.machines[3].legislator.naturalize(time, '2', '2')
     network.tick(time)
     assert(network.machines[0].legislator.government, {
         majority: [ '3', '0', '4' ],
@@ -761,7 +764,7 @@ function prove (assert) {
         network.machines.push(new Machine(network, new Legislator(String(index), options)))
         network.machines[index].legislator.inject(network.machines[3].legislator.extract('backward', 9).entries)
         network.machines[index].legislator.initialize(time)
-        network.machines[3].legislator.naturalize(time, String(index))
+        network.machines[3].legislator.naturalize(time, String(index), String(index))
     }
     network.tick(time)
     assert(network.machines[0].legislator.government, {

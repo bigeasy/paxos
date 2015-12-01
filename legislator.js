@@ -38,7 +38,7 @@ function Legislator (id, options) {
     this.proposals = []
     this.routed = {}
     this.unrouted = {}
-    this.location = {}
+    this.locations = {}
 
     this.government = { id: '0/0', minority: [], majority: [] }
     this.citizens = []
@@ -399,8 +399,8 @@ Legislator.prototype._entry = function (id, message) {
     return entry
 }
 
-Legislator.prototype.bootstrap = function (now) {
-    this._signal('bootstrap', [ now ])
+Legislator.prototype.bootstrap = function (now, location) {
+    this._signal('bootstrap', [ now, location ])
     this.now = now
     var entry = this._entry('0/1', {
         id: '0/1',
@@ -420,6 +420,7 @@ Legislator.prototype.bootstrap = function (now) {
         majority: [ this.id ],
         minority: []
     }
+    this.locations[this.id] = location
     this.citizens = [ this.id ]
     this.newGovernment([ this.id ], government)
     this.log.remove(this.log.min())
@@ -590,7 +591,8 @@ Legislator.prototype.newGovernment = function (quorum, government, remap) {
         value: {
             type: 'convene',
             government: government,
-            terminus: current.id
+            terminus: current.id,
+            locations: this.locations
         }
     }
     if (remap) {
@@ -1250,7 +1252,7 @@ Legislator.prototype._propagation = function () {
 
     for (var failed in this.failed) {
         if (!~this.citizens.indexOf(failed)) {
-            delete this.location[failed]
+            delete this.locations[failed]
             delete this.unrouted[failed]
             for (var id in this.routed) {
                 var route = this.routed[id]
@@ -1336,8 +1338,10 @@ Legislator.prototype._decideConvene = function (entry) {
     // quorum than the resulting government.
     this.promise.quorum = entry.value.government.majority
 
-    this.government = entry.value.government
+    // todo: deep copy.
+    this.government = JSON.parse(JSON.stringify(entry.value.government))
     this.government.id = entry.id
+    this.locations = JSON.parse(JSON.stringify(entry.value.locations))
 
     if (this.id != this.government.majority[0]) {
         this.proposals.length = 0
@@ -1346,10 +1350,10 @@ Legislator.prototype._decideConvene = function (entry) {
     this._propagation()
 }
 
-Legislator.prototype.naturalize = function (now, id) {
+Legislator.prototype.naturalize = function (now, id, location) {
     this._signal('naturalize', [ now, id ])
     assert(typeof id == 'string', 'id must be a hexidecmimal string')
-    return this.post(now, null, { type: 'naturalize', id: id }, true)
+    return this.post(now, null, { type: 'naturalize', id: id, location: location }, true)
 }
 
 Legislator.prototype._decideNaturalize = function (entry) {
@@ -1360,7 +1364,7 @@ Legislator.prototype._decideNaturalize = function (entry) {
     if (entry.value.id == this.id) {
         this.naturalized = entry.id
     }
-    this.location[entry.value.id] = entry.value.location
+    this.locations[entry.value.id] = entry.value.location
     var elect, now = this.now
     elect = this.government.majority[0] == this.id
     elect = elect && this.parliament.length < this._maxParliamentSize(this._candidates(now).length + 1)
