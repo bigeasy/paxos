@@ -6,7 +6,7 @@ function prove (assert) {
 
     var legislator = new Legislator('0')
 
-    legislator.bootstrap(Date.now())
+    legislator.bootstrap(Date.now(), '0')
 
     for (var i = 2; i < 5; i++) {
         var entry = legislator._entry(i + '/0', {
@@ -15,11 +15,11 @@ function prove (assert) {
             value: {
                 type: 'convene',
                 government: {
-                    id: i + '/0',
                     majority: [ 0 ],
                     minority: [],
                     constituents: []
                 },
+                locations: { 0: '0' },
                 terminus: (i - 1) + '/0'
             },
             internal: true,
