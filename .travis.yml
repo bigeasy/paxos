@@ -20,7 +20,3 @@ branches:
 before_install:
   - npm install
   - npm install istanbul coveralls
-
-env:
-  global:
-  - secure: "AlcO3Cz9uPiXUbtuRnN7fXbsDjf4jS1cDUL6XR+UwgWDPBXtUq7EhvC+huMb4XY3c36gCcl4O+iqjJrtxpordjomrkXfNw3FZjoiBNW/yEVQryDs4xSNgi8Q0wYd+0NbtqmgMwq13dmEjSrQJwaIcviOBBPq9WaDEG//6/Kmy/Q="
