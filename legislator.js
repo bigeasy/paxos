@@ -1359,6 +1359,8 @@ Legislator.prototype.naturalize = function (now, id, location) {
 }
 
 Legislator.prototype._decideNaturalize = function (entry) {
+    // TODO You need to naturalize the same id twice, I believe, to test this
+    // branch as a negative, but perhaps it is an assertion.
     if (!~this.citizens.indexOf(entry.value.id)) {
         this.government.constituents.push(entry.value.id)
     }
