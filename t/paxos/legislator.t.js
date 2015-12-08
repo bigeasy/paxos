@@ -75,7 +75,7 @@ function prove (assert) {
         id: '2/0'
     }, 'minority learning')
 
-    // todo: is when necessary?
+    // TODO Is when necessary?
     gremlin = network.addGremlin(function (when, route, index) {
         return route.path[index] == '2'
     })
