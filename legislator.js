@@ -1,4 +1,3 @@
-Error.stackTraceLimit = Infinity
 var assert = require('assert')
 var Monotonic = require('monotonic')
 var Scheduler = require('happenstance')
