@@ -86,7 +86,7 @@ Legislator.prototype._greatestOf = function (id) {
     return this.greatest[id] || { learned: '0/0', decided: '0/0', uniform: '0/0' }
 }
 
-// todo: to make replayable, we need to create a scheduler that accepts a now so
+// TODO To make replayable, we need to create a scheduler that accepts a now so
 // that the caller can replay the schedule, this should probably be the default.
 Legislator.prototype._schedule = function (event) {
     var when = this.now + event.delay
@@ -542,7 +542,7 @@ Legislator.prototype.immigrate = function (id) {
     this.government = { id: '0/0', minority: [], majority: [] }
 }
 
-// todo: count here by length in client
+// TODO Count here by length in client.
 
 Legislator.prototype.shift = function () {
     this._signal('shift', [])
@@ -573,7 +573,7 @@ Legislator.prototype._nextProposalId = function (index) {
 }
 
 Legislator.prototype.newGovernment = function (quorum, government, remap) {
-    // todo: need a copy government befor sharing it in this way.
+    // TODO Need a copy government befor sharing it in this way.
     this._signal('newGovernment', [ quorum, government, remap ])
     assert(!government.constituents)
     government.constituents = this.citizens.filter(function (citizen) {
@@ -673,7 +673,7 @@ Legislator.prototype._prepare = function () {
     })
 }
 
-// todo: leader is never going to aggree to a new government that was not
+// TODO leader is never going to aggree to a new government that was not
 // proposed by itself, thus the only race is when it is the minorities, so I
 // need to test the race with a five member parliament.
 Legislator.prototype._receivePrepare = function (envelope, message) {
@@ -840,7 +840,7 @@ Legislator.prototype._markAndSetGreatest = function (entry, type) {
     return false
 }
 
-// todo: do not learn something if the promise is less than your uniform id.
+// TODO Do not learn something if the promise is less than your uniform id.
 Legislator.prototype._receiveAccepted = function (envelope, message) {
     var entry = this._entry(message.promise, message)
     assert(!~entry.accepts.indexOf(envelope.from))
@@ -1019,7 +1019,7 @@ Legislator.prototype._receiveSynchronize = function (envelope, message) {
         var greatest = this._greatestOf(envelope.from).uniform
 
         while (count-- && (entry = iterator.next()) != null && entry.id != lastUniformId) {
-            // todo: test a gap.
+            // TODO Test a gap.
             if (entry.uniform) {
                 greatest = entry.id
                 createLearned.call(this, entry)
@@ -1129,7 +1129,7 @@ Legislator.prototype._receiveFailed = function (envelope, message) {
     }
 }
 
-// todo: what was the gap that made it impossible?
+// TODO What was the gap that made it impossible?
 Legislator.prototype._receivePong = function (envelope, message, route) {
     this.greatest[envelope.from] = message.greatest
     var impossible = Id.compare(this.log.min().id, message.greatest.uniform) > 0
@@ -1192,8 +1192,8 @@ Legislator.prototype._pinged = function (reachable, from) {
             if (election.reachable < election.parliamentSize) {
                 // if we have the quorum, but we do not have the parliament, we
                 // form a government of quorum size, shrink the government.
-                // todo: come back and convince myself that we won't shrink
-                // below size of two.
+                // TODO Come back and convince myself that we won't shrink below
+                // size of two.
                 election.parliamentSize -= 2
                 election.majoritySize = Math.ceil(election.parliamentSize / 2)
                 election.minoritySize = election.parliamentSize - election.majoritySize
@@ -1340,7 +1340,7 @@ Legislator.prototype._decideConvene = function (entry) {
     // quorum than the resulting government.
     this.promise.quorum = entry.value.government.majority
 
-    // todo: deep copy.
+    // TODO Deep copy.
     this.government = JSON.parse(JSON.stringify(entry.value.government))
     this.government.id = entry.id
     this.locations = JSON.parse(JSON.stringify(entry.value.locations))
