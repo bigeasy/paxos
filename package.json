@@ -20,14 +20,14 @@
     ],
     "dependencies":
     {
-                    "bintrees": "1.0.1",
-                    "happenstance": "1.0.x",
-                    "monotonic": "1.0.x",
-                    "signal": "1.0.x"
+                    "bintrees":         "1.0.1",
+                    "happenstance":     "1.0.x",
+                    "monotonic":        "1.0.x",
+                    "signal":           "1.0.x"
     },
     "devDependencies":
     {
-                    "proof": "0.0.56"
+                    "proof":            "0.0.56"
     },
     "scripts":
     {
