@@ -1,18 +1,17 @@
-
-require('proof')(35, prove)
+require('proof')(28, prove)
 
 function prove (assert) {
     var Client = require('../../client')
 
     var client = new Client('0')
 
-    client.prime([])
-    assert(client.length, 0, 'empty prime array')
+    var iterator = client.prime({ value: null, promise: '1/0' })
 
-    client.prime([{ value: null, promise: '1/0' }])
-    var marker = client.receive([
+    client.receive([
         { cookie: '2/0', promise: '1/1', value: 1, previous: '1/0' },
     ])
+
+    assert(!!iterator.next, 'next')
 
     assert(client.outbox(), [], 'outbox is empty')
     assert(client.outbox(), [], 'outbox is still empty')
@@ -33,33 +32,22 @@ function prove (assert) {
         { cookie: '0/1', promise: '1/3', value: 2, previous: '1/2' },
     ])
 
-    var marker = client.receive([
+    client.receive([
         { cookie: '1/1', promise: '1/2', value: 1, previous: '1/1' },
         { cookie: '0/1', promise: '1/3', value: 2, previous: '1/2' },
         { cookie: '0/2', promise: '1/4', value: 2, previous: '1/3' }
     ])
+
+    while (iterator.next) {
+        iterator = iterator.next
+    }
+    assert(iterator.promise, '1/4', 'filled')
+
     client.receive([
         { cookie: '0/2', promise: '1/4', value: 2, previous: '1/3' }
     ])
 
-    assert(marker, '1/1', 'marker')
-
-    var array = []
-    client.each(marker, function (entry) {
-        array.push(entry)
-    })
-    assert(array, [
-        { cookie: '1/1', promise: '1/2', value: 1, previous: '1/1', uniform: true },
-        { cookie: '0/1', promise: '1/3', value: 2, previous: '1/2', uniform: true },
-        { cookie: '0/2', promise: '1/4', value: 2, previous: '1/3', uniform: true }
-    ], 'each')
-
-    var array = client.since(marker)
-    assert(array, [
-        { cookie: '1/1', promise: '1/2', value: 1, previous: '1/1', uniform: true },
-        { cookie: '0/1', promise: '1/3', value: 2, previous: '1/2', uniform: true },
-        { cookie: '0/2', promise: '1/4', value: 2, previous: '1/3', uniform: true }
-    ], 'since')
+    assert(!iterator.next, 'duplicate')
 
     assert(client.outbox(), [], 'outbox is empty after publshing')
 
@@ -187,49 +175,4 @@ function prove (assert) {
         { cookie: '0/12', promise: '5/2', value: 3, previous: '5/1' }
     ])
     assert(client.sent.ordered.length, 2, 'all consumed')
-
-    while (client.shift()) { }
-
-    assert(client.length, 1, 'shift')
-
-    client.publish(2)
-    assert(client.clear(),
-    [ { cookie: '0/11', value: 2, internal: false, promise: '4/3' },
-      { cookie: '0/12', value: 3, internal: false, promise: '4/4' },
-      { cookie: '0/13', value: 2, internal: false } ]
-    , 'clear')
-
-    client.prime([{ value: null, promise: '1/0' }])
-
-    client.publish(1)
-    client.publish(2)
-    client.publish(3)
-    assert(client.outbox(), [
-        { cookie: '0/1', value: 1, internal: false },
-        { cookie: '0/2', value: 2, internal: false },
-        { cookie: '0/3', value: 3, internal: false } ], 'reset')
-    client.published([
-        { cookie: '0/1', promise: '1/1' },
-        { cookie: '0/2', promise: '1/2' },
-        { cookie: '0/3', promise: '1/3' }
-    ])
-    assert(client.outbox(), [], 'outbox again')
-    client.receive([
-        { promise: '2/0', previous: '1/0', value: {} }
-    ])
-    assert(client.outbox(), [
-        { cookie: '0/1', value: 1, internal: false },
-        { cookie: '0/2', value: 2, internal: false },
-        { cookie: '0/3', value: 3, internal: false } ], 'outbox overshot')
-    client.published([
-        { cookie: '0/1', promise: '2/1' },
-        { cookie: '0/2', promise: '2/2' },
-        { cookie: '0/3', promise: '2/3' }
-    ])
-    client.receive([
-        { cookie: '0/1', promise: '2/1', value: 1, previous: '2/0' },
-        { cookie: '0/2', promise: '2/2', value: 2, previous: '2/1' },
-        { cookie: '0/3', promise: '2/3', value: 3, previous: '2/2' }
-    ])
-    assert(client.outbox(), [], 'outbox cleared')
 }

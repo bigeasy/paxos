@@ -57,14 +57,12 @@ Client.prototype.published = function (receipts) {
     delete this.sent.indexed
 }
 
-Client.prototype.prime = function (entries) {
-    if (entries.length) {
-        this._ingest(entries)
-        this.uniform = this.log.min().promise
-        this.length = 1
-        this.log.min().uniform = true
-        this.playUniform()
-    }
+Client.prototype.prime = function (entry) {
+    this.uniform = entry.promise
+    this.length = 1
+    this.log.insert(entry)
+    this.log.min().uniform = true
+    return entry
 }
 
 Client.prototype.retry = function () {
@@ -90,6 +88,7 @@ Client.prototype.playUniform = function (entries) {
         if (!current.uniform) {
             break
         }
+        previous.next = current
         this.uniform = current.promise
         this.length++
         var request = this.sent.ordered[0] || { cookie: '/' }, boundary = this.boundary
@@ -144,40 +143,6 @@ Client.prototype._ingest = function (entries) {
 Client.prototype.receive = function (entries) {
     this._ingest(entries)
     return this.playUniform()
-}
-
-Client.prototype.since = function (marker, callback) {
-    var iterator = this.log.findIter({ promise: marker })
-    assert(iterator, 'promise not found')
-    var entries = [], entry
-    while ((entry = iterator.next()) && entry.uniform) {
-        entries.push(entry)
-    }
-    return entries
-}
-
-Client.prototype.each = function (marker, callback) {
-    var iterator = this.log.findIter({ promise: marker })
-    assert(iterator, 'promise not found')
-    var entry
-    while ((entry = iterator.next()) && entry.uniform) {
-        callback(entry)
-    }
-}
-
-Client.prototype.shift = function () {
-    if (this.length > 1) {
-        this.log.remove(this.log.min())
-        this.length--
-        return true
-    }
-    return false
-}
-
-Client.prototype.clear = function () {
-    var waiting = this.sent.ordered.concat(this.pending.ordered)
-    Client.call(this, this.id)
-    return waiting
 }
 
 module.exports = Client
