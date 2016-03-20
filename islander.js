@@ -4,7 +4,7 @@ var RBTree = require('bintrees').RBTree
 var Id = require('./id')
 var unshift = [].unshift
 
-function Client (id) {
+function Islander (id) {
     this.id = id
     this.boundary = null
     this.flush = false
@@ -15,7 +15,7 @@ function Client (id) {
     this.log = new RBTree(function (a, b) { return Id.compare(a.promise, b.promise) })
 }
 
-Client.prototype.publish = function (value, internal) {
+Islander.prototype.publish = function (value, internal) {
     var cookie = this.nextCookie()
     var request = { cookie: cookie, value: value, internal: !!internal }
     this.pending.ordered.push(request)
@@ -23,11 +23,11 @@ Client.prototype.publish = function (value, internal) {
     return cookie
 }
 
-Client.prototype.nextCookie = function () {
+Islander.prototype.nextCookie = function () {
     return this.cookie = Id.increment(this.cookie, 1)
 }
 
-Client.prototype.outbox = function () {
+Islander.prototype.outbox = function () {
     var outbox = []
     if (this.flush) {
         outbox = [{ cookie: this.nextCookie(), value: 0 }]
@@ -41,7 +41,7 @@ Client.prototype.outbox = function () {
     return outbox
 }
 
-Client.prototype.published = function (receipts) {
+Islander.prototype.published = function (receipts) {
     if (receipts.length === 0) {
         this.flush = true
     } else if (this.flush) {
@@ -57,7 +57,7 @@ Client.prototype.published = function (receipts) {
     delete this.sent.indexed
 }
 
-Client.prototype.prime = function (entry) {
+Islander.prototype.prime = function (entry) {
     this.uniform = entry.promise
     this.length = 1
     this.log.insert(entry)
@@ -65,7 +65,7 @@ Client.prototype.prime = function (entry) {
     return entry
 }
 
-Client.prototype.retry = function () {
+Islander.prototype.retry = function () {
     unshift.apply(this.pending.ordered, this.sent.ordered)
     this.sent.ordered.forEach(function (request) {
         delete request.promise
@@ -74,7 +74,7 @@ Client.prototype.retry = function () {
     this.sent = { ordered: [], indexed: {} }
 }
 
-Client.prototype.playUniform = function (entries) {
+Islander.prototype.playUniform = function (entries) {
     var start = this.uniform, iterator = this.log.findIter({ promise: start }),
         previous, current,
         request
@@ -131,7 +131,7 @@ Client.prototype.playUniform = function (entries) {
     return start
 }
 
-Client.prototype._ingest = function (entries) {
+Islander.prototype._ingest = function (entries) {
     entries.forEach(function (entry) {
         var found = this.log.find({ promise: entry.promise })
         if (!found) {
@@ -140,9 +140,9 @@ Client.prototype._ingest = function (entries) {
     }, this)
 }
 
-Client.prototype.receive = function (entries) {
+Islander.prototype.receive = function (entries) {
     this._ingest(entries)
     return this.playUniform()
 }
 
-module.exports = Client
+module.exports = Islander
