@@ -464,6 +464,7 @@ Legislator.prototype.prime = function (promise) {
         return []
     } else {
         return [{
+            // TODO Why sometimes promise, sometimes id?
             promise: entry.id,
             previous: null,
             internal: entry.internal,
@@ -787,7 +788,7 @@ Legislator.prototype._accept = function () {
 // is if the message rides a pulse. This is worth noting because I thought, "the
 // only place where the pulse matters is in the leader, it does not need to be a
 // property of the legislator, it can just be a property of an envelope that
-// describes a route." Not so. The message should be keep with the route and it
+// describes a route." Not so. The message should be kept with the route and it
 // should only go out when that route is pulsed. If the network calls fail, the
 // leader will be able to learn immediately.
 
@@ -992,6 +993,24 @@ Legislator.prototype._nothing = function () {
     })
 }
 
+// This is a message because it rides the pulse. When a new government is
+// created, the new leader adds `"synchronize"` messages to the `"prepare"`
+// messages. It is opportune to have the leader signal that the new majority
+// needs to synchronize amongst themselves and have that knowledge ride the
+// initial pulse that runs a full round of Paxos.
+//
+// This is is noteworthy because you've come back to this code, looked at how
+// the message is used to synchronize constituents and thought that it was a
+// waste to tigger these actions through dispatch. You then look at how the
+// messages are sent during the pulse and wonder why those messages can't simply
+// be added by a function call, but the pulse is telling all the members of the
+// majority to synchronize among themselves.
+//
+// However, it is always going to be the case that when we are reelecting we're
+// going to synchronize from the new leader. The new leader is going to be a
+// member of the previous majority. They are going to have the latest
+// information. And, actually, we can always check when we see a route if the
+// members on that route are at the same level of uniformity as us.
 Legislator.prototype._receiveSynchronize = function (envelope, message) {
     assert(message.greatest, 'message must have greatest')
     this.greatest[envelope.from] = message.greatest
@@ -1409,7 +1428,7 @@ Legislator.prototype.elect = function (now) {
 }
 
 Legislator.prototype._elect = function (remap) {
-    this._signal('elect', [ remap ])
+    this._signal('_elect', [ remap ])
     if (this.election) {
         return
     }
