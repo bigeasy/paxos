@@ -80,6 +80,7 @@ Legislator.prototype.routeOf = function (path, pulse) {
 }
 
 Legislator.prototype._greatestOf = function (id) {
+    // todo: uniform is redundant
     return this.greatest[id] || { decided: '0/0', decreed: '0/0', uniform: '0/0' }
 }
 
@@ -204,18 +205,7 @@ Legislator.prototype.outbox = function (now) {
                 var route = this.routeOf([ this.id, id ], false)
                 if (!route.sending && route.retry && route.sleep <= now) {
                     if (Monotonic.compare(this._greatestOf(id).uniform, greatest.uniform) < 0) {
-                        this._dispatch({
-                            pulse: false,
-                            route: [ this.id, id ],
-                            from: id,
-                            to: this.id,
-                            message: {
-                                type: 'synchronize',
-                                count: 20,
-                                greatest: this._greatestOf(id),
-                                decided: true
-                            }
-                        })
+                        this._synchronize([ this.id, id ], false, false, id, 20)
                     }
                 }
             }, this)
@@ -1059,6 +1049,66 @@ Legislator.prototype._receiveSynchronize = function (envelope, message) {
             route: envelope.route,
             from: entry.decisions,
             to: envelope.from,
+            message: {
+                type: 'decided',
+                promise: entry.id,
+                quorum: entry.quorum,
+                cookie: entry.cookie,
+                value: entry.value,
+                internal: entry.internal
+            }
+        })
+    }
+}
+
+// TODO Allow messages to land prior to being primed. No! Assert that this never
+// happens.
+Legislator.prototype._synchronize = function (route, pulse, decided, to, count) {
+    var unknown = this._greatestOf(to).decided == '0/0'
+    var count = unknown ? 1 : count
+
+    assert(count, 'zero count to synchronize')
+
+    // Decided will only be sent by a majority member during re-election. There
+    // will always be zero or one decided rounds in addition to the existing
+    // rounds.
+    if (decided && this._greatestOf(this.id).decided != this._greatestOf(to).decided) {
+        createDecided.call(this, this.log.find({ id: this._greatestOf(this.id).decided }))
+    }
+
+    var lastUniformId = this._greatestOf(this.id).uniform
+    if (lastUniformId != this._greatestOf(to).uniform) {
+        createDecided.call(this, this.log.find({ id: lastUniformId }))
+        count--
+
+        var iterator = this.log.lowerBound({ id: this._greatestOf(to).uniform }), entry
+        var greatest = this._greatestOf(to).uniform
+
+        while (count-- && (entry = iterator.next()) != null && entry.id != lastUniformId) {
+            // TODO Test a gap.
+            if (entry.uniform) {
+                greatest = entry.id
+                createDecided.call(this, entry)
+            }
+        }
+    }
+
+    this._dispatch({
+        pulse: pulse,
+        route: route,
+        to: to,
+        message: {
+            type: 'ping',
+            greatest: this._greatestOf(this.id)
+        }
+    })
+
+    function createDecided (entry) {
+        this._dispatch({
+            pulse: pulse,
+            route: route,
+            from: entry.decisions,
+            to: to,
             message: {
                 type: 'decided',
                 promise: entry.id,

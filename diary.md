@@ -15,3 +15,11 @@ http://stackoverflow.com/questions/5850487/questions-about-paxos-implementation/
     talk to Alan about Proof so that tests will pass.
 
 If multi paxos is optional, remember to finish packet work before closing socket
+
+
+## Glossary
+
+ * Proposal ~ The first stage of a round of Paxos.
+ * Decision ~ The second stage of a round of Paxos.
+ * Round ~ A round of Paxos in any state from proposed, to decided, to decreed.
+ Entries in the log are called rounds. A round it identified by it's promise id.
