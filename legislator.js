@@ -80,7 +80,7 @@ Legislator.prototype.routeOf = function (path, pulse) {
 }
 
 Legislator.prototype._greatestOf = function (id) {
-    return this.greatest[id] || { learned: '0/0', decided: '0/0', uniform: '0/0' }
+    return this.greatest[id] || { learned: '0/0', decreed: '0/0', uniform: '0/0' }
 }
 
 // TODO To make replayable, we need to create a scheduler that accepts a now so
@@ -199,7 +199,7 @@ Legislator.prototype.outbox = function (now) {
     if (routes.length == 0) {
         var greatest = this._greatestOf(this.id)
         var now = this.now
-        if (greatest.uniform == greatest.decided) {
+        if (greatest.uniform == greatest.decreed) {
             this.constituency.forEach(function (id) {
                 var route = this.routeOf([ this.id, id ], false)
                 if (!route.sending && route.retry && route.sleep <= now) {
@@ -327,7 +327,7 @@ Legislator.prototype.returns = function (now, route, index) {
     var route = this.routeOf(route.path, route.pulse),
         envelopes = [],
         greatest = this._greatestOf(this.id),
-        failures = greatest.decided == greatest.uniform
+        failures = greatest.decreed == greatest.uniform
     route.path.slice(0, index).forEach(function (id) {
         if (failures) {
             for (var key in this.failed) {
@@ -412,7 +412,7 @@ Legislator.prototype.bootstrap = function (now, location) {
     this.greatest = {}
     this.greatest[this.id] = {
         learned: '0/1',
-        decided: '0/1',
+        decreed: '0/1',
         uniform: '0/1'
     }
     var government = {
@@ -510,7 +510,7 @@ Legislator.prototype.inject = function (entries) {
             internal: entry.internal,
             value: entry.value,
             learned: true,
-            decided: true
+            decreed: true
         })
     }, this)
 }
@@ -522,7 +522,7 @@ Legislator.prototype.initialize = function (now) {
     this.greatest = {}
     this.greatest[this.id] = {
         learned: min.id,
-        decided: min.id,
+        decreed: min.id,
         uniform: min.id
     }
     this._markUniform(min)
@@ -675,7 +675,7 @@ Legislator.prototype._prepare = function () {
 // proposed by itself, thus the only race is when it is the minorities, so I
 // need to test the race with a five member parliament.
 Legislator.prototype._receivePrepare = function (envelope, message) {
-    if (Monotonic.compare(this._greatestOf(this.id).decided, this._greatestOf(this.id).uniform) == 0) {
+    if (Monotonic.compare(this._greatestOf(this.id).decreed, this._greatestOf(this.id).uniform) == 0) {
         var compare = Monotonic.compareIndex(this.promise.id, message.promise, 0)
         if (compare < 0) {
             this.promise = {
@@ -892,7 +892,7 @@ Legislator.prototype._playUniform = function () {
 
         if (Monotonic.compare(Monotonic.increment(previous.id, 1), current.id) == 0) {
             assert(previous.uniform, 'previous must be resolved')
-            if (current.decided) {
+            if (current.decreed) {
                 this._markUniform(current)
                 continue
             } else {
@@ -905,7 +905,7 @@ Legislator.prototype._playUniform = function () {
             if (!terminus || Monotonic.compareIndex(terminus.id, '0/0', 1) != 0) {
                 break OUTER
             }
-            if (terminus.decided) {
+            if (terminus.decreed) {
                 break
             }
             terminus = iterator.next()
@@ -955,12 +955,12 @@ Legislator.prototype._receiveLearned = function (envelope, message) {
         entry.learns.push(envelope.from)
         if (entry.learns.length == entry.quorum.length) {
             this._markAndSetGreatest(entry, 'learned')
-            this._markAndSetGreatest(entry, 'decided')
+            this._markAndSetGreatest(entry, 'decreed')
         }
         this._playUniform()
         // Shift the next entry or else send final learning pulse.
         var shift = true, max = this.log.max()
-        shift = shift && !! entry.decided
+        shift = shift && !! entry.decreed
         shift = shift && this.government.majority[0] == this.id
         shift = shift && !! max.working
         shift = shift && Monotonic.compare(max.id, entry.id) <= 0

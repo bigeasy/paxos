@@ -28,7 +28,7 @@ function prove (assert) {
         entry.learns = [ 0 ]
     }
 
-    legislator.log.max().decided = true
+    legislator.log.max().decreed = true
 
     legislator._playUniform()
 

@@ -127,7 +127,7 @@ function prove (assert) {
         value: { type: 'naturalize', id: '3', location: '3' },
         internal: true,
         learned: true,
-        decided: true,
+        decreed: true,
         uniform: true
     }, 'citizen naturalized')
 
@@ -195,7 +195,7 @@ function prove (assert) {
         },
         internal: true,
         learned: true,
-        decided: true,
+        decreed: true,
         uniform: true
     }, 'former leader learned')
 
