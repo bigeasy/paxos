@@ -22,7 +22,7 @@
     {
                     "bintrees":         "1.0.1",
                     "happenstance":     "1.x",
-                    "monotonic":        "1.x",
+                    "monotonic":        "2.x",
                     "signal":           "1.x"
     },
     "devDependencies":

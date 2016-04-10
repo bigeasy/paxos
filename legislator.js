@@ -1,12 +1,10 @@
 var assert = require('assert')
-var Monotonic = require('monotonic')
+var Monotonic = require('monotonic').asString
 var Scheduler = require('happenstance')
 var push = [].push
 var slice = [].slice
 var RBTree = require('bintrees').RBTree
 var signal = require('signal')
-
-var Id = require('./id')
 
 function consume (array, f, context) {
     var index = 0
@@ -28,7 +26,7 @@ function Legislator (id, options) {
     this._Date = options.Date || Date
 
     this.messageId = id + '/0'
-    this.log = new RBTree(function (a, b) { return Id.compare(a.id, b.id) })
+    this.log = new RBTree(function (a, b) { return Monotonic.compare(a.id, b.id) })
     this.length = 0
     this.scheduler = new Scheduler
 
@@ -126,7 +124,7 @@ Legislator.prototype._consume = function (envelope, route) {
 
 Legislator.prototype._stuff = function (from, to, pulse, route, message) {
     var envelopes = []
-    message.id = this.messageId = Id.increment(this.messageId, 1)
+    message.id = this.messageId = Monotonic.increment(this.messageId, 1)
     this._signal('_stuff', [ from, to, pulse, route, message ])
     from.forEach(function (from) {
         to.forEach(function (to) {
@@ -205,7 +203,7 @@ Legislator.prototype.outbox = function (now) {
             this.constituency.forEach(function (id) {
                 var route = this.routeOf([ this.id, id ], false)
                 if (!route.sending && route.retry && route.sleep <= now) {
-                    if (Id.compare(this._greatestOf(id).uniform, greatest.uniform) < 0) {
+                    if (Monotonic.compare(this._greatestOf(id).uniform, greatest.uniform) < 0) {
                         this._dispatch({
                             pulse: false,
                             route: [ this.id, id ],
@@ -260,7 +258,7 @@ Legislator.prototype.sent = function (now, route, sent, received) {
             switch (envelope.message.type) {
                 case 'prepare':
                 case 'accept':
-                    wasGovernment = Id.isGovernment(envelope.message.promise)
+                    wasGovernment = Monotonic.isBoundary(envelope.message.promise, 0)
                 case 'ping':
                     expecting = true
                     break
@@ -440,7 +438,7 @@ Legislator.prototype.extract = function (direction, count, id) {
     entry = iterator.data(), id = entry.id
     for (entry = iterator.data(); entry; entry = iterator[next]()) {
         if (!entry.uniform) continue // not wasteful, it will be the leader that syncs
-        if (Id.compare(entry.id, id, 0) != 0) break
+        if (Monotonic.compareIndex(entry.id, id, 0) != 0) break
         if (!count--) break
         entries.push({
             id: entry.id,
@@ -481,7 +479,7 @@ Legislator.prototype.since = function (promise, count) {
         return null
     }
     var entry, since = [], uniform = this._greatestOf(this.id).uniform, previous = promise
-    while (count && (entry = iterator.next()) && Id.compare(entry.id, uniform) <= 0) {
+    while (count && (entry = iterator.next()) && Monotonic.compare(entry.id, uniform) <= 0) {
         if (entry.uniform) {
             since.push({
                 promise: entry.id,
@@ -528,7 +526,7 @@ Legislator.prototype.initialize = function (now) {
         uniform: min.id
     }
     this._markUniform(min)
-    assert(Id.isGovernment(min.id), 'min not government')
+    assert(Monotonic.isBoundary(min.id, 0), 'min not government')
     this._playUniform()
     assert(this._greatestOf(this.id).uniform == this.log.max().id)
 }
@@ -547,10 +545,10 @@ Legislator.prototype.immigrate = function (id) {
 Legislator.prototype.shift = function () {
     this._signal('shift', [])
     var min = this.log.min(), max = this.log.max(), entry = min, removed = 0
-    if (Id.compare(min.id, max.id, 0) == 0) {
+    if (Monotonic.compareIndex(min.id, max.id, 0) == 0) {
         return removed
     }
-    while (Id.compare(entry.id, min.id, 0) == 0) {
+    while (Monotonic.compareIndex(entry.id, min.id, 0) == 0) {
         if (entry.uniform) {
             removed++
         }
@@ -566,10 +564,10 @@ Legislator.prototype.shift = function () {
 
 Legislator.prototype._nextProposalId = function (index) {
     var entry = this.log.max(), id = entry.id, proposal
-    if (Id.compare(id, this.lastPromisedId) < 0) {
+    if (Monotonic.compare(id, this.lastPromisedId) < 0) {
         id = this.lastPromisedId
     }
-    return this.lastPromisedId = Id.increment(id, index)
+    return this.lastPromisedId = Monotonic.increment(id, index)
 }
 
 Legislator.prototype.newGovernment = function (quorum, government, remap) {
@@ -677,8 +675,8 @@ Legislator.prototype._prepare = function () {
 // proposed by itself, thus the only race is when it is the minorities, so I
 // need to test the race with a five member parliament.
 Legislator.prototype._receivePrepare = function (envelope, message) {
-    if (Id.compare(this._greatestOf(this.id).decided, this._greatestOf(this.id).uniform) == 0) {
-        var compare = Id.compare(this.promise.id, message.promise, 0)
+    if (Monotonic.compare(this._greatestOf(this.id).decided, this._greatestOf(this.id).uniform) == 0) {
+        var compare = Monotonic.compareIndex(this.promise.id, message.promise, 0)
         if (compare < 0) {
             this.promise = {
                 id: message.promise,
@@ -719,7 +717,7 @@ Legislator.prototype._receivePrepare = function (envelope, message) {
 
 Legislator.prototype._receivePromise = function (envelope, message) {
     var entry = this.log.max()
-    assert(Id.compare(entry.id, message.promise) == 0, 'unexpected promise')
+    assert(Monotonic.compare(entry.id, message.promise) == 0, 'unexpected promise')
     assert(~entry.quorum.indexOf(envelope.from))
     assert(!~entry.promises.indexOf(envelope.from))
     entry.promises.push(envelope.from)
@@ -729,10 +727,10 @@ Legislator.prototype._receivePromise = function (envelope, message) {
 }
 
 Legislator.prototype._receivePromised = function (envelope, message) {
-    if (Id.compare(this.lastPromisedId, message.promise) < 0) {
+    if (Monotonic.compare(this.lastPromisedId, message.promise) < 0) {
         this.lastPromisedId = message.promise
     }
-    if (Id.compare(this._greatestOf(envelope.from).uniform, this._greatestOf(this.id).uniform) == 0) {
+    if (Monotonic.compare(this._greatestOf(envelope.from).uniform, this._greatestOf(this.id).uniform) == 0) {
         this._schedule({ type: 'elect', id: this.id, delay: this.timeout })
     } else {
         this._elect()
@@ -749,7 +747,7 @@ Legislator.prototype.post = function (now, cookie, value, internal) {
     }
 
     var max = this.log.max()
-    if ((max.working && Id.isGovernment(max.id)) || this.election) {
+    if ((max.working && Monotonic.isBoundary(max.id, 0)) || this.election) {
         return {
             posted: false,
             leader: null
@@ -793,7 +791,7 @@ Legislator.prototype._accept = function () {
 // leader will be able to learn immediately.
 
 Legislator.prototype._receiveAccept = function (envelope, message) {
-    var compare = Id.compare(this.promise.id, message.promise, 0)
+    var compare = Monotonic.compareIndex(this.promise.id, message.promise, 0)
     if (compare == 0) {
         var entry = this._entry(message.promise, message)
         this._dispatch({
@@ -831,7 +829,7 @@ Legislator.prototype._receiveAccept = function (envelope, message) {
 
 Legislator.prototype._markAndSetGreatest = function (entry, type) {
     if (!entry[type]) {
-        if (Id.compare(this._greatestOf(this.id)[type], entry.id) < 0) {
+        if (Monotonic.compare(this._greatestOf(this.id)[type], entry.id) < 0) {
             this._greatestOf(this.id)[type] = entry.id
         }
         entry[type] = true
@@ -892,7 +890,7 @@ Legislator.prototype._playUniform = function () {
             break
         }
 
-        if (Id.compare(Id.increment(previous.id, 1), current.id) == 0) {
+        if (Monotonic.compare(Monotonic.increment(previous.id, 1), current.id) == 0) {
             assert(previous.uniform, 'previous must be resolved')
             if (current.decided) {
                 this._markUniform(current)
@@ -904,7 +902,7 @@ Legislator.prototype._playUniform = function () {
 
         terminus = iterator.data()
         for (;;) {
-            if (!terminus || Id.compare(terminus.id, '0/0', 1) != 0) {
+            if (!terminus || Monotonic.compareIndex(terminus.id, '0/0', 1) != 0) {
                 break OUTER
             }
             if (terminus.decided) {
@@ -918,19 +916,19 @@ Legislator.prototype._playUniform = function () {
             if (!terminus) {
                 break OUTER
             }
-            if (Id.compare(current.id, terminus.id, 0) >= 0) {
+            if (Monotonic.compareIndex(current.id, terminus.id, 0) >= 0) {
                 break
             }
         }
 
-        assert(Id.compare(terminus.id, current.id) == 0
-            || Id.compare(terminus.id, previous.id) == 0, 'terminus does not exist')
+        assert(Monotonic.compare(terminus.id, current.id) == 0
+            || Monotonic.compare(terminus.id, previous.id) == 0, 'terminus does not exist')
 
         var uniform = [ terminus = iterator.data() ]
         for (;;) {
             terminus = this.log.find({ id: terminus.value.terminus })
             uniform.push(terminus)
-            if (Id.compare(current.id, terminus.id, 0) >= 0) {
+            if (Monotonic.compareIndex(current.id, terminus.id, 0) >= 0) {
                 break
             }
         }
@@ -965,7 +963,7 @@ Legislator.prototype._receiveLearned = function (envelope, message) {
         shift = shift && !! entry.decided
         shift = shift && this.government.majority[0] == this.id
         shift = shift && !! max.working
-        shift = shift && Id.compare(max.id, entry.id) <= 0
+        shift = shift && Monotonic.compare(max.id, entry.id) <= 0
         if (shift) {
             delete max.working
             var proposal = this.proposals.shift()
@@ -1123,11 +1121,11 @@ Legislator.prototype._receiveFailed = function (envelope, message) {
         election = election || !! this.election
 
         var max = this.log.max()
-        election = election || max.working && Id.isGovernment(max.id)
+        election = election || max.working && Monotonic.isBoundary(max.id, 0)
 
         var promise = failed.election || '0/0'
         var uniform = this._greatestOf(this.id).uniform
-        election = election || Id.compare(promise, uniform) >= 0
+        election = election || Monotonic.compare(promise, uniform) >= 0
 
         if (!election) {
             var leader = this.id
@@ -1150,7 +1148,7 @@ Legislator.prototype._receiveFailed = function (envelope, message) {
 // TODO What was the gap that made it impossible?
 Legislator.prototype._receivePong = function (envelope, message, route) {
     this.greatest[envelope.from] = message.greatest
-    var impossible = Id.compare(this.log.min().id, message.greatest.uniform) > 0
+    var impossible = Monotonic.compare(this.log.min().id, message.greatest.uniform) > 0
     if (impossible) {
         this._dispatch({
             from: envelope.from,
@@ -1352,7 +1350,7 @@ Legislator.prototype._decideConvene = function (entry) {
     var terminus = this.log.find({ id: entry.value.terminus })
 
     assert(min.id == entry.id || (terminus && terminus.learns.length > 0))
-    assert(Id.compare(this.government.id, entry.id) < 0, 'governments out of order')
+    assert(Monotonic.compare(this.government.id, entry.id) < 0, 'governments out of order')
 
     // when we vote to shrink the government, the initial vote has a greater
     // quorum than the resulting government.
