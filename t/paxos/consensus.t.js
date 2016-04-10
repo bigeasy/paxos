@@ -121,12 +121,12 @@ function prove (assert) {
     assert(network.machines[2].legislator.log.max(), {
         id: '4/1',
         accepts: [],
-        learns: [ '1', '0' ],
+        decisions: [ '1', '0' ],
         quorum: [ '0', '1' ],
         cookie: null,
         value: { type: 'naturalize', id: '3', location: '3' },
         internal: true,
-        learned: true,
+        decided: true,
         decreed: true,
         uniform: true
     }, 'citizen naturalized')
@@ -166,12 +166,12 @@ function prove (assert) {
     assert(network.machines[1].legislator.log.max(), {
         id: '5/2',
         accepts: [ '1' ],
-        learns: [],
+        decisions: [],
         quorum: [ '1', '2' ],
         cookie: null,
         value: { greeting: '¡hola mundo!' },
         internal: false
-    }, 'leader unlearned')
+    }, 'leader undecided')
     assert(network.machines[1].legislator.scheduler.what[1].value.type == 'elect', 'election planned')
 
     time++
@@ -181,7 +181,7 @@ function prove (assert) {
     assert(network.machines[1].legislator.log.max(), {
         id: '6/0',
         accepts: [],
-        learns: [ '3', '2' ],
+        decisions: [ '3', '2' ],
         quorum: [ '2', '3' ],
         value: {
             type: 'convene',
@@ -194,10 +194,10 @@ function prove (assert) {
             terminus: '5/2'
         },
         internal: true,
-        learned: true,
+        decided: true,
         decreed: true,
         uniform: true
-    }, 'former leader learned')
+    }, 'former leader decided')
 
     network.machines[2].legislator.post(time, null, { value: 1 })
     network.machines[2].legislator.post(time, null, { value: 2 })
@@ -236,7 +236,7 @@ function prove (assert) {
         minority: [ '0' ],
         constituents: [ '1' ],
         id: '7/0'
-    }, 'race resolved, old majority member learned')
+    }, 'race resolved, old majority member decided')
 
     network.machines[1].legislator.elect(time)
     network.tick(time)
@@ -382,7 +382,7 @@ function prove (assert) {
         minority: [ '2' ],
         constituents: [ '3' ],
         id: 'b/0'
-    }, 'previous leader rejected, learned election')
+    }, 'previous leader rejected, decided election')
 
     var gremlin = network.addGremlin(function (when, route, index, envelopes) {
         return route.path[index] == '0'
@@ -408,7 +408,7 @@ function prove (assert) {
         minority: [ '3' ],
         constituents: [ '0' ],
         id: 'c/0'
-    }, 'previous leader informed of promise, learned election')
+    }, 'previous leader informed of promise, decided election')
 
     var gremlin = network.addGremlin(function (when, route, index, envelopes) {
         return route.path[index] == '1'
@@ -440,7 +440,7 @@ function prove (assert) {
         minority: [ '0' ],
         constituents: [ '1' ],
         id: 'f/0'
-    }, 'previous leader informed of promise greater than, learned election')
+    }, 'previous leader informed of promise greater than, decided election')
 
     var gremlin = network.addGremlin(function (when, route, index, envelopes) {
         return route.path[index] == '0'
@@ -669,7 +669,7 @@ function prove (assert) {
 
     assert(network.machines.every(function (machine) {
         return Object.keys(machine.legislator.failed).length == 0
-    }), 'failures learned')
+    }), 'failures decided')
 
     network.machines[0].legislator.immigrate('0')
     network.machines[2].legislator.naturalize(time, '0', '0')
@@ -741,7 +741,7 @@ function prove (assert) {
 
     assert([ 3, 0, 4 ].every(function (index) {
         return Object.keys(network.machines[index].legislator.failed).length == 0
-    }), 'gap failures learned')
+    }), 'gap failures decided')
 
     network.machines[1].legislator = new Legislator('1', options)
     network.machines[1].legislator.inject(network.machines[3].legislator.extract('backward', 9).entries)

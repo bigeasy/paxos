@@ -25,7 +25,7 @@ function prove (assert) {
             internal: true,
             promises: [ 0 ]
         })
-        entry.learns = [ 0 ]
+        entry.decisions = [ 0 ]
     }
 
     legislator.log.max().decreed = true

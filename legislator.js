@@ -80,7 +80,7 @@ Legislator.prototype.routeOf = function (path, pulse) {
 }
 
 Legislator.prototype._greatestOf = function (id) {
-    return this.greatest[id] || { learned: '0/0', decreed: '0/0', uniform: '0/0' }
+    return this.greatest[id] || { decided: '0/0', decreed: '0/0', uniform: '0/0' }
 }
 
 // TODO To make replayable, we need to create a scheduler that accepts a now so
@@ -213,7 +213,7 @@ Legislator.prototype.outbox = function (now) {
                                 type: 'synchronize',
                                 count: 20,
                                 greatest: this._greatestOf(id),
-                                learned: true
+                                decided: true
                             }
                         })
                     }
@@ -385,7 +385,7 @@ Legislator.prototype._entry = function (id, message) {
         var entry = {
             id: id,
             accepts: [],
-            learns: [],
+            decisions: [],
             quorum: message.quorum
         }
         this.log.insert(entry)
@@ -406,12 +406,12 @@ Legislator.prototype.bootstrap = function (now, location) {
         value: 0,
         quorum: [ this.id ]
     })
-    entry.learns = [ this.id ]
-    entry.learned = true
+    entry.decisions = [ this.id ]
+    entry.decided = true
     entry.uniform = true
     this.greatest = {}
     this.greatest[this.id] = {
-        learned: '0/1',
+        decided: '0/1',
         decreed: '0/1',
         uniform: '0/1'
     }
@@ -506,10 +506,10 @@ Legislator.prototype.inject = function (entries) {
         this.log.insert({
             id: entry.id,
             quorum: entry.quorum.slice(),
-            learns: entry.quorum.slice(),
+            decisions: entry.quorum.slice(),
             internal: entry.internal,
             value: entry.value,
-            learned: true,
+            decided: true,
             decreed: true
         })
     }, this)
@@ -521,7 +521,7 @@ Legislator.prototype.initialize = function (now) {
     var min = this.log.min()
     this.greatest = {}
     this.greatest[this.id] = {
-        learned: min.id,
+        decided: min.id,
         decreed: min.id,
         uniform: min.id
     }
@@ -581,7 +581,7 @@ Legislator.prototype.newGovernment = function (quorum, government, remap) {
         return !this.failed[constituent]
     }.bind(this))
     var iterator = this.log.findIter(this.log.max()), current = iterator.data()
-    while (!current.learned) {
+    while (!current.decided) {
         current = iterator.prev()
     }
     var proposal = {
@@ -620,7 +620,7 @@ Legislator.prototype.newGovernment = function (quorum, government, remap) {
                 type: 'synchronize',
                 count: 20,
                 greatest: this._greatestOf(id),
-                learned: true // <- ?
+                decided: true // <- ?
             }
         })
         this._dispatch({
@@ -632,7 +632,7 @@ Legislator.prototype.newGovernment = function (quorum, government, remap) {
                 type: 'synchronize',
                 count: 20,
                 greatest: this._greatestOf(this.id),
-                learned: true
+                decided: true
             }
         })
     }, this)
@@ -846,12 +846,12 @@ Legislator.prototype._receiveAccepted = function (envelope, message) {
     assert(~entry.quorum.indexOf(envelope.from))
     entry.accepts.push(envelope.from)
     if (entry.accepts.length >= entry.quorum.length)  {
-        this._markAndSetGreatest(entry, 'learned')
+        this._markAndSetGreatest(entry, 'decided')
         this._dispatch({
             pulse: true,
             route: entry.quorum,
             message: {
-                type: 'learned',
+                type: 'decided',
                 promise: message.promise
             }
         })
@@ -868,7 +868,7 @@ Legislator.prototype._receiveRejected = function (envelope, message) {
 }
 
 Legislator.prototype._markUniform = function (entry) {
-    assert(entry.learns.length > 0)
+    assert(entry.decisions.length > 0)
     if (this._markAndSetGreatest(entry, 'uniform')) {
         this.length++
         if (entry.internal) {
@@ -934,7 +934,7 @@ Legislator.prototype._playUniform = function () {
         }
 
         while (uniform.length) {
-            if (uniform[uniform.length - 1].learns.length == 0) {
+            if (uniform[uniform.length - 1].decisions.length == 0) {
                 break OUTER
             }
             this._markUniform(uniform.pop())
@@ -942,19 +942,19 @@ Legislator.prototype._playUniform = function () {
     }
 }
 
-Legislator.prototype._receiveLearned = function (envelope, message) {
-    this._signal('_receiveLearned', [ envelope, message ])
+Legislator.prototype._receiveDecided = function (envelope, message) {
+    this._signal('_receiveDecided', [ envelope, message ])
     var entry = this._entry(message.promise, message)
     if (message.quorum && message.quorum[0] != entry.quorum[0]) {
-        assert(entry.learns.length == 0, 'replace not learned')
-        assert(!entry.learned, 'replace not learned')
+        assert(entry.decisions.length == 0, 'replace not decided')
+        assert(!entry.decided, 'replace not decided')
         this.log.remove(entry)
         entry = this._entry(message.promise, message)
     }
-    if (!~entry.learns.indexOf(envelope.from)) {
-        entry.learns.push(envelope.from)
-        if (entry.learns.length == entry.quorum.length) {
-            this._markAndSetGreatest(entry, 'learned')
+    if (!~entry.decisions.indexOf(envelope.from)) {
+        entry.decisions.push(envelope.from)
+        if (entry.decisions.length == entry.quorum.length) {
+            this._markAndSetGreatest(entry, 'decided')
             this._markAndSetGreatest(entry, 'decreed')
         }
         this._playUniform()
@@ -1012,23 +1012,23 @@ Legislator.prototype._nothing = function () {
 Legislator.prototype._receiveSynchronize = function (envelope, message) {
     assert(message.greatest, 'message must have greatest')
     this.greatest[envelope.from] = message.greatest
-    var unknown = this._greatestOf(envelope.from).learned == '0/0'
+    var unknown = this._greatestOf(envelope.from).decided == '0/0'
     var count = unknown ? 1 : message.count
 
     assert(message.from != this.id, 'synchronize with self')
 
     assert(message.count, 'zero count to synchronize')
 
-    // Learned will only be sent by a majority member during re-election.
-    if (message.learned &&
-        this._greatestOf(this.id).learned != this._greatestOf(envelope.from).learned
+    // Decided will only be sent by a majority member during re-election.
+    if (message.decided &&
+        this._greatestOf(this.id).decided != this._greatestOf(envelope.from).decided
     ) {
-        createLearned.call(this, this.log.find({ id: this._greatestOf(this.id).learned }))
+        createDecided.call(this, this.log.find({ id: this._greatestOf(this.id).decided }))
     }
 
     var lastUniformId = this._greatestOf(this.id).uniform
     if (lastUniformId != this._greatestOf(envelope.from).uniform) {
-        createLearned.call(this, this.log.find({ id: lastUniformId }))
+        createDecided.call(this, this.log.find({ id: lastUniformId }))
         count--
 
         var iterator = this.log.lowerBound({ id: this._greatestOf(envelope.from).uniform }), entry
@@ -1038,7 +1038,7 @@ Legislator.prototype._receiveSynchronize = function (envelope, message) {
             // TODO Test a gap.
             if (entry.uniform) {
                 greatest = entry.id
-                createLearned.call(this, entry)
+                createDecided.call(this, entry)
             }
         }
     }
@@ -1053,14 +1053,14 @@ Legislator.prototype._receiveSynchronize = function (envelope, message) {
         }
     })
 
-    function createLearned (entry) {
+    function createDecided (entry) {
         this._dispatch({
             pulse: envelope.pulse,
             route: envelope.route,
-            from: entry.learns,
+            from: entry.decisions,
             to: envelope.from,
             message: {
-                type: 'learned',
+                type: 'decided',
                 promise: entry.id,
                 quorum: entry.quorum,
                 cookie: entry.cookie,
@@ -1349,7 +1349,7 @@ Legislator.prototype._decideConvene = function (entry) {
     var min = this.log.min()
     var terminus = this.log.find({ id: entry.value.terminus })
 
-    assert(min.id == entry.id || (terminus && terminus.learns.length > 0))
+    assert(min.id == entry.id || (terminus && terminus.decisions.length > 0))
     assert(Monotonic.compare(this.government.id, entry.id) < 0, 'governments out of order')
 
     // when we vote to shrink the government, the initial vote has a greater
