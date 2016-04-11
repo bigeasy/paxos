@@ -8,7 +8,7 @@ function prove (assert) {
 
     signal.subscribe('.bigeasy.paxos.invoke'.split('.'), function (id, method, vargs) {
          if (id == '0') {
-            console.log(JSON.stringify({ method: method, vargs: vargs }))
+            // console.log(JSON.stringify({ method: method, vargs: vargs }))
         }
     })
 

@@ -205,7 +205,7 @@ Legislator.prototype.outbox = function (now) {
                 var route = this.routeOf([ this.id, id ], false)
                 if (!route.sending && route.retry && route.sleep <= now) {
                     if (Monotonic.compare(this._greatestOf(id).uniform, greatest.uniform) < 0) {
-                        this._synchronize([ this.id, id ], false, false, id, 20)
+                        this._synchronize([ this.id, id ], false, id, 20)
                     }
                 }
             }, this)
@@ -299,6 +299,7 @@ Legislator.prototype.forwards = function (now, route, index) {
     this.now = now
     var route = this.routeOf(route.path, route.pulse)
     var envelopes = []
+    var greatest = this._greatestOf(this.id)
     consume(route.envelopes, function (envelope) {
         var i = route.path.indexOf(envelope.to)
         if (index < i) {
@@ -319,6 +320,9 @@ Legislator.prototype.returns = function (now, route, index) {
         greatest = this._greatestOf(this.id),
         failures = greatest.decreed == greatest.uniform
     route.path.slice(0, index).forEach(function (id) {
+        if (false) if (Monotonic.compare(this._greatestOf(id).decided, greatest.decided) < 0) {
+            this._synchronize(route.path, route.pulse, id, 20)
+        }
         if (failures) {
             for (var key in this.failed) {
                 this._dispatch({
@@ -601,18 +605,7 @@ Legislator.prototype.newGovernment = function (quorum, government, remap) {
     entry.promises = []
     entry.working = true
     quorum.slice(1).forEach(function (id) {
-        this._dispatch({
-            pulse: true,
-            route: entry.quorum,
-            from: id,
-            to: this.id,
-            message: {
-                type: 'synchronize',
-                count: 20,
-                greatest: this._greatestOf(id),
-                decided: true // <- ?
-            }
-        })
+        this._synchronize(entry.quorum, true, id, 20)
         this._dispatch({
             pulse: true,
             route: entry.quorum,
@@ -650,6 +643,12 @@ Legislator.prototype._propose = function (cookie, value, internal, accept) {
 
 Legislator.prototype._prepare = function () {
     var entry = this.log.max(), quorum = entry.quorum
+    var greatest = this._greatestOf(this.id)
+    quorum.slice(1).forEach(function (id) {
+        if (Monotonic.compare(this._greatestOf(id).decided, greatest.decided) < 0) {
+            this._synchronize(quorum, true, id, 20)
+        }
+    }, this)
     this._dispatch({
         pulse: true,
         route: quorum,
@@ -794,17 +793,9 @@ Legislator.prototype._receiveAccept = function (envelope, message) {
             }
         })
     } else {
-        this._dispatch({
-            pulse: true,
-            route: envelope.route,
-            from: envelope.from,
-            to: this.id,
-            message: {
-                type: 'synchronize',
-                count: 20,
-                greatest: this._greatestOf(envelope.from)
-            }
-        })
+        assert(typeof envelope.from == 'string')
+        assert(!Array.isArray(envelope.from))
+        this._synchronize(envelope.route, true, envelope.from, 20)
         this._dispatch({
             pulse: true,
             route: envelope.route,
@@ -1063,7 +1054,7 @@ Legislator.prototype._receiveSynchronize = function (envelope, message) {
 
 // TODO Allow messages to land prior to being primed. No! Assert that this never
 // happens.
-Legislator.prototype._synchronize = function (route, pulse, decided, to, count) {
+Legislator.prototype._synchronize = function (route, pulse, to, count) {
     var unknown = this._greatestOf(to).decided == '0/0'
     var count = unknown ? 1 : count
 
@@ -1072,7 +1063,7 @@ Legislator.prototype._synchronize = function (route, pulse, decided, to, count) 
     // Decided will only be sent by a majority member during re-election. There
     // will always be zero or one decided rounds in addition to the existing
     // rounds.
-    if (decided && this._greatestOf(this.id).decided != this._greatestOf(to).decided) {
+    if (pulse && this._greatestOf(this.id).decided != this._greatestOf(to).decided) {
         createDecided.call(this, this.log.find({ id: this._greatestOf(this.id).decided }))
     }
 
