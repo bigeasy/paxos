@@ -1,4 +1,4 @@
-require('proof')(95, prove)
+require('proof')(5, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -12,6 +12,10 @@ function prove (assert) {
         }
     })
 
+    function dump (legislator) {
+        legislator.log.each(function (entry) { console.log(entry) })
+    }
+
     var time = 0, gremlin
 
     var options = {
@@ -24,8 +28,8 @@ function prove (assert) {
 
     var count = 0, util = require('util')
 
-    assert(! new Legislator('0').checkSchedule(time), 'empty schedule')
-    var legislators = [ new Legislator('0', options) ]
+    assert(! new Legislator(time, '0').checkSchedule(time), 'empty schedule')
+    var legislators = [ new Legislator(time, '0', options) ]
     legislators[0].bootstrap(time, '0')
 
     var network = new Network
@@ -38,12 +42,10 @@ function prove (assert) {
         majority: [ '0' ],
         minority: [],
         constituents: [],
-        id: '1/0'
+        promise: '1/0'
     }, 'bootstrap')
 
-    network.machines.push(new Machine(network, new Legislator('1', options)))
-    network.machines[1].legislator.inject(network.machines[0].legislator.extract('forward', 20).entries)
-    network.machines[1].legislator.initialize(time)
+    network.machines.push(new Machine(network, new Legislator(time, '1', options)))
 
     assert(network.machines[0].legislator.naturalize(time, '1', '1').posted, 'naturalize')
     network.tick(time)
@@ -51,9 +53,16 @@ function prove (assert) {
     assert(legislators[0].government, {
         majority: [ '0' ],
         minority: [],
+        naturalize: { id: '1', location: '1' },
         constituents: [ '1' ],
-        id: '1/0'
+        promise: '2/0'
     }, 'leader and constituent pair')
+
+    // dump(legislators[0])
+
+    assert(network.machines[1].legislator.log.size, 3, 'synchronized')
+
+    return
 
     network.machines.push(new Machine(network, new Legislator('2', options)))
     network.machines[2].legislator.inject(network.machines[0].legislator.extract('forward', 20).entries)

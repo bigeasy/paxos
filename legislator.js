@@ -14,10 +14,10 @@ function consume (array, f, context) {
     }
 }
 
-function Legislator (id, options) {
-    options || (options = {})
+function Legislator (now, id, options) {
+    assert(typeof now == 'number')
 
-    this.now = Infinity
+    options || (options = {})
 
     assert(typeof id == 'string', 'id must be hexidecimal string')
 
@@ -26,20 +26,20 @@ function Legislator (id, options) {
     this._Date = options.Date || Date
 
     this.messageId = id + '/0'
-    this.log = new RBTree(function (a, b) { return Monotonic.compare(a.id, b.id) })
+    this.log = new RBTree(function (a, b) { return Monotonic.compare(a.promise, b.promise) })
     this.length = 0
     this.scheduler = new Scheduler
 
-    this.promise = { id: '0/0', quorum: [ null ] }
-    this.lastPromisedId = '0/0'
     this.proposals = []
     this.routed = {}
     this.unrouted = {}
     this.locations = {}
+    this._greatest = {}
+    this.naturalizing = []
 
-    this.government = { id: '0/0', minority: [], majority: [] }
+    this.government = { promise: '0/0', minority: [], majority: [] }
+    this.promise = '0/0'
     this.citizens = []
-
 
     assert(!Array.isArray(options.retry), 'retry no longer accepts range')
     assert(!Array.isArray(options.ping), 'retry no longer accepts range')
@@ -51,7 +51,17 @@ function Legislator (id, options) {
     this.timeout = options.timeout || 1
     this.failed = {}
 
-    this._propagation()
+    var round = {
+        promise: '0/0',
+        value: this.government,
+        quorum: [ this.id ],
+        decisions: [ this.id ],
+        decided: true,
+        enacted: true
+    }
+    this.log.insert(round)
+
+    this._propagation(now)
 }
 
 Legislator.prototype._signal = function (method, vargs) {
@@ -61,7 +71,8 @@ Legislator.prototype._signal = function (method, vargs) {
     }
 }
 
-Legislator.prototype.routeOf = function (path, pulse) {
+Legislator.prototype.routeOf = function (now, path, pulse) {
+    assert(arguments.length == 3)
     this._signal('routeOf', [ path, pulse ])
     assert(typeof path != 'string', 'paths are no longer strings')
     assert(pulse != null, 'pulse must not be null')
@@ -70,7 +81,7 @@ Legislator.prototype.routeOf = function (path, pulse) {
         this.routed[id] = route = {
             pulse: !! pulse,
             retry: this.retry,
-            sleep: this.now,
+            sleep: now,
             id: id,
             path: path,
             envelopes: []
@@ -79,15 +90,18 @@ Legislator.prototype.routeOf = function (path, pulse) {
     return route
 }
 
-Legislator.prototype._greatestOf = function (id) {
-    // todo: uniform is redundant
-    return this.greatest[id] || { decided: '0/0', decreed: '0/0', uniform: '0/0' }
+Legislator.prototype.getGreatest = function (id, value) {
+    if (!this._greatest[id] || value) {
+        this._greatest[id] = value || { decided: '0/0', enacted: '0/0' }
+    }
+    return this._greatest[id]
 }
 
 // TODO To make replayable, we need to create a scheduler that accepts a now so
 // that the caller can replay the schedule, this should probably be the default.
-Legislator.prototype._schedule = function (event) {
-    var when = this.now + event.delay
+Legislator.prototype._schedule = function (now, event) {
+    assert(arguments.length == 2)
+    var when = now + event.delay
     return this._actualSchedule(event.id, event, when)
 }
 
@@ -103,9 +117,8 @@ Legislator.prototype._unschedule = function (id) {
 
 Legislator.prototype.checkSchedule = function (now) {
     this._signal('checkSchedule', [ now ])
-    this.now = now
     var happened = false
-    this.scheduler.check(this.now).forEach(function (event) {
+    this.scheduler.check(now).forEach(function (event) {
         happened = true
         var type = event.type
         var method = '_when' + type[0].toUpperCase() + type.substring(1)
@@ -114,16 +127,18 @@ Legislator.prototype.checkSchedule = function (now) {
     return happened
 }
 
-Legislator.prototype._consume = function (envelope, route) {
+Legislator.prototype._consume = function (now, envelope, route) {
+    assert(arguments.length == 3 && now != null)
     this._signal('_consume', [ envelope, route ])
     assert(envelope.to == this.id, 'consume not self')
     var type = envelope.message.type
     var method = '_receive' + type[0].toUpperCase() + type.substring(1)
-    this.ticks[envelope.from] = this.now
-    this[method](envelope, envelope.message, route)
+    this.ticks[envelope.from] = now
+    this[method](now, envelope, envelope.message, route)
 }
 
-Legislator.prototype._stuff = function (from, to, pulse, route, message) {
+Legislator.prototype._stuff = function (now, from, to, pulse, route, message) {
+    assert(arguments.length == 6 && now != null)
     var envelopes = []
     message.id = this.messageId = Monotonic.increment(this.messageId, 1)
     this._signal('_stuff', [ from, to, pulse, route, message ])
@@ -137,7 +152,7 @@ Legislator.prototype._stuff = function (from, to, pulse, route, message) {
                 message: message
             }
             if (this.id == envelope.to) {
-                this._consume(envelope, route)
+                this._consume(now, envelope, route)
             } else {
                 envelopes.push(envelope)
             }
@@ -147,7 +162,8 @@ Legislator.prototype._stuff = function (from, to, pulse, route, message) {
     return envelopes
 }
 
-Legislator.prototype._dispatch = function (options) {
+Legislator.prototype._dispatch = function (now, options) {
+    assert(arguments.length == 2 && now != null)
 //    if (options.message.id == '0/95') throw new Error
     this._signal('_dispatch', [ options ])
     if (options.message.type !== 'failed') {
@@ -178,18 +194,22 @@ Legislator.prototype._dispatch = function (options) {
             envelopes.push(envelope)
         }, this)
     } else {
-        route = this.routeOf(route, options.pulse)
-        push.apply(route.envelopes, this._stuff(from, to, route.pulse, route.path, message))
+        route = this.routeOf(now, route, options.pulse)
+        push.apply(route.envelopes, this._stuff(now, from, to, route.pulse, route.path, message))
     }
 }
+
+Legislator.prototype.__defineGetter__('now',  function (now) {
+    throw new Error
+})
 
 Legislator.prototype.outbox = function (now) {
     this._signal('outbox', [ now ])
 
     var routes = []
 
-    if (this.promise.quorum[0] == this.id) {
-        var route = this.routeOf(this.promise.quorum, true)
+    if (this.government.majority[0] == this.id) {
+        var route = this.routeOf(now, this.government.majority, true)
         if (route.envelopes.length && !route.sending) {
             route.sending = true
             route.retry = this.retry
@@ -198,18 +218,15 @@ Legislator.prototype.outbox = function (now) {
     }
 
     if (routes.length == 0) {
-        var greatest = this._greatestOf(this.id)
-        var now = this.now
-        if (greatest.uniform == greatest.decreed) {
-            this.constituency.forEach(function (id) {
-                var route = this.routeOf([ this.id, id ], false)
-                if (!route.sending && route.retry && route.sleep <= now) {
-                    if (Monotonic.compare(this._greatestOf(id).uniform, greatest.uniform) < 0) {
-                        this._synchronize([ this.id, id ], false, id, 20)
-                    }
+        var greatest = this.getGreatest(this.id)
+        this.constituency.forEach(function (id) {
+            var route = this.routeOf(now, [ this.id, id ], false)
+            if (!route.sending && route.retry && route.sleep <= now) {
+                if (Monotonic.compare(this.getGreatest(id).decided, greatest.decided) < 0) {
+                    this._synchronize(now, [ this.id, id ], false, id, 20)
                 }
-            }, this)
-        }
+            }
+        }, this)
         for (var id in this.routed) {
             var route = this.routed[id]
             if (route.path[0] === this.id && !route.pulse) {
@@ -233,7 +250,7 @@ Legislator.prototype.outbox = function (now) {
 Legislator.prototype.sent = function (now, route, sent, received) {
     this._signal('sent', [ now, route, sent, received ])
     this.now = now
-    var pulse = route.pulse, route = this.routeOf(route.path, route.pulse), types = {}
+    var pulse = route.pulse, route = this.routeOf(now, route.path, route.pulse), types = {}
 
     route.sending = false
     if (route.retry) route.retry--
@@ -268,9 +285,9 @@ Legislator.prototype.sent = function (now, route, sent, received) {
 
     if (success) {
         route.retry = this.retry
-        route.sleep = this.now
-        this.visited = this.now
-        this._schedule({ type: 'ping', id: pulse ? this.id : route.path[1], delay: this.ping })
+        route.sleep = now
+        this.visited = now
+        this._schedule(now, { type: 'ping', id: pulse ? this.id : route.path[1], delay: this.ping })
     } else {
         if (pulse) {
             delete this.log.max().working
@@ -297,9 +314,8 @@ Legislator.prototype.sent = function (now, route, sent, received) {
 Legislator.prototype.forwards = function (now, route, index) {
     this._signal('forwards', [ now, route, index ])
     this.now = now
-    var route = this.routeOf(route.path, route.pulse)
+    var route = this.routeOf(now, route.path, route.pulse)
     var envelopes = []
-    var greatest = this._greatestOf(this.id)
     consume(route.envelopes, function (envelope) {
         var i = route.path.indexOf(envelope.to)
         if (index < i) {
@@ -315,14 +331,11 @@ Legislator.prototype.forwards = function (now, route, index) {
 Legislator.prototype.returns = function (now, route, index) {
     this._signal('returns', [ now, route, index ])
     this.now = now
-    var route = this.routeOf(route.path, route.pulse),
+    var route = this.routeOf(now, route.path, route.pulse),
         envelopes = [],
-        greatest = this._greatestOf(this.id),
-        failures = greatest.decreed == greatest.uniform
+        greatest = this.getGreatest(this.id),
+        failures = greatest.enacted == greatest.uniform
     route.path.slice(0, index).forEach(function (id) {
-        if (false) if (Monotonic.compare(this._greatestOf(id).decided, greatest.decided) < 0) {
-            this._synchronize(route.path, route.pulse, id, 20)
-        }
         if (failures) {
             for (var key in this.failed) {
                 this._dispatch({
@@ -357,13 +370,13 @@ Legislator.prototype.inbox = function (now, route, envelopes) {
     assert(route.id != '-', 'no route id')
     this.now = now
     this.visited = now
-    var route = this.routeOf(route.path, route.pulse)
+    var route = this.routeOf(now, route.path, route.pulse)
     if (route.pulse && !this.election) {
-        this._schedule({ type: 'elect', id: this.id, delay: this.timeout })
+        this._schedule(now, { type: 'elect', id: this.id, delay: this.timeout })
     }
     envelopes.forEach(function (envelope) {
         this._signal('envelope', [ envelope ])
-        this._dispatch({
+        this._dispatch(now, {
             pulse: route.pulse,
             route: envelope.route,
             from: envelope.from,
@@ -373,156 +386,22 @@ Legislator.prototype.inbox = function (now, route, envelopes) {
     }, this)
 }
 
-Legislator.prototype._entry = function (id, message) {
-    var entry = this.log.find({ id: id })
-    if (!entry) {
-        var entry = {
-            id: id,
-            accepts: [],
-            decisions: [],
-            quorum: message.quorum
-        }
-        this.log.insert(entry)
-    }
-    ([ 'cookie', 'value', 'internal' ]).forEach(function (key) {
-        if (!(key in entry) && (key in message)) {
-            entry[key] = message[key]
-        }
-    })
-    return entry
-}
-
 Legislator.prototype.bootstrap = function (now, location) {
     this._signal('bootstrap', [ now, location ])
     this.now = now
-    var entry = this._entry('0/1', {
-        id: '0/1',
-        value: 0,
-        quorum: [ this.id ]
-    })
-    entry.decisions = [ this.id ]
-    entry.decided = true
-    entry.uniform = true
-    this.greatest = {}
-    this.greatest[this.id] = {
-        decided: '0/1',
-        decreed: '0/1',
-        uniform: '0/1'
-    }
     var government = {
         majority: [ this.id ],
         minority: []
     }
     this.locations[this.id] = location
     this.citizens = [ this.id ]
-    this.newGovernment([ this.id ], government)
+    this.newGovernment(now, [ this.id ], government, false)
     this.log.remove(this.log.min())
-}
-
-Legislator.prototype.extract = function (direction, count, id) {
-    this._signal('extract', [ direction, count, id ])
-    var most = direction == 'forward' ? 'min' : 'max'
-    var next = direction == 'forward' ? 'next' : 'prev'
-    var entries = [], entry, iterator, next
-    id || (id = this.log[most]().id)
-    iterator = this.log.findIter({ id: id })
-    if (!iterator) {
-        return { found: false }
-    }
-    entry = iterator.data(), id = entry.id
-    for (entry = iterator.data(); entry; entry = iterator[next]()) {
-        if (!entry.uniform) continue // not wasteful, it will be the leader that syncs
-        if (Monotonic.compareIndex(entry.id, id, 0) != 0) break
-        if (!count--) break
-        entries.push({
-            id: entry.id,
-            quorum: entry.quorum,
-            internal: entry.internal,
-            value: JSON.parse(JSON.stringify(entry.value))
-        })
-    }
-    next = entry && entry.id
-    return {
-        found: true,
-        entries: entries,
-        next: next
-    }
-}
-
-Legislator.prototype.prime = function (promise) {
-    this._signal('prime', [ promise ])
-    var entry = this.log.find({ id: promise })
-    if (entry == null) {
-        return []
-    } else {
-        return [{
-            // TODO Why sometimes promise, sometimes id?
-            promise: entry.id,
-            previous: null,
-            internal: entry.internal,
-            value: entry.value
-        }]
-    }
-}
-
-Legislator.prototype.since = function (promise, count) {
-    this._signal('since', [ promise ])
-    count = count || 24
-    var iterator = this.log.findIter({ id: promise })
-    if (!iterator) {
-        return null
-    }
-    var entry, since = [], uniform = this._greatestOf(this.id).uniform, previous = promise
-    while (count && (entry = iterator.next()) && Monotonic.compare(entry.id, uniform) <= 0) {
-        if (entry.uniform) {
-            since.push({
-                promise: entry.id,
-                previous: previous,
-                cookie: entry.cookie,
-                internal: entry.internal,
-                value: entry.value
-            })
-            previous = entry.id
-            count--
-        }
-    }
-    return since
 }
 
 Legislator.prototype.min = function () {
     this._signal('min', [])
     return this.log.min().id
-}
-
-Legislator.prototype.inject = function (entries) {
-    this._signal('inject', [ entries ])
-    entries.forEach(function (entry) {
-        this.log.insert({
-            id: entry.id,
-            quorum: entry.quorum.slice(),
-            decisions: entry.quorum.slice(),
-            internal: entry.internal,
-            value: entry.value,
-            decided: true,
-            decreed: true
-        })
-    }, this)
-}
-
-Legislator.prototype.initialize = function (now) {
-    this._signal('initialize', [ now ])
-    this.now = now
-    var min = this.log.min()
-    this.greatest = {}
-    this.greatest[this.id] = {
-        decided: min.id,
-        decreed: min.id,
-        uniform: min.id
-    }
-    this._markUniform(min)
-    assert(Monotonic.isBoundary(min.id, 0), 'min not government')
-    this._playUniform()
-    assert(this._greatestOf(this.id).uniform == this.log.max().id)
 }
 
 Legislator.prototype.immigrate = function (id) {
@@ -556,15 +435,8 @@ Legislator.prototype.shift = function () {
     return removed
 }
 
-Legislator.prototype._nextProposalId = function (index) {
-    var entry = this.log.max(), id = entry.id, proposal
-    if (Monotonic.compare(id, this.lastPromisedId) < 0) {
-        id = this.lastPromisedId
-    }
-    return this.lastPromisedId = Monotonic.increment(id, index)
-}
-
-Legislator.prototype.newGovernment = function (quorum, government, remap) {
+Legislator.prototype.newGovernment = function (now, quorum, government, remap) {
+    assert(arguments.length == 4)
     // TODO Need a copy government befor sharing it in this way.
     this._signal('newGovernment', [ quorum, government, remap ])
     assert(!government.constituents)
@@ -574,156 +446,51 @@ Legislator.prototype.newGovernment = function (quorum, government, remap) {
     }).filter(function (constituent) {
         return !this.failed[constituent]
     }.bind(this))
-    var iterator = this.log.findIter(this.log.max()), current = iterator.data()
-    while (!current.decided) {
-        current = iterator.prev()
+    if (government.naturalize) {
+        government.constituents.push(government.naturalize.id)
     }
-    var proposal = {
-        id: this._nextProposalId(0),
-        quorum: quorum,
-        internal: true,
-        value: {
-            type: 'convene',
-            government: government,
-            terminus: current.id,
-            locations: this.locations
-        }
+    // No mercy. If it was not decided, it never happened.
+    var max = this.log.max()
+    while (!max.decided) {
+        this.log.remove(max)
+        max = this.log.max()
+        assert(max.enacted)
     }
+    var promise = government.promise = this.promise = Monotonic.increment(this.promise, 0)
+    var map = []
     if (remap) {
-        this.proposals = remap.map(function (proposal) {
-            proposal.was = proposal.id
-            proposal.id = this._nextProposalId(1)
+        this.proposals = this.proposals.splice(0, this.proposals.length).map(function (proposal) {
+            proposal.was = proposal.promise
+            proposal.promise = this.promise = Monotonic.increment(this.promise, 1)
             return proposal
         }.bind(this))
-        proposal.value.map = remap.map(function (proposal) {
-            return { was: proposal.was, is: proposal.id }
+        map = this.proposals.map(function (proposal) {
+            return { was: proposal.was, is: proposal.promise }
         })
     } else {
         this.proposals.length = 0
     }
-    var entry = this._entry(proposal.id, proposal)
-    entry.promises = []
-    entry.working = true
+    var proposal = {
+        type: 'propose',
+        promise: promise,
+        quorum: quorum,
+        acceptances: [],
+        decisions: [],
+        cookie: null,
+        internal: true,
+        value: {
+            type: 'convene',
+            government: government,
+            terminus: JSON.parse(JSON.stringify(max)),
+            locations: this.locations,
+            map: map
+        }
+    }
     quorum.slice(1).forEach(function (id) {
         this._synchronize(entry.quorum, true, id, 20)
-        this._dispatch({
-            pulse: true,
-            route: entry.quorum,
-            from: this.id,
-            to: id,
-            message: {
-                type: 'synchronize',
-                count: 20,
-                greatest: this._greatestOf(this.id),
-                decided: true
-            }
-        })
     }, this)
-    this._prepare()
-}
-
-Legislator.prototype._propose = function (cookie, value, internal, accept) {
-    var proposal = {
-        id: this._nextProposalId(1),
-        cookie: cookie,
-        quorum: this.government.majority,
-        internal: !! internal,
-        value: value
-    }
-
-    if (accept) {
-        this._entry(proposal.id, proposal).working = true
-        this._accept()
-    } else {
-        this.proposals.push(proposal)
-    }
-
-    return proposal
-}
-
-Legislator.prototype._prepare = function () {
-    var entry = this.log.max(), quorum = entry.quorum
-    var greatest = this._greatestOf(this.id)
-    quorum.slice(1).forEach(function (id) {
-        if (Monotonic.compare(this._greatestOf(id).decided, greatest.decided) < 0) {
-            this._synchronize(quorum, true, id, 20)
-        }
-    }, this)
-    this._dispatch({
-        pulse: true,
-        route: quorum,
-        message: {
-            type: 'prepare',
-            promise: entry.id,
-            quorum: entry.quorum
-        }
-    })
-}
-
-// TODO leader is never going to aggree to a new government that was not
-// proposed by itself, thus the only race is when it is the minorities, so I
-// need to test the race with a five member parliament.
-Legislator.prototype._receivePrepare = function (envelope, message) {
-    if (Monotonic.compare(this._greatestOf(this.id).decreed, this._greatestOf(this.id).uniform) == 0) {
-        var compare = Monotonic.compareIndex(this.promise.id, message.promise, 0)
-        if (compare < 0) {
-            this.promise = {
-                id: message.promise,
-                quorum: message.quorum
-            }
-            this._dispatch({
-                pulse: true,
-                route: envelope.route,
-                to: envelope.from,
-                message: {
-                    type: 'promise',
-                    promise: this.promise.id
-                }
-            })
-        } else {
-            this._dispatch({
-                pulse: true,
-                route: envelope.route,
-                to: envelope.from,
-                message: {
-                    type: 'promised',
-                    promise: this.promise.id
-                }
-            })
-        }
-    } else {
-        this._dispatch({
-            pulse: true,
-            route: envelope.route,
-            to: envelope.from,
-            message: {
-                type: 'promised',
-                promise: this.promise.id
-            }
-        })
-    }
-}
-
-Legislator.prototype._receivePromise = function (envelope, message) {
-    var entry = this.log.max()
-    assert(Monotonic.compare(entry.id, message.promise) == 0, 'unexpected promise')
-    assert(~entry.quorum.indexOf(envelope.from))
-    assert(!~entry.promises.indexOf(envelope.from))
-    entry.promises.push(envelope.from)
-    if (entry.promises.length == entry.quorum.length) {
-        this._accept()
-    }
-}
-
-Legislator.prototype._receivePromised = function (envelope, message) {
-    if (Monotonic.compare(this.lastPromisedId, message.promise) < 0) {
-        this.lastPromisedId = message.promise
-    }
-    if (Monotonic.compare(this._greatestOf(envelope.from).uniform, this._greatestOf(this.id).uniform) == 0) {
-        this._schedule({ type: 'elect', id: this.id, delay: this.timeout })
-    } else {
-        this._elect()
-    }
+    this.proposals.unshift(proposal)
+    this._propose(now)
 }
 
 Legislator.prototype.post = function (now, cookie, value, internal) {
@@ -736,14 +503,31 @@ Legislator.prototype.post = function (now, cookie, value, internal) {
     }
 
     var max = this.log.max()
-    if ((max.working && Monotonic.isBoundary(max.id, 0)) || this.election) {
+    if ((!max.decided && Monotonic.isBoundary(max.id, 0)) || this.election) {
         return {
             posted: false,
             leader: null
         }
     }
 
-    var proposal = this._propose(cookie, value, internal, !max.working)
+    var proposal = {
+        type: 'propose',
+        promise: this.promise = Monotonic.increment(this.promise, 1),
+        quorum: this.government.majority,
+        acceptances: [],
+        decisions: [],
+        cookie: cookie,
+        internal: internal,
+        value: value,
+        working: true
+    }
+
+    this.proposals.push(proposal)
+
+    // TODO What is the best way to know if the ball is rolling?
+    if (max.enacted) {
+        this._propose(now)
+    }
 
     return {
         posted: true,
@@ -752,20 +536,13 @@ Legislator.prototype.post = function (now, cookie, value, internal) {
     }
 }
 
-Legislator.prototype._accept = function () {
-    this._signal('_accept', [])
-    var entry = this.log.max()
-    this._dispatch({
+Legislator.prototype._propose = function (now) {
+    this._signal('_propose', [])
+    var proposal = this.proposals.shift()
+    this._dispatch(now, {
         pulse: true,
-        route: entry.quorum,
-        message: {
-            type: 'accept',
-            internal: entry.internal,
-            cookie: entry.cookie,
-            quorum: entry.quorum,
-            promise: entry.id,
-            value: entry.value
-        }
+        route: proposal.quorum,
+        message: proposal
     })
 }
 
@@ -779,23 +556,50 @@ Legislator.prototype._accept = function () {
 // should only go out when that route is pulsed. If the network calls fail, the
 // leader will be able to learn immediately.
 
-Legislator.prototype._receiveAccept = function (envelope, message) {
-    var compare = Monotonic.compareIndex(this.promise.id, message.promise, 0)
-    if (compare == 0) {
-        var entry = this._entry(message.promise, message)
-        this._dispatch({
+Legislator.prototype._receivePropose = function (now, envelope, message) {
+    // fetch an interator to inspect the last two entries in the log
+    var iterator = this.log.iterator()
+    var max = iterator.prev()
+
+    var accepted = false
+
+    // if not already proposed by someone else, and greater than or inside the
+    // current government...
+    var round = this.log.find({ promise: message.promise })
+    var compare = Monotonic.compareIndex(max.promise, message.promise, 0)
+    if (!round && compare <= 0) {
+        accepted = true
+        if (compare < 0) {
+            // select the last decided entry in the log
+            var decided = max.decided ? max : iterator.prev()
+            var terminus = message.value.terminus
+            // the terminus must be in the previous government
+            accepted = Monotonic.compareIndex(terminus.promise, decided.promise, 0) == 0
+            accepted = accepted || message.value.government.naturalize.id == this.id
+            if (accepted) {
+                // remove the top of the log if it is undecided, we're replacing it.
+                if (!max.decided) {
+                    this.log.remove(max)
+                }
+            }
+        }
+    }
+    if (accepted) {
+        this.log.insert(message)
+        this._dispatch(now, {
             pulse: true,
-            route: entry.quorum,
+            route: message.quorum,
             message: {
                 type: 'accepted',
                 promise: message.promise,
-                quorum: entry.quorum
+                quorum: message.quorum
             }
         })
     } else {
+        throw new Error
         assert(typeof envelope.from == 'string')
         assert(!Array.isArray(envelope.from))
-        this._synchronize(envelope.route, true, envelope.from, 20)
+        this._synchronize(envelope.route, true, envelope.from, 20) // TODO outgoing
         this._dispatch({
             pulse: true,
             route: envelope.route,
@@ -808,32 +612,23 @@ Legislator.prototype._receiveAccept = function (envelope, message) {
     }
 }
 
-Legislator.prototype._markAndSetGreatest = function (entry, type) {
-    if (!entry[type]) {
-        if (Monotonic.compare(this._greatestOf(this.id)[type], entry.id) < 0) {
-            this._greatestOf(this.id)[type] = entry.id
-        }
-        entry[type] = true
-        return true
-    }
-    return false
-}
-
 // TODO Do not learn something if the promise is less than your uniform id.
-Legislator.prototype._receiveAccepted = function (envelope, message) {
-    var entry = this._entry(message.promise, message)
-    assert(!~entry.accepts.indexOf(envelope.from))
-    assert(~entry.quorum.indexOf(this.id))
-    assert(~entry.quorum.indexOf(envelope.from))
-    entry.accepts.push(envelope.from)
-    if (entry.accepts.length >= entry.quorum.length)  {
-        this._markAndSetGreatest(entry, 'decided')
-        this._dispatch({
+Legislator.prototype._receiveAccepted = function (now, envelope, message) {
+    assert(now != null)
+    var round = this.log.find({ promise: message.promise })
+    assert(!~round.acceptances.indexOf(envelope.from))
+    // assert(~round.quorum.indexOf(this.id))
+    assert(~round.quorum.indexOf(envelope.from))
+    round.acceptances.push(envelope.from)
+    if (round.acceptances.length >= round.quorum.length)  {
+        this.getGreatest(this.id).decided = round.promise
+        round.decided = true
+        this._dispatch(now, {
             pulse: true,
-            route: entry.quorum,
+            route: round.quorum,
             message: {
                 type: 'decided',
-                promise: message.promise
+                promise: round.promise
             }
         })
     }
@@ -848,126 +643,59 @@ Legislator.prototype._receiveRejected = function (envelope, message) {
     entry.rejects.push(envelope.from)
 }
 
-Legislator.prototype._markUniform = function (entry) {
-    assert(entry.decisions.length > 0)
-    if (this._markAndSetGreatest(entry, 'uniform')) {
-        this.length++
-        if (entry.internal) {
-            var type = entry.value.type
-            var method = '_decide' + type[0].toUpperCase() + type.slice(1)
-            this[method](entry)
-        }
-    }
-}
-
-Legislator.prototype._playUniform = function () {
-    var iterator = this.log.findIter({ id: this._greatestOf(this.id).uniform }), skip,
-        previous, current, terminus
-
-    OUTER: for (;;) {
-        previous = iterator.data(), current = iterator.next()
-
-        if (!current) {
-            break
-        }
-
-        if (Monotonic.compare(Monotonic.increment(previous.id, 1), current.id) == 0) {
-            assert(previous.uniform, 'previous must be resolved')
-            if (current.decreed) {
-                this._markUniform(current)
-                continue
-            } else {
-                iterator.next()
-            }
-        }
-
-        terminus = iterator.data()
-        for (;;) {
-            if (!terminus || Monotonic.compareIndex(terminus.id, '0/0', 1) != 0) {
-                break OUTER
-            }
-            if (terminus.decreed) {
-                break
-            }
-            terminus = iterator.next()
-        }
-
-        for (;;) {
-            terminus = this.log.find({ id: terminus.value.terminus })
-            if (!terminus) {
-                break OUTER
-            }
-            if (Monotonic.compareIndex(current.id, terminus.id, 0) >= 0) {
-                break
-            }
-        }
-
-        assert(Monotonic.compare(terminus.id, current.id) == 0
-            || Monotonic.compare(terminus.id, previous.id) == 0, 'terminus does not exist')
-
-        var uniform = [ terminus = iterator.data() ]
-        for (;;) {
-            terminus = this.log.find({ id: terminus.value.terminus })
-            uniform.push(terminus)
-            if (Monotonic.compareIndex(current.id, terminus.id, 0) >= 0) {
-                break
-            }
-        }
-
-        while (uniform.length) {
-            if (uniform[uniform.length - 1].decisions.length == 0) {
-                break OUTER
-            }
-            this._markUniform(uniform.pop())
-        }
-    }
-}
-
-Legislator.prototype._receiveDecided = function (envelope, message) {
+Legislator.prototype._receiveDecided = function (now, envelope, message) {
     this._signal('_receiveDecided', [ envelope, message ])
-    var entry = this._entry(message.promise, message)
-    if (message.quorum && message.quorum[0] != entry.quorum[0]) {
-        assert(entry.decisions.length == 0, 'replace not decided')
-        assert(!entry.decided, 'replace not decided')
-        this.log.remove(entry)
-        entry = this._entry(message.promise, message)
-    }
-    if (!~entry.decisions.indexOf(envelope.from)) {
-        entry.decisions.push(envelope.from)
-        if (entry.decisions.length == entry.quorum.length) {
-            this._markAndSetGreatest(entry, 'decided')
-            this._markAndSetGreatest(entry, 'decreed')
-        }
-        this._playUniform()
-        // Shift the next entry or else send final learning pulse.
-        var shift = true, max = this.log.max()
-        shift = shift && !! entry.decreed
-        shift = shift && this.government.majority[0] == this.id
-        shift = shift && !! max.working
-        shift = shift && Monotonic.compare(max.id, entry.id) <= 0
-        if (shift) {
-            delete max.working
-            var proposal = this.proposals.shift()
-            if (proposal) {
-                this._entry(proposal.id, proposal).working = true
-                this._accept()
-            } else {
-                this._nothing()
+    var iterator = this.log.iterator()
+    var round = iterator.prev()
+    if (Monotonic.compare(round.promise, message.promise) == 0 &&
+        !~round.decisions.indexOf(envelope.from)
+    ) {
+        round.decisions.push(envelope.from)
+        if (round.decisions.length == round.quorum.length) {
+            iterator.prev().next = round
+            round.enacted = true
+            this.getGreatest(this.id).enacted = round.promise
+            // possibly do some work
+            this._enact(now, round)
+            if (this.government.majority[0] == this.id) {
+                if (this.naturalizing.length) {
+                    // TODO Is there a race condition associated with leaving
+                    // this in place? We need to break things pretty hard in a
+                    // contentinous election.
+                    var round = this.naturalizing[0]
+                    this.newGovernment(now, this.government.majority, {
+                        majority: this.government.majority,
+                        minority: this.government.minority,
+                        naturalize: { id: round.value.id, location: round.value.location }
+                    }, true)
+                } else if (this.proposals.length) {
+                    this._propose(now)
+                } else {
+                    this._nothing(now)
+                }
             }
         }
     }
+    // what was this about?
+    // var round = this.log.find({ promise: message.promise })
+    // if (message.quorum && message.quorum[0] != round.quorum[0]) {
+    //    assert(entry.decisions.length == 0, 'replace not decided')
+    //    assert(!entry.decided, 'replace not decided')
+    //    this.log.remove(entry)
+    //    entry = this._entry(message.promise, message)
+    // }
 }
 
 // This merely asserts that a message follows a certain route. Maybe I'll
 // rename it to "route", but "nothing" is good enough.
-Legislator.prototype._nothing = function () {
-    this._signal('_nothing', [])
-    this._dispatch({
+Legislator.prototype._nothing = function (now) {
+    this._signal('_nothing', [ now ])
+    this._dispatch(now, {
         pulse: true,
-        route: this.promise.quorum,
+        route: this.government.majority,
         message: {
             type: 'ping',
-            greatest: this._greatestOf(this.id)
+            greatest: this.getGreatest(this.id)
         }
     })
 }
@@ -990,126 +718,94 @@ Legislator.prototype._nothing = function () {
 // member of the previous majority. They are going to have the latest
 // information. And, actually, we can always check when we see a route if the
 // members on that route are at the same level of uniformity as us.
-Legislator.prototype._receiveSynchronize = function (envelope, message) {
-    assert(message.greatest, 'message must have greatest')
-    this.greatest[envelope.from] = message.greatest
-    var unknown = this._greatestOf(envelope.from).decided == '0/0'
-    var count = unknown ? 1 : message.count
-
-    assert(message.from != this.id, 'synchronize with self')
-
-    assert(message.count, 'zero count to synchronize')
-
-    // Decided will only be sent by a majority member during re-election.
-    if (message.decided &&
-        this._greatestOf(this.id).decided != this._greatestOf(envelope.from).decided
-    ) {
-        createDecided.call(this, this.log.find({ id: this._greatestOf(this.id).decided }))
-    }
-
-    var lastUniformId = this._greatestOf(this.id).uniform
-    if (lastUniformId != this._greatestOf(envelope.from).uniform) {
-        createDecided.call(this, this.log.find({ id: lastUniformId }))
-        count--
-
-        var iterator = this.log.lowerBound({ id: this._greatestOf(envelope.from).uniform }), entry
-        var greatest = this._greatestOf(envelope.from).uniform
-
-        while (count-- && (entry = iterator.next()) != null && entry.id != lastUniformId) {
-            // TODO Test a gap.
-            if (entry.uniform) {
-                greatest = entry.id
-                createDecided.call(this, entry)
-            }
-        }
-    }
-
-    this._dispatch({
-        pulse: envelope.pulse,
-        route: envelope.route,
-        to: envelope.from,
-        message: {
-            type: 'ping',
-            greatest: this._greatestOf(this.id)
-        }
-    })
-
-    function createDecided (entry) {
-        this._dispatch({
-            pulse: envelope.pulse,
-            route: envelope.route,
-            from: entry.decisions,
-            to: envelope.from,
-            message: {
-                type: 'decided',
-                promise: entry.id,
-                quorum: entry.quorum,
-                cookie: entry.cookie,
-                value: entry.value,
-                internal: entry.internal
-            }
-        })
-    }
-}
 
 // TODO Allow messages to land prior to being primed. No! Assert that this never
 // happens.
-Legislator.prototype._synchronize = function (route, pulse, to, count) {
-    var unknown = this._greatestOf(to).decided == '0/0'
-    var count = unknown ? 1 : count
+Legislator.prototype._synchronize = function (now, route, pulse, to, count) {
+    var maximum = this.getGreatest(to).enacted
+    var unknown = maximum == '0/0'
+
+    var round
+    if (unknown) {
+        round = this.log.min()
+        assert(Monotonic.compareIndex(round.promise, '0/0', 1) == 0, 'minimum not a government')
+        for (;;) {
+            var naturalize = round.value.government.naturalize
+            if (naturalize && naturalize.id == to) {
+                maximum = round.promise
+                break
+            }
+            round = round.nextGovernment
+            assert(round, 'cannot find naturalization')
+        }
+    }
 
     assert(count, 'zero count to synchronize')
+
+    round = this.log.find({ promise: maximum })
+
+    while (--count && round) {
+        this._replicate(now, pulse, route, to, round)
+        round = round.next
+    }
 
     // Decided will only be sent by a majority member during re-election. There
     // will always be zero or one decided rounds in addition to the existing
     // rounds.
     if (pulse && this._greatestOf(this.id).decided != this._greatestOf(to).decided) {
-        createDecided.call(this, this.log.find({ id: this._greatestOf(this.id).decided }))
+        this._replicate(now, pulse, route, to, this.log.find({ id: this._greatestOf(this.id).decided }))
     }
 
-    var lastUniformId = this._greatestOf(this.id).uniform
-    if (lastUniformId != this._greatestOf(to).uniform) {
-        createDecided.call(this, this.log.find({ id: lastUniformId }))
-        count--
-
-        var iterator = this.log.lowerBound({ id: this._greatestOf(to).uniform }), entry
-        var greatest = this._greatestOf(to).uniform
-
-        while (count-- && (entry = iterator.next()) != null && entry.id != lastUniformId) {
-            // TODO Test a gap.
-            if (entry.uniform) {
-                greatest = entry.id
-                createDecided.call(this, entry)
-            }
-        }
-    }
-
-    this._dispatch({
+    this._dispatch(now, {
         pulse: pulse,
         route: route,
         to: to,
         message: {
             type: 'ping',
-            greatest: this._greatestOf(this.id)
+            greatest: this.getGreatest(this.id)
         }
     })
+}
 
-    function createDecided (entry) {
-        this._dispatch({
-            pulse: pulse,
-            route: route,
-            from: entry.decisions,
-            to: to,
-            message: {
-                type: 'decided',
-                promise: entry.id,
-                quorum: entry.quorum,
-                cookie: entry.cookie,
-                value: entry.value,
-                internal: entry.internal
-            }
-        })
-    }
+Legislator.prototype._replicate = function (now, pulse, route, to, round) {
+    this._dispatch(now, {
+        pulse: pulse,
+        route: route,
+        from: round.quorum[0],
+        to: to,
+        message: {
+            type: 'propose',
+            promise: round.promise,
+            quorum: round.quorum,
+            acceptances: [],
+            decisions: [],
+            cookie: round.cookie,
+            internal: round.internal,
+            value: round.value
+        }
+    })
+    this._dispatch(now, {
+        pulse: pulse,
+        route: route,
+        from: round.acceptances,
+        to: to,
+        message: {
+            type: 'accepted',
+            promise: round.promise,
+            quorum: round.quorum
+        }
+    })
+    this._dispatch(now, {
+        pulse: pulse,
+        route: route,
+        from: round.acceptances,
+        to: to,
+        message: {
+            type: 'decided',
+            promise: round.promise,
+            quorum: round.quorum
+        }
+    })
 }
 
 Legislator.prototype._whenPing = function (event) {
@@ -1128,15 +824,15 @@ Legislator.prototype._whenPing = function (event) {
     }
 }
 
-Legislator.prototype._receivePing = function (envelope, message) {
-    this.greatest[envelope.from] = message.greatest
-    this._dispatch({
+Legislator.prototype._receivePing = function (now, envelope, message) {
+    this.getGreatest(envelope.from, message.greatest)
+    this._dispatch(now, {
         pulse: envelope.pulse,
         route: envelope.route,
         to: envelope.from,
         message: {
             type: 'pong',
-            greatest: this._greatestOf(this.id)
+            greatest: this.getGreatest(this.id)
         }
     })
 }
@@ -1187,9 +883,9 @@ Legislator.prototype._receiveFailed = function (envelope, message) {
 }
 
 // TODO What was the gap that made it impossible?
-Legislator.prototype._receivePong = function (envelope, message, route) {
-    this.greatest[envelope.from] = message.greatest
-    var impossible = Monotonic.compare(this.log.min().id, message.greatest.uniform) > 0
+Legislator.prototype._receivePong = function (now, envelope, message, route) {
+    this.getGreatest(envelope.from, message.greatest)
+    var impossible = Monotonic.compare(this.log.min().promise, message.greatest.enacted) > 0
     if (impossible) {
         this._dispatch({
             from: envelope.from,
@@ -1304,7 +1000,8 @@ Legislator.prototype.emigrate = function (now, id) {
     })
 }
 
-Legislator.prototype._propagation = function () {
+Legislator.prototype._propagation = function (now) {
+    assert(arguments.length == 1)
     this.citizens = this.government.majority.concat(this.government.minority)
                                             .concat(this.government.constituents)
     this.parliament = this.government.majority.concat(this.government.minority)
@@ -1352,19 +1049,19 @@ Legislator.prototype._propagation = function () {
                 this.parliament.length < this.parliamentSize &&
                 this.citizens.length > this.parliament.length
             ) {
-                this._schedule({
+                this._schedule(now, {
                     type: 'elect',
                     id: '!',
                     delay: this.timeout
                 })
             }
-            this._schedule({
+            this._schedule(now, {
                 type: 'ping',
                 id: this.id,
                 delay: this.ping
             })
         } else {
-            this._schedule({
+            this._schedule(now, {
                 type: 'elect',
                 id: this.id,
                 delay: this.timeout
@@ -1372,41 +1069,63 @@ Legislator.prototype._propagation = function () {
         }
     }
     this.constituency.forEach(function (id) {
-        var route = this.routeOf([ this.id, id ], false)
-        var event = this._schedule({
+        var route = this.routeOf(now, [ this.id, id ], false)
+        var event = this._schedule(now, {
             type: 'ping',
             id: id,
             delay: this.ping
         })
-        route.sleep = this.now
+        route.sleep = now
         route.retry = this.retry
     }, this)
 }
 
-Legislator.prototype._decideConvene = function (entry) {
-    this._signal('_decideConvene', [ entry ])
+Legislator.prototype._enact = function (now, round) {
+    if (round.internal) {
+        var type = round.value.type
+        var method = '_enact' + type[0].toUpperCase() + type.slice(1)
+        this[method](now, round)
+    }
+}
+
+Legislator.prototype._enactConvene = function (now, round) {
+    this._signal('_enactConvene', [ round ])
     delete this.election
 
     var min = this.log.min()
-    var terminus = this.log.find({ id: entry.value.terminus })
+    var terminus = this.log.find({ promise: round.value.terminus.promise })
+    if (!terminus) {
+        this.log.insert(terminus = round.value.terminus)
+    }
+    if (!terminus.enacted) {
+        terminus.enacted = true
+        this._enact(now, terminus)
+    }
 
-    assert(min.id == entry.id || (terminus && terminus.decisions.length > 0))
-    assert(Monotonic.compare(this.government.id, entry.id) < 0, 'governments out of order')
+    var previous = Monotonic.toWords(terminus.promise)
+    if (round.value.government.naturalize) {
+        if (this.naturalizing.length == 0 && round.value.government.naturalize.id == this.id) {
+            this.naturalizing.unshift({ value: { id: this.id } })
+            previous = Monotonic.toWords('0/0')
+        }
+        assert(this.naturalizing.shift().value.id == round.value.government.naturalize.id)
+    }
+    previous[1] = [ 0 ]
+    this.log.find({ promise: Monotonic.toString(previous) }).nextGovernment = round
+
+    assert(Monotonic.compare(this.government.promise, round.promise) < 0, 'governments out of order')
 
     // when we vote to shrink the government, the initial vote has a greater
-    // quorum than the resulting government.
-    this.promise.quorum = entry.value.government.majority
-
+    // quorum than the resulting government. Not sure why this comment is here.
     // TODO Deep copy.
-    this.government = JSON.parse(JSON.stringify(entry.value.government))
-    this.government.id = entry.id
-    this.locations = JSON.parse(JSON.stringify(entry.value.locations))
+    this.government = JSON.parse(JSON.stringify(round.value.government))
+    this.locations = JSON.parse(JSON.stringify(round.value.locations))
 
     if (this.id != this.government.majority[0]) {
         this.proposals.length = 0
     }
 
-    this._propagation()
+    this._propagation(now)
 }
 
 Legislator.prototype.naturalize = function (now, id, location) {
@@ -1415,23 +1134,8 @@ Legislator.prototype.naturalize = function (now, id, location) {
     return this.post(now, null, { type: 'naturalize', id: id, location: location }, true)
 }
 
-Legislator.prototype._decideNaturalize = function (entry) {
-    // TODO You need to naturalize the same id twice, I believe, to test this
-    // branch as a negative, but perhaps it is an assertion.
-    if (!~this.citizens.indexOf(entry.value.id)) {
-        this.government.constituents.push(entry.value.id)
-    }
-    this._propagation()
-    if (entry.value.id == this.id) {
-        this.naturalized = entry.id
-    }
-    this.locations[entry.value.id] = entry.value.location
-    var elect, now = this.now
-    elect = this.government.majority[0] == this.id
-    elect = elect && this.parliament.length < this._maxParliamentSize(this._candidates(now).length + 1)
-    if (elect) {
-        this._elect(true)
-    }
+Legislator.prototype._enactNaturalize = function (now, round) {
+    this.naturalizing.push(round)
 }
 
 Legislator.prototype._maxParliamentSize = function (citizens) {
@@ -1531,7 +1235,7 @@ Legislator.prototype.reelection = function (now, id) {
     return this.post(now, null, { type: 'election', id: id || this.id }, true)
 }
 
-Legislator.prototype._decideElection = function (entry) {
+Legislator.prototype._enactElection = function (entry) {
     if (entry.value.id == this.id) {
         if (~this.government.majority.indexOf(this.id)) {
             this._elect(true)

@@ -32,7 +32,7 @@ function prove (assert) {
 
 
     ! function () {
-        var legislator = new Legislator('1')
+        var legislator = new Legislator(0, '1')
 
         legislator._actualSchedule('scheduled', { type: 'scheduled' }, 0)
         legislator._actualSchedule('removed', { type: 'removed' }, 0)
@@ -60,7 +60,7 @@ function prove (assert) {
         retry: 5
     }
 
-    var legislators = [ new Legislator('0', options) ]
+    var legislators = [ new Legislator(time, '0', options) ]
     legislators[0].bootstrap(time, '0')
 
     var network = new Network

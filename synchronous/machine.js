@@ -9,7 +9,7 @@ function Machine (network, legislator) {
 Machine.prototype.receive = function (now, route, index, envelopes) {
     this.legislator.inbox(now, route, envelopes)
 
-    var route = this.legislator.routeOf(route.path, route.pulse)
+    var route = this.legislator.routeOf(now, route.path, route.pulse)
 
     if (index + 1 < route.path.length) {
         var forwards = this.legislator.forwards(now, route, index)
