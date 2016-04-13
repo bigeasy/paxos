@@ -15,23 +15,22 @@ Network.prototype.removeGremlin = function (gremlin) {
     })
 }
 
-Network.prototype.post = function (now, route, index, envelopes) {
-    var post = JSON.parse(JSON.stringify({ route: route, index: index, envelopes: envelopes }))
-    var returns =  this._post(now, post.route, post.index, post.envelopes)
+Network.prototype.post = function (now, pulse, index) {
+    var returns = this._post(now, JSON.parse(JSON.stringify(pulse)), index)
     return JSON.parse(JSON.stringify(returns))
 }
 
-Network.prototype._post = function (now, route, index, envelopes) {
-    this.gremlins.forEach(function (gremlin) {
+Network.prototype._post = function (now, pulse, index, envelopes) {
+    if (false) this.gremlins.forEach(function (gremlin) {
         if (gremlin('before', route, index, envelopes)) {
             envelopes = []
         }
     }, this)
     var machine = this.machines.filter(function (machine) {
-        return machine.legislator.id == route.path[index]
+        return machine.legislator.id == pulse.route[index]
     }).shift()
-    var returns = machine.receive(now, route, index, envelopes)
-    this.gremlins.forEach(function (gremlin) {
+    var returns = machine.receive(now, pulse, index)
+    if (false) this.gremlins.forEach(function (gremlin) {
         if (gremlin('after', route, index, returns)) {
             returns = []
         }
