@@ -569,6 +569,7 @@ Legislator.prototype._nothing = function (now, messages) {
         to: this.government.majority.slice(1),
         message: {
             type: 'ping',
+            when: now,
             greatest: this._greatest[this.id]
         }
     }))
@@ -637,6 +638,7 @@ Legislator.prototype._receiveSynchronize = function (now, pulse, envelope, messa
         to: [ message.to ],
         message: {
             type: 'ping',
+            when: now,
             greatest: this._greatest[this.id]
         }
     })
@@ -691,6 +693,7 @@ Legislator.prototype._whenPing = function (event) {
             to: event.id,
             message: {
                 type: 'ping',
+                when: now,
                 greatest: this._greatestOf(this.id)
             }
         })
@@ -703,6 +706,7 @@ Legislator.prototype._receivePing = function (now, pulse, envelope, message) {
         to: [ envelope.from ],
         message: {
             type: 'pong',
+            when: message.when,
             greatest: this._greatest[this.id]
         }
     })
@@ -1110,6 +1114,7 @@ Legislator.prototype._elect = function (now, remap) {
             to: [ id ],
             message: {
                 type: 'ping',
+                when: now,
                 greatest: this._greatest[this.id]
             }
         }])
