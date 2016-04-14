@@ -21,6 +21,7 @@ function Legislator (now, id, options) {
     this.log = new RBTree(function (a, b) { return Monotonic.compare(a.promise, b.promise) })
     this.length = 0
     this.scheduler = new Scheduler
+    this.naturalizing = null
 
     this.proposals = []
     this.routed = {}
@@ -314,6 +315,38 @@ Legislator.prototype.newGovernment = function (now, quorum, government, remap) {
     this._propose(now)
 }
 
+// TODO We might get something enqueued and not know it. There are two ways to
+// deal with this; we have some mechanism that prevents the double submission of
+// a cookie, so that the client can put something into the queue, and have a
+// mechanism to say, you who's id is such and such, you're last cookie was this
+// value. You can only post the next cookie if the previous cookie is correct.
+// This cookie list can be maintained by the log.
+
+// Otherwise, it has to be no big deal to repeat something. Add a user, get a
+// 500, so add it again with a new cookie, same cookie, you sort it out when two
+// "add user" messages come back to you.
+
+// This queue, it could be maintained by the server, with the last value that
+// passed through Paxos in a look up table, a list of submissions waiting to be
+// added, so a link to the next submission in the queue. The user can know that
+// if the government jitters, they can know definitively what they need to
+// resubmit.
+
+// Or else, if they get a 500, they resubmit, resubmit, resubmit until they get
+// a 200, but the clients know not to replay duplicate cookies, that becomes
+// logic for the client queue, or in the application, user added using such and
+// such a promise, such and such a cookie, so this has already been updated.
+
+// Finally, a 500 message, it can be followed by a boundary message, basically,
+// you put in a message it may not have been enqueued, you're not told
+// definitively that it was, so you put in a boundary, noop message, and you
+// wait for it to emerge in the log, so that if it emerges without you're seeing
+// your actual message, then you then know for certain to resubmit. This fits
+// with what's currently going on, and it means that the clients can conspire to
+// build a perfect event log.
+
+// TODO: Actually, this order that you guarantee, that's not part of Paxos,
+// really.
 Legislator.prototype.post = function (now, cookie, value, internal) {
     this._signal('post', [ now, cookie, value, internal ])
     if (this.government.majority[0] != this.id) {
@@ -398,7 +431,15 @@ Legislator.prototype._receivePropose = function (now, pulse, envelope) {
             var terminus = message.value.terminus
             // the terminus must be in the previous government
             accepted = Monotonic.compareIndex(terminus.promise, decided.promise, 0) == 0
-            accepted = accepted || message.value.government.naturalize.id == this.id
+            // TODO There needs to be a message that says that a new citizen is
+            // a member of society, that they are receiving messages.
+            if (!accepted) {
+                accepted = this.log.size == 1
+                accepted = accepted && this.log.min().promise == '0/0'
+                accepted = accepted && message.value.government.naturalize
+                accepted = accepted && message.value.government.naturalize.id == this.id
+                accepted = accepted && message.cookie == this.naturalization
+            }
             if (accepted) {
                 // remove the top of the log if it is undecided, we're replacing it.
                 if (!max.decided) {
@@ -983,7 +1024,8 @@ Legislator.prototype._enactGovernment = function (now, round) {
 Legislator.prototype.naturalize = function (now, id, location) {
     this._signal('naturalize', [ now, id ])
     assert(typeof id == 'string', 'id must be a hexidecmimal string')
-    return this.post(now, null, { type: 'naturalize', id: id, location: location }, true)
+    this.naturalization = now
+    return this.post(now, now, { type: 'naturalize', id: id, location: location }, true)
 }
 
 Legislator.prototype._enactNaturalize = function (now, round) {
