@@ -927,7 +927,7 @@ Legislator.prototype._whenElect = function () {
     this._elect()
 }
 
-Legislator.prototype._electRedux = function () {
+Legislator.prototype._elect = function () {
     if (!this.collapsed) {
         return null
     }
@@ -1034,7 +1034,7 @@ Legislator.prototype._exile = function () {
 // TODO Merge all the above once it settles.
 Legislator.prototype._ponged = function () {
     if (this.collapsed) {
-        return this._electRedux()
+        return this._elect()
     } else if (this.government.majority[0] == this.id) {
         return this._impeach() || this._exile() || this._expand()
     } else {

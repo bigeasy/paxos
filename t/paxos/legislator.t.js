@@ -53,8 +53,8 @@ function prove (assert) {
     ! function () {
         var legislator = new Legislator(0, '1')
 
-        assert(legislator._electRedux.call({}), null, 'elect not collapsed')
-        assert(legislator._electRedux.call({
+        assert(legislator._elect.call({}), null, 'elect not collapsed')
+        assert(legislator._elect.call({
             collapsed: true,
             id: 0,
             government: {
@@ -63,7 +63,7 @@ function prove (assert) {
             },
             _peers: { 2: { timeout: 0 } }
         }), null, 'elect no possible quorum')
-        assert(legislator._electRedux.call({
+        assert(legislator._elect.call({
             collapsed: true,
             id: 0,
             government: {
@@ -76,7 +76,7 @@ function prove (assert) {
             majority: [ 0, 1 ],
             minority: [ 2 ]
         }, 'elect new three member government')
-        assert(legislator._electRedux.call({
+        assert(legislator._elect.call({
             collapsed: true,
             id: 0,
             government: {
@@ -264,7 +264,7 @@ function prove (assert) {
 
         assert(legislator._ponged.call({
             collapsed: true,
-            _electRedux: function () { return 0xaaaaaaaa }
+            _elect: function () { return 0xaaaaaaaa }
         }), 0xaaaaaaaa, 'ponged collapsed')
 
         assert(legislator._ponged.call({
