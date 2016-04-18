@@ -28,13 +28,18 @@ function Legislator (now, id, options) {
     this.unrouted = {}
     this.locations = {}
     this.outbox = []
-    this._greatest = {}
-    this._greatest[this.id] = { decided: '0/0', enacted: '0/0' }
     this.naturalizing = []
 
     this.government = { promise: '0/0', minority: [], majority: [] }
     this.promise = '0/0'
     this.citizens = []
+    this._peers = {}
+    this._peers[this.id] = {
+        extant: true,
+        timeout: 0,
+        decided: '0/0',
+        enacted: '0/0'
+    }
 
     assert(!Array.isArray(options.retry), 'retry no longer accepts range')
     assert(!Array.isArray(options.ping), 'retry no longer accepts range')
@@ -77,8 +82,8 @@ Legislator.prototype._getRoute = function (path) {
     return route
 }
 
-Legislator.prototype._getGreatest = function (id) {
-    return this._greatest[id] || { decided: '0/0', enacted: '0/0' }
+Legislator.prototype.getPeer = function (id) {
+    return this._peers[id] || { decided: '0/0', enacted: '0/0', extant: false }
 }
 
 // TODO To make replayable, we need to create a scheduler that accepts a now so
@@ -171,10 +176,6 @@ Legislator.prototype._dispatch = function (now, type, route, messages) {
     this.outbox.push(pulse)
 }
 
-Legislator.prototype.__defineGetter__('now',  function (now) {
-    throw new Error
-})
-
 Legislator.prototype.sent = function (now, pulse, success) {
     this._signal('sent', [ pulse ])
     var route = this._getRoute(pulse.route)
@@ -204,9 +205,6 @@ Legislator.prototype.sent = function (now, pulse, success) {
                 this.failed[route.path[1]] = {}
             } else {
                 this._schedule({ type: 'ping', id: route.path[1], delay: this.ping })
-            }
-            if (this.election) {
-                this._pinged(now, false, route.path[1])
             }
             break
         }
@@ -488,7 +486,7 @@ Legislator.prototype._receiveAccepted = function (now, pulse, envelope) {
     assert(~round.quorum.indexOf(envelope.from))
     round.acceptances.push(envelope.from)
     if (!round.decided && round.acceptances.length >= round.quorum.length)  {
-        this._greatest[this.id].decided = round.promise
+        this._peers[this.id].decided = round.promise
         round.decided = true
         this._stuff(now, pulse, {
             to: round.quorum,
@@ -520,7 +518,7 @@ Legislator.prototype._receiveDecided = function (now, pulse, envelope, message) 
         if (round.decisions.length == round.quorum.length) {
             iterator.prev().next = round
             round.enacted = true
-            this._greatest[this.id].enacted = round.promise
+            this._peers[this.id].enacted = round.promise
             // possibly do some work
             this._enact(now, round)
             if (this.government.majority[0] == this.id) {
@@ -567,11 +565,7 @@ Legislator.prototype._nothing = function (now, messages) {
     this._signal('_nothing', [ now, messages ])
     this._dispatch(now, 'consensus', this.government.majority, messages.concat({
         to: this.government.majority.slice(1),
-        message: {
-            type: 'ping',
-            when: now,
-            greatest: this._greatest[this.id]
-        }
+        message: this._ping(now)
     }))
 }
 
@@ -597,12 +591,11 @@ Legislator.prototype._nothing = function (now, messages) {
 // TODO Allow messages to land prior to being primed. No! Assert that this never
 // happens.
 Legislator.prototype._receiveSynchronize = function (now, pulse, envelope, message) {
-    var maximum = this._getGreatest(message.to).enacted
-    var unknown = ! this._greatest[message.to]
+    var peer = this.getPeer(message.to), maximum = peer.enacted
 
-    if (!unknown) {
+    if (peer.extant) {
         var round
-        if (maximum == '0/0') {
+        if (peer.enacted == '0/0') {
             round = this.log.min()
             assert(Monotonic.compareIndex(round.promise, '0/0', 1) == 0, 'minimum not a government')
             for (;;) {
@@ -629,19 +622,27 @@ Legislator.prototype._receiveSynchronize = function (now, pulse, envelope, messa
         // Decided will only be sent by a majority member during re-election. There
         // will always be zero or one decided rounds in addition to the existing
         // rounds.
-        if (pulse.type != 'synchronize' && this._getGreatest(this.id).decided != this._getGreatest(message.to).decided) {
+        if (pulse.type != 'synchronize' &&
+            this._peers[this.id].decided != this._peers[message.to].decided
+        ) {
+            throw new Error
             this._replicate(now, pulse, message.to, this.log.find({ id: this._greatestOf(this.id).decided }))
         }
     }
 
     this._stuff(now, pulse, {
         to: [ message.to ],
-        message: {
-            type: 'ping',
-            when: now,
-            greatest: this._greatest[this.id]
-        }
+        message: this._ping(now)
     })
+}
+
+Legislator.prototype._ping = function (now) {
+    return {
+        type: 'ping',
+        when: now,
+        decided: this._peers[this.id].decided,
+        enacted: this._peers[this.id].enacted
+    }
 }
 
 Legislator.prototype._replicate = function (now, pulse, to, round) {
@@ -691,70 +692,38 @@ Legislator.prototype._whenPing = function (event) {
             pulse: false,
             route: [ this.id, event.id ],
             to: event.id,
-            message: {
-                type: 'ping',
-                when: now,
-                greatest: this._greatestOf(this.id)
-            }
+            message: this._ping(now)
         })
     }
 }
 
 Legislator.prototype._receivePing = function (now, pulse, envelope, message) {
-    this._greatest[envelope.from] = message.greatest
+    var peer = this._peers[envelope.from]
+    if (peer) {
+        peer.timeout = 0
+        peer.when = now
+        peer.enacted = message.enacted
+        peer.decided = message.decided
+    } else {
+        peer = this._peers[envelope.from] = {
+            extant: true,
+            when: now,
+            timeout: 0,
+            enacted: message.enacted,
+            decided: message.decided
+        }
+    }
+    this._peers[envelope.from].enacted = message.enacted
+    this._peers[envelope.from].decided = message.decided
     this._stuff(now, pulse, {
         to: [ envelope.from ],
         message: {
             type: 'pong',
             when: message.when,
-            greatest: this._greatest[this.id]
+            enacted: this._peers[this.id].enacted,
+            decided: this._peers[this.id].decided
         }
     })
-}
-
-Legislator.prototype._receiveFailed = function (envelope, message) {
-    if (!~this.citizens.indexOf(envelope.from)) {
-        return
-    }
-
-    if (this.id != envelope.from) {
-        this.routeOf([ this.id, envelope.from ], true).retry = 0
-        this.routeOf([ this.id, envelope.from ], false).retry = 0
-    }
-
-    var failed = this.failed[envelope.from]
-
-    if (!failed) {
-        failed = this.failed[envelope.from] = {}
-    }
-
-    if (this.government.majority[0] == this.id) {
-        var election = false
-        election = election || !! this.election
-
-        var max = this.log.max()
-        election = election || max.working && Monotonic.isBoundary(max.id, 0)
-
-        var promise = failed.election || '0/0'
-        var uniform = this._greatestOf(this.id).uniform
-        election = election || Monotonic.compare(promise, uniform) >= 0
-
-        if (!election) {
-            var leader = this.id
-            if (this.id == envelope.from) {
-                assert(this.government.majority.length > 1, 'single leader cannot succeed')
-                leader = this.government.majority[1]
-                this._dispatch({
-                    pulse: true,
-                    route: this.government.majority,
-                    from: this.id,
-                    to: leader,
-                    message: { type: 'failed' }
-                })
-            }
-            this.failed[envelope.from].election = this.reelection(this.now, leader).promise
-        }
-    }
 }
 
 // TODO Include failues in a pong and they will always return to the leader.
@@ -762,7 +731,6 @@ Legislator.prototype._receiveFailed = function (envelope, message) {
 // rejected was because it was out of sync.
 // TODO What was the gap that made it impossible?
 Legislator.prototype._receivePong = function (now, pulse, envelope, message) {
-/*
     var peer = this._peers[envelope.from], ponged = false
     // TODO Assert you've not pinged a timed out peer.
     if (peer) {
@@ -771,120 +739,32 @@ Legislator.prototype._receivePong = function (now, pulse, envelope, message) {
         }
         peer.timeout = 0
         peer.when = now
+        peer.enacted = message.enacted
+        peer.decided = message.decided
     } else {
         ponged = true
-        peer = this._peers[envelope.from] = { timeout: 0, when: now }
+        peer = this._peers[envelope.from] = {
+            extant: true,
+            when: now,
+            timeout: 0,
+            enacted: message.enacted,
+            decided: message.decided
+        }
     }
-*/
-    this._greatest[envelope.from] = message.greatest
-    var impossible = message.greatest.enacted != '0/0' && Monotonic.compare(this.log.min().promise, message.greatest.enacted) > 0
+    var impossible = message.enacted != '0/0' && Monotonic.compare(this.log.min().promise, message.enacted) > 0
     if (impossible) {
-        this._dispatch({
-            from: envelope.from,
-            to: this.id,
-            message: { type: 'failed' }
-        })
+        peer.timeout = this.timeout
     }
-    if (this.election) {
-        this._pinged(now, !impossible, envelope.from)
-    } else if (
-        pulse.type == 'synchronize' &&
-        Monotonic.compare(message.greatest.enacted, this._greatest[this.id].enacted) < 0
-    ) {
-        this._dispatch(now, 'synchronize', [ this.id, envelope.from ], [{
-            to: [ this.id ],
-            message: { type: 'synchronize', to: envelope.from, count: 20 }
-        }])
+    if (pulse.type == 'synchronize') {
+        if (Monotonic.compare(message.enacted, this._peers[this.id].enacted) < 0) {
+            this._dispatch(now, 'synchronize', [ this.id, envelope.from ], [{
+                to: [ this.id ],
+                message: { type: 'synchronize', to: envelope.from, count: 20 }
+            }])
+        }
     }
-}
-
-Legislator.prototype._pinged = function (now, reachable, from) {
-    this._signal('_pinged', [ reachable, from ])
-
-    // Pings are done via HTTP/S so they are definitive. The response here
-    // includes whether or not they are reachable, whether or not there was a
-    // 200 response. Complete means that all pings where attempted and reachable
-    // is the count of pings that responded.
-
-    var election = this.election, parliament, quorum, minority, majority
-    if (election && !~election.receipts.indexOf(from)) {
-        election.receipts.push(from)
-        var index = election.incumbent.quorum.sought.indexOf(from)
-        if (~index) {
-            election.incumbent.quorum.sought.splice(index, 1)
-            var seen = election.incumbent.quorum.seen
-        } else {
-            var seen = election.incumbent.constituents
-        }
-        if (reachable) {
-            seen.push(from)
-            election.reachable++
-            election.incumbent.sought--
-        }
-        quorum = election.incumbent.quorum.seen.length == election.quorumSize - 1
-        if (quorum) {
-            election.incumbent.quorum.sought.length = 0
-        }
-
-        var parliament = quorum && election.reachable == election.parliamentSize
-        var complete = election.requests == election.receipts.length
-
-        // form on quorum size, so we will never shrink below quorum, never go
-        // from parliament size two to one.
-
-        if (parliament || (quorum && complete)) {
-            var candidates = election.incumbent.quorum.seen.concat(election.incumbent.constituents)
-
-            // we've primed the election quorum with ourselves as leader.
-            for (var i = 0; election.quorum.length < election.quorumSize; i++) {
-                election.quorum.push(candidates.shift())
-            }
-
-            // we now have incumbents up top, followed by whomever.
-            candidates = election.quorum.concat(candidates)
-
-            // do we have enough citizens for a full parliament?
-            if (election.reachable < election.parliamentSize) {
-                // if we have the quorum, but we do not have the parliament, we
-                // form a government of quorum size, shrink the government.
-                // TODO Come back and convince myself that we won't shrink below
-                // size of two.
-                election.parliamentSize -= 2
-                election.majoritySize = Math.ceil(election.parliamentSize / 2)
-                election.minoritySize = election.parliamentSize - election.majoritySize
-                while (election.majority.length < election.majoritySize) {
-                    election.majority.push(candidates.shift())
-                }
-                while (election.minority.length < election.minoritySize) {
-                    election.minority.push(candidates.shift())
-                }
-            } else {
-                // with a quorum of incumbants up top, build a majority.
-                while (election.majority.length < election.majoritySize) {
-                    var candidate = candidates.shift()
-                    election.majority.push(candidate)
-                    if (election.quorum.length < election.majority.length) {
-                        election.quorum.push(candidate)
-                    }
-                }
-                // fill in the minority with any whomever.
-                while (election.minority.length < election.minoritySize) {
-                    election.minority.push(candidates.shift())
-                }
-            }
-
-            // election complete.
-            delete this.election
-
-            // propose the new governent.
-            this.newGovernment(now, election.quorum, {
-                majority: election.majority,
-                minority: election.minority
-            }, election.remap)
-        } else if (complete) {
-            delete this.election
-            this._schedule({ type: 'elect', id: this.id, delay: this.timeout })
-        }
+    if (ponged) {
+        this._pongedX(now)
     }
 }
 
@@ -1029,14 +909,6 @@ Legislator.prototype._enactGovernment = function (now, round) {
     }
 
     this._propagation(now)
-
-    var elect
-    elect = this.government.majority[0] == this.id
-    elect = elect && this.parliament.length < this._maxParliamentSize(this._candidates(now).length + 1)
-
-    if (elect) {
-        this._elect(now, true)
-    }
 }
 
 Legislator.prototype.naturalize = function (now, id, location) {
@@ -1051,29 +923,8 @@ Legislator.prototype._enactNaturalize = function (now, round) {
     this.locations[round.value.id] = round.value.location
 }
 
-Legislator.prototype._maxParliamentSize = function (citizens) {
-    var parliamentSize = Math.min(citizens, this.parliamentSize)
-    if (parliamentSize % 2 == 0) {
-        parliamentSize--
-    }
-    return parliamentSize
-}
-
 Legislator.prototype._whenElect = function () {
     this._elect()
-}
-
-Legislator.prototype._reachable = function (now) {
-    assert(now != null, 'now is requried to reachable')
-    return this.citizens.filter(function (citizen) {
-        return this._getRoute([ this.id, citizen ]).retry != 0
-    }.bind(this))
-}
-
-Legislator.prototype._candidates = function (now) {
-    return this._reachable(now).filter(function (id) {
-        return id != this.id && id != this.government.majority[0]
-    }.bind(this))
 }
 
 Legislator.prototype._electRedux = function () {
@@ -1109,21 +960,22 @@ Legislator.prototype._expand = function () {
         return null
     }
     assert(~this.government.majority.indexOf(this.id), 'would be leader not in majority')
-    var present = []
-    for (var id in this._peers) {
-        if (id != this.id && this._peers[id].timeout == 0) {
-            present.push(id)
-        }
-    }
     var parliamentSize = parliament.length + 2
+    var unknown = { timeout: 1 }
+    var present = parliament.slice(1).concat(this.government.constituents).filter(function (id) {
+        return (this._peers[id] || unknown).timeout == 0
+    }.bind(this))
     if (present.length + 1 < parliamentSize) {
         return null
     }
     var newParliament = [ this.id ].concat(present).slice(0, parliamentSize)
     var majoritySize = Math.ceil(parliamentSize / 2)
     return {
-        majority: newParliament.slice(0, majoritySize),
-        minority: newParliament.slice(majoritySize)
+        quorum: newParliament.slice(0, majoritySize),
+        government: {
+            majority: newParliament.slice(0, majoritySize),
+            minority: newParliament.slice(majoritySize)
+        }
     }
 }
 
@@ -1183,68 +1035,19 @@ Legislator.prototype._exile = function () {
 Legislator.prototype._ponged = function () {
     if (this.collapsed) {
         return this._electRedux()
-    } else {
+    } else if (this.government.majority[0] == this.id) {
         return this._impeach() || this._exile() || this._expand()
+    } else {
+        return null
     }
 }
 
-Legislator.prototype._elect = function (now, remap) {
-    this._signal('_elect', [ remap ])
-    if (this.election) {
-        return
+Legislator.prototype._pongedX = function (now) {
+    assert(now != null)
+    var reshape = this._ponged()
+    if (reshape) {
+        this.newGovernment(now, reshape.quorum, reshape.government, !this.collapsed)
     }
-    if (!~this.government.majority.indexOf(this.id)) {
-        return
-    }
-    var candidates = this._candidates(now)
-    var receipts = this.citizens.filter(function (citizen) {
-        return !~candidates.indexOf(citizen)
-    }.bind(this))
-    var remap = remap && this.proposals.splice(0, this.proposals.length)
-    var parliamentSize = this._maxParliamentSize(candidates.length + 1)
-    var majoritySize = Math.ceil(parliamentSize / 2)
-    var minoritySize = parliamentSize - majoritySize
-    var quorum = this.parliament.filter(function (citizen) {
-        return ~candidates.indexOf(citizen)
-    }, this)
-    var constituents = candidates.filter(function (citizen) {
-        return !~quorum.indexOf(citizen)
-    })
-    var incumbent = {
-        quorum: {
-            sought: quorum.slice(),
-            seen: []
-        },
-        sought: candidates.length,
-        constituents: []
-    }
-    this.election = {
-        remap: remap,
-        parliamentSize: parliamentSize,
-        quorum: [ this.id ],
-        quorumSize: this.government.majority.length,
-        majority: [],
-        majoritySize: majoritySize,
-        minority: [],
-        minoritySize: minoritySize,
-        reachable: [],
-        receipts: receipts,
-        incumbent: incumbent,
-        requests: receipts.length + candidates.length,
-        parliament: [],
-        constituents: [],
-        reachable: 1
-    }
-    candidates.forEach(function (id) {
-        this._dispatch(now, 'synchronize', [ this.id, id ], [{
-            to: [ id ],
-            message: {
-                type: 'ping',
-                when: now,
-                greatest: this._greatest[this.id]
-            }
-        }])
-    }, this)
 }
 
 Legislator.prototype.reelection = function (now, id) {

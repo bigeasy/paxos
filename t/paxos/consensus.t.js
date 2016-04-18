@@ -1,4 +1,4 @@
-require('proof')(9, prove)
+require('proof')(6, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -60,33 +60,6 @@ function prove (assert) {
 
     assert(network.machines[1].legislator.log.size, 3, 'synchronized')
 
-    // won't work because legislator is not in majority.
-    network.machines[1].legislator._elect(time, false)
-    assert(!network.machines[1].legislator.election, 'elect not in majority')
-
-    // skip an election this becasue we're already electing.
-    network.machines[0].legislator._elect(time, false)
-    network.machines[0].legislator._elect(time, false)
-    network.tick(time)
-
-    assert(legislators[0].government, {
-        majority: [ '0' ],
-        minority: [],
-        constituents: [ '1' ],
-        promise: '3/0'
-    }, 'election')
-
-    // skip an election this becasue we're already electing.
-    network.machines[0].legislator.reelection(time, 0)
-    network.tick(time)
-
-    assert(legislators[0].government, {
-        majority: [ '0' ],
-        minority: [],
-        constituents: [ '1' ],
-        promise: '4/0'
-    }, 'election')
-
     network.machines.push(new Machine(network, new Legislator(0, '2', options)))
     network.machines[0].legislator.naturalize(time, '2', '2')
     network.tick(time)
@@ -95,7 +68,7 @@ function prove (assert) {
         majority: [ '0', '1' ],
         minority: [ '2' ],
         constituents: [],
-        promise: '6/0'
+        promise: '4/0'
     }, 'three member parliament')
     return
 

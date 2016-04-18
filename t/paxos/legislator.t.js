@@ -1,4 +1,4 @@
-require('proof')(21, prove)
+require('proof')(22, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator')
@@ -123,7 +123,8 @@ function prove (assert) {
             id: '0',
             government: {
                 majority: [ '0', '1' ],
-                minority: [ '2' ]
+                minority: [ '2' ],
+                constituents: [ '3', '4' ]
             },
             _peers: {
                 0: { timeout: 0 },
@@ -133,8 +134,11 @@ function prove (assert) {
                 4: { timeout: 0 }
             }
         }), {
-            majority: [ '0', '1', '2' ],
-            minority: [ '3', '4' ]
+            quorum: [ '0', '1', '2' ],
+            government: {
+                majority: [ '0', '1', '2' ],
+                minority: [ '3', '4' ]
+            }
         }, 'expand')
     } ()
 
@@ -265,10 +269,22 @@ function prove (assert) {
 
         assert(legislator._ponged.call({
             collapsed: false,
+            id: '0',
+            government: {
+                majority: [ '0' ]
+            },
             _impeach: function () { return null },
             _exile: function () { return null },
             _expand: function () { return 0xaaaaaaaa }
         }), 0xaaaaaaaa, 'ponged not collapsed')
+
+        assert(legislator._ponged.call({
+            collapsed: false,
+            id: '0',
+            government: {
+                majority: [ '1' ]
+            },
+        }) == null, 'ponged do nothing')
     } ()
 
     var options = {
