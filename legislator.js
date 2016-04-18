@@ -945,9 +945,11 @@ Legislator.prototype._elect = function () {
     var majoritySize = Math.ceil(parliamentSize / 2)
     var routeLength = Math.ceil(parliament.length / 2)
     return {
-        route: parliament.slice(0, routeLength),
-        majority: newParliament.slice(0, majoritySize),
-        minority: newParliament.slice(majoritySize)
+        quorum: parliament.slice(0, routeLength),
+        government: {
+            majority: newParliament.slice(0, majoritySize),
+            minority: newParliament.slice(majoritySize)
+        }
     }
 }
 
@@ -1002,11 +1004,14 @@ Legislator.prototype._impeach = function () {
     var parliament = this.government.majority.concat(this.government.minority)
     var parliamentSize = parliament.length <= 3 ? 1 : 3
     var unknown = { timeout: 1 }
-    var newParliament = parliament.slice(0, parliamentSize)
+    var newParliament = this.government.majority.slice(0, parliamentSize)
     var majoritySize = Math.ceil(parliamentSize / 2)
     return {
-        majority: newParliament.slice(0, majoritySize),
-        minority: newParliament.slice(majoritySize)
+        quorum: this.government.majority,
+        government: {
+            majority: newParliament.slice(0, majoritySize),
+            minority: newParliament.slice(majoritySize)
+        }
     }
 }
 
@@ -1024,10 +1029,12 @@ Legislator.prototype._exile = function () {
         return this._peers[id] && this._peers[id].timeout >= this.timeout
     }.bind(this))
     return {
-        majority: this.government.majority,
-        minority: this.government.minority,
-        constituents: responsive,
-        exiles: exiles
+        quorum: this.government.majority,
+        government: {
+            majority: this.government.majority,
+            minority: this.government.minority,
+            exiles: exiles
+        }
     }
 }
 

@@ -72,9 +72,11 @@ function prove (assert) {
             },
             _peers: { 1: { timeout: 0 }, 2: { timeout: 0 } }
         }), {
-            route: [ 0, 1, 2 ],
-            majority: [ 0, 1 ],
-            minority: [ 2 ]
+            quorum: [ 0, 1, 2 ],
+            government: {
+                majority: [ 0, 1 ],
+                minority: [ 2 ]
+            }
         }, 'elect new three member government')
         assert(legislator._elect.call({
             collapsed: true,
@@ -85,9 +87,11 @@ function prove (assert) {
             },
             _peers: { 1: { timeout: 0 } }
         }), {
-            route: [ 0, 1 ],
-            majority: [ 0 ],
-            minority: []
+            quorum: [ 0, 1 ],
+            government: {
+                majority: [ 0 ],
+                minority: []
+            }
         }, 'elect new dictator')
     } ()
 
@@ -203,8 +207,11 @@ function prove (assert) {
                 4: { timeout: 0 }
             }
         }), {
-            majority: [ '0', '1' ],
-            minority: [ '2' ]
+            quorum: [ '0', '1', '2' ],
+            government: {
+                majority: [ '0', '1' ],
+                minority: [ '2' ]
+            }
         }, 'impeach shrink to three member parliament')
         assert(legislator._impeach.call({
             id: '0',
@@ -219,8 +226,11 @@ function prove (assert) {
                 2: { timeout: 2 }
             }
         }), {
-            majority: [ '0' ],
-            minority: []
+            quorum: [ '0', '1' ],
+            government: {
+                majority: [ '0' ],
+                minority: []
+            }
         }, 'impeach shrink to dictator')
     } ()
 
@@ -252,10 +262,12 @@ function prove (assert) {
                 4: { timeout: 2 }
             }
         }), {
-            majority: [ '0', '1' ],
-            minority: [ '2' ],
-            constituents: [ '3' ],
-            exiles: [ '4' ]
+            quorum: [ '0', '1' ],
+            government: {
+                majority: [ '0', '1' ],
+                minority: [ '2' ],
+                exiles: [ '4' ]
+            }
         }, 'exile')
     } ()
 
