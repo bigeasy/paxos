@@ -762,6 +762,20 @@ Legislator.prototype._receiveFailed = function (envelope, message) {
 // rejected was because it was out of sync.
 // TODO What was the gap that made it impossible?
 Legislator.prototype._receivePong = function (now, pulse, envelope, message) {
+/*
+    var peer = this._peers[envelope.from], ponged = false
+    // TODO Assert you've not pinged a timed out peer.
+    if (peer) {
+        if (peer.timeout) {
+            ponged = true
+        }
+        peer.timeout = 0
+        peer.when = now
+    } else {
+        ponged = true
+        peer = this._peers[envelope.from] = { timeout: 0, when: now }
+    }
+*/
     this._greatest[envelope.from] = message.greatest
     var impossible = message.greatest.enacted != '0/0' && Monotonic.compare(this.log.min().promise, message.greatest.enacted) > 0
     if (impossible) {
@@ -1060,6 +1074,118 @@ Legislator.prototype._candidates = function (now) {
     return this._reachable(now).filter(function (id) {
         return id != this.id && id != this.government.majority[0]
     }.bind(this))
+}
+
+Legislator.prototype._electRedux = function () {
+    if (!this.collapsed) {
+        return null
+    }
+    assert(~this.government.majority.indexOf(this.id), 'would be leader not in majority')
+    var parliament = this.government.majority.concat(this.government.minority)
+    var unknown = { timeout: 1 }
+    var present = parliament.filter(function (id) {
+        return id != this.id && (this._peers[id] || unknown).timeout == 0
+    }.bind(this))
+    if (present.length + 1 < this.government.majority.length) {
+        return null
+    }
+    var parliamentSize = parliament.length <= 3 ? 1 : 3
+    var newParliament = [ this.id ].concat(present).slice(0, parliamentSize)
+    var majoritySize = Math.ceil(parliamentSize / 2)
+    var routeLength = Math.ceil(parliament.length / 2)
+    return {
+        route: parliament.slice(0, routeLength),
+        majority: newParliament.slice(0, majoritySize),
+        minority: newParliament.slice(majoritySize)
+    }
+}
+
+Legislator.prototype._expand = function () {
+    if (this.collapsed) {
+        return null
+    }
+    var parliament = this.government.majority.concat(this.government.minority)
+    if (parliament.length == this.parliamentSize) {
+        return null
+    }
+    assert(~this.government.majority.indexOf(this.id), 'would be leader not in majority')
+    var present = []
+    for (var id in this._peers) {
+        if (id != this.id && this._peers[id].timeout == 0) {
+            present.push(id)
+        }
+    }
+    var parliamentSize = parliament.length + 2
+    if (present.length + 1 < parliamentSize) {
+        return null
+    }
+    var newParliament = [ this.id ].concat(present).slice(0, parliamentSize)
+    var majoritySize = Math.ceil(parliamentSize / 2)
+    return {
+        majority: newParliament.slice(0, majoritySize),
+        minority: newParliament.slice(majoritySize)
+    }
+}
+
+Legislator.prototype._impeach = function () {
+    if (this.collapsed) {
+        return null
+    }
+    var timedout = this.government.minority.filter(function (id) {
+        return this._peers[id] && this._peers[id].timeout >= this.timeout
+    }.bind(this)).length != 0
+    if (!timedout) {
+        return null
+    }
+    var candidates = this.government.minority.concat(this.government.constituents)
+    var minority = candidates.filter(function (id) {
+        return this._peers[id] && this._peers[id].timeout < this.timeout
+    }.bind(this)).slice(0, this.government.minority.length)
+    if (minority.length == this.government.minority.length) {
+        return {
+            majority: this.government.majority,
+            minority: minority
+        }
+    }
+    var parliament = this.government.majority.concat(this.government.minority)
+    var parliamentSize = parliament.length <= 3 ? 1 : 3
+    var unknown = { timeout: 1 }
+    var newParliament = parliament.slice(0, parliamentSize)
+    var majoritySize = Math.ceil(parliamentSize / 2)
+    return {
+        majority: newParliament.slice(0, majoritySize),
+        minority: newParliament.slice(majoritySize)
+    }
+}
+
+Legislator.prototype._exile = function () {
+    if (this.collapsed) {
+        return null
+    }
+    var responsive = this.government.constituents.filter(function (id) {
+        return this._peers[id] && this._peers[id].timeout < this.timeout
+    }.bind(this))
+    if (responsive.length == this.government.constituents.length) {
+        return null
+    }
+    var exiles = this.government.constituents.filter(function (id) {
+        return this._peers[id] && this._peers[id].timeout >= this.timeout
+    }.bind(this))
+    return {
+        majority: this.government.majority,
+        minority: this.government.minority,
+        constituents: responsive,
+        exiles: exiles
+    }
+}
+
+// TODO Merge all the above once it settles.
+Legislator.prototype._ponged = function () {
+    if (this.collapsed) {
+        return this._electRedux()
+    } else {
+        return this._impeach() || this._exile() || this._expand()
+    }
 }
 
 Legislator.prototype._elect = function (now, remap) {
