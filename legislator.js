@@ -50,6 +50,7 @@ function Legislator (now, id, options) {
     this.ping = options.ping || 1
     this.timeout = options.timeout || 1
     this.failed = {}
+    this.proposing = false
 
     var round = {
         promise: '0/0',
@@ -310,7 +311,9 @@ Legislator.prototype.newGovernment = function (now, quorum, government, remap) {
         quorum: quorum,
         messages: messages
     })
-    this._propose(now)
+    if (!this.proposing) {
+        this._propose(now)
+    }
 }
 
 // TODO We might get something enqueued and not know it. There are two ways to
@@ -383,7 +386,7 @@ Legislator.prototype.post = function (now, cookie, value, internal) {
 
     // TODO What is the best way to know if the ball is rolling?
     // TODO No good. `_propose` does not put a message on the end of the log.
-    if (max.enacted) {
+    if (!this.proposing) {
         this._propose(now)
     }
 
@@ -396,6 +399,8 @@ Legislator.prototype.post = function (now, cookie, value, internal) {
 
 Legislator.prototype._propose = function (now) {
     this._signal('_propose', [])
+    assert(!this.proposing, 'already proposing')
+    this.proposing = true
     var proposal = this.proposals.shift()
     this._dispatch(now, proposal.type, proposal.quorum, proposal.messages)
 }
@@ -523,6 +528,7 @@ Legislator.prototype._receiveDecided = function (now, pulse, envelope, message) 
             // possibly do some work
             this._enact(now, round)
             if (this.government.majority[0] == this.id) {
+                this.proposing = false
                 if (this.naturalizing.length) {
                     // TODO Is there a race condition associated with leaving
                     // this in place? We need to break things pretty hard in a
