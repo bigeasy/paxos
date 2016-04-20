@@ -29,6 +29,7 @@ function Legislator (now, id, options) {
     this.locations = {}
     this.outbox = []
     this.naturalizing = []
+    this._dirty = false
 
     this.government = { promise: '0/0', minority: [], majority: [] }
     this.promise = '0/0'
@@ -551,7 +552,12 @@ Legislator.prototype._receiveDecided = function (now, pulse, envelope, message) 
                             promise: message.promise
                         }
                     }]
-                    if (this.proposals.length) {
+                    var reshape = this._dirty && this._ponged()
+                    if (reshape) {
+                        this._dirty = false
+                        console.log('x', reshape)
+                        this.newGovernment(now, reshape.quorum, reshape.government, false)
+                    } else if (this.proposals.length) {
                         this._propose(now, decided)
                     } else {
                         this._nothing(now, decided)
@@ -774,9 +780,7 @@ Legislator.prototype._receivePong = function (now, pulse, envelope, message) {
             }])
         }
     }
-    if (ponged) {
-        this._pongedX(now)
-    }
+    this._dirty = this._dirty || ponged
 }
 
 Legislator.prototype.emigrate = function (now, id) {
@@ -1021,7 +1025,7 @@ Legislator.prototype._exile = function () {
         return null
     }
     var responsive = this.government.constituents.filter(function (id) {
-        return this._peers[id] && this._peers[id].timeout < this.timeout
+        return !this._peers[id] || this._peers[id].timeout < this.timeout
     }.bind(this))
     if (responsive.length == this.government.constituents.length) {
         return null
@@ -1032,6 +1036,7 @@ Legislator.prototype._exile = function () {
     return {
         quorum: this.government.majority,
         government: {
+            type: 'exile',
             majority: this.government.majority,
             minority: this.government.minority,
             exiles: exiles
@@ -1047,16 +1052,6 @@ Legislator.prototype._ponged = function () {
         return this._impeach() || this._exile() || this._expand()
     } else {
         return null
-    }
-}
-
-Legislator.prototype._pongedX = function (now) {
-    // TODO Mark ponged and check at the end of a pulse. Do the same for
-    // naturalization.
-    assert(now != null)
-    var reshape = this._ponged()
-    if (reshape) {
-        this.newGovernment(now, reshape.quorum, reshape.government, !this.collapsed)
     }
 }
 
