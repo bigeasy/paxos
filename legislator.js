@@ -792,20 +792,6 @@ Legislator.prototype._propagation = function (now) {
                                             .concat(this.government.constituents)
     this.parliament = this.government.majority.concat(this.government.minority)
 
-    for (var failed in this.failed) {
-        if (!~this.citizens.indexOf(failed)) {
-            delete this.locations[failed]
-            delete this.unrouted[failed]
-            for (var id in this.routed) {
-                var route = this.routed[id]
-                if (~route.path.indexOf(failed)) {
-                    delete this.routed[id]
-                }
-            }
-            delete this.failed[failed]
-        }
-    }
-
     this.constituency = []
     if (this.parliament.length == 1) {
         if (this.id == this.government.majority[0]) {
