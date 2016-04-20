@@ -1,3 +1,5 @@
+var assert = require('assert')
+
 function Transmission (network, pulse) {
     this.network = network
     this.pulse = pulse
@@ -8,6 +10,7 @@ function Transmission (network, pulse) {
 
 Transmission.prototype.consume = function (now) {
     var index = +(this.pulse.route[this.index])
+    this.pulse = JSON.parse(JSON.stringify(this.pulse))
     if (this.direction == 'decending') {
         this.network[index].sent(now, this.pulse, this.success)
     }
@@ -29,8 +32,9 @@ Transmission.prototype.consume = function (now) {
     return true
 }
 
-exports.transmit = function (network, index) {
-    var pulse = network[index].outbox()
+exports.transmit = function (now, network, index) {
+    assert(arguments.length == 3, 'now')
+    var pulse = network[index].outbox(now)
     if (pulse) {
         return new Transmission(network, pulse)
     }
@@ -42,7 +46,7 @@ exports.tick = function (now, network) {
     TICK: while (ticked) {
         ticked = false
         for (var i = 0, I = network.length; i < I; i++) {
-            var transmission = exports.transmit(network, i)
+            var transmission = exports.transmit(now, network, i)
             if (transmission) {
                 ticked = true
                 while (transmission.consume(now));

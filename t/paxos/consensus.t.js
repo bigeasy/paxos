@@ -58,15 +58,18 @@ function prove (assert) {
     legislators.push(new Legislator(0, '2', options))
     legislators[0].naturalize(time, '2', '2')
     network.tick(time, legislators)
+    legislators[0]._whenPulse(time)
+    console.log('------')
+    network.tick(time, legislators)
 
     assert(legislators[0].government, {
-        majority: [ '0' ],
-        minority: [],
-        naturalize: { id: '2', location: '2' },
-        constituents: [ '1', '2' ],
-        promise: '3/0'
+        majority: [ '0', '1' ],
+        minority: [ '2' ],
+        constituents: [],
+        promise: '4/0'
     }, 'three member parliament (broken)')
 
+    console.log(legislators[0]._dirty)
     return
     var post
 
@@ -76,7 +79,7 @@ function prove (assert) {
     post = network.machines[0].legislator.post(time, null, { key: 'value' }, false)
     assert(post.posted, 'post')
 
-    var transmission = transmit(network.machines.map(function (machine) {
+    var transmission = transmit(time, network.machines.map(function (machine) {
         return machine.legislator
     }), network.machines[0].legislator)
 

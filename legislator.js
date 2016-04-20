@@ -73,8 +73,43 @@ Legislator.prototype._signal = function (method, vargs) {
     }
 }
 
-Legislator.prototype.outbox = function () {
-    return this.pulses.shift()
+Legislator.prototype._maybeReshape = function (now) {
+    if (this.proposing) {
+        return false
+    }
+    if (this._dirty) {
+        var reshape = this._dirty && this._ponged()
+        if (reshape) {
+            this._dirty = false
+            this.newGovernment(now, reshape.quorum, reshape.government, false)
+        } /* else if (this.proposals.length) {
+            this._propose(now, decided)
+        } else {
+            this._nothing(now, decided)
+        } */
+    }
+}
+
+Legislator.prototype.outbox = function (now) {
+    if (this.pulses.length) {
+        return this.pulses.shift()
+    }
+    for (var i = 0, I = this.constituency.length; i < I; i++) {
+        var id = this.constituency[i]
+        if (Monotonic.compare(this.getPeer(id).enacted, this.getPeer(this.id).enacted) < 0) {
+            return {
+                type: 'synchronize',
+                route: [ this.id, id ],
+                incoming: [{
+                    to: this.id,
+                    from: id,
+                    message: { type: 'synchronize', to: id, count: 20 }
+                }],
+                outgoing: []
+            }
+        }
+    }
+    return null
 }
 
 Legislator.prototype._getRoute = function (path) {
@@ -420,7 +455,7 @@ Legislator.prototype._propose = function (now) {
 // should only go out when that route is pulsed. If the network calls fail, the
 // leader will be able to learn immediately.
 
-Legislator.prototype._receivePropose = function (now, pulse, envelope) {
+Legislator.prototype._receivePropose = function (now, pulse, envelope, message) {
     // fetch an interator to inspect the last two entries in the log
     var iterator = this.log.iterator()
     var max = iterator.prev()
@@ -488,24 +523,27 @@ Legislator.prototype._receivePropose = function (now, pulse, envelope) {
 }
 
 // TODO Do not learn something if the promise is less than your uniform id.
-Legislator.prototype._receiveAccepted = function (now, pulse, envelope) {
+Legislator.prototype._receiveAccepted = function (now, pulse, envelope, message) {
     assert(now != null)
     var message = envelope.message
     var round = this.log.find({ promise: message.promise })
-    // assert(!~round.acceptances.indexOf(envelope.from))
-    // assert(~round.quorum.indexOf(this.id))
+    if (envelope.from == '1') {
+        debugger
+    }
     assert(~round.quorum.indexOf(envelope.from))
-    round.acceptances.push(envelope.from)
-    if (!round.decided && round.acceptances.length >= round.quorum.length)  {
-        this._peers[this.id].decided = round.promise
-        round.decided = true
-        this._stuff(now, pulse, {
-            to: round.quorum,
-            message: {
-                type: 'decided',
-                promise: round.promise
-            }
-        })
+    if (!~round.acceptances.indexOf(envelope.from)) {
+        round.acceptances.push(envelope.from)
+        if (!round.decided && round.acceptances.length >= round.quorum.length)  {
+            this._peers[this.id].decided = round.promise
+            round.decided = true
+            this._stuff(now, pulse, {
+                to: round.quorum,
+                message: {
+                    type: 'decided',
+                    promise: round.promise
+                }
+            })
+        }
     }
 }
 
@@ -559,7 +597,6 @@ Legislator.prototype._receiveDecided = function (now, pulse, envelope, message) 
                     var reshape = this._dirty && this._ponged()
                     if (reshape) {
                         this._dirty = false
-                        console.log('x', reshape)
                         this.newGovernment(now, reshape.quorum, reshape.government, false)
                     } else if (this.proposals.length) {
                         this._propose(now, decided)
@@ -701,7 +738,7 @@ Legislator.prototype._replicate = function (now, pulse, to, round) {
     })
 }
 
-Legislator.prototype._whenPulse = function (event) {
+Legislator.prototype._whenPulse = function (now, event) {
     if (this.government.majority[0] == this.id) {
         this._nothing(now, [])
     }
@@ -785,6 +822,7 @@ Legislator.prototype._receivePong = function (now, pulse, envelope, message) {
         }
     }
     this._dirty = this._dirty || ponged
+    this._maybeReshape(now)
 }
 
 Legislator.prototype.emigrate = function (now, id) {
@@ -1040,7 +1078,6 @@ Legislator.prototype._exile = function () {
     return {
         quorum: this.government.majority,
         government: {
-            type: 'exile',
             majority: this.government.majority,
             minority: this.government.minority,
             exiles: exiles
