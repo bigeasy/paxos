@@ -30,7 +30,7 @@ Transmission.prototype.consume = function (now) {
 }
 
 exports.transmit = function (network, index) {
-    var pulse = network[index].outbox.shift()
+    var pulse = network[index].outbox()
     if (pulse) {
         return new Transmission(network, pulse)
     }

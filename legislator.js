@@ -27,7 +27,7 @@ function Legislator (now, id, options) {
     this.routed = {}
     this.unrouted = {}
     this.locations = {}
-    this.outbox = []
+    this.pulses = []
     this.naturalizing = []
     this._dirty = false
 
@@ -71,6 +71,10 @@ Legislator.prototype._signal = function (method, vargs) {
     for (var i = 0, I = subscribers.length; i < I; i++) {
         subscribers[i](this.id, method, vargs)
     }
+}
+
+Legislator.prototype.outbox = function () {
+    return this.pulses.shift()
 }
 
 Legislator.prototype._getRoute = function (path) {
@@ -175,7 +179,7 @@ Legislator.prototype._dispatch = function (now, type, route, messages) {
         outgoing: []
     }
 
-    this.outbox.push(pulse)
+    this.pulses.push(pulse)
 }
 
 Legislator.prototype.sent = function (now, pulse, success) {
