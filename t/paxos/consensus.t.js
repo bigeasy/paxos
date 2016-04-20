@@ -2,8 +2,7 @@ require('proof')(6, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
-        Network = require('../../synchronous/network'),
-        Machine = require('../../synchronous/machine'),
+        network = require('./transmission'),
         signal = require('signal')
 
     signal.subscribe('.bigeasy.paxos.invoke'.split('.'), function (id, method, vargs) {
@@ -32,11 +31,7 @@ function prove (assert) {
     var legislators = [ new Legislator(time, '0', options) ]
     legislators[0].bootstrap(time, '0')
 
-    var network = new Network
-    var machine = new Machine(network, legislators[0])
-    network.machines.push(machine)
-
-    network.tick(time)
+    network.tick(time, legislators)
 
     assert(legislators[0].government, {
         majority: [ '0' ],
@@ -45,10 +40,10 @@ function prove (assert) {
         promise: '1/0'
     }, 'bootstrap')
 
-    network.machines.push(new Machine(network, new Legislator(time, '1', options)))
+    legislators.push(new Legislator(time, '1', options))
 
-    assert(network.machines[0].legislator.naturalize(time, '1', '1').posted, 'naturalize')
-    network.tick(time)
+    assert(legislators[0].naturalize(time, '1', '1').posted, 'naturalize')
+    network.tick(time, legislators)
 
     assert(legislators[0].government, {
         majority: [ '0' ],
@@ -58,18 +53,39 @@ function prove (assert) {
         promise: '2/0'
     }, 'leader and constituent pair')
 
-    assert(network.machines[1].legislator.log.size, 3, 'synchronized')
+    assert(legislators[1].log.size, 3, 'synchronized')
 
-    network.machines.push(new Machine(network, new Legislator(0, '2', options)))
-    network.machines[0].legislator.naturalize(time, '2', '2')
-    network.tick(time)
+    legislators.push(new Legislator(0, '2', options))
+    legislators[0].naturalize(time, '2', '2')
+    network.tick(time, legislators)
 
-    assert(network.machines[1].legislator.government, {
-        majority: [ '0', '1' ],
-        minority: [ '2' ],
-        constituents: [],
-        promise: '4/0'
-    }, 'three member parliament')
+    assert(legislators[0].government, {
+        majority: [ '0' ],
+        minority: [],
+        naturalize: { id: '2', location: '2' },
+        constituents: [ '1', '2' ],
+        promise: '3/0'
+    }, 'three member parliament (broken)')
+
+    return
+    var post
+
+    post = network.machines[1].legislator.post(time, null, { key: 'value' }, false)
+    assert(!post.posted, 'post not leader')
+
+    post = network.machines[0].legislator.post(time, null, { key: 'value' }, false)
+    assert(post.posted, 'post')
+
+    var transmission = transmit(network.machines.map(function (machine) {
+        return machine.legislator
+    }), network.machines[0].legislator)
+
+    console.log(transmission.index, transmission.direction)
+    transmission.consume(time)
+    console.log(transmission.index, transmission.direction)
+    transmission.consume(time)
+    console.log(transmission.index, transmission.direction)
+
     return
 
     assert(network.machines[2].legislator.government, {

@@ -4,8 +4,6 @@ function prove (assert) {
     var Legislator = require('../../legislator')
     var signal = require('signal')
     var Legislator = require('../../legislator'),
-        Network = require('../../synchronous/network'),
-        Machine = require('../../synchronous/machine'),
         signal = require('signal')
 
     signal.subscribe('.bigeasy.paxos.invoke'.split('.'), function (id, method, vargs) {
@@ -298,21 +296,4 @@ function prove (assert) {
             },
         }) == null, 'ponged do nothing')
     } ()
-
-    var options = {
-        Date: { now: function () { return time } },
-        parliamentSize: 5,
-        ping: 1,
-        timeout: 2,
-        retry: 5
-    }
-
-    var legislators = [ new Legislator(time, '0', options) ]
-    legislators[0].bootstrap(time, '0')
-
-    var network = new Network
-    var machine = new Machine(network, legislators[0])
-    network.machines.push(machine)
-
-    network.tick(time)
 }

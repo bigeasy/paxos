@@ -382,6 +382,7 @@ Legislator.prototype.post = function (now, cookie, value, internal) {
     })
 
     // TODO What is the best way to know if the ball is rolling?
+    // TODO No good. `_propose` does not put a message on the end of the log.
     if (max.enacted) {
         this._propose(now)
     }
@@ -533,6 +534,10 @@ Legislator.prototype._receiveDecided = function (now, pulse, envelope, message) 
                         naturalize: { id: round.value.id, location: round.value.location }
                     }, true)
                 } else {
+                    // TODO Special pulse on government change; need to
+                    // propagate changes to new majority members.
+                    // TODO Most interesting case is a change in the shape of
+                    // the government that enters the collapsed state.
                     var decided = [{
                         to: this.government.majority.slice(1),
                         message: {
@@ -803,7 +808,9 @@ Legislator.prototype._propagation = function (now) {
 
     this.constituency = []
     if (this.parliament.length == 1) {
-        this.constituency = this.government.constituents.slice()
+        if (this.id == this.government.majority[0]) {
+            this.constituency = this.government.constituents.slice()
+        }
     } else {
         var index = this.government.majority.slice(1).indexOf(this.id)
         if (~index) {
@@ -849,6 +856,7 @@ Legislator.prototype._propagation = function (now) {
             })
         }
     }
+
     this.constituency.forEach(function (id) {
         this._getRoute([ this.id, id ]).retry = this.retry
         var event = this._schedule(now, {
@@ -973,6 +981,7 @@ Legislator.prototype._expand = function () {
     var newParliament = [ this.id ].concat(present).slice(0, parliamentSize)
     var majoritySize = Math.ceil(parliamentSize / 2)
     return {
+        // quorum: this.government.majority,
         quorum: newParliament.slice(0, majoritySize),
         government: {
             majority: newParliament.slice(0, majoritySize),
@@ -1050,6 +1059,8 @@ Legislator.prototype._ponged = function () {
 }
 
 Legislator.prototype._pongedX = function (now) {
+    // TODO Mark ponged and check at the end of a pulse. Do the same for
+    // naturalization.
     assert(now != null)
     var reshape = this._ponged()
     if (reshape) {
