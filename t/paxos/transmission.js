@@ -3,10 +3,14 @@ function Transmission (network, pulse) {
     this.pulse = pulse
     this.direction = 'ascending'
     this.index = 0
+    this.success = true
 }
 
 Transmission.prototype.consume = function (now) {
     var index = +(this.pulse.route[this.index])
+    if (this.direction == 'decending') {
+        this.network[index].sent(now, this.pulse, this.success)
+    }
     this.network[index].consume(now, this.pulse)
     if (this.direction == 'ascending') {
         if (this.index == this.pulse.route.length - 1) {
