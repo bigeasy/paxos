@@ -436,7 +436,6 @@ Legislator.prototype._receivePropose = function (now, pulse, envelope, message) 
                 accepted = accepted && this.log.min().promise == '0/0'
                 accepted = accepted && message.value.government.naturalize
                 accepted = accepted && message.value.government.naturalize.id == this.id
-                accepted = accepted && message.cookie == this.naturalization
             }
             if (accepted) {
                 // remove the top of the log if it is undecided, we're replacing it.
