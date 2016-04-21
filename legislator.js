@@ -263,28 +263,6 @@ Legislator.prototype.bootstrap = function (now, location) {
     this.newGovernment(now, [ this.id ], government, false)
 }
 
-// TODO Count here by length in client.
-
-Legislator.prototype.shift = function () {
-    this._signal('shift', [])
-    var min = this.log.min(), max = this.log.max(), entry = min, removed = 0
-    if (Monotonic.compareIndex(min.id, max.id, 0) == 0) {
-        return removed
-    }
-    while (Monotonic.compareIndex(entry.id, min.id, 0) == 0) {
-        if (entry.uniform) {
-            removed++
-        }
-        this.log.remove(entry)
-        entry = this.log.min()
-    }
-    if (!removed) {
-        return this.shift()
-    }
-    this.length -= removed
-    return removed
-}
-
 Legislator.prototype.newGovernment = function (now, quorum, government, remap) {
     assert(arguments.length == 4)
     // TODO Need a copy government befor sharing it in this way.
