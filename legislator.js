@@ -299,13 +299,6 @@ Legislator.prototype.newGovernment = function (now, quorum, government, remap) {
     if (government.naturalize) {
         government.constituents.push(government.naturalize.id)
     }
-    // No mercy. If it was not decided, it never happened.
-    var max = this.log.max()
-    while (!max.decided) {
-        this.log.remove(max)
-        max = this.log.max()
-        assert(max.enacted)
-    }
     var promise = government.promise = this.promise = Monotonic.increment(this.promise, 0)
     var map = []
     if (remap) {
@@ -340,7 +333,7 @@ Legislator.prototype.newGovernment = function (now, quorum, government, remap) {
             value: {
                 type: 'government',
                 government: government,
-                terminus: JSON.parse(JSON.stringify(max)),
+                terminus: JSON.parse(JSON.stringify(this.log.max())),
                 locations: this.locations,
                 map: map
             }
