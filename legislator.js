@@ -27,7 +27,7 @@ function Legislator (now, id, options) {
     this.routed = {}
     this.unrouted = {}
     this.locations = {}
-    this.pulses = []
+    this.pulse = null
     this.naturalizing = []
     this._dirty = false
 
@@ -91,8 +91,10 @@ Legislator.prototype._maybeReshape = function (now) {
 }
 
 Legislator.prototype.outbox = function (now) {
-    if (this.pulses.length) {
-        return this.pulses.shift()
+    if (this.pulse != null) {
+        var pulse = this.pulse
+        this.pulse = null
+        return pulse
     }
     for (var i = 0, I = this.constituency.length; i < I; i++) {
         var id = this.constituency[i]
@@ -191,30 +193,6 @@ Legislator.prototype._stuff = function (now, pulse, options) {
             })
         })
     })
-}
-
-Legislator.prototype._dispatch = function (now, type, route, messages) {
-    assert(arguments.length == 4 && now != null && typeof type == 'string')
-
-    this._signal('_dispatch', [ route, messages ])
-
-    var from = this.id
-    var pulse = {
-        type: type,
-        route: route,
-        incoming: [].concat.apply([], messages.map(function (envelope) {
-            return envelope.to.map(function (to) {
-                return {
-                    from: from,
-                    to: to,
-                    message: envelope.message
-                }
-            })
-        })),
-        outgoing: []
-    }
-
-    this.pulses.push(pulse)
 }
 
 Legislator.prototype.sent = function (now, pulse, success) {
@@ -413,7 +391,17 @@ Legislator.prototype._propose = function (now) {
     assert(!this.proposing, 'already proposing')
     this.proposing = true
     var proposal = this.proposals.shift()
-    this._dispatch(now, proposal.type, proposal.quorum, proposal.messages)
+    if (this.pulse == null) {
+        this.pulse = {
+            type: 'consensus',
+            route: proposal.quorum,
+            incoming: [],
+            outgoing: []
+        }
+    }
+    proposal.messages.forEach(function (message) {
+        this._stuff(now, this.pulse, message)
+    }, this)
 }
 
 // The accepted message must go out on the pulse, we cannot put it in the
@@ -558,21 +546,20 @@ Legislator.prototype._receiveDecided = function (now, pulse, envelope, message) 
                     // propagate changes to new majority members.
                     // TODO Most interesting case is a change in the shape of
                     // the government that enters the collapsed state.
-                    var decided = [{
+                    this._stuff(now, pulse, {
                         to: this.government.majority.slice(1),
                         message: {
                             type: 'decided',
                             promise: message.promise
                         }
-                    }]
+                    })
+                    this.pulse = pulse
                     var reshape = this._dirty && this._ponged()
                     if (reshape) {
                         this._dirty = false
                         this.newGovernment(now, reshape.quorum, reshape.government, false)
                     } else if (this.proposals.length) {
                         this._propose(now, decided)
-                    } else {
-                        this._nothing(now, decided)
                     }
                 }
             }
@@ -590,7 +577,7 @@ Legislator.prototype._receiveDecided = function (now, pulse, envelope, message) 
 
 // This merely asserts that a message follows a certain route. Maybe I'll
 // rename it to "route", but "nothing" is good enough.
-Legislator.prototype._nothing = function (now, messages) {
+Legislator.prototype.__nothing = function (now, messages) {
     this._signal('_nothing', [ now, messages ])
     this._dispatch(now, 'consensus', this.government.majority, messages.concat({
         to: this.government.majority.slice(1),
@@ -784,14 +771,6 @@ Legislator.prototype._receivePong = function (now, pulse, envelope, message) {
     if (impossible) {
         peer.timeout = this.timeout
     }
-    if (pulse.type == 'synchronize') {
-        if (Monotonic.compare(message.enacted, this._peers[this.id].enacted) < 0) {
-            this._dispatch(now, 'synchronize', [ this.id, envelope.from ], [{
-                to: [ this.id ],
-                message: { type: 'synchronize', to: envelope.from, count: 20 }
-            }])
-        }
-    }
     this._dirty = this._dirty || ponged
     this._maybeReshape(now)
 }
@@ -873,10 +852,6 @@ Legislator.prototype._propagation = function (now) {
             id: id,
             delay: this.ping
         })
-        this._dispatch(now, 'synchronize', [ this.id, id ], [{
-            to: [ this.id ],
-            message: { type: 'synchronize', to: id, count: 20 }
-        }])
     }, this)
 }
 
