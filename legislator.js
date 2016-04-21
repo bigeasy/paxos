@@ -17,15 +17,10 @@ function Legislator (now, id, options) {
     this.parliamentSize = options.parliamentSize || 5
     this._Date = options.Date || Date
 
-    this.messageId = id + '/0'
     this.log = new RBTree(function (a, b) { return Monotonic.compare(a.promise, b.promise) })
-    this.length = 0
     this.scheduler = new Scheduler
-    this.naturalizing = null
 
     this.proposals = []
-    this.routed = {}
-    this.unrouted = {}
     this.locations = {}
     this.pulse = null
     this.naturalizing = []
@@ -34,20 +29,16 @@ function Legislator (now, id, options) {
     this.government = { promise: '0/0', minority: [], majority: [] }
     this.promise = '0/0'
     this.citizens = []
+
     this._peers = {}
-    this._peers[this.id] = {
-        extant: true,
-        timeout: 0,
-        decided: '0/0',
-        enacted: '0/0'
-    }
+    this.getPeer(this.id).extant = true
+    this.getPeer(this.id).timeout = 0
 
     assert(!Array.isArray(options.retry), 'retry no longer accepts range')
     assert(!Array.isArray(options.ping), 'retry no longer accepts range')
     assert(!Array.isArray(options.timeout), 'retry no longer accepts range')
 
     this.ticks = {}
-    this.retry = options.retry || 2
     this.ping = options.ping || 1
     this.timeout = options.timeout || 1
     this.failed = {}
@@ -114,19 +105,22 @@ Legislator.prototype.outbox = function (now) {
     return null
 }
 
-Legislator.prototype._getRoute = function (path) {
-    assert(arguments.length == 1)
-    this._signal('_getRoute', [ path ])
-    assert(typeof path != 'string', 'paths are no longer strings')
-    var id = path.join(' -> '), route = this.routed[id]
-    if (!route) {
-        route = this.routed[id] = { retry: this.retry, path: path }
+Legislator.prototype.getPeer = function (id, initializer) {
+    var peer = this._peers[id]
+    if (peer == null) {
+        peer = this._peers[id] = {
+            extant: false,
+            timeout: 1,
+            when: 0,
+            decided: '0/0',
+            enacted: '0/0'
+        }
     }
-    return route
-}
-
-Legislator.prototype.getPeer = function (id) {
-    return this._peers[id] || { decided: '0/0', enacted: '0/0', extant: false }
+    initializer || (initializer = {})
+    for (var key in initializer) {
+        peer[key] = initializer[key]
+    }
+    return peer
 }
 
 // TODO To make replayable, we need to create a scheduler that accepts a now so
@@ -197,9 +191,10 @@ Legislator.prototype._stuff = function (now, pulse, options) {
 
 Legislator.prototype.sent = function (now, pulse, success) {
     this._signal('sent', [ pulse ])
-    var route = this._getRoute(pulse.route)
     if (success) {
-        route.retry = this.retry
+        pulse.route.slice(1).forEach(function (id) {
+            this.getPeer(id, { timeout: 0, now: now })
+        }, this)
         switch (pulse.type) {
         case 'synchronize':
             this._schedule(now, { type: 'ping', id: pulse.route[1], delay: this.ping })
@@ -210,7 +205,7 @@ Legislator.prototype.sent = function (now, pulse, success) {
             break
         }
     } else {
-        route.retry = Max(route.retry - 1, 0)
+        throw new Error
         switch (pulse.type) {
         case 'election':
             this._schedule(now, { type: 'elect', id: this.id, delay: this.timeout })
@@ -714,30 +709,19 @@ Legislator.prototype._whenPing = function (event) {
 }
 
 Legislator.prototype._receivePing = function (now, pulse, envelope, message) {
-    var peer = this._peers[envelope.from]
-    if (peer) {
-        peer.timeout = 0
-        peer.when = now
-        peer.enacted = message.enacted
-        peer.decided = message.decided
-    } else {
-        peer = this._peers[envelope.from] = {
-            extant: true,
-            when: now,
-            timeout: 0,
-            enacted: message.enacted,
-            decided: message.decided
-        }
-    }
-    this._peers[envelope.from].enacted = message.enacted
-    this._peers[envelope.from].decided = message.decided
+    var peer = this.getPeer(envelope.from)
+    peer.extant = true
+    peer.timeout = 0
+    peer.when = now
+    peer.enacted = message.enacted
+    peer.decided = message.decided
     this._stuff(now, pulse, {
         to: [ envelope.from ],
         message: {
             type: 'pong',
             when: message.when,
-            enacted: this._peers[this.id].enacted,
-            decided: this._peers[this.id].decided
+            enacted: this.getPeer(this.id).enacted,
+            decided: this.getPeer(this.id).decided
         }
     })
 }
@@ -747,26 +731,21 @@ Legislator.prototype._receivePing = function (now, pulse, envelope, message) {
 // rejected was because it was out of sync.
 // TODO What was the gap that made it impossible?
 Legislator.prototype._receivePong = function (now, pulse, envelope, message) {
-    var peer = this._peers[envelope.from], ponged = false
+    var peer = this.getPeer(envelope.from, {
+        now: now,
+        enacted: message.enacted,
+        decided: message.decided
+    }), ponged = false
     // TODO Assert you've not pinged a timed out peer.
-    if (peer) {
+    if (peer.extant) {
         if (peer.timeout) {
             ponged = true
         }
-        peer.timeout = 0
-        peer.when = now
-        peer.enacted = message.enacted
-        peer.decided = message.decided
     } else {
         ponged = true
-        peer = this._peers[envelope.from] = {
-            extant: true,
-            when: now,
-            timeout: 0,
-            enacted: message.enacted,
-            decided: message.decided
-        }
     }
+    peer.extant = true
+    peer.timeout = 0
     var impossible = message.enacted != '0/0' && Monotonic.compare(this.log.min().promise, message.enacted) > 0
     if (impossible) {
         peer.timeout = this.timeout
@@ -846,8 +825,7 @@ Legislator.prototype._propagation = function (now) {
     }
 
     this.constituency.forEach(function (id) {
-        this._getRoute([ this.id, id ]).retry = this.retry
-        var event = this._schedule(now, {
+        this._schedule(now, {
             type: 'ping',
             id: id,
             delay: this.ping
