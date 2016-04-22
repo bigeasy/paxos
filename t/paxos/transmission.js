@@ -34,11 +34,9 @@ Transmission.prototype.consume = function (now) {
 
 exports.transmit = function (now, network, index) {
     assert(arguments.length == 3, 'now')
-    var pulse = network[index].outbox(now)
-    if (pulse) {
+    return network[index].outbox(now).map(function (pulse) {
         return new Transmission(network, pulse)
-    }
-    return null
+    })
 }
 
 exports.tick = function (now, network) {
@@ -46,10 +44,13 @@ exports.tick = function (now, network) {
     TICK: while (ticked) {
         ticked = false
         for (var i = 0, I = network.length; i < I; i++) {
-            var transmission = exports.transmit(now, network, i)
-            if (transmission) {
+            var transmissions = exports.transmit(now, network, i)
+            if (transmissions.length) {
                 ticked = true
-                while (transmission.consume(now));
+                while (transmissions.length) {
+                    var transmission = transmissions.shift()
+                    while (transmission.consume(now));
+                }
                 continue TICK
             }
         }

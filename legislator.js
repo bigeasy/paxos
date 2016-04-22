@@ -80,31 +80,44 @@ Legislator.prototype._maybeReshape = function (now) {
     return false
 }
 
-Legislator.prototype.outbox = function (now) {
-    if (this.pulse != null) {
-        var pulse = this.pulse
-        this.pulse = null
-        return pulse
+Legislator.prototype._synchronizePulse = function (id) {
+    this.synchronizing[id] = true
+    return {
+        type: 'synchronize',
+        route: [ this.id, id ],
+        incoming: [{
+            to: this.id,
+            from: id,
+            message: { type: 'synchronize', to: id, count: 20 }
+        }],
+        outgoing: []
     }
-    for (var i = 0, I = this.constituency.length; i < I; i++) {
-        var id = this.constituency[i]
-        var peer = this.getPeer(id)
-        var behind = Monotonic.compare(this.getPeer(id).enacted, this.getPeer(this.id).enacted) < 0
-        if ((behind || peer.outdated) && !this.synchronizing[id]) {
-            this.synchronizing[id] = true
-            return {
-                type: 'synchronize',
-                route: [ this.id, id ],
-                incoming: [{
-                    to: this.id,
-                    from: id,
-                    message: { type: 'synchronize', to: id, count: 20 }
-                }],
-                outgoing: []
+}
+Legislator.prototype.outbox = function (now) {
+    var outbox = []
+    if (this.collapsed) {
+        this.parliament.filter(function (id) {
+            return id != this.id
+        }.bind(this)).forEach(function (id) {
+            if (!this.synchronizing[id]) {
+                outbox.push(this._synchronizePulse(id))
+            }
+        }, this)
+    } else {
+        if (this.pulse != null) {
+            outbox.push(this.pulse)
+            this.pulse = null
+        }
+        for (var i = 0, I = this.constituency.length; i < I; i++) {
+            var id = this.constituency[i]
+            var peer = this.getPeer(id)
+            var compare = Monotonic.compare(this.getPeer(id).enacted, this.getPeer(this.id).enacted)
+            if ((compare < 0 || peer.outdated) && !this.synchronizing[id]) {
+                outbox.push(this._synchronizePulse(id))
             }
         }
     }
-    return null
+    return outbox
 }
 
 Legislator.prototype.getPeer = function (id, initializer) {
