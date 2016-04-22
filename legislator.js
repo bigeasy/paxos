@@ -93,8 +93,28 @@ Legislator.prototype._synchronizePulse = function (id) {
     }
 }
 Legislator.prototype.outbox = function (now) {
-    if (!this.collapsed) {
-        this._maybeReshape(now)
+    // TODO Terrible. Reset naturalizing on collapse.
+    if (this.naturalizing.length && this.government.majority[0] == this.id) {
+        // TODO Is there a race condition associated with leaving
+        // this in place? We need to break things pretty hard in a
+        // contentinous election.
+        var naturalization = this.naturalizing.shift()
+        this.newGovernment(now, this.government.majority, {
+            majority: this.government.majority,
+            minority: this.government.minority,
+            naturalize: {
+                id: naturalization.id,
+                location: naturalization.location
+            }
+        }, true)
+    } else if (!this.collapsed) {
+        // TODO Special pulse on government change; need to
+        // propagate changes to new majority members.
+        // TODO Most interesting case is a change in the shape of
+        // the government that enters the collapsed state.
+        if (! this._maybeReshape(now) && this.proposals.length && !this.proposing) {
+            this._propose(now, decided)
+        }
     }
     var outbox = []
     if (this.pulse != null) {
@@ -549,28 +569,6 @@ Legislator.prototype._receiveDecided = function (now, pulse, envelope, message) 
                         promise: message.promise
                     }
                 })
-                if (this.naturalizing.length) {
-                    // TODO Is there a race condition associated with leaving
-                    // this in place? We need to break things pretty hard in a
-                    // contentinous election.
-                    var naturalization = this.naturalizing.shift()
-                    this.newGovernment(now, this.government.majority, {
-                        majority: this.government.majority,
-                        minority: this.government.minority,
-                        naturalize: {
-                            id: naturalization.id,
-                            location: naturalization.location
-                        }
-                    }, true)
-                } else {
-                    // TODO Special pulse on government change; need to
-                    // propagate changes to new majority members.
-                    // TODO Most interesting case is a change in the shape of
-                    // the government that enters the collapsed state.
-                    if (! this._maybeReshape(now) && this.proposals.length) {
-                        this._propose(now, decided)
-                    }
-                }
             }
         }
     }
