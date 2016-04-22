@@ -35,6 +35,8 @@ function Legislator (now, id, options) {
     this.getPeer(this.id).extant = true
     this.getPeer(this.id).timeout = 0
 
+    this.length = options.length || 1024
+
     assert(!Array.isArray(options.retry), 'retry no longer accepts range')
     assert(!Array.isArray(options.ping), 'retry no longer accepts range')
     assert(!Array.isArray(options.timeout), 'retry no longer accepts range')
@@ -378,12 +380,10 @@ Legislator.prototype.post = function (now, cookie, value, internal) {
         }
     }
 
-/*
     if (internal && value.type == 'naturalize') {
         this.naturalizing.push({ id: value.id, location: value.location })
         return { posted: true, promise: null }
     }
-*/
 
     var promise = this.promise = Monotonic.increment(this.promise, 1)
     this.proposals.push({
@@ -556,9 +556,13 @@ Legislator.prototype._receiveDecided = function (now, pulse, envelope, message) 
         if (round.decisions.length == round.quorum.length) {
             iterator.prev().next = round
             round.enacted = true
+            while (this.log.size > this.length) {
+                this.log.remove(this.log.min())
+            }
             this._peers[this.id].enacted = round.promise
-            // possibly do some work
-            this._enact(now, round)
+            if (Monotonic.isBoundary(message.promise, 0)) {
+                this._enactGovernment(now, round)
+            }
             if (this.government.majority[0] == this.id) {
                 this.proposing = false
                 this.pulse = pulse
@@ -832,14 +836,6 @@ Legislator.prototype._propagation = function (now) {
     }, this)
 }
 
-Legislator.prototype._enact = function (now, round) {
-    if (round.internal) {
-        var type = round.value.type
-        var method = '_enact' + type[0].toUpperCase() + type.slice(1)
-        this[method](now, round)
-    }
-}
-
 Legislator.prototype._enactGovernment = function (now, round) {
     this._signal('_enactGovernment', [ round ])
     delete this.election
@@ -851,7 +847,6 @@ Legislator.prototype._enactGovernment = function (now, round) {
     }
     if (!terminus.enacted) {
         terminus.enacted = true
-        this._enact(now, terminus)
     }
 
     assert(Monotonic.compare(this.government.promise, round.promise) < 0, 'governments out of order')
@@ -887,10 +882,6 @@ Legislator.prototype.naturalize = function (now, id, location) {
     assert(typeof id == 'string', 'id must be a hexidecmimal string')
     this.naturalization = now
     return this.post(now, now, { type: 'naturalize', id: id, location: location }, true)
-}
-
-Legislator.prototype._enactNaturalize = function (now, round) {
-    this.naturalizing.push(round.value)
 }
 
 Legislator.prototype._whenCollapse = function () {
