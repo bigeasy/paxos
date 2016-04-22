@@ -576,14 +576,6 @@ Legislator.prototype._receiveDecided = function (now, pulse, envelope, message) 
             }
         }
     }
-    // what was this about?
-    // var round = this.log.find({ promise: message.promise })
-    // if (message.quorum && message.quorum[0] != round.quorum[0]) {
-    //    assert(entry.decisions.length == 0, 'replace not decided')
-    //    assert(!entry.decided, 'replace not decided')
-    //    this.log.remove(entry)
-    //    entry = this._entry(message.promise, message)
-    // }
 }
 
 // This merely asserts that a message follows a certain route. Maybe I'll
