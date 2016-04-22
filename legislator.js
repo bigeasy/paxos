@@ -256,9 +256,6 @@ Legislator.prototype.newGovernment = function (now, quorum, government, remap) {
         return !~government.majority.indexOf(citizen)
             && !~government.minority.indexOf(citizen)
     })
-    if (government.naturalize) {
-        government.constituents.push(government.naturalize.id)
-    }
     var promise = government.promise = this.promise = Monotonic.increment(this.promise, 0)
     var map = []
     if (remap) {
@@ -538,11 +535,14 @@ Legislator.prototype._receiveDecided = function (now, pulse, envelope, message) 
                     // TODO Is there a race condition associated with leaving
                     // this in place? We need to break things pretty hard in a
                     // contentinous election.
-                    var round = this.naturalizing[0]
+                    var naturalization = this.naturalizing.shift()
                     this.newGovernment(now, this.government.majority, {
                         majority: this.government.majority,
                         minority: this.government.minority,
-                        naturalize: { id: round.value.id, location: round.value.location }
+                        naturalize: {
+                            id: naturalization.id,
+                            location: naturalization.location
+                        }
                     }, true)
                 } else {
                     // TODO Special pulse on government change; need to
@@ -847,17 +847,6 @@ Legislator.prototype._enactGovernment = function (now, round) {
         this._enact(now, terminus)
     }
 
-    var previous = Monotonic.toWords(terminus.promise)
-    if (round.value.government.naturalize) {
-        if (this.naturalizing.length == 0 && round.value.government.naturalize.id == this.id) {
-            this.naturalizing.unshift({ value: { id: this.id } })
-            previous = Monotonic.toWords('0/0')
-        }
-        assert(this.naturalizing.shift().value.id == round.value.government.naturalize.id)
-    }
-    previous[1] = [ 0 ]
-    this.log.find({ promise: Monotonic.toString(previous) }).nextGovernment = round
-
     assert(Monotonic.compare(this.government.promise, round.promise) < 0, 'governments out of order')
 
     // when we vote to shrink the government, the initial vote has a greater
@@ -865,6 +854,19 @@ Legislator.prototype._enactGovernment = function (now, round) {
     // TODO Deep copy.
     this.government = JSON.parse(JSON.stringify(round.value.government))
     this.locations = JSON.parse(JSON.stringify(round.value.locations))
+
+    var previous = Monotonic.toWords(terminus.promise)
+    if (round.value.government.naturalize) {
+        this.government.constituents.push(this.government.naturalize.id)
+        this.locations[this.government.naturalize.id] = this.government.naturalize.location
+        if (round.value.government.naturalize.id == this.id) {
+            previous = Monotonic.toWords('0/0')
+        }
+    }
+    previous[1] = [ 0 ]
+    this.log.find({ promise: Monotonic.toString(previous) }).nextGovernment = round
+
+
 
     if (this.id != this.government.majority[0]) {
         this.proposals.length = 0
@@ -881,8 +883,7 @@ Legislator.prototype.naturalize = function (now, id, location) {
 }
 
 Legislator.prototype._enactNaturalize = function (now, round) {
-    this.naturalizing.push(round)
-    this.locations[round.value.id] = round.value.location
+    this.naturalizing.push(round.value)
 }
 
 Legislator.prototype._whenCollapse = function () {
