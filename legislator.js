@@ -95,7 +95,11 @@ Legislator.prototype._synchronizePulse = function (id) {
 }
 Legislator.prototype.outbox = function (now) {
     var outbox = []
-    if (this.collapsed) {
+    if (this.pulse != null) {
+        outbox.push(this.pulse)
+        this.pulse = null
+    }
+    if (this.collapsed) { // and the pulse is not a government
         this.parliament.filter(function (id) {
             return id != this.id
         }.bind(this)).forEach(function (id) {
@@ -104,10 +108,6 @@ Legislator.prototype.outbox = function (now) {
             }
         }, this)
     } else {
-        if (this.pulse != null) {
-            outbox.push(this.pulse)
-            this.pulse = null
-        }
         for (var i = 0, I = this.constituency.length; i < I; i++) {
             var id = this.constituency[i]
             var peer = this.getPeer(id)
@@ -805,30 +805,18 @@ Legislator.prototype._propagation = function (now) {
     }
     assert(!this.constituency.length || this.constituency[0] != null)
     this.scheduler.clear()
-    if (~this.government.majority.indexOf(this.id)) {
-        if (this.government.majority[0] == this.id) {
-            if (
-                this.parliament.length < this.parliamentSize &&
-                this.citizens.length > this.parliament.length
-            ) {
-                this._schedule(now, {
-                    type: 'elect',
-                    id: '!',
-                    delay: this.timeout
-                })
-            }
-            this._schedule(now, {
-                type: 'ping',
-                id: this.id,
-                delay: this.ping
-            })
-        } else {
-            this._schedule(now, {
-                type: 'elect',
-                id: this.id,
-                delay: this.timeout
-            })
-        }
+    if (this.government.majority[0] == this.id) {
+        this._schedule(now, {
+            type: 'pulse',
+            id: this.id,
+            delay: this.ping
+        })
+    } else if (~this.government.majority.slice(1).indexOf(this.id)) {
+        this._schedule(now, {
+            type: 'collapse',
+            id: this.id,
+            delay: this.timeout
+        })
     }
 
     this.constituency.forEach(function (id) {
