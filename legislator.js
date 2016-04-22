@@ -93,6 +93,9 @@ Legislator.prototype._synchronizePulse = function (id) {
     }
 }
 Legislator.prototype.outbox = function (now) {
+    if (!this.collapsed) {
+        this._maybeReshape(now)
+    }
     var outbox = []
     if (this.pulse != null) {
         outbox.push(this.pulse)
@@ -531,6 +534,14 @@ Legislator.prototype._receiveDecided = function (now, pulse, envelope, message) 
             this._enact(now, round)
             if (this.government.majority[0] == this.id) {
                 this.proposing = false
+                this.pulse = pulse
+                this._stuff(now, pulse, {
+                    to: this.government.majority.slice(1),
+                    message: {
+                        type: 'decided',
+                        promise: message.promise
+                    }
+                })
                 if (this.naturalizing.length) {
                     // TODO Is there a race condition associated with leaving
                     // this in place? We need to break things pretty hard in a
@@ -549,14 +560,6 @@ Legislator.prototype._receiveDecided = function (now, pulse, envelope, message) 
                     // propagate changes to new majority members.
                     // TODO Most interesting case is a change in the shape of
                     // the government that enters the collapsed state.
-                    this._stuff(now, pulse, {
-                        to: this.government.majority.slice(1),
-                        message: {
-                            type: 'decided',
-                            promise: message.promise
-                        }
-                    })
-                    this.pulse = pulse
                     if (! this._maybeReshape(now) && this.proposals.length) {
                         this._propose(now, decided)
                     }
@@ -755,7 +758,6 @@ Legislator.prototype._receivePong = function (now, pulse, envelope, message) {
         peer.timeout = this.timeout
     }
     this._dirty = this._dirty || ponged
-    this._maybeReshape(now)
 }
 
 Legislator.prototype.emigrate = function (now, id) {
