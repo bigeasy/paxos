@@ -42,7 +42,6 @@ function Legislator (now, id, options) {
     this.ticks = {}
     this.ping = options.ping || 1
     this.timeout = options.timeout || 1
-    this.failed = {}
     this.proposing = false
 
     var round = {
@@ -256,9 +255,7 @@ Legislator.prototype.newGovernment = function (now, quorum, government, remap) {
     government.constituents = this.citizens.filter(function (citizen) {
         return !~government.majority.indexOf(citizen)
             && !~government.minority.indexOf(citizen)
-    }).filter(function (constituent) {
-        return !this.failed[constituent]
-    }.bind(this))
+    })
     if (government.naturalize) {
         government.constituents.push(government.naturalize.id)
     }
