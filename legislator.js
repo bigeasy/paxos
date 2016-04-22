@@ -142,13 +142,7 @@ Legislator.prototype.getPeer = function (id, initializer) {
 // that the caller can replay the schedule, this should probably be the default.
 Legislator.prototype._schedule = function (now, event) {
     assert(arguments.length == 2)
-    var when = now + event.delay
-    return this._actualSchedule(event.id, event, when)
-}
-
-Legislator.prototype._actualSchedule = function (key, value, when) {
-    this._signal('_actualSchedule', [ key, value, when ])
-    return this.scheduler.schedule(key, value, when)
+    return this.scheduler.schedule(event.id, event, now + event.delay)
 }
 
 Legislator.prototype._unschedule = function (id) {

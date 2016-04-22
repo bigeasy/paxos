@@ -31,8 +31,8 @@ function prove (assert) {
     ! function () {
         var legislator = new Legislator(0, '1')
 
-        legislator._actualSchedule('scheduled', { type: 'scheduled' }, 0)
-        legislator._actualSchedule('removed', { type: 'removed' }, 0)
+        legislator._schedule(0, { id: 'scheduled', type: 'scheduled', delay: 0 })
+        legislator._schedule(0, { id: 'removed', delay: 0 })
         legislator._unschedule('removed')
 
         var wasScheduled = false
