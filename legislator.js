@@ -358,6 +358,20 @@ Legislator.prototype.post = function (now, cookie, value, internal) {
         }
     }
 
+/*
+    if (internal && value.type == 'naturalize') {
+        this.naturalizing.push({ id: value.id, location: value.location })
+        return { posted: true, promise: null }
+    }
+*/
+*/
+*/
+*/
+*/
+*/
+*/
+*/
+
     var promise = this.promise = Monotonic.increment(this.promise, 1)
     this.proposals.push({
         type: 'consensus',
