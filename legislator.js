@@ -559,10 +559,7 @@ Legislator.prototype._receiveDecided = function (now, pulse, envelope, message) 
                         }
                     })
                     this.pulse = pulse
-                    if (this._maybeReshape(now)) {
-                        this._dirty = false
-                        this.newGovernment(now, reshape.quorum, reshape.government, false)
-                    } else if (this.proposals.length) {
+                    if (! this._maybeReshape(now) && this.proposals.length) {
                         this._propose(now, decided)
                     }
                 }
