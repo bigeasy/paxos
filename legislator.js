@@ -73,12 +73,10 @@ Legislator.prototype._maybeReshape = function (now) {
         if (reshape) {
             this._dirty = false
             this.newGovernment(now, reshape.quorum, reshape.government, false)
-        } /* else if (this.proposals.length) {
-            this._propose(now, decided)
-        } else {
-            this._nothing(now, decided)
-        } */
+            return true
+        }
     }
+    return false
 }
 
 Legislator.prototype.outbox = function (now) {
@@ -199,19 +197,16 @@ Legislator.prototype.sent = function (now, pulse, success) {
         case 'synchronize':
             this._schedule(now, { type: 'ping', id: pulse.route[1], delay: this.ping })
             break
-        case 'election':
         case 'consensus':
             this._schedule(now, { type: 'pulse', id: this.id, delay: this.ping })
             break
         }
     } else {
-        throw new Error
         switch (pulse.type) {
-        case 'election':
-            this._schedule(now, { type: 'elect', id: this.id, delay: this.timeout })
-            break
         case 'consensus':
-            this._unschedule(this.id)
+            if (this.collapsed) {
+                this._schedule(now, { type: 'elect', id: this.id, delay: this.timeout })
+            }
             this._elect(now, false)
             break
         case 'synchronize':
@@ -557,8 +552,7 @@ Legislator.prototype._receiveDecided = function (now, pulse, envelope, message) 
                         }
                     })
                     this.pulse = pulse
-                    var reshape = this._dirty && this._ponged()
-                    if (reshape) {
+                    if (this._maybeReshape(now)) {
                         this._dirty = false
                         this.newGovernment(now, reshape.quorum, reshape.government, false)
                     } else if (this.proposals.length) {
