@@ -322,7 +322,7 @@ Legislator.prototype.newGovernment = function (now, quorum, government, remap) {
         }
     })
     this.proposals.unshift({
-        type: 'election',
+        type: 'consensus',
         quorum: quorum,
         messages: messages
     })
