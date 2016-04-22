@@ -19,6 +19,7 @@ function Legislator (now, id, options) {
 
     this.log = new RBTree(function (a, b) { return Monotonic.compare(a.promise, b.promise) })
     this.scheduler = new Scheduler
+    this.synchronizing = {}
 
     this.proposals = []
     this.locations = {}
@@ -87,7 +88,10 @@ Legislator.prototype.outbox = function (now) {
     }
     for (var i = 0, I = this.constituency.length; i < I; i++) {
         var id = this.constituency[i]
-        if (Monotonic.compare(this.getPeer(id).enacted, this.getPeer(this.id).enacted) < 0) {
+        var peer = this.getPeer(id)
+        var behind = Monotonic.compare(this.getPeer(id).enacted, this.getPeer(this.id).enacted) < 0
+        if ((behind || peer.outdated) && !this.synchronizing[id]) {
+            this.synchronizing[id] = true
             return {
                 type: 'synchronize',
                 route: [ this.id, id ],
@@ -195,6 +199,7 @@ Legislator.prototype.sent = function (now, pulse, success) {
         }, this)
         switch (pulse.type) {
         case 'synchronize':
+            this.synchronizing[pulse.route[1]] = false
             this._schedule(now, { type: 'ping', id: pulse.route[1], delay: this.ping })
             break
         case 'consensus':
@@ -202,6 +207,7 @@ Legislator.prototype.sent = function (now, pulse, success) {
             break
         }
     } else {
+        throw new Error
         switch (pulse.type) {
         case 'consensus':
             if (this.collapsed) {
@@ -210,6 +216,7 @@ Legislator.prototype.sent = function (now, pulse, success) {
             this._elect(now, false)
             break
         case 'synchronize':
+            this.synchronizing[pulse.route[1]] = false
             if (route.retry == 0) {
                 this.failed[route.path[1]] = {}
             } else {
