@@ -1015,14 +1015,4 @@ Legislator.prototype._ponged = function () {
     }
 }
 
-Legislator.prototype.reelection = function (now, id) {
-    return this.post(now, null, { type: 'election', id: id }, true)
-}
-
-Legislator.prototype._enactElection = function (now, round) {
-    if (round.value.id == this.id) {
-        this._elect(now, false)
-    }
-}
-
 module.exports = Legislator
