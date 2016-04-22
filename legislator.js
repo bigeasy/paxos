@@ -207,21 +207,15 @@ Legislator.prototype.sent = function (now, pulse, success) {
             break
         }
     } else {
-        throw new Error
         switch (pulse.type) {
         case 'consensus':
-            if (this.collapsed) {
-                this._schedule(now, { type: 'elect', id: this.id, delay: this.timeout })
-            }
-            this._elect(now, false)
+            this.collapse()
             break
         case 'synchronize':
             this.synchronizing[pulse.route[1]] = false
-            if (route.retry == 0) {
-                this.failed[route.path[1]] = {}
-            } else {
-                this._schedule({ type: 'ping', id: route.path[1], delay: this.ping })
-            }
+            this.getPeer(pulse.route[1], { extant: true })
+            this._dirty = true
+            this._schedule(now, { type: 'ping', id: pulse.route[1], delay: this.ping })
             break
         }
     }
@@ -899,8 +893,8 @@ Legislator.prototype._enactNaturalize = function (now, round) {
     this.locations[round.value.id] = round.value.location
 }
 
-Legislator.prototype._whenElect = function () {
-    this._elect()
+Legislator.prototype._whenCollapse = function () {
+    this.collapse()
 }
 
 Legislator.prototype._elect = function () {
