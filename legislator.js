@@ -364,13 +364,6 @@ Legislator.prototype.post = function (now, cookie, value, internal) {
         return { posted: true, promise: null }
     }
 */
-*/
-*/
-*/
-*/
-*/
-*/
-*/
 
     var promise = this.promise = Monotonic.increment(this.promise, 1)
     this.proposals.push({
