@@ -496,13 +496,8 @@ Legislator.prototype._receivePropose = function (now, pulse, envelope, message) 
     } else if (~message.quorum.indexOf(this.id)) {
         console.log(max.promise, message)
         throw new Error
-        assert(typeof envelope.from == 'string')
-        assert(!Array.isArray(envelope.from))
-        this._synchronize(envelope.route, true, envelope.from, 20) // TODO outgoing
-        this._dispatch({
-            pulse: true,
-            route: envelope.route,
-            to: envelope.from,
+        this._stuff(now, pulse, {
+            to: message.quorum,
             message: {
                 type: 'rejected',
                 promise: message.promise
