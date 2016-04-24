@@ -264,9 +264,6 @@ Legislator.prototype.newGovernment = function (now, quorum, government, remap) {
     } else {
         this.proposals.length = 0
     }
-    var messages = []
-    messages.push({
-    })
     this.proposals.unshift({
         type: 'consensus',
         quorum: quorum,
@@ -370,6 +367,15 @@ Legislator.prototype.post = function (now, cookie, value, internal) {
         leader: this.government.majority[0],
         promise: promise
     }
+}
+
+Legislator.prototype._routeEqual = function (a, b) {
+    if (a.length != b.length) {
+        return false
+    }
+    return a.filter(function (value, index) {
+        return b[index] == value
+    }).length == a.length
 }
 
 Legislator.prototype._propose = function (now) {
