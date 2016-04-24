@@ -11,16 +11,13 @@ function Transmission (network, pulse) {
 Transmission.prototype.consume = function (now) {
     var index = +(this.pulse.route[this.index])
     this.pulse = JSON.parse(JSON.stringify(this.pulse))
-    if (this.direction == 'decending') {
+    if (this.direction == 'descending') {
         this.network[index].sent(now, this.pulse, this.success)
     }
-    this.network[index].consume(now, this.pulse)
+    this.network[index].consume(now, this.pulse, this.direction)
     if (this.direction == 'ascending') {
         if (this.index == this.pulse.route.length - 1) {
-            this.direction = 'decending'
-            if (index > 0) {
-                this.index--
-            }
+            this.direction = 'descending'
         } else {
             this.index++
         }
