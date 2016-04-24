@@ -65,21 +65,6 @@ Legislator.prototype._signal = function (method, vargs) {
     }
 }
 
-Legislator.prototype._maybeReshape = function (now) {
-    if (this.proposing) {
-        return false
-    }
-    if (this.ponged) {
-        var reshape = this.ponged && this._ponged()
-        if (reshape) {
-            this.ponged = false
-            this.newGovernment(now, reshape.quorum, reshape.government, false)
-            return true
-        }
-    }
-    return false
-}
-
 Legislator.prototype._synchronizePulse = function (id) {
     this.synchronizing[id] = true
     return {
@@ -109,7 +94,13 @@ Legislator.prototype.outbox = function (now) {
         // propagate changes to new majority members.
         // TODO Most interesting case is a change in the shape of
         // the government that enters the collapsed state.
-        this._maybeReshape(now)
+        if (this.ponged) {
+            var reshape = this.reshape()
+            if (reshape) {
+                this.ponged = false
+                this.newGovernment(now, reshape.quorum, reshape.government, false)
+            }
+        }
     }
     var proposal = this.proposals[0], propose = false
     var propose = this.decided == null
@@ -833,7 +824,7 @@ Legislator.prototype._exile = function () {
 }
 
 // TODO Merge all the above once it settles.
-Legislator.prototype._ponged = function () {
+Legislator.prototype.reshape = function () {
     if (this.collapsed) {
         return this._elect()
     } else if (this.government.majority[0] == this.id) {

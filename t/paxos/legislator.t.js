@@ -272,12 +272,12 @@ function prove (assert) {
     ! function () {
         var legislator = new Legislator(0, '1')
 
-        assert(legislator._ponged.call({
+        assert(legislator.reshape.call({
             collapsed: true,
             _elect: function () { return 0xaaaaaaaa }
         }), 0xaaaaaaaa, 'ponged collapsed')
 
-        assert(legislator._ponged.call({
+        assert(legislator.reshape.call({
             collapsed: false,
             id: '0',
             government: {
@@ -288,7 +288,7 @@ function prove (assert) {
             _expand: function () { return 0xaaaaaaaa }
         }), 0xaaaaaaaa, 'ponged not collapsed')
 
-        assert(legislator._ponged.call({
+        assert(legislator.reshape.call({
             collapsed: false,
             id: '0',
             government: {
