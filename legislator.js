@@ -73,6 +73,7 @@ Legislator.prototype._synchronizePulse = function (id) {
         messages: [{ type: 'sent' }, { type: 'synchronize', to: id, count: 20 }]
     }
 }
+
 Legislator.prototype.outbox = function (now) {
     this._signal('outbox', [ now ])
     // TODO Terrible. Reset naturalizing on collapse.
