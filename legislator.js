@@ -384,7 +384,7 @@ Legislator.prototype._propose = function (now) {
                 messages: []
             }
         }
-        this.pulse.messages.push.apply(this.pulse.messages, proposal.messages)
+        push.apply(this.pulse.messages, proposal.messages)
     }
 }
 
