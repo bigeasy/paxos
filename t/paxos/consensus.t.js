@@ -63,7 +63,7 @@ function prove (assert) {
         minority: [ '2' ],
         constituents: [],
         promise: '4/0'
-    }, 'three member parliament (broken)')
+    }, 'three member parliament')
     return
     var post
 
