@@ -66,13 +66,45 @@ Legislator.prototype._signal = function (method, vargs) {
 }
 
 Legislator.prototype._synchronizePulse = function (now, id) {
+    var count = 20
     this.synchronizing[id] = true
     var pulse = {
         type: 'synchronize',
         route: [ id ],
         messages: []
     }
-    this._receiveSynchronize(now, pulse, { to: id, count: 20 })
+    var peer = this.getPeer(id), maximum = peer.enacted
+    if (peer.extant) {
+        var round
+        if (peer.enacted == '0/0') {
+            round = this.log.min()
+            assert(Monotonic.compareIndex(round.promise, '0/0', 1) == 0, 'minimum not a government')
+            for (;;) {
+                var naturalize = round.value.government.naturalize
+                if (naturalize && naturalize.id == id) {
+                    maximum = round.promise
+                    break
+                }
+                round = round.nextGovernment
+                assert(round, 'cannot find naturalization')
+            }
+        } else {
+            round = this.log.find({ promise: maximum }).next
+        }
+
+        while (--count && round) {
+            pulse.messages.push({
+                type: 'enact',
+                promise: round.promise,
+                cookie: round.cookie,
+                internal: round.internal,
+                value: round.value
+            })
+            round = round.next
+        }
+    }
+
+    pulse.messages.push(this._ping(now))
     return pulse
 }
 
@@ -491,65 +523,6 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
     }
 
     this.getPeer(this.id).enacted = message.promise
-}
-
-// This is a message because it rides the pulse. When a new government is
-// created, the new leader adds `"synchronize"` messages to the `"prepare"`
-// messages. It is opportune to have the leader signal that the new majority
-// needs to synchronize amongst themselves and have that knowledge ride the
-// initial pulse that runs a full round of Paxos.
-//
-// This is is noteworthy because you've come back to this code, looked at how
-// the message is used to synchronize constituents and thought that it was a
-// waste to tigger these actions through dispatch. You then look at how the
-// messages are sent during the pulse and wonder why those messages can't simply
-// be added by a function call, but the pulse is telling all the members of the
-// majority to synchronize among themselves.
-//
-// However, it is always going to be the case that when we are reelecting we're
-// going to synchronize from the new leader. The new leader is going to be a
-// member of the previous majority. They are going to have the latest
-// information. And, actually, we can always check when we see a route if the
-// members on that route are at the same level of uniformity as us.
-
-// TODO Allow messages to land prior to being primed. No! Assert that this never
-// happens.
-Legislator.prototype._receiveSynchronize = function (now, pulse, message) {
-    var peer = this.getPeer(message.to), maximum = peer.enacted
-    if (peer.extant) {
-        var round
-        if (peer.enacted == '0/0') {
-            round = this.log.min()
-            assert(Monotonic.compareIndex(round.promise, '0/0', 1) == 0, 'minimum not a government')
-            for (;;) {
-                var naturalize = round.value.government.naturalize
-                if (naturalize && naturalize.id == message.to) {
-                    maximum = round.promise
-                    break
-                }
-                round = round.nextGovernment
-                assert(round, 'cannot find naturalization')
-            }
-        } else {
-            round = this.log.find({ promise: maximum }).next
-        }
-
-        var count = message.count
-        assert(count, 'zero count to synchronize')
-
-        while (--count && round) {
-            pulse.messages.push({
-                type: 'enact',
-                promise: round.promise,
-                cookie: round.cookie,
-                internal: round.internal,
-                value: round.value
-            })
-            round = round.next
-        }
-    }
-
-    pulse.messages.push(this._ping(now))
 }
 
 Legislator.prototype._ping = function (now) {
