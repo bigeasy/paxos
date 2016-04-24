@@ -139,7 +139,6 @@ Legislator.prototype.synchronize = function (now) {
         var id = this.constituency[i]
         var peer = this.getPeer(id)
         var compare = Monotonic.compare(this.getPeer(id).enacted, this.getPeer(this.id).enacted)
-        console.log('---', peer, compare, this.synchronizing[id])
         if (compare < 0 && !this.synchronizing[id]) {
             outbox.push(this._synchronizePulse(now, id))
         }
@@ -209,11 +208,9 @@ Legislator.prototype.sent = function (now, pulse, responses) {
         if (responses[id] == null) {
             success = false
         } else {
-            console.log(responses)
             this.receive(now, pulse, responses[id])
         }
     }, this)
-    console.log('-xxxx foo', pulse.type)
     if (success) {
         switch (pulse.type) {
         case 'synchronize':
@@ -584,7 +581,6 @@ Legislator.prototype._whenPing = function (event) {
 }
 
 Legislator.prototype._receivePing = function (now, pulse, message, responses) {
-    console.log('foo', message)
     var peer = this.getPeer(message.from), ponged = false
     if (peer.extant) {
         if (peer.timeout) {
