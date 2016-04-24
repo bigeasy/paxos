@@ -419,27 +419,6 @@ Legislator.prototype._receivePropose = function (now, pulse, direction, message)
     var compare = 0 // Monotonic.compareIndex(max.promise, message.promise, 0)
     if (!round && compare <= 0) {
         accepted = true
-        if (compare < 0) {
-            // select the last decided entry in the log
-            var decided = max.decided ? max : iterator.prev()
-            var terminus = message.value.terminus
-            // the terminus must be in the previous government
-            accepted = Monotonic.compareIndex(terminus.promise, decided.promise, 0) == 0
-            // TODO There needs to be a message that says that a new citizen is
-            // a member of society, that they are receiving messages.
-            if (!accepted) {
-                accepted = this.log.size == 1
-                accepted = accepted && this.log.min().promise == '0/0'
-                accepted = accepted && message.value.government.naturalize
-                accepted = accepted && message.value.government.naturalize.id == this.id
-            }
-            if (accepted) {
-                // remove the top of the log if it is undecided, we're replacing it.
-                if (!max.decided) {
-                    this.log.remove(max)
-                }
-            }
-        }
     }
     if (accepted) {
         this.decided = JSON.parse(JSON.stringify(message))
@@ -484,7 +463,41 @@ Legislator.prototype._receiveEnact = function (now, pulse, direction, message) {
         return
     }
 
+    // TODO So many assertions.
+    if (this.decided) {
+        this.decided = null
+    }
+
     message = JSON.parse(JSON.stringify(message))
+
+    var max = this.log.max()
+
+    var valid = Monotonic.compare(max.promise, message.promise) < 0
+
+    if (!valid) {
+        return
+    }
+
+    if (Monotonic.isBoundary(message.promise, 0)) {
+        var terminus = message.value.terminus
+        valid = Monotonic.compareIndex(terminus.promise, max.promise, 0) == 0
+        if (valid) {
+            this._receiveEnact(now, pulse, direction, terminus)
+            max = this.log.max()
+            assert(Monotonic.compare(max.promise, terminus.promise) == 0)
+        } else {
+            valid = this.log.size == 1
+            valid = valid && this.log.min().promise == '0/0'
+            valid = valid && message.value.government.naturalize
+            valid = valid && message.value.government.naturalize.id == this.id
+            if (!valid) {
+                return
+            }
+        }
+    } else {
+        throw new Error
+    }
+
     this.log.max().next = message
     this.log.insert(message)
 
