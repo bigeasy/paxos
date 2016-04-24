@@ -583,41 +583,6 @@ Legislator.prototype._ping = function (now) {
     }
 }
 
-Legislator.prototype._replicate = function (now, pulse, to, round) {
-    this._stuff(now, pulse, {
-        from: round.quorum,
-        to: [ to ],
-        message: {
-            type: 'propose',
-            promise: round.promise,
-            quorum: round.quorum,
-            acceptances: [],
-            decisions: [],
-            cookie: round.cookie,
-            internal: round.internal,
-            value: round.value
-        }
-    })
-    this._stuff(now, pulse, {
-        from: round.quorum,
-        to: [ to ],
-        message: {
-            type: 'accepted',
-            promise: round.promise,
-            quorum: round.quorum
-        }
-    })
-    this._stuff(now, pulse, {
-        from: round.quorum,
-        to: [ to ],
-        message: {
-            type: 'decided',
-            promise: round.promise,
-            quorum: round.quorum
-        }
-    })
-}
-
 Legislator.prototype._whenPulse = function (now, event) {
     if (this.government.majority[0] == this.id) {
         this._nothing(now, [])
@@ -654,39 +619,6 @@ Legislator.prototype._receivePing = function (now, pulse, direction, message) {
     peer.decided = message.decided
     pulse.messages.push(this._ping(now))
     this.ponged = this.ponged || ponged
-}
-
-// TODO Include failues in a pong and they will always return to the leader.
-// TODO Redo an election, or government immediately, if the only reason it was
-// rejected was because it was out of sync.
-// TODO What was the gap that made it impossible?
-Legislator.prototype._receivePong = function (now, pulse, envelope, message) {
-    var peer = this.getPeer(envelope.from, {
-        now: now,
-        enacted: message.enacted,
-        decided: message.decided
-    }), ponged = false
-    // TODO Assert you've not pinged a timed out peer.
-    peer.extant = true
-    peer.timeout = 0
-    var impossible = message.enacted != '0/0' && Monotonic.compare(this.log.min().promise, message.enacted) > 0
-    if (impossible) {
-        peer.timeout = this.timeout
-    }
-    this._dirty = this._dirty || ponged
-}
-
-Legislator.prototype.emigrate = function (now, id) {
-    this._signal('emigrate', [ now, id ])
-    assert(this._Date.now() == now, 'now is wrong')
-    this._dispatch({
-        from: id,
-        to: this.id,
-        message: {
-            type: 'failed',
-            value: {}
-        }
-    })
 }
 
 Legislator.prototype._propagation = function (now) {
