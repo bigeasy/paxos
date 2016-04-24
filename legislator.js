@@ -85,10 +85,11 @@ Legislator.prototype._synchronizePulse = function (id) {
     return {
         type: 'synchronize',
         route: [ this.id, id ],
-        messages: [{ type: 'synchronize', to: id, count: 20 }]
+        messages: [{ type: 'sent' }, { type: 'synchronize', to: id, count: 20 }]
     }
 }
 Legislator.prototype.outbox = function (now) {
+    this._signal('outbox', [ now ])
     // TODO Terrible. Reset naturalizing on collapse.
     if (this.naturalizing.length && this.government.majority[0] == this.id) {
         // TODO Is there a race condition associated with leaving
@@ -108,29 +109,44 @@ Legislator.prototype.outbox = function (now) {
         // propagate changes to new majority members.
         // TODO Most interesting case is a change in the shape of
         // the government that enters the collapsed state.
-        if (! this._maybeReshape(now) && this.proposals.length && !this.proposing) {
-            this._propose(now, decided)
+        this._maybeReshape(now)
+    }
+    var proposal = this.proposals[0], propose = false
+    var propose = this.decided == null
+    if (this.decided != null) {
+        var commit = {
+            type: 'commit',
+            promise: this.decided.promise
+        }
+        if (proposal == null || !this._routeEqual(proposal.quorum, this.government.majority)) {
+            this.proposals.unshift({
+                type: 'consensus',
+                route: this.decided.route,
+                messages: [ commit ]
+            })
+        } else {
+            proposal.messages.unshift(commit)
         }
     }
+    proposal = this.proposals.shift()
     var outbox = []
-    if (this.pulse != null) {
-        outbox.push(this.pulse)
-        this.pulse = null
-    }
-    if (this.collapsed) { // and the pulse is not a government
+    if (proposal) {
+        proposal.messages.unshift({ type: 'sent' })
+        outbox.push(proposal)
+    /* if (this.collapsed) { // and the pulse is not a government
         this.parliament.filter(function (id) {
             return id != this.id
         }.bind(this)).forEach(function (id) {
             if (!this.synchronizing[id]) {
                 outbox.push(this._synchronizePulse(id))
             }
-        }, this)
+        }, this) */
     } else {
         for (var i = 0, I = this.constituency.length; i < I; i++) {
             var id = this.constituency[i]
             var peer = this.getPeer(id)
             var compare = Monotonic.compare(this.getPeer(id).enacted, this.getPeer(this.id).enacted)
-            if ((compare < 0 || peer.outdated) && !this.synchronizing[id]) {
+            if (compare < 0 && !this.synchronizing[id]) {
                 outbox.push(this._synchronizePulse(id))
             }
         }
@@ -191,32 +207,44 @@ Legislator.prototype.consume = function (now, pulse, direction) {
     }
 }
 
-Legislator.prototype.sent = function (now, pulse, success) {
+Legislator.prototype._receiveSent = function (now, pulse, direction, message) {
     this._signal('sent', [ pulse ])
-    if (success) {
-        pulse.route.slice(1).forEach(function (id) {
-            this.getPeer(id, { timeout: 0, now: now })
-        }, this)
-        switch (pulse.type) {
-        case 'synchronize':
-            this.synchronizing[pulse.route[1]] = false
-            this._schedule(now, { type: 'ping', id: pulse.route[1], delay: this.ping })
-            break
-        case 'consensus':
-            this._schedule(now, { type: 'pulse', id: this.id, delay: this.ping })
-            break
+    if (direction == 'ascending') {
+        if (this.locked) {
+            pulse.failed = true
+            return
         }
+        this.locked = true
     } else {
-        switch (pulse.type) {
-        case 'consensus':
-            this.collapse()
-            break
-        case 'synchronize':
-            this.synchronizing[pulse.route[1]] = false
-            this.getPeer(pulse.route[1], { extant: true })
-            this._dirty = true
-            this._schedule(now, { type: 'ping', id: pulse.route[1], delay: this.ping })
-            break
+        assert(direction == 'descending')
+        this.locked = false
+        if (this.id == pulse.route[0]) {
+            if (pulse.failed) {
+                switch (pulse.type) {
+                case 'consensus':
+                    this.collapse()
+                    break
+                case 'synchronize':
+                    this.synchronizing[pulse.route[1]] = false
+                    this.getPeer(pulse.route[1], { extant: true })
+                    this._dirty = true
+                    this._schedule(now, { type: 'ping', id: pulse.route[1], delay: this.ping })
+                    break
+                }
+            } else {
+                pulse.route.slice(1).forEach(function (id) {
+                    this.getPeer(id, { timeout: 0, now: now })
+                }, this)
+                switch (pulse.type) {
+                case 'synchronize':
+                    this.synchronizing[pulse.route[1]] = false
+                    this._schedule(now, { type: 'ping', id: pulse.route[1], delay: this.ping })
+                    break
+                case 'consensus':
+                    this._schedule(now, { type: 'pulse', id: this.id, delay: this.ping })
+                    break
+                }
+            }
         }
     }
 }
@@ -266,10 +294,11 @@ Legislator.prototype.newGovernment = function (now, quorum, government, remap) {
     }
     this.proposals.unshift({
         type: 'consensus',
-        quorum: quorum,
+        route: quorum,
         messages: [{
             type: 'propose',
             promise: promise,
+            route: quorum,
             cookie: null,
             internal: true,
             value: {
@@ -282,9 +311,6 @@ Legislator.prototype.newGovernment = function (now, quorum, government, remap) {
             }
         }]
     })
-    if (!this.proposing) {
-        this._propose(now)
-    }
 }
 
 // TODO We might get something enqueued and not know it. There are two ways to
@@ -346,7 +372,7 @@ Legislator.prototype.post = function (now, cookie, value, internal) {
     var promise = this.promise = Monotonic.increment(this.promise, 1)
     this.proposals.push({
         type: 'consensus',
-        quorum: this.government.majority,
+        route: this.government.majority,
         messages: [{
             to: this.government.majority,
             message: {
@@ -379,19 +405,6 @@ Legislator.prototype._routeEqual = function (a, b) {
 }
 
 Legislator.prototype._propose = function (now) {
-    this._signal('_propose', [])
-    assert(!this.proposing, 'already proposing')
-    var proposal = this.proposals.shift()
-    if (proposal) {
-        if (this.pulse == null) {
-            this.pulse = {
-                type: 'consensus',
-                route: proposal.quorum,
-                messages: []
-            }
-        }
-        push.apply(this.pulse.messages, proposal.messages)
-    }
 }
 
 // The accepted message must go out on the pulse, we cannot put it in the
@@ -442,18 +455,6 @@ Legislator.prototype._receivePropose = function (now, pulse, direction, message)
     }
     if (accepted) {
         this.decided = JSON.parse(JSON.stringify(message))
-        if (pulse.route[0] == this.id) {
-            var pulse = {
-                type: 'consensus',
-                route: pulse.route,
-                messages: []
-            }
-            pulse.messages.push({
-                type: 'commit',
-                promise: message.promise
-            })
-            this.pulse = pulse
-        }
     } else if (~message.quorum.indexOf(this.id)) {
         throw new Error
         this._stuff(now, pulse, {

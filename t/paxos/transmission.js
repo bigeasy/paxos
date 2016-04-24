@@ -11,9 +11,6 @@ function Transmission (network, pulse) {
 Transmission.prototype.consume = function (now) {
     var index = +(this.pulse.route[this.index])
     this.pulse = JSON.parse(JSON.stringify(this.pulse))
-    if (this.direction == 'descending') {
-        this.network[index].sent(now, this.pulse, this.success)
-    }
     this.network[index].consume(now, this.pulse, this.direction)
     if (this.direction == 'ascending') {
         if (this.index == this.pulse.route.length - 1) {
