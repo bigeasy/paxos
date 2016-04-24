@@ -419,7 +419,6 @@ Legislator.prototype._propose = function (now) {
 
 Legislator.prototype._receivePropose = function (now, pulse, direction, message) {
     // fetch an interator to inspect the last two entries in the log
-
     if (direction == 'ascending') {
         return
     }
@@ -505,16 +504,6 @@ Legislator.prototype._receiveEnact = function (now, pulse, direction, message) {
     }
 
     this.getPeer(this.id).enacted = message.promise
-}
-
-// This merely asserts that a message follows a certain route. Maybe I'll
-// rename it to "route", but "nothing" is good enough.
-Legislator.prototype.__nothing = function (now, messages) {
-    this._signal('_nothing', [ now, messages ])
-    this._dispatch(now, 'consensus', this.government.majority, messages.concat({
-        to: this.government.majority.slice(1),
-        message: this._ping(now)
-    }))
 }
 
 // This is a message because it rides the pulse. When a new government is
