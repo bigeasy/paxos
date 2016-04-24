@@ -404,9 +404,6 @@ Legislator.prototype._routeEqual = function (a, b) {
     }).length == a.length
 }
 
-Legislator.prototype._propose = function (now) {
-}
-
 // The accepted message must go out on the pulse, we cannot put it in the
 // unrouted list and then count on it to get drawn into a pulse, because the
 // leader needs to know if the message failed. The only way the leader will know
