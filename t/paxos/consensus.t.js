@@ -2,7 +2,6 @@ require('proof')(6, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
-        network = require('./transmission'),
         signal = require('signal')
 
     signal.subscribe('.bigeasy.paxos.invoke'.split('.'), function (id, method, vargs) {
@@ -31,7 +30,37 @@ function prove (assert) {
     var legislators = [ new Legislator(time, '0', options) ]
     legislators[0].bootstrap(time, '0')
 
-    network.tick(time, legislators)
+    function tick () {
+        var ticked = true
+        while (ticked) {
+            ticked = false
+            legislators.forEach(function (legislator) {
+                var sent = true
+                while (sent) {
+                    sent = false
+                    var outbox = legislator.synchronize(time)
+                    if (outbox.length == 0) {
+                        var consensus = legislator.consensus()
+                        if (consensus) {
+                            outbox = [ consensus ]
+                        }
+                    }
+                    while (outbox.length != 0) {
+                        sent = true
+                        var send = outbox.shift(), responses = {}
+                        send.route.forEach(function (id) {
+                            var legislator = legislators[id]
+                            responses[id] = legislator.receive(time, send, send.messages)
+                        })
+                        legislator.sent(time, send, responses)
+                    }
+                }
+                ticked = ticked || sent
+            })
+        }
+    }
+
+    tick()
 
     assert(legislators[0].government, {
         majority: [ '0' ],
@@ -43,7 +72,7 @@ function prove (assert) {
     legislators.push(new Legislator(time, '1', options))
 
     assert(legislators[0].naturalize(time, '1', '1').posted, 'naturalize')
-    network.tick(time, legislators)
+    tick()
 
     assert(legislators[0].government, {
         majority: [ '0' ],
@@ -57,7 +86,9 @@ function prove (assert) {
 
     legislators.push(new Legislator(0, '2', options))
     legislators[0].naturalize(time, '2', '2')
-    network.tick(time, legislators)
+
+    tick()
+
     assert(legislators[0].government, {
         majority: [ '0', '1' ],
         minority: [ '2' ],

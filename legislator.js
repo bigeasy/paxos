@@ -65,16 +65,18 @@ Legislator.prototype._signal = function (method, vargs) {
     }
 }
 
-Legislator.prototype._synchronizePulse = function (id) {
+Legislator.prototype._synchronizePulse = function (now, id) {
     this.synchronizing[id] = true
-    return {
+    var pulse = {
         type: 'synchronize',
-        route: [ this.id, id ],
-        messages: [{ type: 'sent' }, { type: 'synchronize', to: id, count: 20 }]
+        route: [ id ],
+        messages: []
     }
+    this._receiveSynchronize(now, pulse, { to: id, count: 20 })
+    return pulse
 }
 
-Legislator.prototype.outbox = function (now) {
+Legislator.prototype.consensus = function (now) {
     this._signal('outbox', [ now ])
     // TODO Terrible. Reset naturalizing on collapse.
     if (this.naturalizing.length && this.government.majority[0] == this.id) {
@@ -120,11 +122,7 @@ Legislator.prototype.outbox = function (now) {
             proposal.messages.unshift(commit)
         }
     }
-    proposal = this.proposals.shift()
-    var outbox = []
-    if (proposal) {
-        proposal.messages.unshift({ type: 'sent' })
-        outbox.push(proposal)
+    return this.proposals.shift()
     /* if (this.collapsed) { // and the pulse is not a government
         this.parliament.filter(function (id) {
             return id != this.id
@@ -133,14 +131,17 @@ Legislator.prototype.outbox = function (now) {
                 outbox.push(this._synchronizePulse(id))
             }
         }, this) */
-    } else {
-        for (var i = 0, I = this.constituency.length; i < I; i++) {
-            var id = this.constituency[i]
-            var peer = this.getPeer(id)
-            var compare = Monotonic.compare(this.getPeer(id).enacted, this.getPeer(this.id).enacted)
-            if (compare < 0 && !this.synchronizing[id]) {
-                outbox.push(this._synchronizePulse(id))
-            }
+}
+
+Legislator.prototype.synchronize = function (now) {
+    var outbox = []
+    for (var i = 0, I = this.constituency.length; i < I; i++) {
+        var id = this.constituency[i]
+        var peer = this.getPeer(id)
+        var compare = Monotonic.compare(this.getPeer(id).enacted, this.getPeer(this.id).enacted)
+        console.log('---', peer, compare, this.synchronizing[id])
+        if (compare < 0 && !this.synchronizing[id]) {
+            outbox.push(this._synchronizePulse(now, id))
         }
     }
     return outbox
@@ -188,55 +189,52 @@ Legislator.prototype.checkSchedule = function (now) {
     return happened
 }
 
-Legislator.prototype.consume = function (now, pulse, direction) {
+Legislator.prototype.receive = function (now, pulse, messages) {
     assert(arguments.length == 3 && now != null)
-    this._signal('_consume', [ now, pulse ])
-    for (var i = 0, I = pulse.messages.length; i < I; i++) {
-        var message = pulse.messages[i]
+    this._signal('_receive', [ now, pulse ])
+    var responses = []
+    for (var i = 0, I = messages.length; i < I; i++) {
+        var message = messages[i]
         var type = message.type
         var method = '_receive' + type[0].toUpperCase() + type.substring(1)
-        this[method].call(this, now, pulse, direction, message)
+        this[method].call(this, now, pulse, message, responses)
     }
+    return responses
 }
 
-Legislator.prototype._receiveSent = function (now, pulse, direction, message) {
+Legislator.prototype.sent = function (now, pulse, responses) {
     this._signal('sent', [ pulse ])
-    if (direction == 'ascending') {
-        if (this.locked) {
-            pulse.failed = true
-            return
+    var success = true
+    pulse.route.forEach(function (id) {
+        if (responses[id] == null) {
+            success = false
+        } else {
+            console.log(responses)
+            this.receive(now, pulse, responses[id])
         }
-        this.locked = true
+    }, this)
+    console.log('-xxxx foo', pulse.type)
+    if (success) {
+        switch (pulse.type) {
+        case 'synchronize':
+            delete this.synchronizing[pulse.route[0]]
+            this._schedule(now, { type: 'ping', id: pulse.route[1], delay: this.ping })
+            break
+        case 'consensus':
+            this._schedule(now, { type: 'pulse', id: this.id, delay: this.ping })
+            break
+        }
     } else {
-        assert(direction == 'descending')
-        this.locked = false
-        if (this.id == pulse.route[0]) {
-            if (pulse.failed) {
-                switch (pulse.type) {
-                case 'consensus':
-                    this.collapse()
-                    break
-                case 'synchronize':
-                    this.synchronizing[pulse.route[1]] = false
-                    this.getPeer(pulse.route[1], { extant: true })
-                    this._dirty = true
-                    this._schedule(now, { type: 'ping', id: pulse.route[1], delay: this.ping })
-                    break
-                }
-            } else {
-                pulse.route.slice(1).forEach(function (id) {
-                    this.getPeer(id, { timeout: 0, now: now })
-                }, this)
-                switch (pulse.type) {
-                case 'synchronize':
-                    this.synchronizing[pulse.route[1]] = false
-                    this._schedule(now, { type: 'ping', id: pulse.route[1], delay: this.ping })
-                    break
-                case 'consensus':
-                    this._schedule(now, { type: 'pulse', id: this.id, delay: this.ping })
-                    break
-                }
-            }
+        switch (pulse.type) {
+        case 'consensus':
+            this.collapse()
+            break
+        case 'synchronize':
+            delete this.synchronizing[pulse.route[0]]
+            this.getPeer(pulse.route[1], { extant: true })
+            this._dirty = true
+            this._schedule(now, { type: 'ping', id: pulse.route[1], delay: this.ping })
+            break
         }
     }
 }
@@ -406,13 +404,7 @@ Legislator.prototype._routeEqual = function (a, b) {
 // should only go out when that route is pulsed. If the network calls fail, the
 // leader will be able to learn immediately.
 
-Legislator.prototype._receivePropose = function (now, pulse, direction, message) {
-    // fetch an interator to inspect the last two entries in the log
-    if (direction == 'ascending') {
-        return
-    }
-    assert(direction == 'descending')
-
+Legislator.prototype._receivePropose = function (now, pulse, message) {
     // TODO Clear out decisions and whatnot.
     var accepted = false
     var round = this.decided
@@ -443,11 +435,8 @@ Legislator.prototype._receiveRejected = function (envelope, message) {
     entry.rejects.push(envelope.from)
 }
 
-Legislator.prototype._receiveCommit = function (now, pulse, direction, message) {
-    this._signal('_receiveCommit', [ now, pulse, direction, message ])
-    if (direction == 'descending') {
-        return
-    }
+Legislator.prototype._receiveCommit = function (now, pulse, message) {
+    this._signal('_receiveCommit', [ now, pulse, message ])
 
     var round = this.decided
     this.decided = null
@@ -455,13 +444,12 @@ Legislator.prototype._receiveCommit = function (now, pulse, direction, message) 
     if (Monotonic.compare(round.promise, message.promise) != 0) {
         throw new Error
     }
-    this._receiveEnact(now, pulse, 'ascending', round)
+
+    this._receiveEnact(now, pulse, round)
 }
 
-Legislator.prototype._receiveEnact = function (now, pulse, direction, message) {
-    if (direction == 'descending') {
-        return
-    }
+Legislator.prototype._receiveEnact = function (now, pulse, message) {
+    this._signal('_receiveEnact', [ now, pulse, message ])
 
     // TODO So many assertions.
     if (this.decided) {
@@ -482,7 +470,7 @@ Legislator.prototype._receiveEnact = function (now, pulse, direction, message) {
         var terminus = message.value.terminus
         valid = Monotonic.compareIndex(terminus.promise, max.promise, 0) == 0
         if (valid) {
-            this._receiveEnact(now, pulse, direction, terminus)
+            this._receiveEnact(now, pulse, terminus)
             max = this.log.max()
             assert(Monotonic.compare(max.promise, terminus.promise) == 0)
         } else {
@@ -529,11 +517,7 @@ Legislator.prototype._receiveEnact = function (now, pulse, direction, message) {
 
 // TODO Allow messages to land prior to being primed. No! Assert that this never
 // happens.
-Legislator.prototype._receiveSynchronize = function (now, pulse, direction, message) {
-    if (direction == 'descending' || this.id != pulse.route[0]) {
-        return
-    }
-
+Legislator.prototype._receiveSynchronize = function (now, pulse, message) {
     var peer = this.getPeer(message.to), maximum = peer.enacted
     if (peer.extant) {
         var round
@@ -572,6 +556,7 @@ Legislator.prototype._receiveSynchronize = function (now, pulse, direction, mess
 }
 
 Legislator.prototype._ping = function (now) {
+    assert(now != null)
     return {
         type: 'ping',
         when: now,
@@ -598,10 +583,8 @@ Legislator.prototype._whenPing = function (event) {
     }
 }
 
-Legislator.prototype._receivePing = function (now, pulse, direction, message) {
-    if (direction == 'ascending' || message.from == this.id) {
-        return
-    }
+Legislator.prototype._receivePing = function (now, pulse, message, responses) {
+    console.log('foo', message)
     var peer = this.getPeer(message.from), ponged = false
     if (peer.extant) {
         if (peer.timeout) {
@@ -615,7 +598,7 @@ Legislator.prototype._receivePing = function (now, pulse, direction, message) {
     peer.when = now
     peer.enacted = message.enacted
     peer.decided = message.decided
-    pulse.messages.push(this._ping(now))
+    responses.push(this._ping(now))
     this.ponged = this.ponged || ponged
 }
 
