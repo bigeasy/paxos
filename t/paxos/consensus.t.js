@@ -64,6 +64,11 @@ function prove (assert) {
         constituents: [],
         promise: '4/0'
     }, 'three member parliament')
+
+
+    legislators[0]._whenCollapse()
+    legislators[1]._whenCollapse()
+
     return
     var post
 

@@ -245,7 +245,7 @@ Legislator.prototype.collapse = function () {
     this.collapsed = true
     for (var id in this._peers) {
         if (id != this.id) {
-            delete this._peers[key]
+            delete this._peers[id]
         }
     }
 }
