@@ -65,6 +65,46 @@ Legislator.prototype._signal = function (method, vargs) {
     }
 }
 
+Legislator.prototype._schedule = function (now, event) {
+    assert(arguments.length == 2)
+    return this.scheduler.schedule(event.id, event, now + event.delay)
+}
+
+Legislator.prototype._unschedule = function (id) {
+    this._signal('_unschedule', [ id ])
+    this.scheduler.unschedule(id)
+}
+
+Legislator.prototype.checkSchedule = function (now) {
+    this._signal('checkSchedule', [ now ])
+    var happened = false
+    this.scheduler.check(now).forEach(function (event) {
+        happened = true
+        var type = event.type
+        var method = '_when' + type[0].toUpperCase() + type.substring(1)
+        this[method](event)
+    }, this)
+    return happened
+}
+
+Legislator.prototype.getPeer = function (id, initializer) {
+    var peer = this._peers[id]
+    if (peer == null) {
+        peer = this._peers[id] = {
+            extant: false,
+            timeout: 1,
+            when: 0,
+            decided: '0/0',
+            enacted: '0/0'
+        }
+    }
+    initializer || (initializer = {})
+    for (var key in initializer) {
+        peer[key] = initializer[key]
+    }
+    return peer
+}
+
 Legislator.prototype.consensus = function (now) {
     this._signal('outbox', [ now ])
     // TODO Terrible. Reset naturalizing on collapse.
@@ -198,46 +238,6 @@ Legislator.prototype.synchronize = function (now) {
         }
     }
     return outbox
-}
-
-Legislator.prototype.getPeer = function (id, initializer) {
-    var peer = this._peers[id]
-    if (peer == null) {
-        peer = this._peers[id] = {
-            extant: false,
-            timeout: 1,
-            when: 0,
-            decided: '0/0',
-            enacted: '0/0'
-        }
-    }
-    initializer || (initializer = {})
-    for (var key in initializer) {
-        peer[key] = initializer[key]
-    }
-    return peer
-}
-
-Legislator.prototype._schedule = function (now, event) {
-    assert(arguments.length == 2)
-    return this.scheduler.schedule(event.id, event, now + event.delay)
-}
-
-Legislator.prototype._unschedule = function (id) {
-    this._signal('_unschedule', [ id ])
-    this.scheduler.unschedule(id)
-}
-
-Legislator.prototype.checkSchedule = function (now) {
-    this._signal('checkSchedule', [ now ])
-    var happened = false
-    this.scheduler.check(now).forEach(function (event) {
-        happened = true
-        var type = event.type
-        var method = '_when' + type[0].toUpperCase() + type.substring(1)
-        this[method](event)
-    }, this)
-    return happened
 }
 
 Legislator.prototype.receive = function (now, pulse, messages) {
