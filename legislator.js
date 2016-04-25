@@ -123,8 +123,44 @@ Legislator.prototype.consensus = function (now) {
                 id: naturalization.id,
                 location: naturalization.location
             }
-        }, true)
-    } else if (!this.collapsed) {
+        }, Monotonic.increment(this.promise, 0))
+    } else if (this.collapsed) {
+        if (this.election) {
+            if (this.election.promises.length < this.election.majority.length) {
+                return null
+            }
+            this.newGovernment(now, this.election.majority, {
+                majority: this.election.majority,
+                minority: this.election.minority
+            }, this.promise)
+        } else {
+            var election = this._elect()
+            var parliament = this.government.majority.concat(this.government.minority)
+            var unknown = { timeout: 1 }
+            var present = this.parliament.filter(function (id) {
+                return id != this.id && (this._peers[id] || unknown).timeout == 0
+            }.bind(this))
+            var majoritySize = Math.ceil(parliament.length / 2)
+            if (majoritySize < present) {
+                return null
+            }
+            var majority = [ this.id ].concat(present).slice(0, majoritySize)
+            var minority = this.parliament.filter(function (id) { return ! ~majority.indexOf(id) })
+            this.election = {
+                majority: majority,
+                minority: minority,
+                promises: []
+            }
+            return {
+                type: 'consensus',
+                route: majority,
+                messages: [{
+                    type: 'promise',
+                    promise: Monotonic.increment(this.promise, 0)
+                }]
+            }
+        }
+    } else {
         // TODO Special pulse on government change; need to
         // propagate changes to new majority members.
         // TODO Most interesting case is a change in the shape of
@@ -133,7 +169,7 @@ Legislator.prototype.consensus = function (now) {
             var reshape = this.reshape()
             if (reshape) {
                 this.ponged = false
-                this.newGovernment(now, reshape.quorum, reshape.government, false)
+                this.newGovernment(now, reshape.quorum, reshape.government, Monotonic.increment(this.promise, 0))
             }
         }
     }
@@ -144,7 +180,7 @@ Legislator.prototype.consensus = function (now) {
             type: 'commit',
             promise: this.decided.promise
         }
-        if (proposal == null || !this._routeEqual(proposal.quorum, this.government.majority)) {
+        if (proposal == null || !this._routeEqual(proposal.route, this.government.majority)) {
             this.proposals.unshift({
                 type: 'consensus',
                 route: this.decided.route,
@@ -163,7 +199,7 @@ Legislator.prototype.synchronize = function (now) {
         var id = this.constituency[i]
         var peer = this.getPeer(id)
         var compare = Monotonic.compare(this.getPeer(id).enacted, this.getPeer(this.id).enacted)
-        if (compare < 0 && !this.synchronizing[id]) {
+        if ((peer.timeout != 0 || compare < 0) && !this.synchronizing[id]) {
             outbox.push(this._synchronizePulse(now, id))
         }
     }
@@ -252,8 +288,15 @@ Legislator.prototype.sent = function (now, pulse, responses) {
             break
         case 'synchronize':
             delete this.synchronizing[pulse.route[0]]
-            this.getPeer(pulse.route[1], { extant: true })
-            this._dirty = true
+            var peer = this.getPeer(pulse.route[1])
+            peer.when = now
+            if (peer.extant) {
+                peer.timeout = now - peer.when
+            } else {
+                peer.extant = true
+                peer.timeout = 1
+            }
+            this.ponged = true
             this._schedule(now, { type: 'ping', id: pulse.route[1], delay: this.ping })
             break
         }
@@ -262,11 +305,15 @@ Legislator.prototype.sent = function (now, pulse, responses) {
 
 Legislator.prototype.collapse = function () {
     this.collapsed = true
+    this.proposals.length = 0
     for (var id in this._peers) {
         if (id != this.id) {
             delete this._peers[id]
         }
     }
+    this.constituency = this.parliament.filter(function (id) {
+        return this.id != id
+    }.bind(this))
 }
 
 Legislator.prototype.bootstrap = function (now, location) {
@@ -277,32 +324,24 @@ Legislator.prototype.bootstrap = function (now, location) {
     }
     this.locations[this.id] = location
     this.citizens = [ this.id ]
-    this.newGovernment(now, [ this.id ], government, false)
+    this.newGovernment(now, [ this.id ], government, '1/0')
 }
 
-Legislator.prototype.newGovernment = function (now, quorum, government, remap) {
+Legislator.prototype.newGovernment = function (now, quorum, government, promise) {
     assert(arguments.length == 4)
     // TODO Need a copy government befor sharing it in this way.
-    this._signal('newGovernment', [ quorum, government, remap ])
+    this._signal('newGovernment', [ now, quorum, government, promise ])
     assert(!government.constituents)
     government.constituents = this.citizens.filter(function (citizen) {
         return !~government.majority.indexOf(citizen)
             && !~government.minority.indexOf(citizen)
     })
-    var promise = government.promise = this.promise = Monotonic.increment(this.promise, 0)
-    var map = []
-    if (remap) {
-        this.proposals = this.proposals.splice(0, this.proposals.length).map(function (proposal) {
-            proposal.was = proposal.promise
-            proposal.promise = this.promise = Monotonic.increment(this.promise, 1)
-            return proposal
-        }.bind(this))
-        map = this.proposals.map(function (proposal) {
-            return { was: proposal.was, is: proposal.promise }
-        })
-    } else {
-        this.proposals.length = 0
-    }
+    government.promise = promise
+    this.proposals = this.proposals.splice(0, this.proposals.length).map(function (proposal) {
+        proposal.was = proposal.promise
+        proposal.promise = this.promise = Monotonic.increment(this.promise, 1)
+        return proposal
+    }.bind(this))
     this.proposals.unshift({
         type: 'consensus',
         route: quorum,
@@ -318,7 +357,9 @@ Legislator.prototype.newGovernment = function (now, quorum, government, remap) {
                 // TODO this.decided || this.log.max()
                 terminus: JSON.parse(JSON.stringify(this.log.max())),
                 locations: this.locations,
-                map: map
+                map: this.proposals.map(function (proposal) {
+                    return { was: proposal.was, is: proposal.promise }
+                })
             }
         }]
     })
@@ -415,6 +456,33 @@ Legislator.prototype._routeEqual = function (a, b) {
     }).length == a.length
 }
 
+Legislator.prototype._receivePromise = function (now, pulse, message, responses) {
+    this._signal('_receivePromise', [ now, pulse, message, responses ])
+    var compare = Monotonic.compare(message.promise, this.promise)
+    if (compare > 0) {
+        responses.push({
+            type: 'promise_',
+            from: this.id,
+            promise: this.promise = message.promise,
+            decided: this.decided
+        })
+    } else {
+        pulse.failed = true
+    }
+}
+
+Legislator.prototype._receivePromise_ = function (now, pulse, message, responses) {
+    this._signal('_receivePromise_', [ now, pulse, message, responses ])
+    assert(!~this.election.promises.indexOf(message.from), 'duplicate promise')
+    this.election.promises.push(message.from)
+    if (message.decided == null) {
+        return
+    }
+    if (Monotonic.compareIndex(this.government.terminus.promise, message.decided.promise, 0) < 0) {
+        this.government.terminus = message.decided
+    }
+}
+
 // The accepted message must go out on the pulse, we cannot put it in the
 // unrouted list and then count on it to get drawn into a pulse, because the
 // leader needs to know if the message failed. The only way the leader will know
@@ -426,34 +494,12 @@ Legislator.prototype._routeEqual = function (a, b) {
 // leader will be able to learn immediately.
 
 Legislator.prototype._receivePropose = function (now, pulse, message) {
-    // TODO Clear out decisions and whatnot.
-    var accepted = false
-    var round = this.decided
-    var compare = 0 // Monotonic.compareIndex(max.promise, message.promise, 0)
-    if (!round && compare <= 0) {
-        accepted = true
-    }
-    if (accepted) {
+    if (Monotonic.compareIndex(this.promise, message.promise, 0) <= 0) {
         this.decided = JSON.parse(JSON.stringify(message))
-    } else if (~message.quorum.indexOf(this.id)) {
-        throw new Error
-        this._stuff(now, pulse, {
-            to: message.quorum,
-            message: {
-                type: 'rejected',
-                promise: message.promise
-            }
-        })
+        this.promise = this.decided.promise
+    } else {
+        pulse.failed = true
     }
-}
-
-Legislator.prototype._receiveRejected = function (envelope, message) {
-    var entry = this._entry(message.promise, message)
-    assert(!~entry.accepts.indexOf(envelope.from))
-    assert(~entry.quorum.indexOf(this.id))
-    assert(~entry.quorum.indexOf(envelope.from))
-    entry.rejects || (entry.rejects = [])
-    entry.rejects.push(envelope.from)
 }
 
 Legislator.prototype._receiveCommit = function (now, pulse, message) {
@@ -509,6 +555,7 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
 
     this.log.max().next = message
     this.log.insert(message)
+    this.promise = message.promise
 
     if (Monotonic.isBoundary(message.promise, 0)) {
         this._enactGovernment(now, message)
@@ -620,6 +667,7 @@ Legislator.prototype._propagation = function (now) {
 Legislator.prototype._enactGovernment = function (now, round) {
     this._signal('_enactGovernment', [ round ])
     delete this.election
+    this.collapsed = false
 
     var min = this.log.min()
     var terminus = this.log.find({ promise: round.value.terminus.promise })

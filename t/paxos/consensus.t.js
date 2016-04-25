@@ -1,4 +1,4 @@
-require('proof')(6, prove)
+require('proof')(7, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -30,31 +30,37 @@ function prove (assert) {
     var legislators = [ new Legislator(time, '0', options) ]
     legislators[0].bootstrap(time, '0')
 
+    function send (legislator) {
+        var sending = true, sent = false
+        while (sending) {
+            sending = false
+            var outbox = legislator.synchronize(time)
+            if (outbox.length == 0) {
+                var consensus = legislator.consensus()
+                if (consensus) {
+                    sent = sending = true
+                    outbox = [ consensus ]
+                }
+            }
+            while (outbox.length != 0) {
+                sent = sending = true
+                var send = outbox.shift(), responses = {}
+                send.route.forEach(function (id) {
+                    var legislator = legislators[id]
+                    responses[id] = legislator.receive(time, send, send.messages)
+                })
+                legislator.sent(time, send, responses)
+            }
+        }
+        return sent
+    }
+
     function tick () {
         var ticked = true
         while (ticked) {
             ticked = false
             legislators.forEach(function (legislator) {
-                var sent = true
-                while (sent) {
-                    sent = false
-                    var outbox = legislator.synchronize(time)
-                    if (outbox.length == 0) {
-                        var consensus = legislator.consensus()
-                        if (consensus) {
-                            outbox = [ consensus ]
-                        }
-                    }
-                    while (outbox.length != 0) {
-                        sent = true
-                        var send = outbox.shift(), responses = {}
-                        send.route.forEach(function (id) {
-                            var legislator = legislators[id]
-                            responses[id] = legislator.receive(time, send, send.messages)
-                        })
-                        legislator.sent(time, send, responses)
-                    }
-                }
+                var sent = send(legislator)
                 ticked = ticked || sent
             })
         }
@@ -99,6 +105,15 @@ function prove (assert) {
 
     legislators[0]._whenCollapse()
     legislators[1]._whenCollapse()
+
+    tick()
+
+    assert(legislators[0].government, {
+        majority: [ '0', '1' ],
+        minority: [ '2' ],
+        constituents: [],
+        promise: '5/0'
+    }, 'recover from collapse')
 
     return
     var post
