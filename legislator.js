@@ -105,6 +105,43 @@ Legislator.prototype.getPeer = function (id, initializer) {
     return peer
 }
 
+Legislator.prototype.newGovernment = function (now, quorum, government, promise) {
+    assert(arguments.length == 4)
+    this._signal('newGovernment', [ now, quorum, government, promise ])
+    assert(!government.constituents)
+    government.constituents = this.citizens.filter(function (citizen) {
+        return !~government.majority.indexOf(citizen)
+            && !~government.minority.indexOf(citizen)
+    })
+    government.promise = promise
+    this.proposals = this.proposals.splice(0, this.proposals.length).map(function (proposal) {
+        proposal.was = proposal.promise
+        proposal.promise = this.promise = Monotonic.increment(this.promise, 1)
+        return proposal
+    }.bind(this))
+    this.proposals.unshift({
+        type: 'consensus',
+        route: quorum,
+        messages: [{
+            type: 'propose',
+            promise: promise,
+            route: quorum,
+            cookie: null,
+            internal: true,
+            value: {
+                type: 'government',
+                government: government,
+                // TODO this.decided || this.log.max()
+                terminus: JSON.parse(JSON.stringify(this.log.max())),
+                locations: this.locations,
+                map: this.proposals.map(function (proposal) {
+                    return { was: proposal.was, is: proposal.promise }
+                })
+            }
+        }]
+    })
+}
+
 Legislator.prototype.consensus = function (now) {
     this._signal('outbox', [ now ])
     // TODO Terrible. Reset naturalizing on collapse.
@@ -253,6 +290,19 @@ Legislator.prototype.receive = function (now, pulse, messages) {
     return responses
 }
 
+Legislator.prototype.collapse = function () {
+    this.collapsed = true
+    this.proposals.length = 0
+    for (var id in this._peers) {
+        if (id != this.id) {
+            delete this._peers[id]
+        }
+    }
+    this.constituency = this.parliament.filter(function (id) {
+        return this.id != id
+    }.bind(this))
+}
+
 Legislator.prototype.sent = function (now, pulse, responses) {
     this._signal('sent', [ pulse ])
     var success = true
@@ -295,19 +345,6 @@ Legislator.prototype.sent = function (now, pulse, responses) {
     }
 }
 
-Legislator.prototype.collapse = function () {
-    this.collapsed = true
-    this.proposals.length = 0
-    for (var id in this._peers) {
-        if (id != this.id) {
-            delete this._peers[id]
-        }
-    }
-    this.constituency = this.parliament.filter(function (id) {
-        return this.id != id
-    }.bind(this))
-}
-
 Legislator.prototype.bootstrap = function (now, location) {
     this._signal('bootstrap', [ now, location ])
     var government = {
@@ -317,43 +354,6 @@ Legislator.prototype.bootstrap = function (now, location) {
     this.locations[this.id] = location
     this.citizens = [ this.id ]
     this.newGovernment(now, [ this.id ], government, '1/0')
-}
-
-Legislator.prototype.newGovernment = function (now, quorum, government, promise) {
-    assert(arguments.length == 4)
-    this._signal('newGovernment', [ now, quorum, government, promise ])
-    assert(!government.constituents)
-    government.constituents = this.citizens.filter(function (citizen) {
-        return !~government.majority.indexOf(citizen)
-            && !~government.minority.indexOf(citizen)
-    })
-    government.promise = promise
-    this.proposals = this.proposals.splice(0, this.proposals.length).map(function (proposal) {
-        proposal.was = proposal.promise
-        proposal.promise = this.promise = Monotonic.increment(this.promise, 1)
-        return proposal
-    }.bind(this))
-    this.proposals.unshift({
-        type: 'consensus',
-        route: quorum,
-        messages: [{
-            type: 'propose',
-            promise: promise,
-            route: quorum,
-            cookie: null,
-            internal: true,
-            value: {
-                type: 'government',
-                government: government,
-                // TODO this.decided || this.log.max()
-                terminus: JSON.parse(JSON.stringify(this.log.max())),
-                locations: this.locations,
-                map: this.proposals.map(function (proposal) {
-                    return { was: proposal.was, is: proposal.promise }
-                })
-            }
-        }]
-    })
 }
 
 // Note that a client will have to treat a network failure on submission as a
@@ -406,6 +406,13 @@ Legislator.prototype.post = function (now, cookie, value, internal) {
         leader: this.government.majority[0],
         promise: promise
     }
+}
+
+Legislator.prototype.naturalize = function (now, id, location) {
+    this._signal('naturalize', [ now, id ])
+    assert(typeof id == 'string', 'id must be a hexidecmimal string')
+    this.naturalization = now
+    return this.post(now, now, { type: 'naturalize', id: id, location: location }, true)
 }
 
 Legislator.prototype._routeEqual = function (a, b) {
@@ -664,13 +671,6 @@ Legislator.prototype._enactGovernment = function (now, round) {
     }
 
     this._propagation(now)
-}
-
-Legislator.prototype.naturalize = function (now, id, location) {
-    this._signal('naturalize', [ now, id ])
-    assert(typeof id == 'string', 'id must be a hexidecmimal string')
-    this.naturalization = now
-    return this.post(now, now, { type: 'naturalize', id: id, location: location }, true)
 }
 
 Legislator.prototype._whenCollapse = function () {
