@@ -161,10 +161,6 @@ Legislator.prototype.consensus = function (now) {
             }
         }
     } else {
-        // TODO Special pulse on government change; need to
-        // propagate changes to new majority members.
-        // TODO Most interesting case is a change in the shape of
-        // the government that enters the collapsed state.
         if (this.ponged) {
             var reshape = this.reshape()
             if (reshape) {
@@ -224,8 +220,6 @@ Legislator.prototype.getPeer = function (id, initializer) {
     return peer
 }
 
-// TODO To make replayable, we need to create a scheduler that accepts a now so
-// that the caller can replay the schedule, this should probably be the default.
 Legislator.prototype._schedule = function (now, event) {
     assert(arguments.length == 2)
     return this.scheduler.schedule(event.id, event, now + event.delay)
@@ -329,7 +323,6 @@ Legislator.prototype.bootstrap = function (now, location) {
 
 Legislator.prototype.newGovernment = function (now, quorum, government, promise) {
     assert(arguments.length == 4)
-    // TODO Need a copy government befor sharing it in this way.
     this._signal('newGovernment', [ now, quorum, government, promise ])
     assert(!government.constituents)
     government.constituents = this.citizens.filter(function (citizen) {
@@ -365,38 +358,8 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
     })
 }
 
-// TODO We might get something enqueued and not know it. There are two ways to
-// deal with this; we have some mechanism that prevents the double submission of
-// a cookie, so that the client can put something into the queue, and have a
-// mechanism to say, you who's id is such and such, you're last cookie was this
-// value. You can only post the next cookie if the previous cookie is correct.
-// This cookie list can be maintained by the log.
-
-// Otherwise, it has to be no big deal to repeat something. Add a user, get a
-// 500, so add it again with a new cookie, same cookie, you sort it out when two
-// "add user" messages come back to you.
-
-// This queue, it could be maintained by the server, with the last value that
-// passed through Paxos in a look up table, a list of submissions waiting to be
-// added, so a link to the next submission in the queue. The user can know that
-// if the government jitters, they can know definitively what they need to
-// resubmit.
-
-// Or else, if they get a 500, they resubmit, resubmit, resubmit until they get
-// a 200, but the clients know not to replay duplicate cookies, that becomes
-// logic for the client queue, or in the application, user added using such and
-// such a promise, such and such a cookie, so this has already been updated.
-
-// Finally, a 500 message, it can be followed by a boundary message, basically,
-// you put in a message it may not have been enqueued, you're not told
-// definitively that it was, so you put in a boundary, noop message, and you
-// wait for it to emerge in the log, so that if it emerges without you're seeing
-// your actual message, then you then know for certain to resubmit. This fits
-// with what's currently going on, and it means that the clients can conspire to
-// build a perfect event log.
-
-// TODO: Actually, this order that you guarantee, that's not part of Paxos,
-// really.
+// Note that a client will have to treat a network failure on submission as a
+// failure requiring boundary detection.
 Legislator.prototype.post = function (now, cookie, value, internal) {
     this._signal('post', [ now, cookie, value, internal ])
     if (this.government.majority[0] != this.id) {
@@ -682,7 +645,6 @@ Legislator.prototype._enactGovernment = function (now, round) {
 
     // when we vote to shrink the government, the initial vote has a greater
     // quorum than the resulting government. Not sure why this comment is here.
-    // TODO Deep copy.
     this.government = JSON.parse(JSON.stringify(round.value.government))
     this.locations = JSON.parse(JSON.stringify(round.value.locations))
 
