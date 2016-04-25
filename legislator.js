@@ -65,49 +65,6 @@ Legislator.prototype._signal = function (method, vargs) {
     }
 }
 
-Legislator.prototype._synchronizePulse = function (now, id) {
-    var count = 20
-    this.synchronizing[id] = true
-    var pulse = {
-        type: 'synchronize',
-        route: [ id ],
-        messages: []
-    }
-    var peer = this.getPeer(id), maximum = peer.enacted
-    if (peer.extant) {
-        var round
-        if (peer.enacted == '0/0') {
-            round = this.log.min()
-            assert(Monotonic.compareIndex(round.promise, '0/0', 1) == 0, 'minimum not a government')
-            for (;;) {
-                var naturalize = round.value.government.naturalize
-                if (naturalize && naturalize.id == id) {
-                    maximum = round.promise
-                    break
-                }
-                round = round.nextGovernment
-                assert(round, 'cannot find naturalization')
-            }
-        } else {
-            round = this.log.find({ promise: maximum }).next
-        }
-
-        while (--count && round) {
-            pulse.messages.push({
-                type: 'enact',
-                promise: round.promise,
-                cookie: round.cookie,
-                internal: round.internal,
-                value: round.value
-            })
-            round = round.next
-        }
-    }
-
-    pulse.messages.push(this._ping(now))
-    return pulse
-}
-
 Legislator.prototype.consensus = function (now) {
     this._signal('outbox', [ now ])
     // TODO Terrible. Reset naturalizing on collapse.
@@ -196,7 +153,48 @@ Legislator.prototype.synchronize = function (now) {
         var peer = this.getPeer(id)
         var compare = Monotonic.compare(this.getPeer(id).enacted, this.getPeer(this.id).enacted)
         if ((peer.timeout != 0 || compare < 0) && !this.synchronizing[id]) {
-            outbox.push(this._synchronizePulse(now, id))
+            var count = 20
+            this.synchronizing[id] = true
+            var pulse = {
+                type: 'synchronize',
+                route: [ id ],
+                messages: []
+            }
+
+            var peer = this.getPeer(id), maximum = peer.enacted
+            if (peer.extant) {
+                var round
+                if (peer.enacted == '0/0') {
+                    round = this.log.min()
+                    assert(Monotonic.compareIndex(round.promise, '0/0', 1) == 0, 'minimum not a government')
+                    for (;;) {
+                        var naturalize = round.value.government.naturalize
+                        if (naturalize && naturalize.id == id) {
+                            maximum = round.promise
+                            break
+                        }
+                        round = round.nextGovernment
+                        assert(round, 'cannot find naturalization')
+                    }
+                } else {
+                    round = this.log.find({ promise: maximum }).next
+                }
+
+                while (--count && round) {
+                    pulse.messages.push({
+                        type: 'enact',
+                        promise: round.promise,
+                        cookie: round.cookie,
+                        internal: round.internal,
+                        value: round.value
+                    })
+                    round = round.next
+                }
+            }
+
+            pulse.messages.push(this._ping(now))
+
+            outbox.push(pulse)
         }
     }
     return outbox
