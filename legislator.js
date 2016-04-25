@@ -155,14 +155,6 @@ Legislator.prototype.consensus = function (now) {
         }
     }
     return this.proposals.shift()
-    /* if (this.collapsed) { // and the pulse is not a government
-        this.parliament.filter(function (id) {
-            return id != this.id
-        }.bind(this)).forEach(function (id) {
-            if (!this.synchronizing[id]) {
-                outbox.push(this._synchronizePulse(id))
-            }
-        }, this) */
 }
 
 Legislator.prototype.synchronize = function (now) {
