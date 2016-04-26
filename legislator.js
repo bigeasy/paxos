@@ -129,7 +129,7 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
             value: {
                 type: 'government',
                 government: government,
-                // TODO this.decided || this.log.max()
+                // TODO this.accepted || this.log.max()
                 terminus: JSON.parse(JSON.stringify(this.log.max())),
                 locations: this.locations,
                 map: this.proposals.map(function (proposal) {
@@ -202,16 +202,16 @@ Legislator.prototype.consensus = function (now) {
         }
     }
     var proposal = this.proposals[0], propose = false
-    var propose = this.decided == null
-    if (this.decided != null) {
+    var propose = this.accepted == null
+    if (this.accepted != null) {
         var commit = {
             type: 'commit',
-            promise: this.decided.promise
+            promise: this.accepted.promise
         }
         if (proposal == null || !this._routeEqual(proposal.route, this.government.majority)) {
             this.proposals.unshift({
                 type: 'consensus',
-                route: this.decided.route,
+                route: this.accepted.route,
                 messages: [ commit ]
             })
         } else {
@@ -371,7 +371,7 @@ Legislator.prototype.post = function (now, cookie, value, internal) {
 
     /*
     var max = this.log.max()
-    if ((!max.decided && Monotonic.isBoundary(max.id, 0)) || this.election) {
+    if ((!max.accepted && Monotonic.isBoundary(max.id, 0)) || this.election) {
         return {
             posted: false,
             leader: null
@@ -434,7 +434,7 @@ Legislator.prototype._receivePropose = function (now, pulse, message, responses)
             type: 'promise',
             from: this.id,
             promise: this.promise = message.promise,
-            decided: this.decided
+            accepted: this.accepted
         })
     } else {
         pulse.failed = true
@@ -445,11 +445,11 @@ Legislator.prototype._receivePromise = function (now, pulse, message, responses)
     this._signal('_receivePromise', [ now, pulse, message, responses ])
     assert(!~this.election.promises.indexOf(message.from), 'duplicate promise')
     this.election.promises.push(message.from)
-    if (message.decided == null) {
+    if (message.accepted == null) {
         return
     }
-    if (Monotonic.compareIndex(this.government.terminus.promise, message.decided.promise, 0) < 0) {
-        this.government.terminus = message.decided
+    if (Monotonic.compareIndex(this.government.terminus.promise, message.accepted.promise, 0) < 0) {
+        this.government.terminus = message.accepted
     }
 }
 
@@ -465,8 +465,8 @@ Legislator.prototype._receivePromise = function (now, pulse, message, responses)
 
 Legislator.prototype._receiveAccept = function (now, pulse, message) {
     if (Monotonic.compareIndex(this.promise, message.promise, 0) <= 0) {
-        this.decided = JSON.parse(JSON.stringify(message))
-        this.promise = this.decided.promise
+        this.accepted = JSON.parse(JSON.stringify(message))
+        this.promise = this.accepted.promise
     } else {
         pulse.failed = true
     }
@@ -475,8 +475,8 @@ Legislator.prototype._receiveAccept = function (now, pulse, message) {
 Legislator.prototype._receiveCommit = function (now, pulse, message) {
     this._signal('_receiveCommit', [ now, pulse, message ])
 
-    var round = this.decided
-    this.decided = null
+    var round = this.accepted
+    this.accepted = null
 
     if (Monotonic.compare(round.promise, message.promise) != 0) {
         throw new Error
@@ -499,8 +499,8 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
     this._signal('_receiveEnact', [ now, pulse, message ])
 
     // TODO So many assertions.
-    if (this.decided) {
-        this.decided = null
+    if (this.accepted) {
+        this.accepted = null
     }
 
     message = JSON.parse(JSON.stringify(message))
