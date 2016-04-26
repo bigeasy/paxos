@@ -433,7 +433,7 @@ Legislator.prototype._receivePropose = function (now, pulse, message, responses)
     var compare = Monotonic.compare(message.promise, this.promise)
     if (compare > 0) {
         responses.push({
-            type: 'promise_',
+            type: 'promise',
             from: this.id,
             promise: this.promise = message.promise,
             decided: this.decided
@@ -443,8 +443,8 @@ Legislator.prototype._receivePropose = function (now, pulse, message, responses)
     }
 }
 
-Legislator.prototype._receivePromise_ = function (now, pulse, message, responses) {
-    this._signal('_receivePromise_', [ now, pulse, message, responses ])
+Legislator.prototype._receivePromise = function (now, pulse, message, responses) {
+    this._signal('_receivePromise', [ now, pulse, message, responses ])
     assert(!~this.election.promises.indexOf(message.from), 'duplicate promise')
     this.election.promises.push(message.from)
     if (message.decided == null) {
