@@ -568,7 +568,6 @@ Legislator.prototype._receivePing = function (now, pulse, message, responses) {
     if (message.from == this.id) {
         return
     }
-    console.log(message.from, this.id)
     var peer = this.getPeer(message.from), ponged = false
     if (peer.extant) {
         if (peer.timeout) {
