@@ -220,7 +220,11 @@ Legislator.prototype.consensus = function (now) {
             proposal.messages.unshift(commit)
         }
     }
-    return this.proposals.shift()
+    var proposal = this.proposals.shift()
+    if (proposal) {
+        proposal.messages.unshift(this._ping(now))
+    }
+    return proposal
 }
 
 Legislator.prototype.synchronize = function (now) {
@@ -544,23 +548,27 @@ Legislator.prototype._ping = function (now) {
 }
 
 Legislator.prototype._whenPulse = function (now, event) {
-    if (this.government.majority[0] == this.id) {
-        this._nothing(now, [])
-    }
+    this.proposals.push({
+        type: 'consensus',
+        route: this.government.majority,
+        messages: []
+    })
 }
 
 Legislator.prototype._whenPing = function (event) {
-    if (~this.constituency.indexOf(event.id)) {
-        this._dispatch({
-            pulse: false,
-            route: [ this.id, event.id ],
-            to: event.id,
-            message: this._ping(now)
-        })
-    }
+    this.constituency.forEach(function (id) {
+        var peer = this.getPeer(id)
+        if (peer.extant) {
+            peer.timeout = 1
+        }
+    }, this)
 }
 
 Legislator.prototype._receivePing = function (now, pulse, message, responses) {
+    if (message.from == this.id) {
+        return
+    }
+    console.log(message.from, this.id)
     var peer = this.getPeer(message.from), ponged = false
     if (peer.extant) {
         if (peer.timeout) {

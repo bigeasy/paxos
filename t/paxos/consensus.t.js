@@ -1,4 +1,4 @@
-require('proof')(7, prove)
+require('proof')(11, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -36,7 +36,7 @@ function prove (assert) {
             sending = false
             var outbox = legislator.synchronize(time)
             if (outbox.length == 0) {
-                var consensus = legislator.consensus()
+                var consensus = legislator.consensus(time)
                 if (consensus) {
                     sent = sending = true
                     outbox = [ consensus ]
@@ -114,6 +114,30 @@ function prove (assert) {
         constituents: [],
         promise: '5/0'
     }, 'recover from collapse')
+
+    legislators[0]._peers[1].timeout = 1
+
+    legislators[0]._whenPulse(time)
+
+    tick()
+
+    assert(legislators[0]._peers[1].timeout, 0, 'liveness pulse')
+
+    legislators[1]._whenPing(time)
+
+    assert(legislators[1]._peers[2].timeout, 1, 'liveness ping timeout set')
+
+    tick()
+
+    assert(legislators[1]._peers[2].timeout, 0, 'liveness ping resolved')
+
+    delete legislators[1]._peers[2]
+
+    legislators[1]._whenPing(time)
+
+    tick()
+
+    assert(legislators[1]._peers[2].timeout, 0, 'liveness ping materialized')
 
     return
     var post
