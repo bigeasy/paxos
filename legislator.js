@@ -482,7 +482,17 @@ Legislator.prototype._receiveCommit = function (now, pulse, message) {
         throw new Error
     }
 
-    this._receiveEnact(now, pulse, round)
+    var rounds = []
+    while (round) {
+        rounds.push(round)
+        var next = round.previous
+        round.previous = null
+        round = next
+    }
+
+    rounds.forEach(function (round) {
+        this._receiveEnact(now, pulse, round)
+    }, this)
 }
 
 Legislator.prototype._receiveEnact = function (now, pulse, message) {
