@@ -50,7 +50,7 @@ function Legislator (now, id, options) {
         value: { government: this.government },
         quorum: [ this.id ],
         decisions: [ this.id ],
-        enacted: true
+        decided: true
     }
     this.log.insert(round)
 
@@ -93,7 +93,7 @@ Legislator.prototype.getPeer = function (id, initializer) {
             extant: false,
             timeout: 1,
             when: 0,
-            enacted: '0/0'
+            decided: '0/0'
         }
     }
     initializer || (initializer = {})
@@ -230,7 +230,7 @@ Legislator.prototype.synchronize = function (now) {
     for (var i = 0, I = this.constituency.length; i < I; i++) {
         var id = this.constituency[i]
         var peer = this.getPeer(id)
-        var compare = Monotonic.compare(this.getPeer(id).enacted, this.getPeer(this.id).enacted)
+        var compare = Monotonic.compare(this.getPeer(id).decided, this.getPeer(this.id).decided)
         if ((peer.timeout != 0 || compare < 0) && !this.synchronizing[id]) {
             var count = 20
             this.synchronizing[id] = true
@@ -240,10 +240,10 @@ Legislator.prototype.synchronize = function (now) {
                 messages: []
             }
 
-            var peer = this.getPeer(id), maximum = peer.enacted
+            var peer = this.getPeer(id), maximum = peer.decided
             if (peer.extant) {
                 var round
-                if (peer.enacted == '0/0') {
+                if (peer.decided == '0/0') {
                     round = this.log.min()
                     assert(Monotonic.compareIndex(round.promise, '0/0', 1) == 0, 'minimum not a government')
                     for (;;) {
@@ -541,7 +541,7 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
         this._enactGovernment(now, message)
     }
 
-    this.getPeer(this.id).enacted = message.promise
+    this.getPeer(this.id).decided = message.promise
 }
 
 Legislator.prototype._ping = function (now) {
@@ -550,7 +550,7 @@ Legislator.prototype._ping = function (now) {
         type: 'ping',
         when: now,
         from: this.id,
-        enacted: this._peers[this.id].enacted
+        decided: this._peers[this.id].decided
     }
 }
 
@@ -586,7 +586,7 @@ Legislator.prototype._receivePing = function (now, pulse, message, responses) {
     peer.extant = true
     peer.timeout = 0
     peer.when = now
-    peer.enacted = message.enacted
+    peer.decided = message.decided
     responses.push(this._ping(now))
     this.ponged = this.ponged || ponged
 }
@@ -655,8 +655,8 @@ Legislator.prototype._enactGovernment = function (now, round) {
     if (!terminus) {
         this.log.insert(terminus = round.value.terminus)
     }
-    if (!terminus.enacted) {
-        terminus.enacted = true
+    if (!terminus.decided) {
+        terminus.decided = true
     }
 
     assert(Monotonic.compare(this.government.promise, round.promise) < 0, 'governments out of order')
