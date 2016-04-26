@@ -50,7 +50,6 @@ function Legislator (now, id, options) {
         value: { government: this.government },
         quorum: [ this.id ],
         decisions: [ this.id ],
-        decided: true,
         enacted: true
     }
     this.log.insert(round)
@@ -94,7 +93,6 @@ Legislator.prototype.getPeer = function (id, initializer) {
             extant: false,
             timeout: 1,
             when: 0,
-            decided: '0/0',
             enacted: '0/0'
         }
     }
@@ -542,7 +540,6 @@ Legislator.prototype._ping = function (now) {
         type: 'ping',
         when: now,
         from: this.id,
-        decided: this._peers[this.id].decided,
         enacted: this._peers[this.id].enacted
     }
 }
@@ -580,7 +577,6 @@ Legislator.prototype._receivePing = function (now, pulse, message, responses) {
     peer.timeout = 0
     peer.when = now
     peer.enacted = message.enacted
-    peer.decided = message.decided
     responses.push(this._ping(now))
     this.ponged = this.ponged || ponged
 }
