@@ -328,7 +328,9 @@ Legislator.prototype.sent = function (now, pulse, responses) {
     } else {
         switch (pulse.type) {
         case 'consensus':
-            this.collapse()
+            if (this.collapsed || ~this.government.majority.indexOf(this.id)) {
+                this.collapse()
+            }
             break
         case 'synchronize':
             delete this.synchronizing[pulse.route[0]]
@@ -443,13 +445,19 @@ Legislator.prototype._receivePropose = function (now, pulse, message, responses)
 
 Legislator.prototype._receivePromise = function (now, pulse, message, responses) {
     this._signal('_receivePromise', [ now, pulse, message, responses ])
-    assert(!~this.election.promises.indexOf(message.from), 'duplicate promise')
-    this.election.promises.push(message.from)
-    if (message.accepted == null) {
-        return
-    }
-    if (Monotonic.compareIndex(this.government.terminus.promise, message.accepted.promise, 0) < 0) {
-        this.government.terminus = message.accepted
+    // TODO Add current government to messages.
+    if (this.collapsed) {
+        assert(!~this.election.promises.indexOf(message.from), 'duplicate promise')
+        this.election.promises.push(message.from)
+        if (message.accepted == null) {
+            return
+        }
+        if (this.accepted == null ||
+            Monotonic.compareIndex(this.accepted.promise, message.accepted.promise, 0) < 0
+        ) {
+            message.accepted.previous = this.accepted
+            this.accepted = message.accepted
+        }
     }
 }
 
@@ -502,6 +510,12 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
     if (this.accepted) {
         this.accepted = null
     }
+
+    // TODO Do we need all of these?
+    this.proposal = null
+    this.accepted = null
+    this.collapsed = false
+    this.election = false
 
     message = JSON.parse(JSON.stringify(message))
 
@@ -651,6 +665,7 @@ Legislator.prototype._enactGovernment = function (now, round) {
     this.collapsed = false
 
     var min = this.log.min()
+    // TODO Is this getting exercised at the moment.
     var terminus = this.log.find({ promise: round.value.terminus.promise })
     if (!terminus) {
         this.log.insert(terminus = round.value.terminus)
