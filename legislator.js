@@ -189,7 +189,7 @@ Legislator.prototype.consensus = function (now) {
                 type: 'consensus',
                 route: majority,
                 messages: [{
-                    type: 'promise',
+                    type: 'propose',
                     promise: Monotonic.increment(this.promise, 0)
                 }]
             }
@@ -428,8 +428,8 @@ Legislator.prototype._routeEqual = function (a, b) {
     }).length == a.length
 }
 
-Legislator.prototype._receivePromise = function (now, pulse, message, responses) {
-    this._signal('_receivePromise', [ now, pulse, message, responses ])
+Legislator.prototype._receivePropose = function (now, pulse, message, responses) {
+    this._signal('_receivePropose', [ now, pulse, message, responses ])
     var compare = Monotonic.compare(message.promise, this.promise)
     if (compare > 0) {
         responses.push({
