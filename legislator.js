@@ -123,7 +123,7 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
         type: 'consensus',
         route: quorum,
         messages: [{
-            type: 'propose',
+            type: 'accept',
             promise: promise,
             route: quorum,
             cookie: null,
@@ -393,7 +393,7 @@ Legislator.prototype.post = function (now, cookie, value, internal) {
         messages: [{
             to: this.government.majority,
             message: {
-                type: 'propose',
+                type: 'accept',
                 promise: promise,
                 quorum: this.government.majority,
                 acceptances: [],
@@ -465,7 +465,7 @@ Legislator.prototype._receivePromise_ = function (now, pulse, message, responses
 // should only go out when that route is pulsed. If the network calls fail, the
 // leader will be able to learn immediately.
 
-Legislator.prototype._receivePropose = function (now, pulse, message) {
+Legislator.prototype._receiveAccept = function (now, pulse, message) {
     if (Monotonic.compareIndex(this.promise, message.promise, 0) <= 0) {
         this.decided = JSON.parse(JSON.stringify(message))
         this.promise = this.decided.promise
