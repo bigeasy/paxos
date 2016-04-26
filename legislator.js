@@ -54,7 +54,7 @@ function Legislator (now, id, options) {
     }
     this.log.insert(round)
 
-    this._propagation(now)
+    this.constituency = []
 }
 
 Legislator.prototype._signal = function (method, vargs) {
