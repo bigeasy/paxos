@@ -605,8 +605,43 @@ Legislator.prototype._receivePing = function (now, pulse, message, responses) {
     this.ponged = this.ponged || ponged
 }
 
-Legislator.prototype._propagation = function (now) {
-    assert(arguments.length == 1)
+Legislator.prototype._enactGovernment = function (now, round) {
+    this._signal('_enactGovernment', [ round ])
+    delete this.election
+    this.collapsed = false
+
+    var min = this.log.min()
+    // TODO Is this getting exercised at the moment.
+    var terminus = this.log.find({ promise: round.value.terminus.promise })
+    if (!terminus) {
+        this.log.insert(terminus = round.value.terminus)
+    }
+    if (!terminus.decided) {
+        terminus.decided = true
+    }
+
+    assert(Monotonic.compare(this.government.promise, round.promise) < 0, 'governments out of order')
+
+    // when we vote to shrink the government, the initial vote has a greater
+    // quorum than the resulting government. Not sure why this comment is here.
+    this.government = JSON.parse(JSON.stringify(round.value.government))
+    this.locations = JSON.parse(JSON.stringify(round.value.locations))
+
+    var previous = Monotonic.toWords(terminus.promise)
+    if (round.value.government.naturalize) {
+        this.government.constituents.push(this.government.naturalize.id)
+        this.locations[this.government.naturalize.id] = this.government.naturalize.location
+        if (round.value.government.naturalize.id == this.id) {
+            previous = Monotonic.toWords('0/0')
+        }
+    }
+    previous[1] = [ 0 ]
+    this.log.find({ promise: Monotonic.toString(previous) }).nextGovernment = round
+
+    if (this.id != this.government.majority[0]) {
+        this.proposals.length = 0
+    }
+
     this.citizens = this.government.majority.concat(this.government.minority)
                                             .concat(this.government.constituents)
     this.parliament = this.government.majority.concat(this.government.minority)
@@ -657,48 +692,6 @@ Legislator.prototype._propagation = function (now) {
             delay: this.ping
         })
     }, this)
-}
-
-Legislator.prototype._enactGovernment = function (now, round) {
-    this._signal('_enactGovernment', [ round ])
-    delete this.election
-    this.collapsed = false
-
-    var min = this.log.min()
-    // TODO Is this getting exercised at the moment.
-    var terminus = this.log.find({ promise: round.value.terminus.promise })
-    if (!terminus) {
-        this.log.insert(terminus = round.value.terminus)
-    }
-    if (!terminus.decided) {
-        terminus.decided = true
-    }
-
-    assert(Monotonic.compare(this.government.promise, round.promise) < 0, 'governments out of order')
-
-    // when we vote to shrink the government, the initial vote has a greater
-    // quorum than the resulting government. Not sure why this comment is here.
-    this.government = JSON.parse(JSON.stringify(round.value.government))
-    this.locations = JSON.parse(JSON.stringify(round.value.locations))
-
-    var previous = Monotonic.toWords(terminus.promise)
-    if (round.value.government.naturalize) {
-        this.government.constituents.push(this.government.naturalize.id)
-        this.locations[this.government.naturalize.id] = this.government.naturalize.location
-        if (round.value.government.naturalize.id == this.id) {
-            previous = Monotonic.toWords('0/0')
-        }
-    }
-    previous[1] = [ 0 ]
-    this.log.find({ promise: Monotonic.toString(previous) }).nextGovernment = round
-
-
-
-    if (this.id != this.government.majority[0]) {
-        this.proposals.length = 0
-    }
-
-    this._propagation(now)
 }
 
 Legislator.prototype._whenCollapse = function () {
