@@ -1,4 +1,4 @@
-require('proof')(22, prove)
+require('proof')(21, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator')
@@ -271,11 +271,6 @@ function prove (assert) {
 
     ! function () {
         var legislator = new Legislator(0, '1')
-
-        assert(legislator.reshape.call({
-            collapsed: true,
-            _elect: function () { return 0xaaaaaaaa }
-        }), 0xaaaaaaaa, 'ponged collapsed')
 
         assert(legislator.reshape.call({
             collapsed: false,

@@ -819,9 +819,7 @@ Legislator.prototype._exile = function () {
 
 // TODO Merge all the above once it settles.
 Legislator.prototype.reshape = function () {
-    if (this.collapsed) {
-        return this._elect()
-    } else if (this.government.majority[0] == this.id) {
+    if (!this.collapsed && this.government.majority[0] == this.id) {
         return this._impeach() || this._exile() || this._expand()
     } else {
         return null
