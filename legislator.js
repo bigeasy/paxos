@@ -364,8 +364,9 @@ Legislator.prototype.bootstrap = function (now, location) {
 
 // Note that a client will have to treat a network failure on submission as a
 // failure requiring boundary detection.
-Legislator.prototype.post = function (now, cookie, value, internal) {
-    this._signal('post', [ now, cookie, value, internal ])
+Legislator.prototype.post = function (now, message) {
+    assert(arguments.length == 2)
+    this._signal('post', [ now, message ])
     if (this.government.majority[0] != this.id) {
         return {
             posted: false,
@@ -373,52 +374,51 @@ Legislator.prototype.post = function (now, cookie, value, internal) {
         }
     }
 
-    /*
-    var max = this.log.max()
-    if ((!max.accepted && Monotonic.isBoundary(max.id, 0)) || this.election) {
+    if (this.collapsed) {
         return {
             posted: false,
             leader: null
         }
     }
-    */
 
-    if (internal && value.type == 'naturalize') {
-        this.naturalizing.push({ id: value.id, location: value.location, cookie: cookie })
+    switch (message.type) {
+    case 'naturalize':
+        this.naturalizing.push(message)
         return { posted: true, promise: null }
-    }
+    case 'enqueue':
+        var promise = this.promise = Monotonic.increment(this.promise, 1)
+        this.proposals.push({
+            type: 'consensus',
+            route: this.government.majority,
+            messages: [{
+                to: this.government.majority,
+                message: {
+                    type: 'accept',
+                    promise: promise,
+                    quorum: this.government.majority,
+                    acceptances: [],
+                    decisions: [],
+                    cookie: cookie,
+                    internal: internal,
+                    value: value
+                }
+            }]
+        })
 
-    var promise = this.promise = Monotonic.increment(this.promise, 1)
-    this.proposals.push({
-        type: 'consensus',
-        route: this.government.majority,
-        messages: [{
-            to: this.government.majority,
-            message: {
-                type: 'accept',
-                promise: promise,
-                quorum: this.government.majority,
-                acceptances: [],
-                decisions: [],
-                cookie: cookie,
-                internal: internal,
-                value: value
-            }
-        }]
-    })
-
-    return {
-        posted: true,
-        leader: this.government.majority[0],
-        promise: promise
+        return {
+            posted: true,
+            leader: this.government.majority[0],
+            promise: promise
+        }
+        break
     }
 }
 
 Legislator.prototype.naturalize = function (now, id, location) {
     this._signal('naturalize', [ now, id ])
     assert(typeof id == 'string', 'id must be a hexidecmimal string')
-    this.naturalization = now
-    return this.post(now, this.cookie = now, { type: 'naturalize', id: id, location: location }, true)
+    this.cookie = now
+    return this.post(now, { type: 'naturalize', id: id, location: location, cookie: now })
 }
 
 Legislator.prototype._routeEqual = function (a, b) {
