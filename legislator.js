@@ -125,7 +125,6 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
             promise: promise,
             route: quorum,
             cookie: null,
-            internal: true,
             value: {
                 type: 'government',
                 government: government,
@@ -266,7 +265,6 @@ Legislator.prototype.synchronize = function (now) {
                         type: 'enact',
                         promise: round.promise,
                         cookie: round.cookie,
-                        internal: round.internal,
                         value: round.value
                     })
                     round = round.next
@@ -399,7 +397,6 @@ Legislator.prototype.post = function (now, message) {
                     acceptances: [],
                     decisions: [],
                     cookie: cookie,
-                    internal: internal,
                     value: value
                 }
             }]
