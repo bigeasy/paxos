@@ -153,7 +153,8 @@ Legislator.prototype.consensus = function (now) {
             minority: this.government.minority,
             naturalize: {
                 id: naturalization.id,
-                location: naturalization.location
+                location: naturalization.location,
+                cookie: naturalization.cookie
             }
         }, Monotonic.increment(this.promise, 0))
     } else if (this.collapsed) {
@@ -244,16 +245,17 @@ Legislator.prototype.synchronize = function (now) {
             if (peer.extant) {
                 var round
                 if (peer.decided == '0/0') {
-                    round = this.log.min()
-                    assert(Monotonic.compareIndex(round.promise, '0/0', 1) == 0, 'minimum not a government')
+                    var iterator = this.log.iterator()
                     for (;;) {
-                        var naturalize = round.value.government.naturalize
-                        if (naturalize && naturalize.id == id) {
-                            maximum = round.promise
-                            break
-                        }
-                        round = round.nextGovernment
+                        round = iterator.prev()
                         assert(round, 'cannot find naturalization')
+                        if (Monotonic.isBoundary(round.promise, 0)) {
+                            var naturalize = round.value.government.naturalize
+                            if (naturalize && naturalize.id == id && naturalize.cookie == this.cookie) {
+                                maximum = round.promise
+                                break
+                            }
+                        }
                     }
                 } else {
                     round = this.log.find({ promise: maximum }).next
@@ -382,7 +384,7 @@ Legislator.prototype.post = function (now, cookie, value, internal) {
     */
 
     if (internal && value.type == 'naturalize') {
-        this.naturalizing.push({ id: value.id, location: value.location })
+        this.naturalizing.push({ id: value.id, location: value.location, cookie: cookie })
         return { posted: true, promise: null }
     }
 
@@ -416,7 +418,7 @@ Legislator.prototype.naturalize = function (now, id, location) {
     this._signal('naturalize', [ now, id ])
     assert(typeof id == 'string', 'id must be a hexidecmimal string')
     this.naturalization = now
-    return this.post(now, now, { type: 'naturalize', id: id, location: location }, true)
+    return this.post(now, this.cookie = now, { type: 'naturalize', id: id, location: location }, true)
 }
 
 Legislator.prototype._routeEqual = function (a, b) {
@@ -610,16 +612,6 @@ Legislator.prototype._enactGovernment = function (now, round) {
     delete this.election
     this.collapsed = false
 
-    var min = this.log.min()
-    // TODO Is this getting exercised at the moment.
-    var terminus = this.log.find({ promise: round.value.terminus.promise })
-    if (!terminus) {
-        this.log.insert(terminus = round.value.terminus)
-    }
-    if (!terminus.decided) {
-        terminus.decided = true
-    }
-
     assert(Monotonic.compare(this.government.promise, round.promise) < 0, 'governments out of order')
 
     // when we vote to shrink the government, the initial vote has a greater
@@ -627,16 +619,9 @@ Legislator.prototype._enactGovernment = function (now, round) {
     this.government = JSON.parse(JSON.stringify(round.value.government))
     this.locations = JSON.parse(JSON.stringify(round.value.locations))
 
-    var previous = Monotonic.toWords(terminus.promise)
     if (round.value.government.naturalize) {
         this.government.constituents.push(this.government.naturalize.id)
-        this.locations[this.government.naturalize.id] = this.government.naturalize.location
-        if (round.value.government.naturalize.id == this.id) {
-            previous = Monotonic.toWords('0/0')
-        }
     }
-    previous[1] = [ 0 ]
-    this.log.find({ promise: Monotonic.toString(previous) }).nextGovernment = round
 
     if (this.id != this.government.majority[0]) {
         this.proposals.length = 0

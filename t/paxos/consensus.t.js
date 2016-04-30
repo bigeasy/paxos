@@ -83,12 +83,12 @@ function prove (assert) {
     assert(legislators[0].government, {
         majority: [ '0' ],
         minority: [],
-        naturalize: { id: '1', location: '1' },
+        naturalize: { id: '1', location: '1', cookie: 0 },
         constituents: [ '1' ],
         promise: '2/0'
     }, 'leader and constituent pair')
 
-    assert(legislators[1].log.size, 3, 'synchronized')
+    assert(legislators[1].log.size, 2, 'synchronized')
 
     legislators.push(new Legislator(0, '2', options))
     legislators[0].naturalize(time, '2', '2')
