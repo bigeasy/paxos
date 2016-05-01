@@ -389,16 +389,10 @@ Legislator.prototype.post = function (now, message) {
             type: 'consensus',
             route: this.government.majority,
             messages: [{
-                to: this.government.majority,
-                message: {
-                    type: 'accept',
-                    promise: promise,
-                    quorum: this.government.majority,
-                    acceptances: [],
-                    decisions: [],
-                    cookie: cookie,
-                    value: value
-                }
+                type: 'accept',
+                promise: promise,
+                quorum: this.government.majority,
+                value: message
             }]
         })
 

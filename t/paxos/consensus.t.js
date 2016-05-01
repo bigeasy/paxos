@@ -1,4 +1,4 @@
-require('proof')(13, prove)
+require('proof')(14, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -31,26 +31,23 @@ function prove (assert) {
     legislators[0].bootstrap(time, '0')
 
     function send (legislator) {
-        var sending = true, sent = false
-        while (sending) {
-            sending = false
-            var outbox = legislator.synchronize(time)
-            if (outbox.length == 0) {
-                var consensus = legislator.consensus(time)
-                if (consensus) {
-                    sent = sending = true
-                    outbox = [ consensus ]
-                }
+        var sent = false
+        var outbox = legislator.synchronize(time)
+        if (outbox.length == 0) {
+            var consensus = legislator.consensus(time)
+            if (consensus) {
+                sent = true
+                outbox = [ consensus ]
             }
-            while (outbox.length != 0) {
-                sent = sending = true
-                var send = outbox.shift(), responses = {}
-                send.route.forEach(function (id) {
-                    var legislator = legislators[id]
-                    responses[id] = legislator.receive(time, send, send.messages)
-                })
-                legislator.sent(time, send, responses)
-            }
+        }
+        while (outbox.length != 0) {
+            sent = true
+            var send = outbox.shift(), responses = {}
+            send.route.forEach(function (id) {
+                var legislator = legislators[id]
+                responses[id] = legislator.receive(time, send, send.messages)
+            })
+            legislator.sent(time, send, responses)
         }
         return sent
     }
@@ -60,8 +57,9 @@ function prove (assert) {
         while (ticked) {
             ticked = false
             legislators.forEach(function (legislator) {
-                var sent = send(legislator)
-                ticked = ticked || sent
+                while (send(legislator)) {
+                    ticked = true
+                }
             })
         }
     }
@@ -91,6 +89,7 @@ function prove (assert) {
     assert(legislators[1].log.size, 2, 'synchronized')
 
     legislators.push(new Legislator(0, '2', options))
+    legislators[0].post(time, { type: 'enqueue', value: 1 })
     legislators[0].naturalize(time, '2', '2')
 
     tick()
@@ -102,6 +101,7 @@ function prove (assert) {
         promise: '4/0'
     }, 'three member parliament')
 
+    assert(legislators[2].log.size, 3, 'synchronized')
 
     legislators[0]._whenCollapse()
     legislators[1]._whenCollapse()
