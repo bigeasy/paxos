@@ -87,7 +87,7 @@ Legislator.prototype.checkSchedule = function (now) {
     return happened
 }
 
-Legislator.prototype.getPeer = function (id, initializer) {
+Legislator.prototype.getPeer = function (id) {
     var peer = this._peers[id]
     if (peer == null) {
         peer = this._peers[id] = {
@@ -97,10 +97,6 @@ Legislator.prototype.getPeer = function (id, initializer) {
             cookie: null,
             decided: '0/0'
         }
-    }
-    initializer || (initializer = {})
-    for (var key in initializer) {
-        peer[key] = initializer[key]
     }
     return peer
 }
