@@ -1,4 +1,4 @@
-require('proof')(11, prove)
+require('proof')(13, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -105,6 +105,9 @@ function prove (assert) {
 
     legislators[0]._whenCollapse()
     legislators[1]._whenCollapse()
+
+    assert(legislators[1].post(time, {}).leader, '0', 'post not leader')
+    assert(!legislators[0].post(time, {}).posted, 'post collapsed')
 
     tick()
 
