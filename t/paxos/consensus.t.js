@@ -1,4 +1,4 @@
-require('proof')(14, prove)
+require('proof')(16, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -75,7 +75,7 @@ function prove (assert) {
 
     legislators.push(new Legislator(time, '1', options))
 
-    assert(legislators[0].naturalize(time, '1', '1').posted, 'naturalize')
+    assert(legislators[0].naturalize(time, '1', legislators[1].cookie, '1').posted, 'naturalize')
     tick()
 
     assert(legislators[0].government, {
@@ -90,7 +90,7 @@ function prove (assert) {
 
     legislators.push(new Legislator(0, '2', options))
     legislators[0].post(time, { type: 'enqueue', value: 1 })
-    legislators[0].naturalize(time, '2', '2')
+    legislators[0].naturalize(time, '2', legislators[2].cookie, '2')
 
     tick()
 
@@ -142,7 +142,20 @@ function prove (assert) {
 
     assert(legislators[1]._peers[2].timeout, 0, 'liveness ping materialized')
 
+    legislators.push(new Legislator(0, '3', options))
+    legislators[0].naturalize(time, '3', legislators[3].cookie, '3')
+    legislators[0].post(time, { type: 'enqueue', value: 2 })
+
+    while (send(legislators[0]));
+
+    assert(legislators[3].log.size, 1, 'log before naturalization')
+
+    tick()
+
+    assert(legislators[3].log.size, 2, 'log after naturalization')
+
     return
+
     var post
 
     post = network.machines[1].legislator.post(time, null, { key: 'value' }, false)

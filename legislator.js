@@ -36,6 +36,7 @@ function Legislator (now, id, options) {
     this.getPeer(this.id).timeout = 0
 
     this.length = options.length || 1024
+    this.cookie = options.cookie || now
 
     assert(!Array.isArray(options.retry), 'retry no longer accepts range')
     assert(!Array.isArray(options.ping), 'retry no longer accepts range')
@@ -93,6 +94,7 @@ Legislator.prototype.getPeer = function (id, initializer) {
             extant: false,
             timeout: 1,
             when: 0,
+            cookie: null,
             decided: '0/0'
         }
     }
@@ -243,6 +245,7 @@ Legislator.prototype.synchronize = function (now) {
             var peer = this.getPeer(id), maximum = peer.decided
             if (peer.extant) {
                 var round
+                // TODO Cookie has to come back with ping.
                 if (peer.decided == '0/0') {
                     var iterator = this.log.iterator()
                     for (;;) {
@@ -250,7 +253,7 @@ Legislator.prototype.synchronize = function (now) {
                         assert(round, 'cannot find naturalization')
                         if (Monotonic.isBoundary(round.promise, 0)) {
                             var naturalize = round.value.government.naturalize
-                            if (naturalize && naturalize.id == id && naturalize.cookie == this.cookie) {
+                            if (naturalize && naturalize.id == id && naturalize.cookie == peer.cookie) {
                                 maximum = round.promise
                                 break
                             }
@@ -401,15 +404,14 @@ Legislator.prototype.post = function (now, message) {
             leader: this.government.majority[0],
             promise: promise
         }
-        break
     }
 }
 
-Legislator.prototype.naturalize = function (now, id, location) {
+Legislator.prototype.naturalize = function (now, id, cookie, location) {
+    assert(arguments.length == 4)
     this._signal('naturalize', [ now, id ])
     assert(typeof id == 'string', 'id must be a hexidecmimal string')
-    this.cookie = now
-    return this.post(now, { type: 'naturalize', id: id, location: location, cookie: now })
+    return this.post(now, { type: 'naturalize', id: id, location: location, cookie: cookie })
 }
 
 Legislator.prototype._routeEqual = function (a, b) {
@@ -557,6 +559,7 @@ Legislator.prototype._ping = function (now) {
         type: 'ping',
         when: now,
         from: this.id,
+        cookie: this.cookie,
         decided: this._peers[this.id].decided
     }
 }
@@ -594,6 +597,7 @@ Legislator.prototype._receivePing = function (now, pulse, message, responses) {
     peer.timeout = 0
     peer.when = now
     peer.decided = message.decided
+    peer.cookie = message.cookie
     responses.push(this._ping(now))
     this.ponged = this.ponged || ponged
 }
