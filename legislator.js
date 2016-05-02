@@ -23,7 +23,7 @@ function Legislator (now, id, options) {
 
     this.proposals = []
     this.locations = {}
-    this.pulse = null
+    this.pulse = false
     this.naturalizing = []
     this._dirty = false
 
@@ -112,28 +112,23 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
     government.promise = promise
     this.proposals = this.proposals.splice(0, this.proposals.length).map(function (proposal) {
         proposal.was = proposal.promise
+        proposal.route = government.majority
         proposal.promise = this.promise = Monotonic.increment(this.promise, 1)
         return proposal
     }.bind(this))
     this.proposals.unshift({
-        type: 'consensus',
+        promise: promise,
         route: quorum,
-        messages: [{
-            type: 'accept',
-            promise: promise,
-            route: quorum,
-            cookie: null,
-            value: {
-                type: 'government',
-                government: government,
-                // TODO this.accepted || this.log.max()
-                terminus: JSON.parse(JSON.stringify(this.log.max())),
-                locations: this.locations,
-                map: this.proposals.map(function (proposal) {
-                    return { was: proposal.was, is: proposal.promise }
-                })
-            }
-        }]
+        value: {
+            type: 'government',
+            government: government,
+            // TODO this.accepted || this.log.max()
+            terminus: JSON.parse(JSON.stringify(this.log.max())),
+            locations: this.locations,
+            map: this.proposals.map(function (proposal) {
+                return { was: proposal.was, is: proposal.promise }
+            })
+        }
     })
 }
 
@@ -199,28 +194,43 @@ Legislator.prototype.consensus = function (now) {
             }
         }
     }
-    var proposal = this.proposals[0], propose = false
-    var propose = this.accepted == null
+    var proposal = this.proposals[0]
+    var messages = [ this._ping(now) ]
     if (this.accepted != null) {
-        var commit = {
+        messages.push({
             type: 'commit',
             promise: this.accepted.promise
-        }
-        if (proposal == null || !this._routeEqual(proposal.route, this.government.majority)) {
-            this.proposals.unshift({
+        })
+        if (proposal == null || !this._routeEqual(proposal.route, this.accepted.route)) {
+            return {
                 type: 'consensus',
                 route: this.accepted.route,
-                messages: [ commit ]
-            })
-        } else {
-            proposal.messages.unshift(commit)
+                messages: messages
+            }
         }
     }
-    var proposal = this.proposals.shift()
     if (proposal) {
-        proposal.messages.unshift(this._ping(now))
+        messages.push({
+            type: 'accept',
+            promise: proposal.promise,
+            value: proposal.value
+        })
+        this.proposals.shift()
+        return {
+            type: 'consensus',
+            route: proposal.route.slice(),
+            messages: messages
+        }
     }
-    return proposal
+    if (this.pulse) {
+        this.pulse = false
+        return {
+            type: 'consensus',
+            route: this.government.majority,
+            messages: [ this._ping(now) ]
+        }
+    }
+    return null
 }
 
 Legislator.prototype.synchronize = function (now) {
@@ -385,14 +395,9 @@ Legislator.prototype.post = function (now, message) {
     case 'enqueue':
         var promise = this.promise = Monotonic.increment(this.promise, 1)
         this.proposals.push({
-            type: 'consensus',
+            promise: promise,
             route: this.government.majority,
-            messages: [{
-                type: 'accept',
-                promise: promise,
-                quorum: this.government.majority,
-                value: message
-            }]
+            value: message
         })
 
         return {
@@ -448,6 +453,7 @@ Legislator.prototype._receivePromise = function (now, pulse, message, responses)
         ) {
             message.accepted.previous = this.accepted
             this.accepted = message.accepted
+            this.accepted.route = pulse.route
         }
     }
 }
@@ -466,6 +472,7 @@ Legislator.prototype._receiveAccept = function (now, pulse, message) {
     if (Monotonic.compareIndex(this.promise, message.promise, 0) <= 0) {
         this.accepted = JSON.parse(JSON.stringify(message))
         this.promise = this.accepted.promise
+        this.accepted.route = pulse.route
     } else {
         pulse.failed = true
     }
@@ -561,11 +568,7 @@ Legislator.prototype._ping = function (now) {
 }
 
 Legislator.prototype._whenPulse = function (now, event) {
-    this.proposals.push({
-        type: 'consensus',
-        route: this.government.majority,
-        messages: []
-    })
+    this.pulse = true
 }
 
 Legislator.prototype._whenPing = function (event) {
