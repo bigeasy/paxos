@@ -132,7 +132,7 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
 
 Legislator.prototype.consensus = function (now) {
     this._signal('outbox', [ now ])
-    if (this.government.majority[0] == this.id && this.accepted && Monotonic.isBoundary(this.accepted.promise)) {
+    if (this.government.majority[0] == this.id && this.accepted && Monotonic.isBoundary(this.accepted.promise, 0)) {
             return {
                 type: 'consensus',
                 route: this.accepted.route,

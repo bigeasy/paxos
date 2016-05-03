@@ -30,7 +30,8 @@ function prove (assert) {
     var legislators = [ new Legislator(time, '0', options) ]
     legislators[0].bootstrap(time, '0')
 
-    function send (legislator) {
+    function send (legislator, failures) {
+        failures || (failures = {})
         var sent = false
         var outbox = legislator.synchronize(time)
         if (outbox.length == 0) {
@@ -45,19 +46,24 @@ function prove (assert) {
             var send = outbox.shift(), responses = {}
             send.route.forEach(function (id) {
                 var legislator = legislators[id]
-                responses[id] = legislator.receive(time, send, send.messages)
+                if (failures[id] != 'request') {
+                    responses[id] = legislator.receive(time, send, send.messages)
+                }
+                if (failures[id] == 'response') {
+                    delete responses[id]
+                }
             })
             legislator.sent(time, send, responses)
         }
         return sent
     }
 
-    function tick () {
+    function tick (failures) {
         var ticked = true
         while (ticked) {
             ticked = false
             legislators.forEach(function (legislator) {
-                while (send(legislator)) {
+                while (send(legislator, failures)) {
                     ticked = true
                 }
             })
@@ -155,4 +161,9 @@ function prove (assert) {
     tick()
 
     assert(legislators[3].log.size, 4, 'log after naturalization')
+
+    legislators[0].post(time, { type: 'enqueue', value: 2 })
+    legislators[0].post(time, { type: 'enqueue', value: 3 })
+
+    tick()
 }
