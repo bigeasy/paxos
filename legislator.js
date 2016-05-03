@@ -478,11 +478,15 @@ Legislator.prototype._receiveAccept = function (now, pulse, message) {
     }
 }
 
+// What happens if you recieve a commit message during a collapse? Currently,
+// you could be sending a commit message out on the pulse of a new promise. You
+// need to make sure that you don't send the commit, ah, but if you'd sent a new
+// promise, you would already have worked through these things.
 Legislator.prototype._receiveCommit = function (now, pulse, message) {
     this._signal('_receiveCommit', [ now, pulse, message ])
 
     var round = this.accepted
-    this.accepted = null
+    this.accepted = null // TODO Move.
 
     if (Monotonic.compare(round.promise, message.promise) != 0) {
         throw new Error
