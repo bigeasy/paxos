@@ -122,8 +122,6 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
         value: {
             type: 'government',
             government: government,
-            // TODO this.accepted || this.log.max()
-            terminus: JSON.parse(JSON.stringify(this.log.max())),
             locations: this.locations,
             map: this.proposals.map(function (proposal) {
                 return { was: proposal.was, is: proposal.promise }
@@ -530,13 +528,11 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
     }
 
     if (Monotonic.isBoundary(message.promise, 0)) {
-        var terminus = message.value.terminus
-        valid = Monotonic.compareIndex(terminus.promise, max.promise, 0) == 0
-        if (valid) {
-            this._receiveEnact(now, pulse, terminus)
-            max = this.log.max()
-            assert(Monotonic.compare(max.promise, terminus.promise) == 0)
-        } else {
+         valid = this.log.max().promise != '0/0'
+        if (!valid) {
+            valid = this.log.max().promise == '0/0' && message.promise == '1/0'
+        }
+        if (!valid) {
             valid = this.log.size == 1
             valid = valid && this.log.min().promise == '0/0'
             valid = valid && message.value.government.naturalize
