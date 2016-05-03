@@ -109,11 +109,11 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
         return !~government.majority.indexOf(citizen)
             && !~government.minority.indexOf(citizen)
     })
-    government.promise = promise
+    var remapped = government.promise = promise
     this.proposals = this.proposals.splice(0, this.proposals.length).map(function (proposal) {
         proposal.was = proposal.promise
         proposal.route = government.majority
-        proposal.promise = this.promise = Monotonic.increment(this.promise, 1)
+        proposal.promise = remapped = Monotonic.increment(remapped, 1)
         return proposal
     }.bind(this))
     this.proposals.unshift({
@@ -541,8 +541,6 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
                 return
             }
         }
-    } else {
-        throw new Error
     }
 
     this.log.max().next = message

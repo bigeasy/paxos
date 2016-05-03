@@ -101,7 +101,7 @@ function prove (assert) {
         promise: '4/0'
     }, 'three member parliament')
 
-    assert(legislators[2].log.size, 3, 'synchronized')
+    assert(legislators[2].log.size, 4, 'synchronized')
 
     legislators[0]._whenCollapse()
     legislators[1]._whenCollapse()
@@ -152,7 +152,7 @@ function prove (assert) {
 
     tick()
 
-    assert(legislators[3].log.size, 2, 'log after naturalization')
+    assert(legislators[3].log.size, 3, 'log after naturalization')
 
     return
 
