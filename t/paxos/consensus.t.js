@@ -142,8 +142,10 @@ function prove (assert) {
 
     assert(legislators[1]._peers[2].timeout, 0, 'liveness ping materialized')
 
-    legislators.push(new Legislator(0, '3', options))
+    legislators.push(new Legislator(time, '3', options))
     legislators[0].naturalize(time, '3', legislators[3].cookie, '3')
+    legislators.push(new Legislator(time, '4', options))
+    legislators[0].naturalize(time, '4', legislators[4].cookie, '4')
     legislators[0].post(time, { type: 'enqueue', value: 2 })
 
     while (send(legislators[0]));
@@ -152,5 +154,5 @@ function prove (assert) {
 
     tick()
 
-    assert(legislators[3].log.size, 3, 'log after naturalization')
+    assert(legislators[3].log.size, 4, 'log after naturalization')
 }

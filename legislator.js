@@ -132,6 +132,16 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
 
 Legislator.prototype.consensus = function (now) {
     this._signal('outbox', [ now ])
+    if (this.government.majority[0] == this.id && this.accepted && Monotonic.isBoundary(this.accepted.promise)) {
+            return {
+                type: 'consensus',
+                route: this.accepted.route,
+                messages: [this._ping(now), {
+                    type: 'commit',
+                    promise: this.accepted.promise
+                }]
+            }
+    }
     // TODO Terrible. Reset naturalizing on collapse.
     if (this.naturalizing.length && this.government.majority[0] == this.id) {
         // TODO Is there a race condition associated with leaving
