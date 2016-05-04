@@ -576,10 +576,11 @@ Legislator.prototype._whenPulse = function (now, event) {
     this.pulse = true
 }
 
-Legislator.prototype._whenPing = function (event) {
+Legislator.prototype._whenPing = function (now, event) {
     this.constituency.forEach(function (id) {
         var peer = this.getPeer(id)
         if (peer.timeout == 0) {
+            peer.when = now
             peer.timeout = 1
         }
     }, this)
@@ -598,7 +599,7 @@ Legislator.prototype._receivePing = function (now, pulse, message, responses) {
         ponged = true
     }
     peer.timeout = 0
-    peer.when = now
+    peer.when = null
     peer.decided = message.decided
     peer.cookie = message.cookie
     responses.push(this._ping(now))
