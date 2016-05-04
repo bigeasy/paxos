@@ -43,7 +43,6 @@ function Legislator (now, id, options) {
 
     this.ping = options.ping || 1
     this.timeout = options.timeout || 3
-    this.proposing = false
 
     var round = {
         promise: '0/0',
