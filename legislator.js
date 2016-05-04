@@ -577,13 +577,10 @@ Legislator.prototype._whenPulse = function (now, event) {
 }
 
 Legislator.prototype._whenPing = function (now, event) {
-    this.constituency.forEach(function (id) {
-        var peer = this.getPeer(id)
-        if (peer.timeout == 0) {
-            peer.when = now
-            peer.timeout = 1
-        }
-    }, this)
+    var peer = this.getPeer(event.id)
+    if (peer.timeout == 0) {
+        peer.timeout = 1
+    }
 }
 
 Legislator.prototype._receivePing = function (now, pulse, message, responses) {

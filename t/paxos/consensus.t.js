@@ -132,7 +132,7 @@ function prove (assert) {
 
     assert(legislators[0]._peers[1].timeout, 0, 'liveness pulse')
 
-    legislators[1]._whenPing(time)
+    legislators[1]._whenPing(time, { id: '2' })
 
     assert(legislators[1]._peers[2].timeout, 1, 'liveness ping timeout set')
 
@@ -142,7 +142,7 @@ function prove (assert) {
 
     delete legislators[1]._peers[2]
 
-    legislators[1]._whenPing(time)
+    legislators[1]._whenPing(time, { id: '2' })
 
     tick()
 
