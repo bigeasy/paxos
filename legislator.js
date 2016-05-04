@@ -256,7 +256,7 @@ Legislator.prototype.synchronize = function (now) {
                 messages: []
             }
 
-            var peer = this.getPeer(id), maximum = peer.decided
+            var maximum = peer.decided
             if (peer.extant) {
                 var round
                 // TODO Cookie has to come back with ping.
