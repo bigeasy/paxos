@@ -179,8 +179,4 @@ function prove (assert) {
     legislators[0].post(time, { type: 'enqueue', value: 3 })
 
     tick()
-
-    legislators[0].post(time, { type: 'enqueue', value: 4 })
-
-    tick({ 4: 'request' })
 }

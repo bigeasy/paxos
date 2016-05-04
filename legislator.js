@@ -90,8 +90,8 @@ Legislator.prototype.getPeer = function (id) {
     var peer = this._peers[id]
     if (peer == null) {
         return peer = this._peers[id] = {
-            timeout: 1,
-            when: 0,
+            timeout: 0,
+            when: null,
             cookie: null,
             decided: '0/0'
         }
@@ -344,6 +344,8 @@ Legislator.prototype.sent = function (now, pulse, responses) {
     } else {
         switch (pulse.type) {
         case 'consensus':
+            // TODO Only act if failure is related to current government, add
+            // government to pulse.
             if (this.collapsed || ~this.government.majority.indexOf(this.id)) {
                 this.collapse()
             }
@@ -351,6 +353,7 @@ Legislator.prototype.sent = function (now, pulse, responses) {
         case 'synchronize':
             delete this.synchronizing[pulse.route[0]]
             var peer = this.getPeer(pulse.route[0])
+            // TODO Why can't I hit both branches at the outset.
             if (peer.when == null) {
                 peer.when = now
                 peer.timeout = 1
@@ -422,6 +425,8 @@ Legislator.prototype.naturalize = function (now, id, cookie, location) {
     return this.post(now, { type: 'naturalize', id: id, location: location, cookie: cookie })
 }
 
+// TODO When would the routes not be equal. You always clear out the previous
+// government before you begin the business of the pulse.
 Legislator.prototype._routeEqual = function (a, b) {
     if (a.length != b.length) {
         return false
@@ -582,6 +587,7 @@ Legislator.prototype._whenPing = function (now, event) {
     var peer = this.getPeer(event.id)
     peer.skip = false
     if (peer.timeout == 0) {
+        peer.when = now
         peer.timeout = 1
     }
 }
