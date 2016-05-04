@@ -32,7 +32,6 @@ function Legislator (now, id, options) {
     this.citizens = []
 
     this._peers = {}
-    this.getPeer(this.id).extant = true
     this.getPeer(this.id).timeout = 0
 
     this.length = options.length || 1024
@@ -90,8 +89,7 @@ Legislator.prototype.checkSchedule = function (now) {
 Legislator.prototype.getPeer = function (id) {
     var peer = this._peers[id]
     if (peer == null) {
-        peer = this._peers[id] = {
-            extant: false,
+        return peer = this._peers[id] = {
             timeout: 1,
             when: 0,
             cookie: null,
@@ -257,7 +255,7 @@ Legislator.prototype.synchronize = function (now) {
             }
 
             var maximum = peer.decided
-            if (peer.extant) {
+            if (peer.cookie != null) {
                 var round
                 // TODO Cookie has to come back with ping.
                 if (peer.decided == '0/0') {
@@ -352,11 +350,10 @@ Legislator.prototype.sent = function (now, pulse, responses) {
         case 'synchronize':
             delete this.synchronizing[pulse.route[0]]
             var peer = this.getPeer(pulse.route[1])
-            peer.when = now
-            if (peer.extant) {
+            if (peer.when) {
                 peer.timeout = now - peer.when
             } else {
-                peer.extant = true
+                peer.when = now
                 peer.timeout = 1
             }
             this.ponged = true
@@ -582,7 +579,7 @@ Legislator.prototype._whenPulse = function (now, event) {
 Legislator.prototype._whenPing = function (event) {
     this.constituency.forEach(function (id) {
         var peer = this.getPeer(id)
-        if (peer.extant) {
+        if (peer.timeout == 0) {
             peer.timeout = 1
         }
     }, this)
@@ -593,14 +590,13 @@ Legislator.prototype._receivePing = function (now, pulse, message, responses) {
         return
     }
     var peer = this.getPeer(message.from), ponged = false
-    if (peer.extant) {
+    if (peer.cookie) {
         if (peer.timeout) {
             ponged = true
         }
     } else {
         ponged = true
     }
-    peer.extant = true
     peer.timeout = 0
     peer.when = now
     peer.decided = message.decided
