@@ -15,7 +15,6 @@ function Legislator (now, id, options) {
 
     this.id = id
     this.parliamentSize = options.parliamentSize || 5
-    this._Date = options.Date || Date
 
     this.log = new RBTree(function (a, b) { return Monotonic.compare(a.promise, b.promise) })
     this.scheduler = new Scheduler
