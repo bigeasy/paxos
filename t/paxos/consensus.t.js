@@ -1,4 +1,4 @@
-require('proof')(16, prove)
+require('proof')(17, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -82,6 +82,19 @@ function prove (assert) {
     legislators.push(new Legislator(time, '1', options))
 
     assert(legislators[0].naturalize(time, '1', legislators[1].cookie, '1').posted, 'naturalize')
+
+    tick({ 1: 'request' })
+
+    time++
+
+    assert(legislators[0].checkSchedule(time), 'ping missed')
+
+    tick({ 1: 'request' })
+
+    time++
+
+    legislators[0].checkSchedule(time)
+
     tick()
 
     assert(legislators[0].government, {
@@ -94,7 +107,7 @@ function prove (assert) {
 
     assert(legislators[1].log.size, 2, 'synchronized')
 
-    legislators.push(new Legislator(0, '2', options))
+    legislators.push(new Legislator(time, '2', options))
     legislators[0].post(time, { type: 'enqueue', value: 1 })
     legislators[0].naturalize(time, '2', legislators[2].cookie, '2')
 
@@ -166,4 +179,8 @@ function prove (assert) {
     legislators[0].post(time, { type: 'enqueue', value: 3 })
 
     tick()
+
+    legislators[0].post(time, { type: 'enqueue', value: 4 })
+
+    tick({ 4: 'request' })
 }

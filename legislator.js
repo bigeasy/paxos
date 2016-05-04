@@ -42,7 +42,7 @@ function Legislator (now, id, options) {
     assert(!Array.isArray(options.timeout), 'retry no longer accepts range')
 
     this.ping = options.ping || 1
-    this.timeout = options.timeout || 1
+    this.timeout = options.timeout || 3
     this.proposing = false
 
     var round = {
@@ -81,7 +81,7 @@ Legislator.prototype.checkSchedule = function (now) {
         happened = true
         var type = event.type
         var method = '_when' + type[0].toUpperCase() + type.substring(1)
-        this[method](event)
+        this[method](now, event)
     }, this)
     return happened
 }
@@ -245,7 +245,7 @@ Legislator.prototype.synchronize = function (now) {
         var id = this.constituency[i]
         var peer = this.getPeer(id)
         var compare = Monotonic.compare(this.getPeer(id).decided, this.getPeer(this.id).decided)
-        if ((peer.timeout != 0 || compare < 0) && !this.synchronizing[id]) {
+        if ((peer.timeout != 0 || compare < 0) && !peer.skip && !this.synchronizing[id]) {
             var count = 20
             this.synchronizing[id] = true
             var pulse = {
@@ -315,7 +315,8 @@ Legislator.prototype.collapse = function () {
             delete this._peers[id]
         }
     }
-    this.constituency = this.parliament.filter(function (id) {
+    var parliament = this.government.majority.concat(this.government.minority)
+    this.constituency = parliament.filter(function (id) {
         return this.id != id
     }.bind(this))
 }
@@ -349,15 +350,16 @@ Legislator.prototype.sent = function (now, pulse, responses) {
             break
         case 'synchronize':
             delete this.synchronizing[pulse.route[0]]
-            var peer = this.getPeer(pulse.route[1])
-            if (peer.when) {
-                peer.timeout = now - peer.when
-            } else {
+            var peer = this.getPeer(pulse.route[0])
+            if (peer.when == null) {
                 peer.when = now
                 peer.timeout = 1
+            } else {
+                peer.timeout = now - peer.when
             }
+            peer.skip = true
             this.ponged = true
-            this._schedule(now, { type: 'ping', id: pulse.route[1], delay: this.ping })
+            this._schedule(now, { type: 'ping', id: pulse.route[0], delay: this.ping })
             break
         }
     }
@@ -578,6 +580,7 @@ Legislator.prototype._whenPulse = function (now, event) {
 
 Legislator.prototype._whenPing = function (now, event) {
     var peer = this.getPeer(event.id)
+    peer.skip = false
     if (peer.timeout == 0) {
         peer.timeout = 1
     }
