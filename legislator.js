@@ -309,6 +309,7 @@ Legislator.prototype.receive = function (now, pulse, messages) {
 Legislator.prototype.collapse = function () {
     this.collapsed = true
     this.proposals.length = 0
+    this.naturalizing.length = 0
     for (var id in this._peers) {
         if (id != this.id) {
             delete this._peers[id]
