@@ -576,8 +576,8 @@ Legislator.prototype._ping = function (now) {
     assert(now != null)
     return {
         type: 'ping',
-        when: now,
         from: this.id,
+        when: now,
         cookie: this.cookie,
         decided: this._peers[this.id].decided
     }
@@ -611,6 +611,22 @@ Legislator.prototype._receivePing = function (now, pulse, message, responses) {
     peer.decided = message.decided
     peer.cookie = message.cookie
     responses.push(this._ping(now))
+    var constituency = this.constituency
+    if (~this.government.majority.slice(1).indexOf(this.id)) {
+        constituency = this.government.minority.concat(this.government.constituents)
+    }
+    constituency.forEach(function (id) {
+        var peer = this.getPeer(id)
+        if (peer.cookie != null) {
+            responses.push({
+                type: 'ping',
+                from: id,
+                when: peer.when,
+                cookie: peer.cookie,
+                decided: peer.decided
+            })
+        }
+    }, this)
     this.ponged = this.ponged || ponged
 }
 

@@ -1,4 +1,4 @@
-require('proof')(17, prove)
+require('proof')(18, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -180,13 +180,18 @@ function prove (assert) {
 
     tick()
 
-    console.log(legislators[0]._peers)
-
-    // Test consensus collapse due to failure, expired proposal, and expired
-    // pulse on send.
+    // One more post to propagate the pings to the new memebers back to the
+    // leader. TODO Do this by advancing clock to test pings.
     legislators[0].post(time, { type: 'enqueue', value: 3 })
 
-    tick({ 1: 'isolate' })
+    tick()
 
-    console.log(legislators[0].government)
+    // TODO: Always include exiles and naturalization empty and null by
+    // default.
+    assert(legislators[0].government, {
+        majority: [ '0', '1', '2' ],
+        minority: [ '3', '4' ],
+        constituents: [],
+        promise: '8/0'
+    }, 'five member parliament')
 }
