@@ -601,11 +601,9 @@ Legislator.prototype._receivePing = function (now, pulse, message, responses) {
         return
     }
     var peer = this.getPeer(message.from), ponged = false
-    if (peer.cookie) {
-        if (peer.timeout) {
-            ponged = true
-        }
-    } else {
+    if (peer.cookie == null) {
+        ponged = true
+    } else if (peer.timeout) {
         ponged = true
     }
     peer.timeout = 0
