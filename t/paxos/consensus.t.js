@@ -46,7 +46,7 @@ function prove (assert) {
             var send = outbox.shift(), responses = {}
             send.route.forEach(function (id) {
                 var legislator = legislators[id]
-                if (failures[id] != 'request') {
+                if (failures[id] != 'request' && failures[id] != 'isolate') {
                     responses[id] = legislator.receive(time, send, send.messages)
                 }
                 if (failures[id] == 'response') {
@@ -180,9 +180,13 @@ function prove (assert) {
 
     tick()
 
+    console.log(legislators[0]._peers)
+
     // Test consensus collapse due to failure, expired proposal, and expired
     // pulse on send.
     legislators[0].post(time, { type: 'enqueue', value: 3 })
 
-    tick({ 1: 'request' })
+    tick({ 1: 'isolate' })
+
+    console.log(legislators[0].government)
 }
