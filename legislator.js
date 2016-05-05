@@ -26,7 +26,7 @@ function Legislator (now, id, options) {
     this.naturalizing = []
     this._dirty = false
 
-    this.government = { promise: '0/0', minority: [], majority: [] }
+    this.government = { promise: '0/0', minority: [], majority: [ this.id ] }
     this.promise = '0/0'
     this.citizens = []
 
@@ -131,7 +131,7 @@ Legislator.prototype.consensus = function (now) {
     if (this.government.majority[0] == this.id && this.accepted && Monotonic.isBoundary(this.accepted.promise, 0)) {
             return {
                 type: 'consensus',
-                government: this.government.promise,
+                governments: [ this.government.promise, this.accepted.promise ],
                 route: this.accepted.route,
                 messages: [this._ping(now), {
                     type: 'commit',
@@ -183,7 +183,7 @@ Legislator.prototype.consensus = function (now) {
             }
             return {
                 type: 'consensus',
-                government: this.government.promise,
+                governments: [ this.government.promise ],
                 route: majority,
                 messages: [{
                     type: 'propose',
@@ -210,7 +210,7 @@ Legislator.prototype.consensus = function (now) {
         if (proposal == null || !this._routeEqual(proposal.route, this.accepted.route)) {
             return {
                 type: 'consensus',
-                government: this.government.promise,
+                governments: [ this.government.promise ],
                 route: this.accepted.route,
                 messages: messages
             }
@@ -225,7 +225,7 @@ Legislator.prototype.consensus = function (now) {
         this.proposals.shift()
         return {
             type: 'consensus',
-            government: this.government.promise,
+            governments: [ this.government.promise ],
             route: proposal.route.slice(),
             messages: messages
         }
@@ -234,7 +234,7 @@ Legislator.prototype.consensus = function (now) {
         this.pulse = false
         return {
             type: 'consensus',
-            government: this.government.promise,
+            governments: [ this.government.promise ],
             route: this.government.majority,
             messages: [ this._ping(now) ]
         }
@@ -253,7 +253,7 @@ Legislator.prototype.synchronize = function (now) {
             this.synchronizing[id] = true
             var pulse = {
                 type: 'synchronize',
-                government: this.government.promise,
+                governments: [ this.government.promise ],
                 route: [ id ],
                 messages: []
             }
@@ -328,7 +328,7 @@ Legislator.prototype.collapse = function () {
 
 Legislator.prototype.sent = function (now, pulse, responses) {
     this._signal('sent', [ pulse ])
-    if (this.government.promise != pulse.government) {
+    if (!~pulse.governments.indexOf(this.government.promise)) {
         return
     }
     var success = true
