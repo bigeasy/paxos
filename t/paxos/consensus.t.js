@@ -179,4 +179,10 @@ function prove (assert) {
     legislators[0].post(time, { type: 'enqueue', value: 3 })
 
     tick()
+
+    // Test consensus collapse due to failure, expired proposal, and expired
+    // pulse on send.
+    legislators[0].post(time, { type: 'enqueue', value: 3 })
+
+    tick({ 1: 'request' })
 }
