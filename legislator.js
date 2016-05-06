@@ -43,14 +43,13 @@ function Legislator (now, id, options) {
     this.ping = options.ping || 1
     this.timeout = options.timeout || 3
 
-    var round = {
+    this.log.insert({
         promise: '0/0',
         value: { government: this.government },
         quorum: [ this.id ],
         decisions: [ this.id ],
         decided: true
-    }
-    this.log.insert(round)
+    })
 
     this.constituency = []
 }
