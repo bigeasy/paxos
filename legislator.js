@@ -171,7 +171,6 @@ Legislator.prototype.consensus = function (now) {
                 minority: this.election.minority
             }, this.promise)
         } else {
-            var election = this._elect()
             var parliament = this.government.majority.concat(this.government.minority)
             var unknown = { timeout: 1 }
             var present = this.parliament.filter(function (id) {
@@ -725,32 +724,6 @@ Legislator.prototype._enactGovernment = function (now, round) {
 
 Legislator.prototype._whenCollapse = function () {
     this.collapse()
-}
-
-Legislator.prototype._elect = function () {
-    if (!this.collapsed) {
-        return null
-    }
-    assert(~this.government.majority.indexOf(this.id), 'would be leader not in majority')
-    var parliament = this.government.majority.concat(this.government.minority)
-    var unknown = { timeout: 1 }
-    var present = parliament.filter(function (id) {
-        return id != this.id && (this._peers[id] || unknown).timeout == 0
-    }.bind(this))
-    if (present.length + 1 < this.government.majority.length) {
-        return null
-    }
-    var parliamentSize = parliament.length <= 3 ? 1 : 3
-    var newParliament = [ this.id ].concat(present).slice(0, parliamentSize)
-    var majoritySize = Math.ceil(parliamentSize / 2)
-    var routeLength = Math.ceil(parliament.length / 2)
-    return {
-        quorum: parliament.slice(0, routeLength),
-        government: {
-            majority: newParliament.slice(0, majoritySize),
-            minority: newParliament.slice(majoritySize)
-        }
-    }
 }
 
 Legislator.prototype._expand = function () {

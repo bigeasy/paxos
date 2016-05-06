@@ -1,4 +1,4 @@
-require('proof')(21, prove)
+require('proof')(17, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator')
@@ -46,51 +46,6 @@ function prove (assert) {
 
         assert(legislator.checkSchedule(0), 'check schedule')
         assert(wasScheduled, 'scheduled')
-    } ()
-
-    ! function () {
-        var legislator = new Legislator(0, '1')
-
-        assert(legislator._elect.call({}), null, 'elect not collapsed')
-        assert(legislator._elect.call({
-            collapsed: true,
-            id: 0,
-            government: {
-                majority: [ 0, 1, 2 ],
-                minority: [ 3, 5 ]
-            },
-            _peers: { 2: { timeout: 0 } }
-        }), null, 'elect no possible quorum')
-        assert(legislator._elect.call({
-            collapsed: true,
-            id: 0,
-            government: {
-                majority: [ 0, 1, 2 ],
-                minority: [ 3, 5 ]
-            },
-            _peers: { 1: { timeout: 0 }, 2: { timeout: 0 } }
-        }), {
-            quorum: [ 0, 1, 2 ],
-            government: {
-                majority: [ 0, 1 ],
-                minority: [ 2 ]
-            }
-        }, 'elect new three member government')
-        assert(legislator._elect.call({
-            collapsed: true,
-            id: 0,
-            government: {
-                majority: [ 0, 1 ],
-                minority: [ 3 ]
-            },
-            _peers: { 1: { timeout: 0 } }
-        }), {
-            quorum: [ 0, 1 ],
-            government: {
-                majority: [ 0 ],
-                minority: []
-            }
-        }, 'elect new dictator')
     } ()
 
     ! function () {
