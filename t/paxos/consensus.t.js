@@ -1,4 +1,4 @@
-require('proof')(19, prove)
+require('proof')(20, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -228,4 +228,9 @@ function prove (assert) {
     tick()
 
     receive(legislators[1], [ consensus ])
+
+    // Test inability to recover because of lack of majority.
+    legislators[0].collapse()
+
+    assert(legislators[0].consensus(), null, 'cannot choose leaders')
 }

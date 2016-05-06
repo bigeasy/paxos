@@ -171,7 +171,7 @@ Legislator.prototype.consensus = function (now) {
                 return id != this.id && (this._peers[id] || unknown).timeout == 0
             }.bind(this))
             var majoritySize = Math.ceil(parliament.length / 2)
-            if (majoritySize < present) {
+            if (present.length < majoritySize) {
                 return null
             }
             var majority = [ this.id ].concat(present).slice(0, majoritySize)
@@ -187,6 +187,7 @@ Legislator.prototype.consensus = function (now) {
                 route: majority,
                 messages: [{
                     type: 'propose',
+                    // Do not increment here, it will be set by `_receivePromise`.
                     promise: Monotonic.increment(this.promise, 0)
                 }]
             }
