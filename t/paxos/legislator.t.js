@@ -2,31 +2,6 @@ require('proof')(15, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator')
-    var signal = require('signal')
-    var Legislator = require('../../legislator'),
-        signal = require('signal')
-
-    signal.subscribe('.bigeasy.paxos.invoke'.split('.'), function (id, method, vargs) {
-         if (id == '0') {
-            // console.log(JSON.stringify({ method: method, vargs: vargs }))
-        }
-    })
-
-    var time = 0, gremlin
-
-    var options = {
-        Date: { now: function () { return time } },
-        parliamentSize: 5,
-        ping: 1,
-        timeout: 2,
-        retry: 5
-    }
-
-    signal.subscribe('.bigeasy.paxos.invoke'.split('.'), function (id, method, vargs) {
-         if (id == '0') {
-            // console.log(JSON.stringify({ method: method, vargs: vargs }))
-        }
-    })
 
     ! function () {
         var legislator = new Legislator(0, '1')
