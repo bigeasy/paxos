@@ -1,4 +1,4 @@
-require('proof')(17, prove)
+require('proof')(15, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator')
@@ -222,28 +222,5 @@ function prove (assert) {
                 exiles: [ '4' ]
             }
         }, 'exile')
-    } ()
-
-    ! function () {
-        var legislator = new Legislator(0, '1')
-
-        assert(legislator.reshape.call({
-            collapsed: false,
-            id: '0',
-            government: {
-                majority: [ '0' ]
-            },
-            _impeach: function () { return null },
-            _exile: function () { return null },
-            _expand: function () { return 0xaaaaaaaa }
-        }), 0xaaaaaaaa, 'ponged not collapsed')
-
-        assert(legislator.reshape.call({
-            collapsed: false,
-            id: '0',
-            government: {
-                majority: [ '1' ]
-            },
-        }) == null, 'ponged do nothing')
     } ()
 }
