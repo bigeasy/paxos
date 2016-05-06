@@ -267,7 +267,6 @@ Legislator.prototype.synchronize = function (now) {
             var maximum = peer.decided
             if (peer.cookie != null) {
                 var round
-                // TODO Cookie has to come back with ping.
                 if (peer.decided == '0/0') {
                     var iterator = this.log.iterator()
                     for (;;) {
@@ -369,7 +368,6 @@ Legislator.prototype.sent = function (now, pulse, responses) {
         case 'synchronize':
             delete this.synchronizing[pulse.route[0]]
             var peer = this.getPeer(pulse.route[0])
-            // TODO Why can't I hit both branches at the outset.
             if (peer.when == null) {
                 peer.when = now
                 peer.timeout = 1
@@ -542,12 +540,6 @@ Legislator.prototype._receiveCommit = function (now, pulse, message) {
 Legislator.prototype._receiveEnact = function (now, pulse, message) {
     this._signal('_receiveEnact', [ now, pulse, message ])
 
-    // TODO So many assertions.
-    if (this.accepted) {
-        this.accepted = null
-    }
-
-    // TODO Do we need all of these?
     this.proposal = null
     this.accepted = null
     this.collapsed = false
