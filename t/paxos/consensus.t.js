@@ -233,20 +233,16 @@ function prove (assert) {
 
     time++
 
+    // Test attmepting to naturalize a restarted legislator.
     legislators[1].checkSchedule(time)
     send(legislators[1])
     legislators[5] = new Legislator(time, '5', options)
     tick()
 
-    console.log('- 1 -')
     legislators[0].collapse()
     send(legislators[0])
     send(legislators[0])
-    console.log('-->', legislators[0].election)
     legislators[2].collapse()
     tick({ 0: 'isolate' })
-    console.log('- 2 -')
-    console.log('-', legislators[0].promise)
-    console.log(legislators[2].government)
     tick()
 }
