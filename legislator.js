@@ -432,6 +432,8 @@ Legislator.prototype.post = function (now, message) {
     }
 }
 
+// TODO Reject duplicate naturalization or override. Reject already naturalized,
+// but you have to do that at ingest of naturalizaiton.
 Legislator.prototype.naturalize = function (now, id, cookie, location) {
     assert(arguments.length == 4)
     this._signal('naturalize', [ now, id ])
