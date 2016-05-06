@@ -206,7 +206,6 @@ function prove (assert) {
 
     tick({ 1: 'isolate' })
 
-
     assert(legislators[0].government, {
         majority: [ '0', '2', '3' ],
         minority: [ '1', '4' ],
@@ -220,8 +219,34 @@ function prove (assert) {
 
     receive(legislators[1], [ consensus ])
 
-    // Test inability to recover because of lack of majority.
+    // Test inability to create new government because of lack of majority.
     legislators[0].collapse()
 
     assert(legislators[0].consensus(), null, 'cannot choose leaders')
+
+    tick()
+
+    legislators.push(new Legislator(time, '5', options))
+    legislators[0].naturalize(time, '5', legislators[5].cookie, '5')
+
+    tick({ 5: 'isolate' })
+
+    time++
+
+    legislators[1].checkSchedule(time)
+    send(legislators[1])
+    legislators[5] = new Legislator(time, '5', options)
+    tick()
+
+    console.log('- 1 -')
+    legislators[0].collapse()
+    send(legislators[0])
+    send(legislators[0])
+    console.log('-->', legislators[0].election)
+    legislators[2].collapse()
+    tick({ 0: 'isolate' })
+    console.log('- 2 -')
+    console.log('-', legislators[0].promise)
+    console.log(legislators[2].government)
+    tick()
 }

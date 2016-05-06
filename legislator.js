@@ -271,6 +271,7 @@ Legislator.prototype.synchronize = function (now) {
                     var iterator = this.log.iterator()
                     for (;;) {
                         round = iterator.prev()
+                        // TODO Yes, if you ping someone who reset itself.
                         assert(round, 'cannot find naturalization')
                         if (Monotonic.isBoundary(round.promise, 0)) {
                             var naturalize = round.value.government.naturalize
@@ -449,16 +450,24 @@ Legislator.prototype._routeEqual = function (a, b) {
     }).length == a.length
 }
 
+Legislator.prototype._reject = function (message) {
+    return {
+        type: 'reject',
+        from: this.id,
+        government: this.government.pulse,
+        promised: this.promise
+    }
+}
+
+Legislator.prototype._receiveReject = function (now, pulse, message) {
+    pulse.failed = false
+}
+
 Legislator.prototype._receivePropose = function (now, pulse, message, responses) {
     this._signal('_receivePropose', [ now, pulse, message, responses ])
     var compare = Monotonic.compare(message.promise, this.promise)
     if (compare <= 0 || pulse.government != this.government.pulse) {
-        responses.push({
-            type: 'reject',
-            from: this.id,
-            government: this.government.pulse,
-            promised: this.promise
-        })
+        responses.push(this._reject(message))
     } else {
         responses.push({
             type: 'promise',
@@ -499,13 +508,17 @@ Legislator.prototype._receivePromise = function (now, pulse, message, responses)
 // should only go out when that route is pulsed. If the network calls fail, the
 // leader will be able to learn immediately.
 
-Legislator.prototype._receiveAccept = function (now, pulse, message) {
-    if (Monotonic.compareIndex(this.promise, message.promise, 0) <= 0) {
+Legislator.prototype._receiveAccept = function (now, pulse, message, responses) {
+    // TODO Think hard; are will this less than catch both two-stage commit and
+    // Paxos?
+    if (~pulse.governments.indexOf(this.government.promise) &&
+        Monotonic.compareIndex(this.promise, message.promise, 0) <= 0
+    ) {
         this.accepted = JSON.parse(JSON.stringify(message))
         this.promise = this.accepted.promise
         this.accepted.route = pulse.route
     } else {
-        pulse.failed = true
+        responses.push(this._reject(message))
     }
 }
 
@@ -513,27 +526,27 @@ Legislator.prototype._receiveAccept = function (now, pulse, message) {
 // you could be sending a commit message out on the pulse of a new promise. You
 // need to make sure that you don't send the commit, ah, but if you'd sent a new
 // promise, you would already have worked through these things.
-Legislator.prototype._receiveCommit = function (now, pulse, message) {
+Legislator.prototype._receiveCommit = function (now, pulse, message, responses) {
     this._signal('_receiveCommit', [ now, pulse, message ])
+    if (this.accepted == null || this.accepted.promise != message.promise) {
+        responses.push(this._reject(message))
+    } else {
+        var round = this.accepted
 
-    var round = this.accepted
-    this.accepted = null // TODO Move.
+        this.accepted = null
 
-    if (Monotonic.compare(round.promise, message.promise) != 0) {
-        throw new Error
+        var rounds = []
+        while (round) {
+            rounds.push(round)
+            var next = round.previous
+            round.previous = null
+            round = next
+        }
+
+        rounds.forEach(function (round) {
+            this._receiveEnact(now, pulse, round)
+        }, this)
     }
-
-    var rounds = []
-    while (round) {
-        rounds.push(round)
-        var next = round.previous
-        round.previous = null
-        round = next
-    }
-
-    rounds.forEach(function (round) {
-        this._receiveEnact(now, pulse, round)
-    }, this)
 }
 
 Legislator.prototype._receiveEnact = function (now, pulse, message) {
@@ -551,6 +564,7 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
     var valid = Monotonic.compare(max.promise, message.promise) < 0
 
     if (!valid) {
+        // TODO When is this called?
         return
     }
 
@@ -566,6 +580,7 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
             valid = valid && message.value.government.naturalize.id == this.id
             valid = valid && message.value.government.naturalize.cookie == this.cookie
             if (!valid) {
+                pulse.failed = true
                 return
             }
         }
