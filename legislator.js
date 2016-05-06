@@ -393,11 +393,7 @@ Legislator.prototype.bootstrap = function (now, location) {
     this.newGovernment(now, [ this.id ], government, '1/0')
 }
 
-// Note that a client will have to treat a network failure on submission as a
-// failure requiring boundary detection.
-Legislator.prototype.post = function (now, message) {
-    assert(arguments.length == 2)
-    this._signal('post', [ now, message ])
+Legislator.prototype._enqueuable = function () {
     if (this.government.majority[0] != this.id) {
         return {
             posted: false,
@@ -411,12 +407,16 @@ Legislator.prototype.post = function (now, message) {
             leader: null
         }
     }
+}
 
-    switch (message.type) {
-    case 'naturalize':
-        this.naturalizing.push(message)
-        return { posted: true, promise: null }
-    case 'enqueue':
+// Note that a client will have to treat a network failure on submission as a
+// failure requiring boundary detection.
+Legislator.prototype.post = function (now, message) {
+    assert(arguments.length == 2)
+    this._signal('post', [ now, message ])
+
+    var response = this._enqueuable()
+    if (response == null) {
         var promise = this.promise = Monotonic.increment(this.promise, 1)
         this.proposals.push({
             promise: promise,
@@ -424,12 +424,14 @@ Legislator.prototype.post = function (now, message) {
             value: message
         })
 
-        return {
+        response = {
             posted: true,
             leader: this.government.majority[0],
             promise: promise
         }
     }
+
+    return response
 }
 
 // TODO Reject duplicate naturalization or override. Reject already naturalized,
@@ -438,7 +440,17 @@ Legislator.prototype.naturalize = function (now, id, cookie, location) {
     assert(arguments.length == 4)
     this._signal('naturalize', [ now, id ])
     assert(typeof id == 'string', 'id must be a hexidecmimal string')
-    return this.post(now, { type: 'naturalize', id: id, location: location, cookie: cookie })
+    var response = this._enqueuable()
+    if (response == null) {
+        this.naturalizing.push({
+            type: 'naturalize',
+            id: id,
+            location: location,
+            cookie: cookie
+        })
+        response = { posted: true, promise: null }
+    }
+    return response
 }
 
 // TODO When would the routes not be equal. You always clear out the previous
