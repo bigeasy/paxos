@@ -1,4 +1,4 @@
-require('proof')(18, prove)
+require('proof')(19, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator'),
@@ -30,6 +30,25 @@ function prove (assert) {
     var legislators = [ new Legislator(time, '0', options) ]
     legislators[0].bootstrap(time, '0')
 
+    function receive (legislator, outbox, failures) {
+        failures || (failures = {})
+        if (outbox.length == 0) {
+            return false
+        }
+        var send = outbox.shift(), responses = {}
+        send.route.forEach(function (id) {
+            var legislator = legislators[id]
+            if (failures[id] != 'request' && failures[id] != 'isolate') {
+                responses[id] = legislator.receive(time, send, send.messages)
+            }
+            if (failures[id] == 'response') {
+                delete responses[id]
+            }
+        })
+        legislator.sent(time, send, responses)
+        return true
+    }
+
     function send (legislator, failures) {
         failures || (failures = {})
         var sent = false
@@ -37,34 +56,25 @@ function prove (assert) {
         if (outbox.length == 0) {
             var consensus = legislator.consensus(time)
             if (consensus) {
-                sent = true
                 outbox = [ consensus ]
             }
         }
-        while (outbox.length != 0) {
+        while (receive(legislator, outbox, failures)) {
             sent = true
-            var send = outbox.shift(), responses = {}
-            send.route.forEach(function (id) {
-                var legislator = legislators[id]
-                if (failures[id] != 'request' && failures[id] != 'isolate') {
-                    responses[id] = legislator.receive(time, send, send.messages)
-                }
-                if (failures[id] == 'response') {
-                    delete responses[id]
-                }
-            })
-            legislator.sent(time, send, responses)
         }
         return sent
     }
 
     function tick (failures) {
+        failures || (failures = {})
         var ticked = true
         while (ticked) {
             ticked = false
             legislators.forEach(function (legislator) {
-                while (send(legislator, failures)) {
-                    ticked = true
+                if (failures[legislator.id] != 'isolate') {
+                    while (send(legislator, failures)) {
+                        ticked = true
+                    }
                 }
             })
         }
@@ -194,4 +204,28 @@ function prove (assert) {
         constituents: [],
         promise: '8/0'
     }, 'five member parliament')
+
+    legislators[0].post(time, { type: 'enqueue', value: 3 })
+
+    legislators[1].collapse()
+
+    send(legislators[1])
+
+    var consensus = legislators[1].consensus(time)
+
+    tick({ 1: 'isolate' })
+
+
+    assert(legislators[0].government, {
+        majority: [ '0', '2', '3' ],
+        minority: [ '1', '4' ],
+        constituents: [],
+        promise: '9/0'
+    }, 'recover from isolation')
+
+    time++
+    legislators[2].checkSchedule(time)
+    tick()
+
+    receive(legislators[1], [ consensus ])
 }

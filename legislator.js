@@ -313,6 +313,7 @@ Legislator.prototype.receive = function (now, pulse, messages) {
 
 Legislator.prototype.collapse = function () {
     this.collapsed = true
+    this.election = null
     this.proposals.length = 0
     this.naturalizing.length = 0
     for (var id in this._peers) {
@@ -329,6 +330,10 @@ Legislator.prototype.collapse = function () {
 Legislator.prototype.sent = function (now, pulse, responses) {
     this._signal('sent', [ pulse ])
     if (!~pulse.governments.indexOf(this.government.promise)) {
+        // TODO This can leave us in a state where we are collapsed and have an
+        // outstanding election and the only thing that will clear that state
+        // would be enacting a new government, so we need to wait until this
+        // government we're .
         return
     }
     var success = true
@@ -339,6 +344,7 @@ Legislator.prototype.sent = function (now, pulse, responses) {
             this.receive(now, pulse, responses[id])
         }
     }, this)
+    success = success && !pulse.failed
     if (success) {
         switch (pulse.type) {
         case 'synchronize':
@@ -443,34 +449,40 @@ Legislator.prototype._routeEqual = function (a, b) {
 Legislator.prototype._receivePropose = function (now, pulse, message, responses) {
     this._signal('_receivePropose', [ now, pulse, message, responses ])
     var compare = Monotonic.compare(message.promise, this.promise)
-    if (compare > 0) {
+    if (compare <= 0 || pulse.government != this.government.pulse) {
+        responses.push({
+            type: 'reject',
+            from: this.id,
+            government: this.government.pulse,
+            promised: this.promise
+        })
+    } else {
         responses.push({
             type: 'promise',
             from: this.id,
             promise: this.promise = message.promise,
             accepted: this.accepted
         })
-    } else {
-        pulse.failed = true
     }
 }
 
 Legislator.prototype._receivePromise = function (now, pulse, message, responses) {
     this._signal('_receivePromise', [ now, pulse, message, responses ])
-    // TODO Add current government to messages.
-    if (this.collapsed) {
-        assert(!~this.election.promises.indexOf(message.from), 'duplicate promise')
-        this.election.promises.push(message.from)
-        if (message.accepted == null) {
-            return
-        }
-        if (this.accepted == null ||
-            Monotonic.compareIndex(this.accepted.promise, message.accepted.promise, 0) < 0
-        ) {
-            message.accepted.previous = this.accepted
-            this.accepted = message.accepted
-            this.accepted.route = pulse.route
-        }
+    // We won't get called if our government has been superceeded.
+    assert(~pulse.governments.indexOf(this.government.promise), 'goverment mismatch')
+    assert(this.election, 'no election')
+    assert(!~this.election.promises.indexOf(message.from), 'duplicate promise')
+    assert(~this.election.majority.indexOf(message.from), 'promise not in majority')
+    this.election.promises.push(message.from)
+    if (message.accepted == null) {
+        return
+    }
+    if (this.accepted == null ||
+        Monotonic.compareIndex(this.accepted.promise, message.accepted.promise, 0) < 0
+    ) {
+        message.accepted.previous = this.accepted
+        this.accepted = message.accepted
+        this.accepted.route = pulse.route
     }
 }
 
@@ -652,6 +664,7 @@ Legislator.prototype._enactGovernment = function (now, round) {
 
     this.citizens = this.government.majority.concat(this.government.minority)
                                             .concat(this.government.constituents)
+    // TODO Decide on whether this is calculated here or as needed.
     this.parliament = this.government.majority.concat(this.government.minority)
 
     this.constituency = []
