@@ -199,8 +199,8 @@ Legislator.prototype.consensus = function (now) {
             }
         }
     } else {
-        if (this.ponged) {
-            var reshape = this.reshape()
+        if (this.ponged && this.id == this.government.majority[0]) {
+            var reshape = this._impeach() || this._exile() || this._expand()
             if (reshape) {
                 this.ponged = false
                 this.newGovernment(now, reshape.quorum, reshape.government, Monotonic.increment(this.promise, 0))
@@ -809,15 +809,6 @@ Legislator.prototype._exile = function () {
             minority: this.government.minority,
             exiles: exiles
         }
-    }
-}
-
-// TODO Merge all the above once it settles.
-Legislator.prototype.reshape = function () {
-    if (!this.collapsed && this.government.majority[0] == this.id) {
-        return this._impeach() || this._exile() || this._expand()
-    } else {
-        return null
     }
 }
 
