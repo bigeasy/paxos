@@ -288,7 +288,6 @@ Legislator.prototype.synchronize = function (now) {
                     pulse.messages.push({
                         type: 'enact',
                         promise: round.promise,
-                        cookie: round.cookie,
                         value: round.value
                     })
                     round = round.next
