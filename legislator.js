@@ -565,6 +565,7 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
             valid = valid && this.log.min().promise == '0/0'
             valid = valid && message.value.government.naturalize
             valid = valid && message.value.government.naturalize.id == this.id
+            valid = valid && message.value.government.naturalize.cookie == this.cookie
             if (!valid) {
                 return
             }
