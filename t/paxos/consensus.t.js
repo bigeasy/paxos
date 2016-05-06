@@ -14,17 +14,9 @@ function prove (assert) {
         legislator.log.each(function (entry) { console.log(entry) })
     }
 
-    var time = 0, gremlin
+    var time = 0
 
-    var options = {
-        Date: { now: function () { return time } },
-        parliamentSize: 5,
-        ping: 1,
-        timeout: 2,
-        retry: 5
-    }
-
-    var count = 0, util = require('util')
+    var options = { parliamentSize: 5, ping: 1, timeout: 3 }
 
     assert(! new Legislator(time, '0').checkSchedule(time), 'empty schedule')
     var legislators = [ new Legislator(time, '0', options) ]
@@ -196,8 +188,7 @@ function prove (assert) {
 
     tick()
 
-    // TODO: Always include exiles and naturalization empty and null by
-    // default.
+    // TODO Always include exiles and naturalization empty and null by default.
     assert(legislators[0].government, {
         majority: [ '0', '1', '2' ],
         minority: [ '3', '4' ],
