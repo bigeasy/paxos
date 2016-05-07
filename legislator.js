@@ -127,33 +127,8 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
 
 Legislator.prototype.consensus = function (now) {
     this._signal('outbox', [ now ])
-    if (this.government.majority[0] == this.id && this.accepted && Monotonic.isBoundary(this.accepted.promise, 0)) {
-            return {
-                type: 'consensus',
-                governments: [ this.government.promise, this.accepted.promise ],
-                route: this.accepted.route,
-                messages: [this._ping(now), {
-                    type: 'commit',
-                    promise: this.accepted.promise
-                }]
-            }
-    }
     // TODO Terrible. Reset naturalizing on collapse.
-    if (this.naturalizing.length && this.government.majority[0] == this.id) {
-        // TODO Is there a race condition associated with leaving
-        // this in place? We need to break things pretty hard in a
-        // contentinous election.
-        var naturalization = this.naturalizing.shift()
-        this.newGovernment(now, this.government.majority, {
-            majority: this.government.majority,
-            minority: this.government.minority,
-            naturalize: {
-                id: naturalization.id,
-                location: naturalization.location,
-                cookie: naturalization.cookie
-            }
-        }, Monotonic.increment(this.promise, 0))
-    } else if (this.collapsed) {
+    if (this.collapsed) {
         if (this.election) {
             // TODO Currently, your tests are running all synchronizations to
             // completion before running a consensus pulse, so we're not seeing
@@ -197,13 +172,35 @@ Legislator.prototype.consensus = function (now) {
                 }]
             }
         }
-    } else {
-        if (this.ponged && this.id == this.government.majority[0]) {
-            var reshape = this._impeach() || this._exile() || this._expand()
-            if (reshape) {
-                this.ponged = false
-                this.newGovernment(now, reshape.quorum, reshape.government, Monotonic.increment(this.promise, 0))
+    } else if (this.government.majority[0] == this.id && this.accepted && Monotonic.isBoundary(this.accepted.promise, 0)) {
+        return {
+            type: 'consensus',
+            governments: [ this.government.promise, this.accepted.promise ],
+            route: this.accepted.route,
+            messages: [this._ping(now), {
+                type: 'commit',
+                promise: this.accepted.promise
+            }]
+        }
+    } else if (this.naturalizing.length && this.government.majority[0] == this.id) {
+        // TODO Is there a race condition associated with leaving
+        // this in place? We need to break things pretty hard in a
+        // contentinous election.
+        var naturalization = this.naturalizing.shift()
+        this.newGovernment(now, this.government.majority, {
+            majority: this.government.majority,
+            minority: this.government.minority,
+            naturalize: {
+                id: naturalization.id,
+                location: naturalization.location,
+                cookie: naturalization.cookie
             }
+        }, Monotonic.increment(this.promise, 0))
+    } else if (this.ponged && this.id == this.government.majority[0]) {
+        var reshape = this._impeach() || this._exile() || this._expand()
+        if (reshape) {
+            this.ponged = false
+            this.newGovernment(now, reshape.quorum, reshape.government, Monotonic.increment(this.promise, 0))
         }
     }
     var proposal = this.proposals[0]
