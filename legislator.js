@@ -494,7 +494,7 @@ Legislator.prototype._receiveReject = function (now, pulse, message) {
 Legislator.prototype._receivePropose = function (now, pulse, message, responses) {
     this._signal('_receivePropose', [ now, pulse, message, responses ])
     var compare = Monotonic.compare(message.promise, this.promise)
-    if (compare <= 0 || pulse.government != this.government.pulse) {
+    if (compare <= 0 || !~pulse.governments.indexOf(this.government.promise)) {
         responses.push(this._reject(message))
     } else {
         responses.push({
