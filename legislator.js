@@ -134,16 +134,31 @@ Legislator.prototype.consensus = function (now) {
             // completion before running a consensus pulse, so we're not seeing
             // the results of decided upon a consensus action before all of the
             // synchronizations have been returned.
-            if (this.election.electing) {
+            if (this.election.status == 'accepted') {
+                return null
+            } else if (this.election.status == 'proposed') {
+                if (this.election.accepts.length == this.election.promises.length) {
+                    this.election.status = 'accepted'
+                    return {
+                        type: 'consensus',
+                        governments: [ this.government.promise, this.accepted.promise ],
+                        route: this.accepted.route,
+                        messages: [this._ping(now), {
+                            type: 'commit',
+                            promise: this.accepted.promise
+                        }]
+                    }
+                }
                 return null
             } else if (this.election.promises.length < this.election.majority.length) {
                 return null
+            } else {
+                this.election.status = 'proposed'
+                this.newGovernment(now, this.election.majority, {
+                    majority: this.election.majority,
+                    minority: this.election.minority
+                }, this.promise)
             }
-            this.election.electing = true
-            this.newGovernment(now, this.election.majority, {
-                majority: this.election.majority,
-                minority: this.election.minority
-            }, this.promise)
         } else {
             var parliament = this.government.majority.concat(this.government.minority)
             var unknown = { timeout: 1 }
@@ -157,9 +172,11 @@ Legislator.prototype.consensus = function (now) {
             var majority = [ this.id ].concat(present).slice(0, majoritySize)
             var minority = this.parliament.filter(function (id) { return ! ~majority.indexOf(id) })
             this.election = {
+                status: 'proposing',
                 majority: majority,
                 minority: minority,
-                promises: []
+                promises: [],
+                accepts: []
             }
             return {
                 type: 'consensus',
@@ -520,6 +537,7 @@ Legislator.prototype._receivePromise = function (now, pulse, message, responses)
 // leader will be able to learn immediately.
 
 Legislator.prototype._receiveAccept = function (now, pulse, message, responses) {
+    this._signal('_receiveAccept', [ now, pulse, message, responses ])
     // TODO Think hard; are will this less than catch both two-stage commit and
     // Paxos?
     if (~pulse.governments.indexOf(this.government.promise) &&
@@ -528,8 +546,22 @@ Legislator.prototype._receiveAccept = function (now, pulse, message, responses) 
         this.accepted = JSON.parse(JSON.stringify(message))
         this.promise = this.accepted.promise
         this.accepted.route = pulse.route
+        responses.push({
+            type: 'accepted',
+            from: this.id,
+            promise: this.promise = message.promise,
+            accepted: this.accepted
+        })
     } else {
         responses.push(this._reject(message))
+    }
+}
+
+Legislator.prototype._receiveAccepted = function (now, pulse, message) {
+    this._signal('_receiveAccepted', [ now, pulse, message ])
+    if (~pulse.governments.indexOf(this.government.promise) && this.election) {
+        assert(!~this.election.accepts.indexOf(message.from))
+        this.election.accepts.push(message.from)
     }
 }
 
