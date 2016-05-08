@@ -64,6 +64,7 @@ function prove (assert) {
             ticked = false
             legislators.forEach(function (legislator) {
                 if (failures[legislator.id] != 'isolate') {
+                    legislator.checkSchedule(time)
                     while (send(legislator, failures)) {
                         ticked = true
                     }
