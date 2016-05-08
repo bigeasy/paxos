@@ -24,7 +24,6 @@ function Legislator (now, id, options) {
     this.locations = {}
     this.pulse = false
     this.naturalizing = []
-    this._dirty = false
 
     this.government = { promise: '0/0', minority: [], majority: [] }
     this.promise = '0/0'
