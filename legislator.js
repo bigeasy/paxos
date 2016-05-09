@@ -88,7 +88,7 @@ Legislator.prototype.getPeer = function (id) {
         return peer = this._peers[id] = {
             timeout: 0,
             when: null,
-            cookie: null,
+            pinged: false,
             decided: '0/0'
         }
     }
@@ -278,7 +278,7 @@ Legislator.prototype.synchronize = function (now) {
             }
 
             var maximum = peer.decided
-            if (peer.cookie != null) {
+            if (peer.pinged) {
                 var round
                 if (peer.decided == '0/0') {
                     var iterator = this.log.iterator()
@@ -288,7 +288,7 @@ Legislator.prototype.synchronize = function (now) {
                         assert(round, 'cannot find naturalization')
                         if (Monotonic.isBoundary(round.promise, 0)) {
                             var naturalize = round.value.government.naturalize
-                            if (naturalize && naturalize.id == id && naturalize.cookie == peer.cookie) {
+                            if (naturalize && naturalize.id == id) {
                                 maximum = round.promise
                                 break
                             }
@@ -645,7 +645,6 @@ Legislator.prototype._ping = function (now) {
         type: 'ping',
         from: this.id,
         when: now,
-        cookie: this.cookie,
         decided: this._peers[this.id].decided
     }
 }
@@ -668,7 +667,7 @@ Legislator.prototype._receivePing = function (now, pulse, message, responses) {
         return
     }
     var peer = this.getPeer(message.from), ponged = false
-    if (peer.cookie == null) {
+    if (!peer.pinged) {
         ponged = true
     } else if (peer.timeout) {
         ponged = true
@@ -676,7 +675,7 @@ Legislator.prototype._receivePing = function (now, pulse, message, responses) {
     peer.timeout = 0
     peer.when = null
     peer.decided = message.decided
-    peer.cookie = message.cookie
+    peer.pinged = true
     responses.push(this._ping(now))
     var constituency = this.constituency
     if (~this.government.majority.slice(1).indexOf(this.id)) {
@@ -684,12 +683,11 @@ Legislator.prototype._receivePing = function (now, pulse, message, responses) {
     }
     constituency.forEach(function (id) {
         var peer = this.getPeer(id)
-        if (peer.cookie != null) {
+        if (peer.pinged) {
             responses.push({
                 type: 'ping',
                 from: id,
                 when: peer.when,
-                cookie: peer.cookie,
                 decided: peer.decided
             })
         }
