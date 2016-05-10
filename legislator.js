@@ -127,7 +127,6 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
 
 Legislator.prototype.consensus = function (now) {
     this._signal('outbox', [ now ])
-    // TODO Terrible. Reset naturalizing on collapse.
     if (this.collapsed) {
         if (this.election) {
             // TODO Currently, your tests are running all synchronizations to
@@ -162,6 +161,8 @@ Legislator.prototype.consensus = function (now) {
         } else {
             var parliament = this.government.majority.concat(this.government.minority)
             var unknown = { timeout: 1 }
+// TODO The constituent must be both connected and synchronized, not just
+// connected.
             var present = this.parliament.filter(function (id) {
                 return id != this.id && (this._peers[id] || unknown).timeout == 0
             }.bind(this))
@@ -200,9 +201,6 @@ Legislator.prototype.consensus = function (now) {
             }]
         }
     } else if (this.naturalizing.length && this.government.majority[0] == this.id) {
-        // TODO Is there a race condition associated with leaving
-        // this in place? We need to break things pretty hard in a
-        // contentinous election.
         var naturalization = this.naturalizing.shift()
         this.newGovernment(now, this.government.majority, {
             majority: this.government.majority,
@@ -285,7 +283,9 @@ Legislator.prototype.synchronize = function (now) {
                     var iterator = this.log.iterator()
                     for (;;) {
                         round = iterator.prev()
-                        // TODO Yes, if you ping someone who reset itself.
+// TODO This will abend if the naturalization falls off the end end of the log.
+// You need to check for gaps and missing naturalizations and then timeout the
+// constituents that will never be connected.
                         assert(round, 'cannot find naturalization')
                         if (Monotonic.isBoundary(round.promise, 0)) {
                             var naturalize = round.value.government.naturalize
@@ -349,10 +349,6 @@ Legislator.prototype.collapse = function () {
 Legislator.prototype.sent = function (now, pulse, responses) {
     this._signal('sent', [ pulse ])
     if (!~pulse.governments.indexOf(this.government.promise)) {
-        // TODO This can leave us in a state where we are collapsed and have an
-        // outstanding election and the only thing that will clear that state
-        // would be enacting a new government, so we need to wait until this
-        // government we're .
         return
     }
     var success = true
@@ -538,8 +534,8 @@ Legislator.prototype._receivePromise = function (now, pulse, message, responses)
 
 Legislator.prototype._receiveAccept = function (now, pulse, message, responses) {
     this._signal('_receiveAccept', [ now, pulse, message, responses ])
-    // TODO Think hard; are will this less than catch both two-stage commit and
-    // Paxos?
+// TODO Think hard; are will this less than catch both two-stage commit and
+// Paxos?
     if (~pulse.governments.indexOf(this.government.promise) &&
         Monotonic.compareIndex(this.promise, message.promise, 0) <= 0
     ) {
@@ -607,7 +603,7 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
     var valid = Monotonic.compare(max.promise, message.promise) < 0
 
     if (!valid) {
-        // TODO When is this called?
+// TODO When is this called?
         return
     }
 
@@ -718,7 +714,7 @@ Legislator.prototype._enactGovernment = function (now, round) {
 
     this.citizens = this.government.majority.concat(this.government.minority)
                                             .concat(this.government.constituents)
-    // TODO Decide on whether this is calculated here or as needed.
+// TODO Decide on whether this is calculated here or as needed.
     this.parliament = this.government.majority.concat(this.government.minority)
 
     this.constituency = []
