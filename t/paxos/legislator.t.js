@@ -1,4 +1,4 @@
-require('proof')(15, prove)
+require('proof')(12, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator')
@@ -26,9 +26,6 @@ function prove (assert) {
     ! function () {
         var legislator = new Legislator(0, '1')
 
-        assert(legislator._expand.call({
-            collapsed: true
-        }), null, 'expand already electing')
         assert(legislator._expand.call({
             parliamentSize: 3,
             government: {
@@ -77,9 +74,6 @@ function prove (assert) {
     ! function () {
         var legislator = new Legislator(0, '1')
 
-        assert(legislator._impeach.call({
-            collapsed: true
-        }), null, 'impeach already electing')
         assert(legislator._impeach.call({
             id: '0',
             timeout: 2,
@@ -165,9 +159,6 @@ function prove (assert) {
     ! function () {
         var legislator = new Legislator(0, '1')
 
-        assert(legislator._exile.call({
-            collapsed: true
-        }), null, 'exile collapsed')
         assert(legislator._exile.call({
             timeout: 2,
             government: {

@@ -24,6 +24,7 @@ function Legislator (now, id, options) {
     this.locations = {}
     this.pulse = false
     this.naturalizing = []
+    this.collapsed = false
 
     this.government = { promise: '0/0', minority: [], majority: [] }
     this.promise = '0/0'
@@ -773,9 +774,7 @@ Legislator.prototype._whenCollapse = function () {
 }
 
 Legislator.prototype._expand = function () {
-    if (this.collapsed) {
-        return null
-    }
+    assert(!this.collapsed)
     var parliament = this.government.majority.concat(this.government.minority)
     if (parliament.length == this.parliamentSize) {
         return null
@@ -802,9 +801,7 @@ Legislator.prototype._expand = function () {
 }
 
 Legislator.prototype._impeach = function () {
-    if (this.collapsed) {
-        return null
-    }
+    assert(!this.collapsed)
     var timedout = this.government.minority.filter(function (id) {
         return this._peers[id] && this._peers[id].timeout >= this.timeout
     }.bind(this)).length != 0
@@ -836,9 +833,7 @@ Legislator.prototype._impeach = function () {
 }
 
 Legislator.prototype._exile = function () {
-    if (this.collapsed) {
-        return null
-    }
+    assert(!this.collapsed)
     var responsive = this.government.constituents.filter(function (id) {
         return !this._peers[id] || this._peers[id].timeout < this.timeout
     }.bind(this))
