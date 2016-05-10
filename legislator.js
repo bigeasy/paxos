@@ -608,7 +608,7 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
     }
 
     if (Monotonic.isBoundary(message.promise, 0)) {
-         valid = this.log.max().promise != '0/0'
+        valid = this.log.max().promise != '0/0'
         if (!valid) {
             valid = this.log.max().promise == '0/0' && message.promise == '1/0'
         }
