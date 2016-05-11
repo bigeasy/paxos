@@ -406,14 +406,14 @@ Legislator.prototype.bootstrap = function (now, location) {
 Legislator.prototype._enqueuable = function () {
     if (this.government.majority[0] != this.id) {
         return {
-            posted: false,
+            enqueued: false,
             leader: this.government.majority[0]
         }
     }
 
     if (this.collapsed) {
         return {
-            posted: false,
+            enqueued: false,
             leader: null
         }
     }
@@ -421,9 +421,9 @@ Legislator.prototype._enqueuable = function () {
 
 // Note that a client will have to treat a network failure on submission as a
 // failure requiring boundary detection.
-Legislator.prototype.post = function (now, message) {
+Legislator.prototype.enqueue = function (now, message) {
     assert(arguments.length == 2)
-    this._signal('post', [ now, message ])
+    this._signal('enqueue', [ now, message ])
 
     var response = this._enqueuable()
     if (response == null) {
@@ -435,7 +435,7 @@ Legislator.prototype.post = function (now, message) {
         })
 
         response = {
-            posted: true,
+            enqueued: true,
             leader: this.government.majority[0],
             promise: promise
         }
@@ -458,7 +458,7 @@ Legislator.prototype.naturalize = function (now, id, cookie, location) {
             location: location,
             cookie: cookie
         })
-        response = { posted: true, promise: null }
+        response = { enqueued: true, promise: null }
     }
     return response
 }

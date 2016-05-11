@@ -84,7 +84,7 @@ function prove (assert) {
 
     legislators.push(new Legislator(time, '1', options))
 
-    assert(legislators[0].naturalize(time, '1', legislators[1].cookie, '1').posted, 'naturalize')
+    assert(legislators[0].naturalize(time, '1', legislators[1].cookie, '1').enqueued, 'naturalize')
 
     tick({ 1: 'request' })
 
@@ -111,7 +111,7 @@ function prove (assert) {
     assert(legislators[1].log.size, 2, 'synchronized')
 
     legislators.push(new Legislator(time, '2', options))
-    legislators[0].post(time, { type: 'enqueue', value: 1 })
+    legislators[0].enqueue(time, { type: 'enqueue', value: 1 })
     legislators[0].naturalize(time, '2', legislators[2].cookie, '2')
 
     tick()
@@ -128,8 +128,8 @@ function prove (assert) {
     legislators[0]._whenCollapse()
     legislators[1]._whenCollapse()
 
-    assert(legislators[1].post(time, {}).leader, '0', 'post not leader')
-    assert(!legislators[0].post(time, {}).posted, 'post collapsed')
+    assert(legislators[1].enqueue(time, {}).leader, '0', 'post not leader')
+    assert(!legislators[0].enqueue(time, {}).enqueued, 'post collapsed')
 
     tick()
 
@@ -168,7 +168,7 @@ function prove (assert) {
     legislators[0].naturalize(time, '3', legislators[3].cookie, '3')
     legislators.push(new Legislator(time, '4', options))
     legislators[0].naturalize(time, '4', legislators[4].cookie, '4')
-    legislators[0].post(time, { type: 'enqueue', value: 2 })
+    legislators[0].enqueue(time, { type: 'enqueue', value: 2 })
 
     while (send(legislators[0]));
 
@@ -178,14 +178,14 @@ function prove (assert) {
 
     assert(legislators[3].log.size, 4, 'log after naturalization')
 
-    legislators[0].post(time, { type: 'enqueue', value: 2 })
-    legislators[0].post(time, { type: 'enqueue', value: 3 })
+    legislators[0].enqueue(time, { type: 'enqueue', value: 2 })
+    legislators[0].enqueue(time, { type: 'enqueue', value: 3 })
 
     tick()
 
     // One more post to propagate the pings to the new memebers back to the
     // leader. TODO Do this by advancing clock to test pings.
-    legislators[0].post(time, { type: 'enqueue', value: 3 })
+    legislators[0].enqueue(time, { type: 'enqueue', value: 3 })
 
     tick()
 
@@ -197,7 +197,7 @@ function prove (assert) {
         promise: '8/0'
     }, 'five member parliament')
 
-    legislators[0].post(time, { type: 'enqueue', value: 3 })
+    legislators[0].enqueue(time, { type: 'enqueue', value: 3 })
 
     legislators[1].collapse()
 
