@@ -608,9 +608,9 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
     }
 
     if (Monotonic.isBoundary(message.promise, 0)) {
-        valid = this.log.max().promise != '0/0'
+        valid = max.promise != '0/0'
         if (!valid) {
-            valid = this.log.max().promise == '0/0' && message.promise == '1/0'
+            valid = max.promise == '0/0' && message.promise == '1/0'
         }
         if (!valid) {
             valid = this.log.size == 1
@@ -625,7 +625,7 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
         }
     }
 
-    this.log.max().next = message
+    max.next = message
     this.log.insert(message)
     this.promise = message.promise
 
