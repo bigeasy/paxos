@@ -708,6 +708,7 @@ Legislator.prototype._enactGovernment = function (now, round) {
 
     if (round.value.government.naturalize) {
         this.government.constituents.push(this.government.naturalize.id)
+        this.locations[this.government.naturalize.id] = this.government.naturalize.location
     }
 
     if (this.id != this.government.majority[0]) {
