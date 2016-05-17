@@ -126,10 +126,10 @@ Legislator.prototype.consensus = function (now) {
     trace('consensus', [ now ])
     if (this.collapsed) {
         if (this.election) {
-            // TODO Currently, your tests are running all synchronizations to
-            // completion before running a consensus pulse, so we're not seeing
-            // the results of decided upon a consensus action before all of the
-            // synchronizations have been returned.
+// TODO Currently, your tests are running all synchronizations to completion
+// before running a consensus pulse, so we're not seeing the results of decided
+// upon a consensus action before all of the synchronizations have been
+// returned.
             if (this.election.status == 'accepted') {
                 return null
             } else if (this.election.status == 'proposed') {
