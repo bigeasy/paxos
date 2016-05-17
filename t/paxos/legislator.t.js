@@ -4,7 +4,7 @@ function prove (assert) {
     var Legislator = require('../../legislator')
 
     ! function () {
-        var legislator = new Legislator(0, '1')
+        var legislator = new Legislator('1', 0)
 
         legislator._schedule(0, { id: 'scheduled', type: 'scheduled', delay: 0 })
         legislator._schedule(0, { id: 'removed', delay: 0 })
@@ -24,7 +24,7 @@ function prove (assert) {
     } ()
 
     ! function () {
-        var legislator = new Legislator(0, '1')
+        var legislator = new Legislator('1', 0)
 
         assert(legislator._expand.call({
             parliamentSize: 3,
@@ -72,7 +72,7 @@ function prove (assert) {
     } ()
 
     ! function () {
-        var legislator = new Legislator(0, '1')
+        var legislator = new Legislator('1', 0)
 
         assert(legislator._impeach.call({
             id: '0',
@@ -157,7 +157,7 @@ function prove (assert) {
     } ()
 
     ! function () {
-        var legislator = new Legislator(0, '1')
+        var legislator = new Legislator('1', 0)
 
         assert(legislator._exile.call({
             timeout: 2,

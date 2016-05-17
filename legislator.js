@@ -6,14 +6,16 @@ var slice = [].slice
 var RBTree = require('bintrees').RBTree
 var logger = require('prolific').createLogger('bigeasy.paxos')
 
-function Legislator (now, id, options) {
-    assert(typeof now == 'number')
-
+function Legislator (id, cookie, options) {
     options || (options = {})
 
     assert(typeof id == 'string', 'id must be hexidecimal string')
 
     this.id = id
+    this.cookie = cookie
+
+    this.islandId = null
+
     this.parliamentSize = options.parliamentSize || 5
 
     this.log = new RBTree(function (a, b) { return Monotonic.compare(a.promise, b.promise) })
@@ -34,7 +36,6 @@ function Legislator (now, id, options) {
     this.getPeer(this.id).timeout = 0
 
     this.length = options.length || 1024
-    this.cookie = options.cookie || now
 
     assert(!Array.isArray(options.retry), 'retry no longer accepts range')
     assert(!Array.isArray(options.ping), 'retry no longer accepts range')
