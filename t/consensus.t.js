@@ -1,7 +1,7 @@
 require('proof')(21, prove)
 
 function prove (assert) {
-    var Legislator = require('../../legislator')
+    var Legislator = require('../legislator')
 
     function dump (legislator) {
         legislator.log.each(function (entry) { console.log(entry) })

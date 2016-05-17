@@ -1,7 +1,7 @@
 require('proof')(12, prove)
 
 function prove (assert) {
-    var Legislator = require('../../legislator')
+    var Legislator = require('../legislator')
 
     ! function () {
         var legislator = new Legislator(1, '1', 0)
