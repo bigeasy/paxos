@@ -18,7 +18,7 @@ function Legislator (islandId, id, cookie, options) {
     this.parliamentSize = options.parliamentSize || 5
 
     this.log = new RBTree(function (a, b) { return Monotonic.compare(a.promise, b.promise) })
-    this.scheduler = new Scheduler
+    this.scheduler = new Scheduler(options.scheduler || {})
     this.synchronizing = {}
 
     this.proposals = []
@@ -56,28 +56,6 @@ function Legislator (islandId, id, cookie, options) {
 
 function trace (method, vargs) {
     logger.trace(method, { vargs: vargs })
-}
-
-Legislator.prototype._schedule = function (now, event) {
-    trace('_schedule', [ now, event ])
-    return this.scheduler.schedule(event.id, event, now + event.delay)
-}
-
-Legislator.prototype._unschedule = function (id) {
-    trace('_unschedule', [ id ])
-    this.scheduler.unschedule(id)
-}
-
-Legislator.prototype.checkSchedule = function (now) {
-    trace('checkSchedule', [ now ])
-    var happened = false
-    this.scheduler.check(now).forEach(function (event) {
-        happened = true
-        var type = event.type
-        var method = '_when' + type[0].toUpperCase() + type.substring(1)
-        this[method](now, event)
-    }, this)
-    return happened
 }
 
 Legislator.prototype.getPeer = function (id) {
@@ -371,10 +349,10 @@ Legislator.prototype.sent = function (now, pulse, responses) {
         switch (pulse.type) {
         case 'synchronize':
             delete this.synchronizing[pulse.route[0]]
-            this._schedule(now, { type: 'ping', id: pulse.route[1], delay: this.ping })
+            this.scheduler.schedule(now + this.ping, pulse.route[0], { object: this, method: '_whenPing' }, pulse.route[0])
             break
         case 'consensus':
-            this._schedule(now, { type: 'pulse', id: this.id, delay: this.ping })
+            this.scheduler.schedule(now + this.ping, this.id, { object: this, method: '_whenPulse' })
             break
         }
     } else {
@@ -393,7 +371,8 @@ Legislator.prototype.sent = function (now, pulse, responses) {
             }
             peer.skip = true
             this.ponged = true
-            this._schedule(now, { type: 'ping', id: pulse.route[0], delay: this.ping })
+            this.scheduler.schedule(now + this.ping, pulse.route[0], { object:
+            this, method: '_whenPing' }, pulse.route[0])
             break
         }
     }
@@ -668,14 +647,14 @@ Legislator.prototype._ping = function (now) {
     }
 }
 
-Legislator.prototype._whenPulse = function (now, event) {
+Legislator.prototype._whenPulse = function (now) {
     trace('_whenPulse', [])
     this.pulse = true
 }
 
-Legislator.prototype._whenPing = function (now, event) {
-    trace('_whenPing', [ now, event ])
-    var peer = this.getPeer(event.id)
+Legislator.prototype._whenPing = function (now, id) {
+    trace('_whenPing', [ now, id ])
+    var peer = this.getPeer(id)
     peer.skip = false
     if (peer.timeout == 0) {
         peer.when = now
@@ -769,25 +748,13 @@ Legislator.prototype._enactGovernment = function (now, round) {
     assert(!this.constituency.length || this.constituency[0] != null)
     this.scheduler.clear()
     if (this.government.majority[0] == this.id) {
-        this._schedule(now, {
-            type: 'pulse',
-            id: this.id,
-            delay: this.ping
-        })
+        this.scheduler.schedule(now + this.ping, this.id, { object: this, method: '_whenPulse' })
     } else if (~this.government.majority.slice(1).indexOf(this.id)) {
-        this._schedule(now, {
-            type: 'collapse',
-            id: this.id,
-            delay: this.timeout
-        })
+        this.scheduler.schedule(now + this.timeout, this.id, { object: this, method: '_whenCollapse' })
     }
 
     this.constituency.forEach(function (id) {
-        this._schedule(now, {
-            type: 'ping',
-            id: id,
-            delay: this.ping
-        })
+        this.scheduler.schedule(now + this.ping, id, { object: this, type: '_whenPing' }, id)
     }, this)
 }
 

@@ -1,27 +1,7 @@
-require('proof')(12, prove)
+require('proof')(10, prove)
 
 function prove (assert) {
     var Legislator = require('../legislator')
-
-    ! function () {
-        var legislator = new Legislator(1, '1', 0)
-
-        legislator._schedule(0, { id: 'scheduled', type: 'scheduled', delay: 0 })
-        legislator._schedule(0, { id: 'removed', delay: 0 })
-        legislator._unschedule('removed')
-
-        var wasScheduled = false
-        legislator._whenScheduled = function () {
-            wasScheduled = true
-        }
-
-        legislator._whenRemoved = function () {
-            throw new Error
-        }
-
-        assert(legislator.checkSchedule(0), 'check schedule')
-        assert(wasScheduled, 'scheduled')
-    } ()
 
     ! function () {
         var legislator = new Legislator(1, '1', 0)

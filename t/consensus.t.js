@@ -1,4 +1,4 @@
-require('proof')(21, prove)
+require('proof')(20, prove)
 
 function prove (assert) {
     var Legislator = require('../legislator')
@@ -9,9 +9,8 @@ function prove (assert) {
 
     var time = 0
 
-    var options = { parliamentSize: 5, ping: 1, timeout: 3 }
+    var options = { parliamentSize: 5, ping: 1, timeout: 3, scheduler: { timer: false } }
 
-    assert(! new Legislator(1, '0', time).checkSchedule(time), 'empty schedule')
     var legislators = [ new Legislator(1, '0', time, options) ]
     legislators[0].bootstrap(time, '0')
 
@@ -57,7 +56,7 @@ function prove (assert) {
             ticked = false
             legislators.forEach(function (legislator) {
                 if (failures[legislator.id] != 'isolate') {
-                    legislator.checkSchedule(time)
+                    legislator.scheduler.check(time)
                     while (send(legislator, failures)) {
                         ticked = true
                     }
@@ -83,13 +82,13 @@ function prove (assert) {
 
     time++
 
-    assert(legislators[0].checkSchedule(time), 'ping missed')
+    assert(legislators[0].scheduler.check(time), 'ping missed')
 
     tick({ 1: 'request' })
 
     time++
 
-    legislators[0].checkSchedule(time)
+    legislators[0].scheduler.check(time)
 
     tick()
 
@@ -141,7 +140,7 @@ function prove (assert) {
 
     assert(legislators[0]._peers[1].timeout, 0, 'liveness pulse')
 
-    legislators[1]._whenPing(time, { id: '2' })
+    legislators[1]._whenPing(time, '2')
 
     assert(legislators[1]._peers[2].timeout, 1, 'liveness ping timeout set')
 
@@ -151,7 +150,7 @@ function prove (assert) {
 
     delete legislators[1]._peers[2]
 
-    legislators[1]._whenPing(time, { id: '2' })
+    legislators[1]._whenPing(time, '2')
 
     tick()
 
@@ -208,7 +207,7 @@ function prove (assert) {
     }, 'recover from isolation')
 
     time++
-    legislators[2].checkSchedule(time)
+    legislators[2].scheduler.check(time)
     tick()
 
     receive(legislators[1], [ consensus ])
@@ -228,7 +227,7 @@ function prove (assert) {
     time++
 
     // Test attmepting to naturalize a restarted legislator.
-    legislators[1].checkSchedule(time)
+    legislators[1].scheduler.check(time)
     send(legislators[1])
     legislators[5] = new Legislator(1, '5', time, options)
     tick()
