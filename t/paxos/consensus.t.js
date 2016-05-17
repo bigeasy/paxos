@@ -13,7 +13,7 @@ function prove (assert) {
 
     assert(! new Legislator(1, '0', time).checkSchedule(time), 'empty schedule')
     var legislators = [ new Legislator(1, '0', time, options) ]
-    legislators[0].bootstrap(time, 1, '0')
+    legislators[0].bootstrap(time, '0')
 
     function receive (legislator, outbox, failures) {
         failures || (failures = {})
