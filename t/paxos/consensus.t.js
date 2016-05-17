@@ -1,14 +1,7 @@
 require('proof')(20, prove)
 
 function prove (assert) {
-    var Legislator = require('../../legislator'),
-        signal = require('signal')
-
-    signal.subscribe('.bigeasy.paxos.invoke'.split('.'), function (id, method, vargs) {
-         if (id == '0') {
-            // console.log(JSON.stringify({ method: method, vargs: vargs }))
-        }
-    })
+    var Legislator = require('../../legislator')
 
     function dump (legislator) {
         legislator.log.each(function (entry) { console.log(entry) })
