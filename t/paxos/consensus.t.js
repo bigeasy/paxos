@@ -11,8 +11,8 @@ function prove (assert) {
 
     var options = { parliamentSize: 5, ping: 1, timeout: 3 }
 
-    assert(! new Legislator('0', time).checkSchedule(time), 'empty schedule')
-    var legislators = [ new Legislator('0', time, options) ]
+    assert(! new Legislator(1, '0', time).checkSchedule(time), 'empty schedule')
+    var legislators = [ new Legislator(1, '0', time, options) ]
     legislators[0].bootstrap(time, 1, '0')
 
     function receive (legislator, outbox, failures) {
@@ -75,7 +75,7 @@ function prove (assert) {
         promise: '1/0'
     }, 'bootstrap')
 
-    legislators.push(new Legislator('1', time, options))
+    legislators.push(new Legislator(1, '1', time, options))
 
     assert(legislators[0].naturalize(time, '1', legislators[1].cookie, '1').enqueued, 'naturalize')
 
@@ -103,7 +103,7 @@ function prove (assert) {
 
     assert(legislators[1].log.size, 2, 'synchronized')
 
-    legislators.push(new Legislator('2', time, options))
+    legislators.push(new Legislator(1, '2', time, options))
     legislators[0].enqueue(time, { type: 'enqueue', value: 1 })
     legislators[0].naturalize(time, '2', legislators[2].cookie, '2')
 
@@ -157,9 +157,9 @@ function prove (assert) {
 
     assert(legislators[1]._peers[2].timeout, 0, 'liveness ping materialized')
 
-    legislators.push(new Legislator('3', time, options))
+    legislators.push(new Legislator(1, '3', time, options))
     legislators[0].naturalize(time, '3', legislators[3].cookie, '3')
-    legislators.push(new Legislator('4', time, options))
+    legislators.push(new Legislator(1, '4', time, options))
     legislators[0].naturalize(time, '4', legislators[4].cookie, '4')
     legislators[0].enqueue(time, { type: 'enqueue', value: 2 })
 
@@ -220,7 +220,7 @@ function prove (assert) {
 
     tick()
 
-    legislators.push(new Legislator('5', time, options))
+    legislators.push(new Legislator(1, '5', time, options))
     legislators[0].naturalize(time, '5', legislators[5].cookie, '5')
 
     tick({ 5: 'isolate' })
@@ -230,7 +230,7 @@ function prove (assert) {
     // Test attmepting to naturalize a restarted legislator.
     legislators[1].checkSchedule(time)
     send(legislators[1])
-    legislators[5] = new Legislator('5', time, options)
+    legislators[5] = new Legislator(1, '5', time, options)
     tick()
 
     legislators[0].collapse()

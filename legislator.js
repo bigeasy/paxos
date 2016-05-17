@@ -6,15 +6,14 @@ var slice = [].slice
 var RBTree = require('bintrees').RBTree
 var logger = require('prolific').createLogger('bigeasy.paxos')
 
-function Legislator (id, cookie, options) {
+function Legislator (islandId, id, cookie, options) {
     options || (options = {})
 
     assert(typeof id == 'string', 'id must be hexidecimal string')
 
+    this.islandId = islandId
     this.id = id
     this.cookie = cookie
-
-    this.islandId = null
 
     this.parliamentSize = options.parliamentSize || 5
 
@@ -500,7 +499,10 @@ Legislator.prototype._receiveReject = function (now, pulse, message) {
 Legislator.prototype._receivePropose = function (now, pulse, message, responses) {
     trace('_receivePropose', [ now, pulse, message, responses ])
     var compare = Monotonic.compare(message.promise, this.promise)
-    if (compare <= 0 || !~pulse.governments.indexOf(this.government.promise)) {
+    if (this.islandId != pulse.islandId ||
+        compare <= 0 ||
+        !~pulse.governments.indexOf(this.government.promise)
+    ) {
         responses.push(this._reject(message))
     } else {
         responses.push({
@@ -546,7 +548,8 @@ Legislator.prototype._receiveAccept = function (now, pulse, message, responses) 
     trace('_receiveAccept', [ now, pulse, message, responses ])
 // TODO Think hard; are will this less than catch both two-stage commit and
 // Paxos?
-    if (~pulse.governments.indexOf(this.government.promise) &&
+    if (this.islandId == pulse.islandId &&
+        ~pulse.governments.indexOf(this.government.promise) &&
         Monotonic.compareIndex(this.promise, message.promise, 0) <= 0
     ) {
         this.accepted = JSON.parse(JSON.stringify(message))
@@ -577,7 +580,10 @@ Legislator.prototype._receiveAccepted = function (now, pulse, message) {
 // promise, you would already have worked through these things.
 Legislator.prototype._receiveCommit = function (now, pulse, message, responses) {
     trace('_receiveCommit', [ now, pulse, message, responses ])
-    if (this.accepted == null || this.accepted.promise != message.promise) {
+    if (this.islandId != pulse.islandId ||
+        this.accepted == null ||
+        this.accepted.promise != message.promise
+    ) {
         responses.push(this._reject(message))
     } else {
         var round = this.accepted
@@ -600,6 +606,11 @@ Legislator.prototype._receiveCommit = function (now, pulse, message, responses) 
 
 Legislator.prototype._receiveEnact = function (now, pulse, message) {
     trace('_receiveEnact', [ now, pulse, message ])
+
+// TODO Reject? Need `===`?
+    if (this.islandId != pulse.islandId) {
+        return
+    }
 
     this.proposal = null
     this.accepted = null
@@ -632,13 +643,7 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
                 pulse.failed = true
                 return
             }
-            this.islandId = pulse.islandId
         }
-    }
-
-// TODO Reject? Need `===`?
-    if (this.islandId !== pulse.islandId) {
-        return
     }
 
 // TODO How crufy are these log entries? What else is lying around in them?
