@@ -114,6 +114,7 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
         route: quorum,
         value: {
             type: 'government',
+            islandId: this.islandId,
             government: government,
             locations: this.locations,
             map: this.proposals.map(function (proposal) {
@@ -138,6 +139,7 @@ Legislator.prototype.consensus = function (now) {
                     this.election.status = 'accepted'
                     return {
                         type: 'consensus',
+                        islandId: this.islandId,
                         governments: [ this.government.promise, this.accepted.promise ],
                         route: this.accepted.route,
                         messages: [this._ping(now), {
@@ -179,6 +181,7 @@ Legislator.prototype.consensus = function (now) {
             }
             return {
                 type: 'consensus',
+                islandId: this.islandId,
                 governments: [ this.government.promise ],
                 route: majority,
                 messages: [{
@@ -191,6 +194,7 @@ Legislator.prototype.consensus = function (now) {
     } else if (this.government.majority[0] == this.id && this.accepted && Monotonic.isBoundary(this.accepted.promise, 0)) {
         return {
             type: 'consensus',
+            islandId: this.islandId,
             governments: [ this.government.promise, this.accepted.promise ],
             route: this.accepted.route,
             messages: [this._ping(now), {
@@ -226,6 +230,7 @@ Legislator.prototype.consensus = function (now) {
         if (proposal == null || !this._routeEqual(proposal.route, this.accepted.route)) {
             return {
                 type: 'consensus',
+                islandId: this.islandId,
                 governments: [ this.government.promise ],
                 route: this.accepted.route,
                 messages: messages
@@ -241,6 +246,7 @@ Legislator.prototype.consensus = function (now) {
         this.proposals.shift()
         return {
             type: 'consensus',
+            islandId: this.islandId,
             governments: [ this.government.promise ],
             route: proposal.route.slice(),
             messages: messages
@@ -250,6 +256,7 @@ Legislator.prototype.consensus = function (now) {
         this.pulse = false
         return {
             type: 'consensus',
+            islandId: this.islandId,
             governments: [ this.government.promise ],
             route: this.government.majority,
             messages: [ this._ping(now) ]
@@ -270,6 +277,7 @@ Legislator.prototype.synchronize = function (now) {
             this.synchronizing[id] = true
             var pulse = {
                 type: 'synchronize',
+                islandId: this.islandId,
                 governments: [ this.government.promise ],
                 route: [ id ],
                 messages: []
@@ -392,12 +400,13 @@ Legislator.prototype.sent = function (now, pulse, responses) {
     }
 }
 
-Legislator.prototype.bootstrap = function (now, location) {
+Legislator.prototype.bootstrap = function (now, islandId, location) {
     trace('bootstrap', [ now, location ])
     var government = {
         majority: [ this.id ],
         minority: []
     }
+    this.islandId = islandId
     this.locations[this.id] = location
     this.citizens = [ this.id ]
     this.newGovernment(now, [ this.id ], government, '1/0')
@@ -623,7 +632,13 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
                 pulse.failed = true
                 return
             }
+            this.islandId = pulse.islandId
         }
+    }
+
+// TODO Reject? Need `===`?
+    if (this.islandId !== pulse.islandId) {
+        return
     }
 
 // TODO How crufy are these log entries? What else is lying around in them?
@@ -778,7 +793,6 @@ Legislator.prototype._whenCollapse = function () {
 }
 
 Legislator.prototype._expand = function () {
-    console.log(this._trace)
     trace('_expand', [])
     assert(!this.collapsed)
     var parliament = this.government.majority.concat(this.government.minority)

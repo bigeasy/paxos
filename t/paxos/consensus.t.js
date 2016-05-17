@@ -1,4 +1,4 @@
-require('proof')(20, prove)
+require('proof')(21, prove)
 
 function prove (assert) {
     var Legislator = require('../../legislator')
@@ -13,7 +13,7 @@ function prove (assert) {
 
     assert(! new Legislator('0', time).checkSchedule(time), 'empty schedule')
     var legislators = [ new Legislator('0', time, options) ]
-    legislators[0].bootstrap(time, '0')
+    legislators[0].bootstrap(time, 1, '0')
 
     function receive (legislator, outbox, failures) {
         failures || (failures = {})
@@ -239,4 +239,6 @@ function prove (assert) {
     legislators[2].collapse()
     tick({ 0: 'isolate' })
     tick()
+
+    assert(legislators[2].islandId, 1, 'island id')
 }
