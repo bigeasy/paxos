@@ -103,6 +103,13 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
 
 Legislator.prototype._consensus = function (now) {
     trace('consensus', [ now ])
+    // Shift any naturalizing citizens that have already naturalized.
+    while (
+        this.naturalizing.length != 0 &&
+        ~this.citizens.indexOf(this.naturalizing[0].id)
+    ) {
+        this.naturalizing.shift()
+    }
     if (this.collapsed) {
         if (this.election) {
 // TODO Currently, your tests are running all synchronizations to completion
@@ -403,29 +410,30 @@ Legislator.prototype.bootstrap = function (now, location) {
     }, '1/0')
 }
 
-Legislator.prototype._enqueuable = function () {
-    trace('_enqueuable', [])
-    if (this.government.majority[0] != this.id) {
-        return {
-            enqueued: false,
-            leader: this.government.majority[0]
-        }
-    }
-
+Legislator.prototype._enqueuable = function (islandId) {
+    trace('_enqueuable', [ islandId ])
     if (this.collapsed) {
         return {
             enqueued: false,
+            islandId: this.islandId,
             leader: null
+        }
+    }
+    if (this.islandId != islandId || this.government.majority[0] != this.id) {
+        return {
+            enqueued: false,
+            islandId: this.islandId,
+            leader: this.government.majority[0]
         }
     }
 }
 
 // Note that a client will have to treat a network failure on submission as a
 // failure requiring boundary detection.
-Legislator.prototype.enqueue = function (now, message) {
+Legislator.prototype.enqueue = function (now, islandId, message) {
     trace('enqueue', [ now, message ])
 
-    var response = this._enqueuable()
+    var response = this._enqueuable(islandId)
     if (response == null) {
         var promise = this.promise = Monotonic.increment(this.promise, 1)
         this.proposals.push({
@@ -445,12 +453,15 @@ Legislator.prototype.enqueue = function (now, message) {
 }
 
 // TODO Reject duplicate naturalization or override. Reject already naturalized,
-// but you have to do that at ingest of naturalizaiton.
-Legislator.prototype.naturalize = function (now, id, cookie, location) {
+// but you have to do that at ingest of naturalization.
+Legislator.prototype.naturalize = function (now, islandId, id, cookie, location) {
     trace('naturalize', [ now, id, cookie, location ])
     assert(typeof id == 'string', 'id must be a hexidecmimal string')
-    var response = this._enqueuable()
+    var response = this._enqueuable(islandId)
     if (response == null) {
+        this.naturalizing = this.naturalizing.filter(function (naturalization) {
+            return naturalization.id != id
+        })
         this.naturalizing.push({
             type: 'naturalize',
             id: id,
