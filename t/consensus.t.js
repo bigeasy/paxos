@@ -9,7 +9,7 @@ function prove (assert) {
 
     var time = 0
 
-    var options = { parliamentSize: 5, ping: 1, timeout: 3, scheduler: { timer: false } }
+    var options = { parliamentSize: 5, ping: 1, timeout: 3, scheduler: { setTimeout: false } }
 
     var legislators = [ new Legislator(1, '0', time, options) ]
     legislators[0].bootstrap(time, '0')
