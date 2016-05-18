@@ -393,13 +393,14 @@ Legislator.prototype.sent = function (now, pulse, responses) {
 
 Legislator.prototype.bootstrap = function (now, location) {
     trace('bootstrap', [ now, location ])
-    var government = {
-        majority: [ this.id ],
-        minority: []
-    }
+    // Update current state as if we're already leader.
+    this.government.majority.push(this.id)
     this.locations[this.id] = location
     this.citizens = [ this.id ]
-    this.newGovernment(now, [ this.id ], government, '1/0')
+    this.newGovernment(now, [ this.id ], {
+        majority: [ this.id ],
+        minority: []
+    }, '1/0')
 }
 
 Legislator.prototype._enqueuable = function () {
