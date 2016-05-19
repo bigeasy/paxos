@@ -410,14 +410,14 @@ Legislator.prototype.bootstrap = function (now, location) {
 
 Legislator.prototype._enqueuable = function (islandId) {
     trace('_enqueuable', [ islandId ])
-    if (this.collapsed) {
+    if (this.collapsed || this.islandId != islandId) {
         return {
             enqueued: false,
             islandId: this.islandId,
             leader: null
         }
     }
-    if (this.islandId != islandId || this.government.majority[0] != this.id) {
+    if (this.government.majority[0] != this.id) {
         return {
             enqueued: false,
             islandId: this.islandId,
