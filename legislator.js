@@ -9,8 +9,6 @@ var logger = require('prolific').createLogger('bigeasy.paxos')
 function Legislator (islandId, id, cookie, options) {
     options || (options = {})
 
-    assert(typeof id == 'string', 'id must be hexidecimal string')
-
     this.islandId = islandId
     this.id = id
     this.cookie = cookie
