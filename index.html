@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <meta charset="utf-8">
-<title>Paxos</title>
+<title>y Paxos</title>
 <link href="http://fonts.googleapis.com/css?family=ABeeZee|Inconsolata|Karla:400,700|Oxygen+Mono" rel="stylesheet" type="text/css">
 <link href="http://fonts.googleapis.com/css?family=Sorts+Mill+Goudy">
 <link rel="stylesheet" type="text/css" href="css/syntax.css">
@@ -9,22 +9,31 @@
 <body><a href="https://github.com/bigeasy/paxos/"><img style="position: absolute; top: 0; left: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_left_gray_6d6d6d.png" alt="Fork me on GitHub"></a><div class="container">
 
 <div class="unit welcome">
-<h1>Paxos !
+<h1>- Paxos !
 </h1></div>
 
 <!-- TODO Include Highlight.js stylesheet. -->
-<pre class="javascript">
-<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>;
-</pre>
-
-<div class="unit description markdown"><h1 id="message-id">Message Id</h1>
-<p>The paxos message id for a cluster will increment indefinately. It is a
-hexidecimal string representing an integer. So long as it is less than
-252, you can parse it into a JavaScript number for comparison. You
-can store it as a <code>BITINT</code> in MySQL so long as it is less than 264.</p>
-<p>You can use your own key, of course, but you also, always order using the paxos
-<code>Identifier</code> class.</p>
-<p>TODO: <a href="https://gist.github.com/mayoff/1138816">https://gist.github.com/mayoff/1138816</a></p>
+<div class="unit description markdown"><p>A replayable, deterministic implemenation of Paxos.</p>
+<p>Sketch of what to say.</p>
+<ul>
+<li>Reproducable events for unit testing, but still a true Paxos.</li>
+<li>In-memory so that no disk writes are necessary.</li>
+<li>Fast because it</li>
+</ul>
+<p>A consensus algorithm will maintain a log between multiple machines, and
+consensus is reached when a majority of the machines agree on an entry in the
+log. The log is eventually consistent, meaning that the participants will learn
+about the values eventually, but they will always learn about events in the same
+order, so you can use this log to implement synchronization.</p>
+<p>Paxos Made Simple, Again</p>
+<p>If you simply want to get Paxos running, use
+<a href="https://bigeasy.github.io/compassion">Compassion</a>. It is an implementation of
+an atomic log using Paxos. From there you build your replicated state machines
+and what have you.</p>
+<p>This is the implemenation of Paxos. It is less than TK lines of JavaScript code.</p>
+<p>The main class of the Paxos library is the <code>Legislator</code>. This is an active
+participant in the Paxos algorithm. (Should it be <code>Citizen</code>? Should it be just
+Paxos?)</p>
 </div> <!-- markdown -->
 
 </div> <!-- container -->
