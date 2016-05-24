@@ -165,7 +165,7 @@ function prove (assert) {
             government: {
                 majority: [ '0', '1' ],
                 minority: [ '2' ],
-                exiles: [ '4' ]
+                exile: '4'
             }
         }, 'exile')
     } ()

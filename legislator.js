@@ -734,6 +734,9 @@ Legislator.prototype._enactGovernment = function (now, round) {
     if (round.value.government.naturalize) {
         this.government.constituents.push(this.government.naturalize.id)
         this.locations[this.government.naturalize.id] = this.government.naturalize.location
+    } else if (this.government.exile) {
+        var index = this.government.constituents.indexOf(this.government.exile)
+        delete this.locations[this.government.exile]
     }
 
     if (this.id != this.government.majority[0]) {
@@ -864,7 +867,7 @@ Legislator.prototype._exile = function () {
         government: {
             majority: this.government.majority,
             minority: this.government.minority,
-            exiles: exiles
+            exile: exiles.shift()
         }
     }
 }

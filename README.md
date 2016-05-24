@@ -7,7 +7,6 @@ Sketch of what to say.
  * Reproducable events for unit testing, but still a true Paxos.
  * In-memory so that no disk writes are necessary.
  * Blindingly fast.
- * Write a proof that shows how this variation works.
 
 **TK: Documentation.**
 
@@ -69,14 +68,14 @@ programmer is willing to absorb in an are where said programmer has already
 decided that replication, that is durability and consistency, is critical.
 *TK: Wha? English please*
 
-The Paxos algorithm insists that acceptors write to disk to recover from a
-crash, but why trust a disk? They fail. In today's hosting environments networks
-are the focus, not disk. Machines are cheap. The come in and out of service
-quickly. They are disposable and their persistent storage reflects that
-disposability. I'd rather that a crash-stop meant we relied on the replication
-built into Paxos. I'd rather wait for two network calls to complete than for a
-disk to flush, especially when that disk flush is itself going to be a network
-call to storage area network.
+The Paxos algorithm insists that acceptors write to disk (WHA!?!?! No it
+doesn't.) to recover from a crash, but why trust a disk? They fail. In today's
+hosting environments networks are the focus, not disk. Machines are cheap. The
+come in and out of service quickly. They are disposable and their persistent
+storage reflects that disposability. I'd rather that a crash-stop meant we
+relied on the replication built into Paxos. I'd rather wait for two network
+calls to complete than for a disk to flush, especially when that disk flush is
+itself going to be a network call to storage area network.
 
 Thus, this is a Paxos that is both practical and inflexible. When one reads the
 Paxos literature, one gets the impression that a good Paxos library would allow
@@ -112,10 +111,6 @@ Alan's Paxos is not a Byzantine Paxos. You must trust your participants.
 To describe Paxos we return to the Lamport analogy of the legislature, but we
 are going to speak more plainly. Some of what we say is almost as
 tongue-in-cheek as the original Lamport paper, but not quite.
-
-As you might know already, a consensus algorithm will maintain a log between
-multiple machines, and consensus is reached when a majority of the machines
-agree on an entry in the log.
 
 Let's just call a running instance our system an **community**. A computer
 participating in our **community** is a **citizen**. A computer requesting
