@@ -780,7 +780,7 @@ Legislator.prototype._enactGovernment = function (now, round) {
     }
 
     this.constituency.forEach(function (id) {
-        this.scheduler.schedule(now + this.ping, id, { object: this, type: '_whenPing' }, id)
+        this.scheduler.schedule(now + this.ping, id, { object: this, method: '_whenPing' }, id)
     }, this)
 }
 
