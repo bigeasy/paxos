@@ -295,6 +295,7 @@ Legislator.prototype.synchronize = function (now) {
                         }
                     }
                 } else {
+// TODO Got a read property of null here.
                     round = this.log.find({ promise: maximum }).next
                 }
 
