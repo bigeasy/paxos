@@ -736,6 +736,7 @@ Legislator.prototype._enactGovernment = function (now, round) {
         this.locations[this.government.naturalize.id] = this.government.naturalize.location
     } else if (this.government.exile) {
         var index = this.government.constituents.indexOf(this.government.exile)
+        this.government.constituents.splice(index, 1)
         delete this.locations[this.government.exile]
     }
 
