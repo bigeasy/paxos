@@ -20,7 +20,7 @@ function Legislator (islandId, id, cookie, options) {
     this.synchronizing = {}
 
     this.proposals = []
-    this.locations = {}
+    this.citizens = {}
     this.pulse = false
     this.naturalizing = []
     this.collapsed = false
@@ -91,7 +91,11 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
             type: 'government',
             islandId: this.islandId,
             government: government,
-            locations: this.locations,
+            citizens: this.citizens,
+// TODO Null map to indicate collapse or change in leadership. Wait, change in
+// leaership is only ever collapse? Ergo...
+            // collapsed: this.collapsed,
+// There was a time when I wanted to allow the user to choose leaders.
             map: this.proposals.map(function (proposal) {
                 return { was: proposal.was, is: proposal.promise }
             })
@@ -401,7 +405,7 @@ Legislator.prototype.bootstrap = function (now, location) {
     trace('bootstrap', [ now, location ])
     // Update current state as if we're already leader.
     this.government.majority.push(this.id)
-    this.locations[this.id] = location
+    this.citizens[this.id] = location
     this.citizens = [ this.id ]
     this.newGovernment(now, [ this.id ], {
         majority: [ this.id ],
@@ -730,15 +734,15 @@ Legislator.prototype._enactGovernment = function (now, round) {
     // when we vote to shrink the government, the initial vote has a greater
     // quorum than the resulting government. Not sure why this comment is here.
     this.government = JSON.parse(JSON.stringify(round.value.government))
-    this.locations = JSON.parse(JSON.stringify(round.value.locations))
+    this.citizens = JSON.parse(JSON.stringify(round.value.citizens))
 
     if (round.value.government.naturalize) {
         this.government.constituents.push(this.government.naturalize.id)
-        this.locations[this.government.naturalize.id] = this.government.naturalize.location
+        this.citizens[this.government.naturalize.id] = this.government.naturalize.location
     } else if (this.government.exile) {
         var index = this.government.constituents.indexOf(this.government.exile)
         this.government.constituents.splice(index, 1)
-        delete this.locations[this.government.exile]
+        delete this.citizens[this.government.exile]
     }
 
     if (this.id != this.government.majority[0]) {
