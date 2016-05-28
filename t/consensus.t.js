@@ -95,7 +95,7 @@ function prove (assert) {
     assert(legislators[0].government, {
         majority: [ '0' ],
         minority: [],
-        naturalize: { id: '1', location: '1', cookie: 0 },
+        naturalize: { id: '1', properties: '1', cookie: 0 },
         constituents: [ '1' ],
         promise: '2/0'
     }, 'leader and constituent pair')

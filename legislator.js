@@ -195,7 +195,7 @@ Legislator.prototype._consensus = function (now) {
             minority: this.government.minority,
             naturalize: {
                 id: naturalization.id,
-                location: naturalization.location,
+                properties: naturalization.properties,
                 cookie: naturalization.cookie
             }
         }, Monotonic.increment(this.promise, 0))
@@ -401,11 +401,11 @@ Legislator.prototype.sent = function (now, pulse, responses) {
     }
 }
 
-Legislator.prototype.bootstrap = function (now, location) {
-    trace('bootstrap', [ now, location ])
+Legislator.prototype.bootstrap = function (now, properties) {
+    trace('bootstrap', [ now, properties ])
     // Update current state as if we're already leader.
     this.government.majority.push(this.id)
-    this.citizens[this.id] = location
+    this.citizens[this.id] = properties
     this.citizens = [ this.id ]
     this.newGovernment(now, [ this.id ], {
         majority: [ this.id ],
@@ -457,8 +457,8 @@ Legislator.prototype.enqueue = function (now, islandId, message) {
 
 // TODO Reject duplicate naturalization or override. Reject already naturalized,
 // but you have to do that at ingest of naturalization.
-Legislator.prototype.naturalize = function (now, islandId, id, cookie, location) {
-    trace('naturalize', [ now, id, cookie, location ])
+Legislator.prototype.naturalize = function (now, islandId, id, cookie, properties) {
+    trace('naturalize', [ now, id, cookie, properties ])
     assert(typeof id == 'string', 'id must be a hexidecmimal string')
     var response = this._enqueuable(islandId)
     if (response == null) {
@@ -468,7 +468,7 @@ Legislator.prototype.naturalize = function (now, islandId, id, cookie, location)
         this.naturalizing.push({
             type: 'naturalize',
             id: id,
-            location: location,
+            properties: properties,
             cookie: cookie
         })
         response = { enqueued: true, promise: null }
@@ -738,7 +738,7 @@ Legislator.prototype._enactGovernment = function (now, round) {
 
     if (round.value.government.naturalize) {
         this.government.constituents.push(this.government.naturalize.id)
-        this.citizens[this.government.naturalize.id] = this.government.naturalize.location
+        this.citizens[this.government.naturalize.id] = this.government.naturalize.properties
     } else if (this.government.exile) {
         var index = this.government.constituents.indexOf(this.government.exile)
         this.government.constituents.splice(index, 1)
