@@ -1,4 +1,4 @@
-require('proof')(20, prove)
+require('proof')(21, prove)
 
 function prove (assert) {
     var Legislator = require('../legislator')
@@ -12,7 +12,7 @@ function prove (assert) {
     var options = { parliamentSize: 5, ping: 1, timeout: 3, scheduler: { setTimeout: false } }
 
     var legislators = [ new Legislator(1, '0', time, options) ]
-    legislators[0].bootstrap(time, '0')
+    legislators[0].bootstrap(time, { location: '0' })
 
     function receive (legislator, outbox, failures) {
         failures || (failures = {})
@@ -76,7 +76,7 @@ function prove (assert) {
 
     legislators.push(new Legislator(1, '1', time, options))
 
-    assert(legislators[0].naturalize(time, 1, '1', legislators[1].cookie, '1').enqueued, 'naturalize')
+    assert(legislators[0].naturalize(time, 1, '1', legislators[1].cookie, { location: '1' }).enqueued, 'naturalize')
 
     tick({ 1: 'request' })
 
@@ -95,16 +95,20 @@ function prove (assert) {
     assert(legislators[0].government, {
         majority: [ '0' ],
         minority: [],
-        naturalize: { id: '1', properties: '1', cookie: 0 },
+        naturalize: { id: '1', properties: { location: '1' }, cookie: 0 },
         constituents: [ '1' ],
         promise: '2/0'
     }, 'leader and constituent pair')
 
     assert(legislators[1].log.size, 2, 'synchronized')
+    assert(legislators[1].citizens, {
+        '0': { location: '0' },
+        '1': { location: '1' }
+    }, 'citizens')
 
     legislators.push(new Legislator(1, '2', time, options))
     legislators[0].enqueue(time, 1, { type: 'enqueue', value: 1 })
-    legislators[0].naturalize(time, 1, '2', legislators[2].cookie, '2')
+    legislators[0].naturalize(time, 1, '2', legislators[2].cookie, { location: '2' })
 
     tick()
 
@@ -158,9 +162,9 @@ function prove (assert) {
     assert(legislators[1]._peers[2].timeout, 0, 'liveness ping materialized')
 
     legislators.push(new Legislator(1, '3', time, options))
-    legislators[0].naturalize(time, 1, '3', legislators[3].cookie, '3')
+    legislators[0].naturalize(time, 1, '3', legislators[3].cookie, { location: '3' })
     legislators.push(new Legislator(1, '4', time, options))
-    legislators[0].naturalize(time, 1, '4', legislators[4].cookie, '4')
+    legislators[0].naturalize(time, 1, '4', legislators[4].cookie, { location: '4' })
     legislators[0].enqueue(time, 1, { type: 'enqueue', value: 2 })
 
     while (send(legislators[0]));
@@ -221,7 +225,7 @@ function prove (assert) {
     tick()
 
     legislators.push(new Legislator(1, '5', time, options))
-    legislators[0].naturalize(time, 1, '5', legislators[5].cookie, '5')
+    legislators[0].naturalize(time, 1, '5', legislators[5].cookie, { location: '5' })
 
     tick({ 5: 'isolate' })
 

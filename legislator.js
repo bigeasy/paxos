@@ -27,7 +27,6 @@ function Legislator (islandId, id, cookie, options) {
 
     this.government = { promise: '0/0', minority: [], majority: [] }
     this.promise = '0/0'
-    this.citizens = []
 
     this._peers = {}
     this.getPeer(this.id).timeout = 0
@@ -73,7 +72,7 @@ Legislator.prototype.getPeer = function (id) {
 Legislator.prototype.newGovernment = function (now, quorum, government, promise) {
     trace('newGovernment', [ now, quorum, government, promise ])
     assert(!government.constituents)
-    government.constituents = this.citizens.filter(function (citizen) {
+    government.constituents = Object.keys(this.citizens).filter(function (citizen) {
         return !~government.majority.indexOf(citizen)
             && !~government.minority.indexOf(citizen)
     })
@@ -108,7 +107,7 @@ Legislator.prototype._consensus = function (now) {
     // Shift any naturalizing citizens that have already naturalized.
     while (
         this.naturalizing.length != 0 &&
-        ~this.citizens.indexOf(this.naturalizing[0].id)
+        this.citizens[this.naturalizing[0].id]
     ) {
         this.naturalizing.shift()
     }
@@ -406,7 +405,6 @@ Legislator.prototype.bootstrap = function (now, properties) {
     // Update current state as if we're already leader.
     this.government.majority.push(this.id)
     this.citizens[this.id] = properties
-    this.citizens = [ this.id ]
     this.newGovernment(now, [ this.id ], {
         majority: [ this.id ],
         minority: []
@@ -749,8 +747,6 @@ Legislator.prototype._enactGovernment = function (now, round) {
         this.proposals.length = 0
     }
 
-    this.citizens = this.government.majority.concat(this.government.minority)
-                                            .concat(this.government.constituents)
 // TODO Decide on whether this is calculated here or as needed.
     this.parliament = this.government.majority.concat(this.government.minority)
 
