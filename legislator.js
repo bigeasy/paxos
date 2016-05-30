@@ -190,7 +190,7 @@ Legislator.prototype._consensus = function (now) {
         this.newGovernment(now, this.government.majority, {
             majority: this.government.majority,
             minority: this.government.minority,
-            naturalize: {
+            immigrate: {
                 id: immigration.id,
                 properties: immigration.properties,
                 cookie: immigration.cookie
@@ -288,8 +288,8 @@ Legislator.prototype.synchronize = function (now) {
 // constituents that will never be connected.
                         assert(round, 'cannot find immigration')
                         if (Monotonic.isBoundary(round.promise, 0)) {
-                            var naturalize = round.value.government.naturalize
-                            if (naturalize && naturalize.id == id) {
+                            var immigrate = round.value.government.immigrate
+                            if (immigrate && immigrate.id == id) {
                                 maximum = round.promise
                                 break
                             }
@@ -453,8 +453,8 @@ Legislator.prototype.enqueue = function (now, islandId, message) {
 
 // TODO Reject duplicate naturalization or override. Reject already naturalized,
 // but you have to do that at ingest of naturalization.
-Legislator.prototype.naturalize = function (now, islandId, id, cookie, properties) {
-    trace('naturalize', [ now, id, cookie, properties ])
+Legislator.prototype.immigrate = function (now, islandId, id, cookie, properties) {
+    trace('immigrate', [ now, id, cookie, properties ])
     assert(typeof id == 'string', 'id must be a hexidecmimal string')
     var response = this._enqueuable(islandId)
     if (response == null) {
@@ -462,7 +462,7 @@ Legislator.prototype.naturalize = function (now, islandId, id, cookie, propertie
             return immigration.id != id
         })
         this.immigrating.push({
-            type: 'naturalize',
+            type: 'immigrate',
             id: id,
             properties: properties,
             cookie: cookie
@@ -638,9 +638,9 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
         if (!valid) {
             valid = this.log.size == 1
             valid = valid && this.log.min().promise == '0/0'
-            valid = valid && message.value.government.naturalize
-            valid = valid && message.value.government.naturalize.id == this.id
-            valid = valid && message.value.government.naturalize.cookie == this.cookie
+            valid = valid && message.value.government.immigrate
+            valid = valid && message.value.government.immigrate.id == this.id
+            valid = valid && message.value.government.immigrate.cookie == this.cookie
             if (!valid) {
                 pulse.failed = true
                 return
@@ -735,9 +735,9 @@ Legislator.prototype._enactGovernment = function (now, round) {
     this.government = JSON.parse(JSON.stringify(round.value.government))
     this.citizens = JSON.parse(JSON.stringify(round.value.citizens))
 
-    if (round.value.government.naturalize) {
-        this.government.constituents.push(this.government.naturalize.id)
-        this.citizens[this.government.naturalize.id] = this.government.naturalize.properties
+    if (round.value.government.immigrate) {
+        this.government.constituents.push(this.government.immigrate.id)
+        this.citizens[this.government.immigrate.id] = this.government.immigrate.properties
     } else if (this.government.exile) {
         var index = this.government.constituents.indexOf(this.government.exile)
         this.government.constituents.splice(index, 1)

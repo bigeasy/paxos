@@ -76,7 +76,7 @@ function prove (assert) {
 
     legislators.push(new Legislator(1, '1', time, options))
 
-    assert(legislators[0].naturalize(time, 1, '1', legislators[1].cookie, { location: '1' }).enqueued, 'naturalize')
+    assert(legislators[0].immigrate(time, 1, '1', legislators[1].cookie, { location: '1' }).enqueued, 'immigrate')
 
     tick({ 1: 'request' })
 
@@ -95,7 +95,7 @@ function prove (assert) {
     assert(legislators[0].government, {
         majority: [ '0' ],
         minority: [],
-        naturalize: { id: '1', properties: { location: '1' }, cookie: 0 },
+        immigrate: { id: '1', properties: { location: '1' }, cookie: 0 },
         constituents: [ '1' ],
         promise: '2/0'
     }, 'leader and constituent pair')
@@ -108,7 +108,7 @@ function prove (assert) {
 
     legislators.push(new Legislator(1, '2', time, options))
     legislators[0].enqueue(time, 1, { type: 'enqueue', value: 1 })
-    legislators[0].naturalize(time, 1, '2', legislators[2].cookie, { location: '2' })
+    legislators[0].immigrate(time, 1, '2', legislators[2].cookie, { location: '2' })
 
     tick()
 
@@ -162,9 +162,9 @@ function prove (assert) {
     assert(legislators[1]._peers[2].timeout, 0, 'liveness ping materialized')
 
     legislators.push(new Legislator(1, '3', time, options))
-    legislators[0].naturalize(time, 1, '3', legislators[3].cookie, { location: '3' })
+    legislators[0].immigrate(time, 1, '3', legislators[3].cookie, { location: '3' })
     legislators.push(new Legislator(1, '4', time, options))
-    legislators[0].naturalize(time, 1, '4', legislators[4].cookie, { location: '4' })
+    legislators[0].immigrate(time, 1, '4', legislators[4].cookie, { location: '4' })
     legislators[0].enqueue(time, 1, { type: 'enqueue', value: 2 })
 
     while (send(legislators[0]));
@@ -225,13 +225,13 @@ function prove (assert) {
     tick()
 
     legislators.push(new Legislator(1, '5', time, options))
-    legislators[0].naturalize(time, 1, '5', legislators[5].cookie, { location: '5' })
+    legislators[0].immigrate(time, 1, '5', legislators[5].cookie, { location: '5' })
 
     tick({ 5: 'isolate' })
 
     time++
 
-    // Test attmepting to naturalize a restarted legislator.
+    // Test attmepting to immigrate a restarted legislator.
     legislators[1].scheduler.check(time)
     send(legislators[1])
     legislators[5] = new Legislator(1, '5', time, options)
