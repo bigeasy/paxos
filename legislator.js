@@ -33,9 +33,7 @@ function Legislator (islandId, id, cookie, options) {
 
     this.length = options.length || 1024
 
-    assert(!Array.isArray(options.retry), 'retry no longer accepts range')
-    assert(!Array.isArray(options.ping), 'retry no longer accepts range')
-    assert(!Array.isArray(options.timeout), 'retry no longer accepts range')
+// Randomly adjust election retry by a percentage.
 
     this.ping = options.ping || 1
     this.timeout = options.timeout || 3
