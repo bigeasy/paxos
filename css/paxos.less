@@ -1,11 +1,15 @@
 @import "response";
 
+/* What layout engine am I using? */
+/* What is a good way to set font height these days? */
+/* Where can I ask dumb questions, a lot of them, about CSS? */
+
 @colorish: #6495ed;
 @logo-text: #000000;
 @body-text: lighten(#000000, 10%);
 @welcome-font: "ABeeZee";
 @heading-font: "Inconsolata";
-@body-font: "Karla";
+@body-font: "Avenir";
 @code-font: "Oxygen Mono";
 
 html {
@@ -15,7 +19,7 @@ html {
 }
 
 body {
-    font-family: Helvetica;
+    font-family: Helvetica, "Helvetica Neue";
     margin: 0 auto;
     padding: 0 0;
 }
@@ -34,10 +38,10 @@ img {
 .unit.welcome {
     .span-grid;
     h1 {
-        font-family: @welcome-font,  "Georgia", sans-serif;
+        font-family: "Georgia", sans-serif;
         /*font-size: 48pt;*/
         font-weight: normal;
-        font-size: 72pt;
+        font-size: 1.75em;
         margin-top: 0.5em;
         margin-bottom: 0.25em;
     }
@@ -57,7 +61,7 @@ img {
 .unit.description {
     font-family: @body-font, "Raleway", "Merriweather", "Maven Pro", "Helvetica", serif;
     p {
-        font-size: 1.45em;
+        font-size: 1.00em;
         margin: 1em 0;
         /* todo: not working in chrome */
         font-weight: 100;
@@ -66,7 +70,7 @@ img {
         }
     }
     ul {
-        font-size: 1.45em;
+        font-size: 1.00em;
         margin: 1em 0;
         padding-left: 2em;
     }
