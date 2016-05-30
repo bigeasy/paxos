@@ -4,7 +4,7 @@ var Scheduler = require('happenstance')
 var push = [].push
 var slice = [].slice
 var RBTree = require('bintrees').RBTree
-var logger = require('prolific').createLogger('bigeasy.paxos')
+var logger = require('prolific.logger').createLogger('bigeasy.paxos')
 
 function Legislator (islandId, id, cookie, options) {
     options || (options = {})
