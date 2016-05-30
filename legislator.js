@@ -186,14 +186,14 @@ Legislator.prototype._consensus = function (now) {
             }]
         }
     } else if (this.immigrating.length && this.government.majority[0] == this.id) {
-        var naturalization = this.immigrating.shift()
+        var immigration = this.immigrating.shift()
         this.newGovernment(now, this.government.majority, {
             majority: this.government.majority,
             minority: this.government.minority,
             naturalize: {
-                id: naturalization.id,
-                properties: naturalization.properties,
-                cookie: naturalization.cookie
+                id: immigration.id,
+                properties: immigration.properties,
+                cookie: immigration.cookie
             }
         }, Monotonic.increment(this.promise, 0))
     } else if (this.ponged && this.id == this.government.majority[0]) {
@@ -286,7 +286,7 @@ Legislator.prototype.synchronize = function (now) {
 // TODO This will abend if the naturalization falls off the end end of the log.
 // You need to check for gaps and missing naturalizations and then timeout the
 // constituents that will never be connected.
-                        assert(round, 'cannot find naturalization')
+                        assert(round, 'cannot find immigration')
                         if (Monotonic.isBoundary(round.promise, 0)) {
                             var naturalize = round.value.government.naturalize
                             if (naturalize && naturalize.id == id) {
@@ -458,8 +458,8 @@ Legislator.prototype.naturalize = function (now, islandId, id, cookie, propertie
     assert(typeof id == 'string', 'id must be a hexidecmimal string')
     var response = this._enqueuable(islandId)
     if (response == null) {
-        this.immigrating = this.immigrating.filter(function (naturalization) {
-            return naturalization.id != id
+        this.immigrating = this.immigrating.filter(function (immigration) {
+            return immigration.id != id
         })
         this.immigrating.push({
             type: 'naturalize',
