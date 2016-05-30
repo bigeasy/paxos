@@ -23,7 +23,7 @@
                     "bintrees":         "1.0.1",
                     "happenstance":     "2.6.x",
                     "monotonic":        "2.x",
-                    "prolific":         "2.x"
+                    "prolific.logger":  "0.0.1"
     },
     "devDependencies":
     {
