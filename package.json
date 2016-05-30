@@ -1,42 +1,40 @@
 {
-    "name":         "paxos",
-    "version":      "3.5.0",
-    "description":  "A Multi-Paxos implementation in pure JavaScript.",
-    "author":       "Alan Gutierrez <alan@prettyrobots.com>",
-    "homepage":     "https://bigeasy.github.io/paxos",
-    "bugs":         "https://github.com/bigeasy/paxos/issues",
+    "name":             "paxos",
+    "version":          "3.5.0",
+    "description":      "A Multi-Paxos implementation in pure JavaScript.",
     "keywords":
     [
-                    "paxos", "database", "database", "network", "consensus",
-                    "atomic", "broadcast", "multi-paxos", "queue", "fifo"
+                        "paxos", "database", "database", "network", "consensus",
+                        "atomic", "broadcast", "multi-paxos", "queue", "fifo"
     ],
+    "author":           "Alan Gutierrez <alan@prettyrobots.com>",
     "contributors":
-    [
-        {
-                    "name":   "Demarius Chrite",
-                    "email":  "chrite.demarius@gmail.com",
-                    "web":    "https://github.com/demarius"
-        }
-    ],
+    [{
+                        "name":   "Demarius Chrite",
+                        "email":  "chrite.demarius@gmail.com",
+                        "web":    "https://github.com/demarius"
+    }],
+    "homepage":         "https://bigeasy.github.io/paxos",
+    "bugs":             "https://github.com/bigeasy/paxos/issues",
+    "license":          "MIT",
+    "repository":
+    {
+                        "type": "git",
+                        "url": "http://github.com/bigeasy/paxos.git"
+    },
     "dependencies":
     {
-                    "bintrees":         "1.0.1",
-                    "happenstance":     "2.6.x",
-                    "monotonic":        "2.x",
-                    "prolific.logger":  "0.0.1"
+                        "bintrees":         "1.0.1",
+                        "happenstance":     "2.6.x",
+                        "monotonic":        "2.x",
+                        "prolific.logger":  "0.0.1"
     },
     "devDependencies":
     {
-                    "proof":            "1.x"
+                        "proof":            "1.x"
     },
     "scripts":
     {
-                    "test": "proof platform win32 && proof test */*/*.t.js || t/test"
-    },
-    "license":      "MIT",
-    "repository":
-    {
-                    "type": "git",
-                    "url": "http://github.com/bigeasy/paxos.git"
+                        "test": "proof platform win32 && proof test */*/*.t.js || t/test"
     }
 }
