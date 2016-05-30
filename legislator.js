@@ -22,7 +22,7 @@ function Legislator (islandId, id, cookie, options) {
     this.proposals = []
     this.citizens = {}
     this.pulse = false
-    this.naturalizing = []
+    this.immigrating = []
     this.collapsed = false
 
     this.government = { promise: '0/0', minority: [], majority: [] }
@@ -104,12 +104,12 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
 
 Legislator.prototype._consensus = function (now) {
     trace('consensus', [ now ])
-    // Shift any naturalizing citizens that have already naturalized.
+    // Shift any immigrating citizens that have already immigrating.
     while (
-        this.naturalizing.length != 0 &&
-        this.citizens[this.naturalizing[0].id]
+        this.immigrating.length != 0 &&
+        this.citizens[this.immigrating[0].id]
     ) {
-        this.naturalizing.shift()
+        this.immigrating.shift()
     }
     if (this.collapsed) {
         if (this.election) {
@@ -187,8 +187,8 @@ Legislator.prototype._consensus = function (now) {
                 promise: this.accepted.promise
             }]
         }
-    } else if (this.naturalizing.length && this.government.majority[0] == this.id) {
-        var naturalization = this.naturalizing.shift()
+    } else if (this.immigrating.length && this.government.majority[0] == this.id) {
+        var naturalization = this.immigrating.shift()
         this.newGovernment(now, this.government.majority, {
             majority: this.government.majority,
             minority: this.government.minority,
@@ -338,7 +338,7 @@ Legislator.prototype.collapse = function () {
     this.collapsed = true
     this.election = null
     this.proposals.length = 0
-    this.naturalizing.length = 0
+    this.immigrating.length = 0
     for (var id in this._peers) {
         if (id != this.id) {
             delete this._peers[id]
@@ -460,10 +460,10 @@ Legislator.prototype.naturalize = function (now, islandId, id, cookie, propertie
     assert(typeof id == 'string', 'id must be a hexidecmimal string')
     var response = this._enqueuable(islandId)
     if (response == null) {
-        this.naturalizing = this.naturalizing.filter(function (naturalization) {
+        this.immigrating = this.immigrating.filter(function (naturalization) {
             return naturalization.id != id
         })
-        this.naturalizing.push({
+        this.immigrating.push({
             type: 'naturalize',
             id: id,
             properties: properties,
@@ -698,6 +698,9 @@ Legislator.prototype._receivePing = function (now, pulse, message, responses) {
         ponged = true
     } else if (peer.timeout) {
         ponged = true
+    }
+    if (Object.keys(this.citizens).length != 0 && !this.citizens[message.from].settled && peer.settled) {
+        this.citizens[message.from].settled = true
     }
     peer.timeout = 0
     peer.when = null
