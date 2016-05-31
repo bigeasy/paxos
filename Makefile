@@ -1,16 +1,25 @@
+# Can't get this to work right now, complaints about JavaScript security. Would
+# update to reload the current page if the current page was the correct page,
+# rather than look through all tabs for the correct pages.
+#
+# http://www.finetunedmac.com/forums/ubbthreads.php?ubb=showflat&Number=40638
 define SAFARI_REFRESH
 tell application "Safari"
 set windowList to every window
 repeat with aWindow in windowList
 	set tabList to every tab of aWindow
-	repeat with atab in tabList
-		if (URL of atab contains "127.0.0.1:4000") then
-		  tell atab to do javascript "window.location.reload()"
-		end if
-	end repeat
+	if tabList is not equal to missing value then
+		repeat with atab in tabList
+			if (URL of atab contains "127.0.0.1:4000") then
+			  do shell script "echo 1"
+			end if
+		end repeat
+	end if
 end repeat
 end tell
 endef
+
+#			  tell atab to do javascript "window.location.reload()"
 
 define CHROME_REFRESH
 on run keyword
@@ -55,7 +64,7 @@ css/%.css: css/%.less
 %.html: pages/%.html node_modules/.bin/edify
 	@echo generating $@
 	@(node node_modules/.bin/edify markdown --select '.markdown' | \
-	    node node_modules/.bin/edify highlight --select 'pre.javascript' --language 'javascript') < $< > $@
+	    node node_modules/.bin/edify highlight --select '.lang-javascript' --language 'javascript') < $< > $@
 
 clean:
 	rm $(sources)

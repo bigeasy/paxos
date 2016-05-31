@@ -2,14 +2,13 @@
 <html>
 <meta charset="utf-8">
 <title>y Paxos</title>
-<link href="http://fonts.googleapis.com/css?family=ABeeZee|Inconsolata|Karla:400,700|Oxygen+Mono" rel="stylesheet" type="text/css">
-<link href="http://fonts.googleapis.com/css?family=Sorts+Mill+Goudy">
-<link rel="stylesheet" type="text/css" href="css/syntax.css">
+<link rel="stylesheet" type="text/css" href="css/ascetic.css">
 <link rel="stylesheet" type="text/css" href="css/paxos.css">
+
 <body><a href="https://github.com/bigeasy/paxos/"><img style="position: absolute; top: 0; left: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_left_gray_6d6d6d.png" alt="Fork me on GitHub"></a><div class="container">
 
 <div class="unit welcome">
-<h1>- Paxos !</h3>
+<h1>Paxos!</h3>
 </div>
 
 <!-- TODO Include Highlight.js stylesheet. -->
@@ -41,6 +40,21 @@ The main class of the Paxos library is the `Legislator`. This is an active
 participant in the Paxos algorithm. (Should it be `Citizen`? Should it be just
 Paxos?)
 
+```javascript
+var i = 0;
+```
+
+Nodes on `Legislator`.
+
+`Legislator.citzens` ~ An object used as a map of properties of the citizens
+of the island.
+
+`Legislator.government` ~ The structure of the goverment with an array of
+majority members, an array of minority members and an array of constituents.
+
+`Legislator.outbox()` ~ Returns the next outbound pulse.
+
+`Legislator.sent(TK)` ~ Reports the results of a pulse.
 
 </div> <!-- markdown -->
 
