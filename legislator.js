@@ -12,6 +12,7 @@ function Legislator (islandId, id, cookie, options) {
     this.islandId = islandId
     this.id = id
     this.cookie = cookie
+    this.naturalized = !! options.naturalized
 
     this.parliamentSize = options.parliamentSize || 5
 
@@ -143,11 +144,11 @@ Legislator.prototype._consensus = function (now) {
             }
         } else {
             var parliament = this.government.majority.concat(this.government.minority)
-            var unknown = { timeout: 1 }
 // TODO The constituent must be both connected and synchronized, not just
 // connected.
             var present = this.parliament.filter(function (id) {
-                return id != this.id && (this._peers[id] || unknown).timeout == 0
+                var peer = this._peers[id] || {}
+                return id != this.id && peer.naturalized && peer.timeout == 0
             }.bind(this))
             var majoritySize = Math.ceil(parliament.length / 2)
             if (present.length < majoritySize) {
@@ -665,6 +666,7 @@ Legislator.prototype._ping = function (now) {
         type: 'ping',
         from: this.id,
         when: now,
+        naturalized: this.naturalized,
         decided: this._peers[this.id].decided
     }
 }
@@ -695,11 +697,9 @@ Legislator.prototype._receivePing = function (now, pulse, message, responses) {
     } else if (peer.timeout) {
         ponged = true
     }
-    if (Object.keys(this.citizens).length != 0 && !this.citizens[message.from].settled && peer.settled) {
-        this.citizens[message.from].settled = true
-    }
     peer.timeout = 0
     peer.when = null
+    peer.naturalized = message.naturalized
     peer.decided = message.decided
     peer.pinged = true
     responses.push(this._ping(now))
@@ -714,6 +714,7 @@ Legislator.prototype._receivePing = function (now, pulse, message, responses) {
                 type: 'ping',
                 from: id,
                 when: peer.when,
+                naturalized: this.naturalized,
                 decided: peer.decided
             })
         }
@@ -790,6 +791,9 @@ Legislator.prototype._whenCollapse = function () {
     this.collapse()
 }
 
+// TODO I don't believe I need to form a new government indicating that I've
+// naturalized, merely record that I've been naturalized. It is a property that
+// will return with liveness.
 Legislator.prototype._expand = function () {
     trace('_expand', [])
     assert(!this.collapsed)
@@ -799,9 +803,9 @@ Legislator.prototype._expand = function () {
     }
     assert(~this.government.majority.indexOf(this.id), 'would be leader not in majority')
     var parliamentSize = parliament.length + 2
-    var unknown = { timeout: 1 }
     var present = parliament.slice(1).concat(this.government.constituents).filter(function (id) {
-        return (this._peers[id] || unknown).timeout == 0
+        var peer = this._peers[id] || {}
+        return peer.naturalized && peer.timeout == 0
     }.bind(this))
     if (present.length + 1 < parliamentSize) {
         return null
@@ -839,7 +843,6 @@ Legislator.prototype._impeach = function () {
     }
     var parliament = this.government.majority.concat(this.government.minority)
     var parliamentSize = parliament.length <= 3 ? 1 : 3
-    var unknown = { timeout: 1 }
     var newParliament = this.government.majority.slice(0, parliamentSize)
     var majoritySize = Math.ceil(parliamentSize / 2)
     return {

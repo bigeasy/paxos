@@ -21,10 +21,10 @@ function prove (assert) {
                 minority: [ 2 ]
             },
             _peers: {
-                0: { timeout: 0 },
-                1: { timeout: 0 },
-                2: { timeout: 0 },
-                3: { timeout: 0 }
+                0: { naturalized: true, timeout: 0 },
+                1: { naturalized: true, timeout: 0 },
+                2: { naturalized: true, timeout: 0 },
+                3: { naturalized: true, timeout: 0 }
             }
         }), null, 'expand not enough present')
         assert(legislator._expand.call({
@@ -36,11 +36,11 @@ function prove (assert) {
                 constituents: [ '3', '4' ]
             },
             _peers: {
-                0: { timeout: 0 },
-                1: { timeout: 0 },
-                2: { timeout: 0 },
-                3: { timeout: 0 },
-                4: { timeout: 0 }
+                0: { naturalized: true, timeout: 0 },
+                1: { naturalized: true, timeout: 0 },
+                2: { naturalized: true, timeout: 0 },
+                3: { naturalized: true, timeout: 0 },
+                4: { naturalized: true, timeout: 0 }
             }
         }), {
             quorum: [ '0', '1', '2' ],
