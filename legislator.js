@@ -102,7 +102,7 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
 
 Legislator.prototype._consensus = function (now) {
     trace('consensus', [ now ])
-    // Shift any immigrating citizens that have already immigrating.
+    // Shift any immigrating citizens that have already immigrated.
     while (
         this.immigrating.length != 0 &&
         this.citizens[this.immigrating[0].id]
@@ -451,8 +451,6 @@ Legislator.prototype.enqueue = function (now, islandId, message) {
     return response
 }
 
-// TODO Reject duplicate naturalization or override. Reject already naturalized,
-// but you have to do that at ingest of naturalization.
 Legislator.prototype.immigrate = function (now, islandId, id, cookie, properties) {
     trace('immigrate', [ now, id, cookie, properties ])
     assert(typeof id == 'string', 'id must be a hexidecmimal string')
