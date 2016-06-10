@@ -145,7 +145,7 @@ function prove (assert) {
 
     legislators[0]._peers[1].timeout = 1
 
-    legislators[0]._whenPulse(time)
+    legislators[0]._whenKeepAlive(time)
 
     tick()
 

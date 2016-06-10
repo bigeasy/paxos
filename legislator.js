@@ -22,7 +22,7 @@ function Legislator (islandId, id, cookie, options) {
 
     this.proposals = []
     this.citizens = {}
-    this.pulse = false
+    this.keepAlive = false
     this.immigrating = []
     this.collapsed = false
 
@@ -244,8 +244,8 @@ Legislator.prototype._consensus = function (now) {
             messages: messages
         }
     }
-    if (this.pulse) {
-        this.pulse = false
+    if (this.keepAlive) {
+        this.keepAlive = false
         return {
             type: 'consensus',
             islandId: this.islandId,
@@ -381,7 +381,7 @@ Legislator.prototype.sent = function (now, pulse, responses) {
             this.scheduler.schedule(now + this.ping, pulse.route[0], { object: this, method: '_whenPing' }, pulse.route[0])
             break
         case 'consensus':
-            this.scheduler.schedule(now + this.ping, this.id, { object: this, method: '_whenPulse' })
+            this.scheduler.schedule(now + this.ping, this.id, { object: this, method: '_whenKeepAlive' })
             break
         }
     } else {
@@ -680,9 +680,9 @@ Legislator.prototype._ping = function (now) {
     }
 }
 
-Legislator.prototype._whenPulse = function (now) {
+Legislator.prototype._whenKeepAlive = function (now) {
     trace('_whenPulse', [])
-    this.pulse = true
+    this.keepAlive = true
 }
 
 Legislator.prototype._whenPing = function (now, id) {
