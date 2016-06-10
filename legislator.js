@@ -88,11 +88,12 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
         value: {
             type: 'government',
             islandId: this.islandId,
+// TODO Choke up on this structure, move majority and minority up one.
             government: government,
             citizens: this.citizens,
 // TODO Null map to indicate collapse or change in leadership. Wait, change in
 // leaership is only ever collapse? Ergo...
-            // collapsed: this.collapsed,
+            collapsed: this.collapsed,
 // There was a time when I wanted to allow the user to choose leaders.
             map: this.proposals.map(function (proposal) {
                 return { was: proposal.was, is: proposal.promise }
