@@ -681,7 +681,7 @@ Legislator.prototype._ping = function (now) {
 }
 
 Legislator.prototype._whenKeepAlive = function (now) {
-    trace('_whenPulse', [])
+    trace('_whenKeepAlive', [])
     this.keepAlive = true
 }
 
