@@ -22,8 +22,9 @@ function Legislator (islandId, id, cookie, options) {
 
     this.proposals = []
     this.citizens = {}
-    this.keepAlive = false
     this.immigrating = []
+    this.keepAlive = false
+    this.pulsing = false
     this.collapsed = false
 
     this.government = { promise: '0/0', minority: [], majority: [] }
@@ -259,9 +260,9 @@ Legislator.prototype._consensus = function (now) {
 
 Legislator.prototype.consensus = function (now) {
     var pulse = null
-    if (!this._pulse) {
+    if (!this.pulsing) {
         pulse = this._consensus(now)
-        this._pulse = !! pulse
+        this.pulsing = !! pulse
     }
     return pulse
 }
@@ -360,7 +361,7 @@ Legislator.prototype.collapse = function () {
 Legislator.prototype.sent = function (now, pulse, responses) {
     trace('sent', [ now, pulse, responses ])
     if (pulse.type == 'consensus') {
-        this._pulse = false
+        this.pulsing = false
     }
     if (!~pulse.governments.indexOf(this.government.promise)) {
         return
