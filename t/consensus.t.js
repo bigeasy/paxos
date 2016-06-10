@@ -108,8 +108,8 @@ function prove (assert) {
 
     assert(legislators[1].log.size, 2, 'synchronized')
     assert(legislators[1].citizens, {
-        '0': { location: '0' },
-        '1': { location: '1' }
+        '0': { location: '0', immigrated: '1/0' },
+        '1': { location: '1', immigrated: '2/0' }
     }, 'citizens')
 
     legislators.push(new Legislator(1, '2', time, options))

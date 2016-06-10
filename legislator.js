@@ -82,6 +82,13 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
         proposal.promise = remapped = Monotonic.increment(remapped, 1)
         return proposal
     }.bind(this))
+    var citizens = JSON.parse(JSON.stringify(this.citizens))
+// TODO I'd rather have a more intelligent structure.
+    if (government.immigrate) {
+        citizens[government.immigrate.id] = JSON.parse(JSON.stringify(government.immigrate.properties))
+        citizens[government.immigrate.id].immigrated = promise
+        government.constituents.push(government.immigrate.id)
+    }
     this.proposals.unshift({
         promise: promise,
         route: quorum,
@@ -90,7 +97,7 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
             islandId: this.islandId,
 // TODO Choke up on this structure, move majority and minority up one.
             government: government,
-            citizens: this.citizens,
+            citizens: citizens,
 // TODO Null map to indicate collapse or change in leadership. Wait, change in
 // leaership is only ever collapse? Ergo...
             collapsed: this.collapsed,
@@ -404,7 +411,8 @@ Legislator.prototype.bootstrap = function (now, properties) {
     trace('bootstrap', [ now, properties ])
     // Update current state as if we're already leader.
     this.government.majority.push(this.id)
-    this.citizens[this.id] = properties
+    this.citizens[this.id] = JSON.parse(JSON.stringify(properties))
+    this.citizens[this.id].immigrated = '1/0'
     this.newGovernment(now, [ this.id ], {
         majority: [ this.id ],
         minority: []
@@ -735,10 +743,7 @@ Legislator.prototype._enactGovernment = function (now, round) {
     this.government = JSON.parse(JSON.stringify(round.value.government))
     this.citizens = JSON.parse(JSON.stringify(round.value.citizens))
 
-    if (round.value.government.immigrate) {
-        this.government.constituents.push(this.government.immigrate.id)
-        this.citizens[this.government.immigrate.id] = this.government.immigrate.properties
-    } else if (this.government.exile) {
+    if (this.government.exile) {
         var index = this.government.constituents.indexOf(this.government.exile)
         this.government.constituents.splice(index, 1)
         delete this.citizens[this.government.exile]
