@@ -107,7 +107,7 @@ function prove (assert) {
     }, 'leader and constituent pair')
 
     assert(legislators[1].log.size, 2, 'synchronized')
-    assert(legislators[1].citizens, {
+    assert(legislators[1].properties, {
         '0': { location: '0', immigrated: '1/0' },
         '1': { location: '1', immigrated: '2/0' }
     }, 'citizens')

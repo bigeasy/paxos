@@ -21,7 +21,7 @@ function Legislator (islandId, id, cookie, options) {
     this.synchronizing = {}
 
     this.proposals = []
-    this.citizens = {}
+    this.properties = {}
     this.immigrating = []
     this.keepAlive = false
     this.pulsing = false
@@ -72,7 +72,7 @@ Legislator.prototype.getPeer = function (id) {
 Legislator.prototype.newGovernment = function (now, quorum, government, promise) {
     trace('newGovernment', [ now, quorum, government, promise ])
     assert(!government.constituents)
-    government.constituents = Object.keys(this.citizens).filter(function (citizen) {
+    government.constituents = Object.keys(this.properties).filter(function (citizen) {
         return !~government.majority.indexOf(citizen)
             && !~government.minority.indexOf(citizen)
     })
@@ -83,11 +83,11 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
         proposal.promise = remapped = Monotonic.increment(remapped, 1)
         return proposal
     }.bind(this))
-    var citizens = JSON.parse(JSON.stringify(this.citizens))
+    var properties = JSON.parse(JSON.stringify(this.properties))
 // TODO I'd rather have a more intelligent structure.
     if (government.immigrate) {
-        citizens[government.immigrate.id] = JSON.parse(JSON.stringify(government.immigrate.properties))
-        citizens[government.immigrate.id].immigrated = promise
+        properties[government.immigrate.id] = JSON.parse(JSON.stringify(government.immigrate.properties))
+        properties[government.immigrate.id].immigrated = promise
         government.constituents.push(government.immigrate.id)
     }
     this.proposals.unshift({
@@ -98,7 +98,7 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
             islandId: this.islandId,
 // TODO Choke up on this structure, move majority and minority up one.
             government: government,
-            citizens: citizens,
+            properties: properties,
 // TODO Null map to indicate collapse or change in leadership. Wait, change in
 // leaership is only ever collapse? Ergo...
             collapsed: this.collapsed,
@@ -112,10 +112,10 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
 
 Legislator.prototype._consensus = function (now) {
     trace('consensus', [ now ])
-    // Shift any immigrating citizens that have already immigrated.
+    // shift any immigrating properties that have already immigrated.
     while (
         this.immigrating.length != 0 &&
-        this.citizens[this.immigrating[0].id]
+        this.properties[this.immigrating[0].id]
     ) {
         this.immigrating.shift()
     }
@@ -412,8 +412,8 @@ Legislator.prototype.bootstrap = function (now, properties) {
     trace('bootstrap', [ now, properties ])
     // Update current state as if we're already leader.
     this.government.majority.push(this.id)
-    this.citizens[this.id] = JSON.parse(JSON.stringify(properties))
-    this.citizens[this.id].immigrated = '1/0'
+    this.properties[this.id] = JSON.parse(JSON.stringify(properties))
+    this.properties[this.id].immigrated = '1/0'
     this.newGovernment(now, [ this.id ], {
         majority: [ this.id ],
         minority: []
@@ -742,12 +742,12 @@ Legislator.prototype._enactGovernment = function (now, round) {
     // when we vote to shrink the government, the initial vote has a greater
     // quorum than the resulting government. Not sure why this comment is here.
     this.government = JSON.parse(JSON.stringify(round.value.government))
-    this.citizens = JSON.parse(JSON.stringify(round.value.citizens))
+    this.properties = JSON.parse(JSON.stringify(round.value.properties))
 
     if (this.government.exile) {
         var index = this.government.constituents.indexOf(this.government.exile)
         this.government.constituents.splice(index, 1)
-        delete this.citizens[this.government.exile]
+        delete this.properties[this.government.exile]
     }
 
     if (this.id != this.government.majority[0]) {
