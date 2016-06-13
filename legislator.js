@@ -259,6 +259,7 @@ Legislator.prototype._consensus = function (now) {
 }
 
 Legislator.prototype.consensus = function (now) {
+    this._trace('consensus', [ now ])
     var pulse = null
     if (!this.pulsing) {
         pulse = this._consensus(now)
@@ -441,7 +442,7 @@ Legislator.prototype._enqueuable = function (islandId) {
 // Note that a client will have to treat a network failure on submission as a
 // failure requiring boundary detection.
 Legislator.prototype.enqueue = function (now, islandId, message) {
-    this._trace('enqueue', [ now, message ])
+    this._trace('enqueue', [ now, islandId, message ])
 
     var response = this._enqueuable(islandId)
     if (response == null) {
@@ -463,7 +464,7 @@ Legislator.prototype.enqueue = function (now, islandId, message) {
 }
 
 Legislator.prototype.immigrate = function (now, islandId, id, cookie, properties) {
-    this._trace('immigrate', [ now, id, cookie, properties ])
+    this._trace('immigrate', [ now, islandId, id, cookie, properties ])
     assert(typeof id == 'string', 'id must be a hexidecmimal string')
     var response = this._enqueuable(islandId)
     if (response == null) {
