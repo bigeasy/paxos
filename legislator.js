@@ -51,12 +51,12 @@ function Legislator (islandId, id, cookie, options) {
     this.constituency = []
 }
 
-function trace (method, vargs) {
+Legislator.prototype._trace = function (method, vargs) {
     logger.trace(method, { vargs: vargs })
 }
 
 Legislator.prototype.getPeer = function (id) {
-    trace('getPeer', [ id ])
+    this._trace('getPeer', [ id ])
     var peer = this._peers[id]
     if (peer == null) {
         return peer = this._peers[id] = {
@@ -70,7 +70,7 @@ Legislator.prototype.getPeer = function (id) {
 }
 
 Legislator.prototype.newGovernment = function (now, quorum, government, promise) {
-    trace('newGovernment', [ now, quorum, government, promise ])
+    this._trace('newGovernment', [ now, quorum, government, promise ])
     assert(!government.constituents)
     government.constituents = Object.keys(this.properties).filter(function (citizen) {
         return !~government.majority.indexOf(citizen)
@@ -111,7 +111,7 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
 }
 
 Legislator.prototype._consensus = function (now) {
-    trace('consensus', [ now ])
+    this._trace('consensus', [ now ])
     // shift any immigrating properties that have already immigrated.
     while (
         this.immigrating.length != 0 &&
@@ -269,7 +269,7 @@ Legislator.prototype.consensus = function (now) {
 
 
 Legislator.prototype.synchronize = function (now) {
-    trace('synchronize', [ now ])
+    this._trace('synchronize', [ now ])
     var outbox = []
     for (var i = 0, I = this.constituency.length; i < I; i++) {
         var id = this.constituency[i]
@@ -329,7 +329,7 @@ Legislator.prototype.synchronize = function (now) {
 }
 
 Legislator.prototype.receive = function (now, pulse, messages) {
-    trace('_receive', [ now, pulse, messages ])
+    this._trace('_receive', [ now, pulse, messages ])
     assert(arguments.length == 3 && now != null)
     var responses = []
     for (var i = 0, I = messages.length; i < I; i++) {
@@ -342,7 +342,7 @@ Legislator.prototype.receive = function (now, pulse, messages) {
 }
 
 Legislator.prototype.collapse = function () {
-    trace('collapse', [])
+    this._trace('collapse', [])
     this.collapsed = true
     this.election = null
     this.proposals.length = 0
@@ -359,7 +359,7 @@ Legislator.prototype.collapse = function () {
 }
 
 Legislator.prototype.sent = function (now, pulse, responses) {
-    trace('sent', [ now, pulse, responses ])
+    this._trace('sent', [ now, pulse, responses ])
     if (pulse.type == 'consensus') {
         this.pulsing = false
     }
@@ -409,7 +409,7 @@ Legislator.prototype.sent = function (now, pulse, responses) {
 }
 
 Legislator.prototype.bootstrap = function (now, properties) {
-    trace('bootstrap', [ now, properties ])
+    this._trace('bootstrap', [ now, properties ])
     // Update current state as if we're already leader.
     this.government.majority.push(this.id)
     this.properties[this.id] = JSON.parse(JSON.stringify(properties))
@@ -421,7 +421,7 @@ Legislator.prototype.bootstrap = function (now, properties) {
 }
 
 Legislator.prototype._enqueuable = function (islandId) {
-    trace('_enqueuable', [ islandId ])
+    this._trace('_enqueuable', [ islandId ])
     if (this.collapsed || this.islandId != islandId) {
         return {
             enqueued: false,
@@ -441,7 +441,7 @@ Legislator.prototype._enqueuable = function (islandId) {
 // Note that a client will have to treat a network failure on submission as a
 // failure requiring boundary detection.
 Legislator.prototype.enqueue = function (now, islandId, message) {
-    trace('enqueue', [ now, message ])
+    this._trace('enqueue', [ now, message ])
 
     var response = this._enqueuable(islandId)
     if (response == null) {
@@ -463,7 +463,7 @@ Legislator.prototype.enqueue = function (now, islandId, message) {
 }
 
 Legislator.prototype.immigrate = function (now, islandId, id, cookie, properties) {
-    trace('immigrate', [ now, id, cookie, properties ])
+    this._trace('immigrate', [ now, id, cookie, properties ])
     assert(typeof id == 'string', 'id must be a hexidecmimal string')
     var response = this._enqueuable(islandId)
     if (response == null) {
@@ -493,7 +493,7 @@ Legislator.prototype._routeEqual = function (a, b) {
 }
 
 Legislator.prototype._reject = function (message) {
-    trace('_reject', [ message ])
+    this._trace('_reject', [ message ])
     return {
         type: 'reject',
         from: this.id,
@@ -503,12 +503,12 @@ Legislator.prototype._reject = function (message) {
 }
 
 Legislator.prototype._receiveReject = function (now, pulse, message) {
-    trace('_receiveReject', [ now, pulse, message ])
+    this._trace('_receiveReject', [ now, pulse, message ])
     pulse.failed = false
 }
 
 Legislator.prototype._receivePropose = function (now, pulse, message, responses) {
-    trace('_receivePropose', [ now, pulse, message, responses ])
+    this._trace('_receivePropose', [ now, pulse, message, responses ])
     var compare = Monotonic.compare(message.promise, this.promise)
     if (this.islandId != pulse.islandId ||
         compare <= 0 ||
@@ -526,7 +526,7 @@ Legislator.prototype._receivePropose = function (now, pulse, message, responses)
 }
 
 Legislator.prototype._receivePromise = function (now, pulse, message, responses) {
-    trace('_receivePromise', [ now, pulse, message, responses ])
+    this._trace('_receivePromise', [ now, pulse, message, responses ])
     // We won't get called if our government has been superceeded.
     assert(~pulse.governments.indexOf(this.government.promise), 'goverment mismatch')
     assert(this.election, 'no election')
@@ -556,7 +556,7 @@ Legislator.prototype._receivePromise = function (now, pulse, message, responses)
 // leader will be able to learn immediately.
 
 Legislator.prototype._receiveAccept = function (now, pulse, message, responses) {
-    trace('_receiveAccept', [ now, pulse, message, responses ])
+    this._trace('_receiveAccept', [ now, pulse, message, responses ])
 // TODO Think hard; are will this less than catch both two-stage commit and
 // Paxos?
     if (this.islandId == pulse.islandId &&
@@ -578,7 +578,7 @@ Legislator.prototype._receiveAccept = function (now, pulse, message, responses) 
 }
 
 Legislator.prototype._receiveAccepted = function (now, pulse, message) {
-    trace('_receiveAccepted', [ now, pulse, message ])
+    this._trace('_receiveAccepted', [ now, pulse, message ])
     if (~pulse.governments.indexOf(this.government.promise) && this.election) {
         assert(!~this.election.accepts.indexOf(message.from))
         this.election.accepts.push(message.from)
@@ -590,7 +590,7 @@ Legislator.prototype._receiveAccepted = function (now, pulse, message) {
 // need to make sure that you don't send the commit, ah, but if you'd sent a new
 // promise, you would already have worked through these things.
 Legislator.prototype._receiveCommit = function (now, pulse, message, responses) {
-    trace('_receiveCommit', [ now, pulse, message, responses ])
+    this._trace('_receiveCommit', [ now, pulse, message, responses ])
     if (this.islandId != pulse.islandId ||
         this.accepted == null ||
         this.accepted.promise != message.promise
@@ -616,7 +616,7 @@ Legislator.prototype._receiveCommit = function (now, pulse, message, responses) 
 }
 
 Legislator.prototype._receiveEnact = function (now, pulse, message) {
-    trace('_receiveEnact', [ now, pulse, message ])
+    this._trace('_receiveEnact', [ now, pulse, message ])
 
 // TODO Reject? Need `===`?
     if (this.islandId != pulse.islandId) {
@@ -682,12 +682,12 @@ Legislator.prototype._ping = function (now) {
 }
 
 Legislator.prototype._whenKeepAlive = function (now) {
-    trace('_whenKeepAlive', [])
+    this._trace('_whenKeepAlive', [])
     this.keepAlive = true
 }
 
 Legislator.prototype._whenPing = function (now, id) {
-    trace('_whenPing', [ now, id ])
+    this._trace('_whenPing', [ now, id ])
     var peer = this.getPeer(id)
     peer.skip = false
     if (peer.timeout == 0) {
@@ -697,7 +697,7 @@ Legislator.prototype._whenPing = function (now, id) {
 }
 
 Legislator.prototype._receivePing = function (now, pulse, message, responses) {
-    trace('_receivePing', [ now, pulse, message, responses ])
+    this._trace('_receivePing', [ now, pulse, message, responses ])
     if (message.from == this.id) {
         return
     }
@@ -733,7 +733,7 @@ Legislator.prototype._receivePing = function (now, pulse, message, responses) {
 }
 
 Legislator.prototype._enactGovernment = function (now, round) {
-    trace('_enactGovernment', [ now, round ])
+    this._trace('_enactGovernment', [ now, round ])
     delete this.election
     this.collapsed = false
 
@@ -794,7 +794,7 @@ Legislator.prototype._enactGovernment = function (now, round) {
 }
 
 Legislator.prototype._whenCollapse = function () {
-    trace('_whenCollapse', [])
+    this._trace('_whenCollapse', [])
     this.collapse()
 }
 
@@ -802,7 +802,7 @@ Legislator.prototype._whenCollapse = function () {
 // naturalized, merely record that I've been naturalized. It is a property that
 // will return with liveness.
 Legislator.prototype._expand = function () {
-    trace('_expand', [])
+    this._trace('_expand', [])
     assert(!this.collapsed)
     var parliament = this.government.majority.concat(this.government.minority)
     if (parliament.length == this.parliamentSize) {
@@ -830,7 +830,7 @@ Legislator.prototype._expand = function () {
 }
 
 Legislator.prototype._impeach = function () {
-    trace('_impeach', [])
+    this._trace('_impeach', [])
     assert(!this.collapsed)
     var timedout = this.government.minority.filter(function (id) {
         return this._peers[id] && this._peers[id].timeout >= this.timeout
@@ -862,7 +862,7 @@ Legislator.prototype._impeach = function () {
 }
 
 Legislator.prototype._exile = function () {
-    trace('_exile', [])
+    this._trace('_exile', [])
     assert(!this.collapsed)
     var responsive = this.government.constituents.filter(function (id) {
         return !this._peers[id] || this._peers[id].timeout < this.timeout

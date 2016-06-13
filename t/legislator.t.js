@@ -7,6 +7,7 @@ function prove (assert) {
         var legislator = new Legislator(1, '1', 0)
 
         assert(legislator._expand.call({
+            _trace: function () {},
             parliamentSize: 3,
             government: {
                 majority: [ 0, 1 ],
@@ -14,6 +15,7 @@ function prove (assert) {
             }
         }), null, 'expand already right size')
         assert(legislator._expand.call({
+            _trace: function () {},
             parliamentSize: 5,
             id: 0,
             government: {
@@ -28,6 +30,7 @@ function prove (assert) {
             }
         }), null, 'expand not enough present')
         assert(legislator._expand.call({
+            _trace: function () {},
             parliamentSize: 5,
             id: '0',
             government: {
@@ -55,6 +58,7 @@ function prove (assert) {
         var legislator = new Legislator(1, '1', 0)
 
         assert(legislator._impeach.call({
+            _trace: function () {},
             id: '0',
             timeout: 2,
             government: {
@@ -67,6 +71,7 @@ function prove (assert) {
             }
         }), null, 'impeach all good')
         assert(legislator._impeach.call({
+            _trace: function () {},
             id: '0',
             timeout: 2,
             government: {
@@ -78,6 +83,7 @@ function prove (assert) {
             }
         }), null, 'impeach missing')
         assert(legislator._impeach.call({
+            _trace: function () {},
             id: '0',
             timeout: 2,
             government: {
@@ -95,6 +101,7 @@ function prove (assert) {
             minority: [ '4', '5' ]
         }, 'impeach replace')
         assert(legislator._impeach.call({
+            _trace: function () {},
             id: '0',
             timeout: 2,
             government: {
@@ -116,6 +123,7 @@ function prove (assert) {
             }
         }, 'impeach shrink to three member parliament')
         assert(legislator._impeach.call({
+            _trace: function () {},
             id: '0',
             timeout: 2,
             government: {
@@ -140,6 +148,7 @@ function prove (assert) {
         var legislator = new Legislator(1, '1', 0)
 
         assert(legislator._exile.call({
+            _trace: function () {},
             timeout: 2,
             government: {
                 constituents: [ '3', '4' ]
@@ -150,6 +159,7 @@ function prove (assert) {
             }
         }), null, 'exile all good')
         assert(legislator._exile.call({
+            _trace: function () {},
             timeout: 2,
             government: {
                 majority: [ '0', '1' ],
