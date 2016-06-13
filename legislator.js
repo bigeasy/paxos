@@ -330,7 +330,7 @@ Legislator.prototype.synchronize = function (now) {
 }
 
 Legislator.prototype.receive = function (now, pulse, messages) {
-    this._trace('_receive', [ now, pulse, messages ])
+    this._trace('receive', [ now, pulse, messages ])
     assert(arguments.length == 3 && now != null)
     var responses = []
     for (var i = 0, I = messages.length; i < I; i++) {
