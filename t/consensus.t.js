@@ -14,7 +14,7 @@ function prove (assert) {
         ping: 1,
         timeout: 3,
         naturalized: true,
-        scheduler: { setTimeout: false }
+        scheduler: { timerless: true }
     }
 
     var legislators = [ new Legislator(1, '0', time, options) ]
