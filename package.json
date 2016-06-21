@@ -26,12 +26,12 @@
     {
                         "bintrees":         "1.0.1",
                         "happenstance":     "2.7.x",
-                        "monotonic":        "2.x",
-                        "prolific.logger":  "0.0.1"
+                        "monotonic":        "2.0.x",
+                        "prolific.logger":  "0.0.*"
     },
     "devDependencies":
     {
-                        "proof":            "1.x"
+                        "proof":            "1.0.x"
     },
     "scripts":
     {
