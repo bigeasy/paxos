@@ -22,7 +22,7 @@ function prove (assert) {
                 majority: [ 0, 1 ],
                 minority: [ 2 ]
             },
-            _peers: {
+            peers: {
                 0: { naturalized: true, timeout: 0 },
                 1: { naturalized: true, timeout: 0 },
                 2: { naturalized: true, timeout: 0 },
@@ -38,7 +38,7 @@ function prove (assert) {
                 minority: [ '2' ],
                 constituents: [ '3', '4' ]
             },
-            _peers: {
+            peers: {
                 0: { naturalized: true, timeout: 0 },
                 1: { naturalized: true, timeout: 0 },
                 2: { naturalized: true, timeout: 0 },
@@ -65,7 +65,7 @@ function prove (assert) {
                 majority: [ '0', '1', '2' ],
                 minority: [ '3', '4' ]
             },
-            _peers: {
+            peers: {
                 3: { timeout: 0 },
                 4: { timeout: 1 }
             }
@@ -78,7 +78,7 @@ function prove (assert) {
                 majority: [ '0', '1', '2' ],
                 minority: [ '3', '4' ]
             },
-            _peers: {
+            peers: {
                 4: { timeout: 0 }
             }
         }), null, 'impeach missing')
@@ -91,7 +91,7 @@ function prove (assert) {
                 minority: [ '3', '4' ],
                 constituents: [ '5' ]
             },
-            _peers: {
+            peers: {
                 3: { timeout: 2 },
                 4: { timeout: 0 },
                 5: { timeout: 0 }
@@ -108,7 +108,7 @@ function prove (assert) {
                 majority: [ '0', '1', '2' ],
                 minority: [ '3', '4' ]
             },
-            _peers: {
+            peers: {
                 0: { timeout: 0 },
                 1: { timeout: 0 },
                 2: { timeout: 0 },
@@ -130,7 +130,7 @@ function prove (assert) {
                 majority: [ '0', '1' ],
                 minority: [ '2' ]
             },
-            _peers: {
+            peers: {
                 0: { timeout: 0 },
                 1: { timeout: 0 },
                 2: { timeout: 2 }
@@ -153,7 +153,7 @@ function prove (assert) {
             government: {
                 constituents: [ '3', '4' ]
             },
-            _peers: {
+            peers: {
                 3: { timeout: 0 },
                 4: { timeout: 1 }
             }
@@ -166,7 +166,7 @@ function prove (assert) {
                 minority: [ '2' ],
                 constituents: [ '3', '4' ]
             },
-            _peers: {
+            peers: {
                 3: { timeout: 0 },
                 4: { timeout: 2 }
             }

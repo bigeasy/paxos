@@ -30,7 +30,7 @@ function Legislator (islandId, id, cookie, options) {
     this.government = { promise: '0/0', minority: [], majority: [] }
     this.promise = '0/0'
 
-    this._peers = {}
+    this.peers = {}
     this.getPeer(this.id).timeout = 0
 
     this.length = options.length || 1024
@@ -57,9 +57,9 @@ Legislator.prototype._trace = function (method, vargs) {
 
 Legislator.prototype.getPeer = function (id) {
     this._trace('getPeer', [ id ])
-    var peer = this._peers[id]
+    var peer = this.peers[id]
     if (peer == null) {
-        return peer = this._peers[id] = {
+        return peer = this.peers[id] = {
             timeout: 0,
             when: null,
             pinged: false,
@@ -156,7 +156,7 @@ Legislator.prototype._consensus = function (now) {
 // TODO The constituent must be both connected and synchronized, not just
 // connected.
             var present = this.parliament.filter(function (id) {
-                var peer = this._peers[id] || {}
+                var peer = this.peers[id] || {}
                 return id != this.id && peer.naturalized && peer.timeout == 0
             }.bind(this))
             var majoritySize = Math.ceil(parliament.length / 2)
@@ -347,9 +347,9 @@ Legislator.prototype.collapse = function () {
     this.election = null
     this.proposals.length = 0
     this.immigrating.length = 0
-    for (var id in this._peers) {
+    for (var id in this.peers) {
         if (id != this.id) {
-            delete this._peers[id]
+            delete this.peers[id]
         }
     }
     var parliament = this.government.majority.concat(this.government.minority)
@@ -677,7 +677,7 @@ Legislator.prototype._ping = function (now) {
         from: this.id,
         when: now,
         naturalized: this.naturalized,
-        decided: this._peers[this.id].decided
+        decided: this.peers[this.id].decided
     }
 }
 
@@ -811,7 +811,7 @@ Legislator.prototype._expand = function () {
     assert(~this.government.majority.indexOf(this.id), 'would be leader not in majority')
     var parliamentSize = parliament.length + 2
     var present = parliament.slice(1).concat(this.government.constituents).filter(function (id) {
-        var peer = this._peers[id] || {}
+        var peer = this.peers[id] || {}
         return peer.naturalized && peer.timeout == 0
     }.bind(this))
     if (present.length + 1 < parliamentSize) {
@@ -833,14 +833,14 @@ Legislator.prototype._impeach = function () {
     this._trace('_impeach', [])
     assert(!this.collapsed)
     var timedout = this.government.minority.filter(function (id) {
-        return this._peers[id] && this._peers[id].timeout >= this.timeout
+        return this.peers[id] && this.peers[id].timeout >= this.timeout
     }.bind(this)).length != 0
     if (!timedout) {
         return null
     }
     var candidates = this.government.minority.concat(this.government.constituents)
     var minority = candidates.filter(function (id) {
-        return this._peers[id] && this._peers[id].timeout < this.timeout
+        return this.peers[id] && this.peers[id].timeout < this.timeout
     }.bind(this)).slice(0, this.government.minority.length)
     if (minority.length == this.government.minority.length) {
         return {
@@ -865,13 +865,13 @@ Legislator.prototype._exile = function () {
     this._trace('_exile', [])
     assert(!this.collapsed)
     var responsive = this.government.constituents.filter(function (id) {
-        return !this._peers[id] || this._peers[id].timeout < this.timeout
+        return !this.peers[id] || this.peers[id].timeout < this.timeout
     }.bind(this))
     if (responsive.length == this.government.constituents.length) {
         return null
     }
     var exiles = this.government.constituents.filter(function (id) {
-        return this._peers[id] && this._peers[id].timeout >= this.timeout
+        return this.peers[id] && this.peers[id].timeout >= this.timeout
     }.bind(this))
     return {
         quorum: this.government.majority,
