@@ -748,6 +748,7 @@ Legislator.prototype._enactGovernment = function (now, round) {
         var index = this.government.constituents.indexOf(this.government.exile)
         this.government.constituents.splice(index, 1)
         delete this.properties[this.government.exile]
+        delete this.peers[this.government.exile]
     }
 
     if (this.id != this.government.majority[0]) {
