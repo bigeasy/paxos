@@ -268,7 +268,6 @@ Legislator.prototype.consensus = function (now) {
     return pulse
 }
 
-
 Legislator.prototype.synchronize = function (now) {
     this._trace('synchronize', [ now ])
     var outbox = []
