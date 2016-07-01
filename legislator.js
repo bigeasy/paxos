@@ -639,22 +639,21 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
         return
     }
 
-    if (Monotonic.isBoundary(message.promise, 0)) {
-        valid = max.promise != '0/0'
-        if (!valid) {
-            valid = max.promise == '0/0' && message.promise == '1/0'
-        }
-        if (!valid) {
-            valid = this.log.size == 1
-            valid = valid && this.log.min().promise == '0/0'
-            valid = valid && message.value.government.immigrate
-            valid = valid && message.value.government.immigrate.id == this.id
-            valid = valid && message.value.government.immigrate.cookie == this.cookie
-            if (!valid) {
-                pulse.failed = true
-                return
-            }
-        }
+    valid = max.promise != '0/0'
+    if (!valid) {
+        valid = max.promise == '0/0' && message.promise == '1/0'
+    }
+    if (!valid) {
+        assert(this.log.size == 1)
+        valid = Monotonic.isBoundary(message.promise, 0)
+        valid = valid && this.log.min().promise == '0/0'
+        valid = valid && message.value.government.immigrate
+        valid = valid && message.value.government.immigrate.id == this.id
+        valid = valid && message.value.government.immigrate.cookie == this.cookie
+    }
+    if (!valid) {
+        pulse.failed = true
+        return
     }
 
 // TODO How crufy are these log entries? What else is lying around in them?
