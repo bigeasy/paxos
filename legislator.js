@@ -222,7 +222,7 @@ Legislator.prototype._consensus = function (now) {
             }, Monotonic.increment(this.promise, 0))
         } else if (this.ponged) {
             var reshape = this._impeach() || this._exile() || this._expand()
-            if (false && reshape) {
+            if (reshape) {
                 this.ponged = false
                 this.newGovernment(now, reshape.quorum, reshape.government, Monotonic.increment(this.promise, 0))
             }
@@ -379,6 +379,9 @@ Legislator.prototype.sent = function (now, pulse, responses) {
     if (pulse.type == 'consensus') {
         this.pulsing = false
     }
+// TODO Sense that it is easier to keep an array of governments from and to that
+// might have a duplicate government, but it's just a sense, and as I write
+// this, I sense that it is wrong.
     if (!~pulse.governments.indexOf(this.government.promise)) {
         return
     }
@@ -525,6 +528,7 @@ Legislator.prototype._receiveReject = function (now, pulse, message) {
 
 Legislator.prototype._receivePropose = function (now, pulse, message, responses) {
     this._trace('_receivePropose', [ now, pulse, message, responses ])
+// TODO Mark as collapsed, call `collapse`, let `collapse` decide?
     var compare = Monotonic.compare(message.promise, this.promise)
     if (this.islandId != pulse.islandId ||
         compare <= 0 ||
@@ -595,9 +599,6 @@ Legislator.prototype._receiveAccept = function (now, pulse, message, responses) 
 
 Legislator.prototype._receiveAccepted = function (now, pulse, message) {
     this._trace('_receiveAccepted', [ now, pulse, message ])
-// TODO Sense that this can be done during two phase commit to simplify proposal
-// logic, test that outstanding proposal is accepted. Perhaps I set a flag, or
-// perhaps I keep this array for two phase commits as well.
     if (~pulse.governments.indexOf(this.government.promise) && this.election) {
         assert(!~this.election.accepts.indexOf(message.from))
         this.election.accepts.push(message.from)
@@ -733,10 +734,17 @@ Legislator.prototype._receivePing = function (now, pulse, message, responses) {
     responses.push(this._ping(now))
     var constituency = this.constituency
     if (~this.government.majority.slice(1).indexOf(this.id)) {
+        if (!this.collapsed && message.from == this.government.majority[0]) {
+            this.scheduler.schedule(now + this.timeout, this.id, {
+                object: this, method: '_whenCollapse'
+            })
+        }
+// TODO Why am I not using my constituency I calculated?
         constituency = this.government.minority.concat(this.government.constituents)
     }
     constituency.forEach(function (id) {
         var peer = this.getPeer(id)
+// TODO When is pinged ever false? Why not use my constituency?
         if (peer.pinged) {
             responses.push({
                 type: 'ping',
