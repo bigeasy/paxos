@@ -556,6 +556,7 @@ Legislator.prototype._receivePromise = function (now, pulse, message, responses)
     if (message.accepted == null) {
         return
     }
+    // Take the greatest accepted, forming a linked list of accepted.
     if (this.accepted == null ||
         Monotonic.compareIndex(this.accepted.promise, message.accepted.promise, 0) < 0
     ) {
