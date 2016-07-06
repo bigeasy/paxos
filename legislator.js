@@ -189,6 +189,15 @@ Legislator.prototype._consensus = function (now) {
     }
     var messages = [ this._ping(now) ]
     if (!this.collapsed) {
+// TODO All this should be put into a function that checks for a next government
+// and puts it onto a queue. It could jump the queue, sure, but I'm leaning
+// toward just putting it in the queue in it's place.
+//
+// Actually, I'm in a hurry to grow the queue when the government is small, the
+// worst case is when the government is only one member, so in that worst case,
+// draining the queue is pretty much synchronous, pretty much instant.
+//
+// Pretty much.
         if (this.accepted && Monotonic.isBoundary(this.accepted.promise, 0)) {
             return {
                 type: 'consensus',
@@ -260,6 +269,9 @@ Legislator.prototype._consensus = function (now) {
         }
     }
     return null
+}
+
+Legislator.prototype.checkGovernment = function () {
 }
 
 Legislator.prototype.consensus = function (now) {
@@ -583,6 +595,9 @@ Legislator.prototype._receiveAccept = function (now, pulse, message, responses) 
 
 Legislator.prototype._receiveAccepted = function (now, pulse, message) {
     this._trace('_receiveAccepted', [ now, pulse, message ])
+// TODO Sense that this can be done during two phase commit to simplify proposal
+// logic, test that outstanding proposal is accepted. Perhaps I set a flag, or
+// perhaps I keep this array for two phase commits as well.
     if (~pulse.governments.indexOf(this.government.promise) && this.election) {
         assert(!~this.election.accepts.indexOf(message.from))
         this.election.accepts.push(message.from)
