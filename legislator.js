@@ -222,7 +222,7 @@ Legislator.prototype._consensus = function (now) {
             }, Monotonic.increment(this.promise, 0))
         } else if (this.ponged) {
             var reshape = this._impeach() || this._exile() || this._expand()
-            if (reshape) {
+            if (false && reshape) {
                 this.ponged = false
                 this.newGovernment(now, reshape.quorum, reshape.government, Monotonic.increment(this.promise, 0))
             }
