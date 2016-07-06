@@ -184,59 +184,63 @@ Legislator.prototype._consensus = function (now) {
                 }]
             }
         }
-    } else if (this.government.majority[0] == this.id && this.accepted && Monotonic.isBoundary(this.accepted.promise, 0)) {
-        return {
-            type: 'consensus',
-            islandId: this.islandId,
-            governments: [ this.government.promise, this.accepted.promise ],
-            route: this.accepted.route,
-            messages: [this._ping(now), {
-                type: 'commit',
-                promise: this.accepted.promise
-            }]
-        }
-    } else if (this.immigrating.length && this.government.majority[0] == this.id) {
-        var immigration = this.immigrating.shift()
-        this.newGovernment(now, this.government.majority, {
-            majority: this.government.majority,
-            minority: this.government.minority,
-            immigrate: {
-                id: immigration.id,
-                properties: immigration.properties,
-                cookie: immigration.cookie
-            }
-        }, Monotonic.increment(this.promise, 0))
-    } else if (this.ponged && this.id == this.government.majority[0]) {
-        var reshape = this._impeach() || this._exile() || this._expand()
-        if (reshape) {
-            this.ponged = false
-            this.newGovernment(now, reshape.quorum, reshape.government, Monotonic.increment(this.promise, 0))
-        }
+    } else if (this.government.majority[0] != this.id) {
+        return null
     }
-    var proposal = this.proposals[0]
     var messages = [ this._ping(now) ]
-    if (this.accepted != null) {
-        messages.push({
-            type: 'commit',
-            promise: this.accepted.promise
-        })
-        if (proposal == null || !this._routeEqual(proposal.route, this.accepted.route)) {
+    if (!this.collapsed) {
+        if (this.accepted && Monotonic.isBoundary(this.accepted.promise, 0)) {
             return {
                 type: 'consensus',
                 islandId: this.islandId,
-                governments: [ this.government.promise ],
+                governments: [ this.government.promise, this.accepted.promise ],
                 route: this.accepted.route,
-                messages: messages
+                messages: [this._ping(now), {
+                    type: 'commit',
+                    promise: this.accepted.promise
+                }]
+            }
+        } else if (this.immigrating.length) {
+            var immigration = this.immigrating.shift()
+            this.newGovernment(now, this.government.majority, {
+                majority: this.government.majority,
+                minority: this.government.minority,
+                immigrate: {
+                    id: immigration.id,
+                    properties: immigration.properties,
+                    cookie: immigration.cookie
+                }
+            }, Monotonic.increment(this.promise, 0))
+        } else if (this.ponged) {
+            var reshape = this._impeach() || this._exile() || this._expand()
+            if (reshape) {
+                this.ponged = false
+                this.newGovernment(now, reshape.quorum, reshape.government, Monotonic.increment(this.promise, 0))
+            }
+        }
+        if (this.accepted != null) {
+            messages.push({
+                type: 'commit',
+                promise: this.accepted.promise
+            })
+            if (this.proposals.length == 0 || !this._routeEqual(this.proposals[0].route, this.accepted.route)) {
+                return {
+                    type: 'consensus',
+                    islandId: this.islandId,
+                    governments: [ this.government.promise ],
+                    route: this.accepted.route,
+                    messages: messages
+                }
             }
         }
     }
-    if (proposal) {
+    var proposal = this.proposals.shift()
+    if (proposal != null) {
         messages.push({
             type: 'accept',
             promise: proposal.promise,
             value: proposal.value
         })
-        this.proposals.shift()
         return {
             type: 'consensus',
             islandId: this.islandId,
