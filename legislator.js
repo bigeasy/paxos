@@ -246,6 +246,12 @@ Legislator.prototype._consensus = function (now) {
     }
     var proposal = this.proposals.shift()
     if (proposal != null) {
+        proposal.route.slice(1).forEach(function (id) {
+            var peer = this.getPeer(id)
+            assert(peer.pinged)
+            var round = this.log.find({ promise: peer.decided }).next
+            this._pushEnactments(messages, round, -1)
+        }, this)
         messages.push({
             type: 'accept',
             promise: proposal.promise,
@@ -324,14 +330,7 @@ Legislator.prototype.synchronize = function (now) {
                     round = this.log.find({ promise: maximum }).next
                 }
 
-                while (--count && round) {
-                    pulse.messages.push({
-                        type: 'enact',
-                        promise: round.promise,
-                        value: round.value
-                    })
-                    round = round.next
-                }
+                this._pushEnactments(pulse.messages, round, count)
             }
 
             pulse.messages.push(this._ping(now))
@@ -340,6 +339,17 @@ Legislator.prototype.synchronize = function (now) {
         }
     }
     return outbox
+}
+
+Legislator.prototype._pushEnactments = function (messages, round, count) {
+    while (--count && round) {
+        messages.push({
+            type: 'enact',
+            promise: round.promise,
+            value: round.value
+        })
+        round = round.next
+    }
 }
 
 Legislator.prototype.receive = function (now, pulse, messages) {
