@@ -188,7 +188,7 @@ Legislator.prototype._gatherProposals = function (now) {
 
 Legislator.prototype._consensus = function (now) {
     this._trace('consensus', [ now ])
-    // shift any immigrating properties that have already immigrated.
+    // Shift the ids any citizens that have already immigrated.
     while (
         this.immigrating.length != 0 &&
         this.properties[this.immigrating[0].id]
@@ -335,25 +335,6 @@ Legislator.prototype._checkGovernment = function (now) {
             this.newGovernment(now, reshape.quorum, reshape.government, Monotonic.increment(this.promise, 0))
         }
     }
-}
-
-Legislator.prototype._flushConsensus = function (now) {
-    if (this.accepted == null) {
-        return null
-    }
-    return {
-        type: 'consensus',
-        islandId: this.islandId,
-        governments: [ this.government.promise, this.accepted.promise ],
-        route: this.accepted.route,
-        messages: [this._ping(now), {
-            type: 'commit',
-            promise: this.accepted.promise
-        }]
-    }
-}
-
-Legislator.prototype._flushConsensus = function (now) {
 }
 
 Legislator.prototype.consensus = function (now) {
