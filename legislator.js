@@ -49,6 +49,7 @@ function Legislator (islandId, id, cookie, options) {
     })
 
     this.constituency = []
+    this.operations = []
 }
 
 Legislator.prototype._trace = function (method, vargs) {
@@ -158,10 +159,10 @@ Legislator.prototype._consensus = function (now) {
 // connected.
             var present = this.parliament.filter(function (id) {
                 var peer = this.peers[id] || {}
-                return id != this.id && peer.naturalized && peer.timeout == 0
+                return id != this.id && peer.timeout == 0
             }.bind(this))
             var majoritySize = Math.ceil(parliament.length / 2)
-            if (present.length < majoritySize) {
+            if (present.length + 1 < majoritySize) {
                 return null
             }
             var majority = [ this.id ].concat(present).slice(0, majoritySize)
@@ -276,6 +277,64 @@ Legislator.prototype._consensus = function (now) {
         }
     }
     return null
+}
+
+Legislator.prototype._outbox = function (now) {
+    var operation = this.operations.shift()
+    return operation && operation.method.call(this, now, operation)
+}
+
+Legislator.prototype.outbox = function (now) {
+    for (;;) {
+        var operation = this.operations.shift()
+        if (operation == null) {
+            return null
+        }
+        var pulse = operation.method.call(this, now)
+        if (pulse != null) {
+            return pulse
+        }
+    }
+}
+
+Legislator.prototype._checkGovernment = function (now) {
+    if (this.immigrating.length) {
+        var immigration = this.immigrating.shift()
+        this.newGovernment(now, this.government.majority, {
+            majority: this.government.majority,
+            minority: this.government.minority,
+            immigrate: {
+                id: immigration.id,
+                properties: immigration.properties,
+                cookie: immigration.cookie
+            }
+        }, Monotonic.increment(this.promise, 0))
+    } else {
+        var reshape = this._impeach() || this._exile() || this._expand()
+        if (reshape) {
+            this.ponged = false
+            this.newGovernment(now, reshape.quorum, reshape.government, Monotonic.increment(this.promise, 0))
+        }
+    }
+}
+
+Legislator.prototype._flushConsensus = function (now) {
+    if (this.accepted == null) {
+        return null
+    }
+    return {
+        type: 'consensus',
+        islandId: this.islandId,
+        governments: [ this.government.promise, this.accepted.promise ],
+        route: this.accepted.route,
+        messages: [this._ping(now), {
+            type: 'commit',
+            promise: this.accepted.promise
+        }]
+    }
+}
+
+Legislator.prototype._flushConsensus = function (now) {
 }
 
 Legislator.prototype.consensus = function (now) {
