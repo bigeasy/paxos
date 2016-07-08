@@ -56,10 +56,11 @@ Legislator.prototype._trace = function (method, vargs) {
 }
 
 Legislator.prototype.getPeer = function (id) {
-    this._trace('getPeer', [ id ])
     var peer = this.peers[id]
     if (peer == null) {
-        return peer = this.peers[id] = {
+        peer = this.peers[id] = {
+            id: id,
+            when: -Infinity,
             timeout: 0,
             when: null,
             pinged: false,
@@ -269,9 +270,6 @@ Legislator.prototype._consensus = function (now) {
         }
     }
     return null
-}
-
-Legislator.prototype.checkGovernment = function () {
 }
 
 Legislator.prototype.consensus = function (now) {
@@ -690,10 +688,14 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
 }
 
 Legislator.prototype._ping = function (now) {
-    assert(now != null)
+    return { type: 'ping', from: this.id }
+}
+
+Legislator.prototype._pong = function (now) {
     return {
-        type: 'ping',
+        type: 'pong',
         from: this.id,
+        timeout: 0,
         when: now,
         naturalized: this.naturalized,
         decided: this.peers[this.id].decided
@@ -715,47 +717,52 @@ Legislator.prototype._whenPing = function (now, id) {
     }
 }
 
+Legislator.prototype._receivePong = function (now, pulse, message, responses) {
+    this._trace('_receivePong', [ now, pulse, message, responses ])
+    var peer = this.getPeer(message.from)
+    if (peer.when <= message.when) {
+        // TODO Imperfect?
+        var ponged = !peer.pinged || peer.timeout != message.timeout
+        peer.pinged = true
+        peer.timeout = message.timeout
+        peer.naturalized = message.naturalized
+        peer.decided = message.decided
+        peer.when = null
+        this.ponged = ponged || this.ponged
+    }
+}
+
 Legislator.prototype._receivePing = function (now, pulse, message, responses) {
     this._trace('_receivePing', [ now, pulse, message, responses ])
     if (message.from == this.id) {
         return
     }
-    var peer = this.getPeer(message.from), ponged = false
-    if (!peer.pinged) {
-        ponged = true
-    } else if (peer.timeout) {
-        ponged = true
-    }
-    peer.timeout = 0
-    peer.when = null
-    peer.naturalized = message.naturalized
-    peer.decided = message.decided
-    peer.pinged = true
-    responses.push(this._ping(now))
-    var constituency = this.constituency
-    if (~this.government.majority.slice(1).indexOf(this.id)) {
-        if (!this.collapsed && message.from == this.government.majority[0]) {
-            this.scheduler.schedule(now + this.timeout, this.id, {
-                object: this, method: '_whenCollapse'
-            })
-        }
-// TODO Why am I not using my constituency I calculated?
-        constituency = this.government.minority.concat(this.government.constituents)
-    }
-    constituency.forEach(function (id) {
-        var peer = this.getPeer(id)
-// TODO When is pinged ever false? Why not use my constituency?
+// TODO Keep a tree to determine if a majority member needs to return the
+// values send by a minority member, for now send everything.
+    responses.push(this._pong(now))
+    for (var id in this.peers) {
+        var peer = this.peers[id]
         if (peer.pinged) {
             responses.push({
-                type: 'ping',
-                from: id,
+                type: 'pong',
+                from: peer.id,
+                timeout: peer.timeout,
                 when: peer.when,
-                naturalized: this.naturalized,
+                naturalized: peer.naturalized,
                 decided: peer.decided
             })
         }
-    }, this)
-    this.ponged = this.ponged || ponged
+    }
+// TODO Are you setting/unsetting this correctly when you are collapsed?
+    var resetWhenCollapse =
+        ~this.government.majority.slice(1).indexOf(this.id) &&
+        !this.collapsed &&
+        message.from == this.government.majority[0]
+    if (resetWhenCollapse) {
+        this.scheduler.schedule(now + this.timeout, this.id, {
+            object: this, method: '_whenCollapse'
+        })
+    }
 }
 
 Legislator.prototype._enactGovernment = function (now, round) {
@@ -791,7 +798,7 @@ Legislator.prototype._enactGovernment = function (now, round) {
         }
     } else {
         var index = this.government.majority.slice(1).indexOf(this.id)
-        if (~index) {
+        if (~index) { // Majority updates minority.
             var length = this.government.majority.length - 1
             this.constituency = this.government.minority.filter(function (id, i) {
                 return i % length == index
@@ -799,7 +806,7 @@ Legislator.prototype._enactGovernment = function (now, round) {
             assert(this.government.minority.length != 0, 'no minority')
         } else {
             var index = this.government.minority.indexOf(this.id)
-            if (~index) {
+            if (~index) { // Minority updates constituents.
                 var length = this.government.minority.length
                 this.constituency = this.government.constituents.filter(function (id, i) {
                     return i % length == index
@@ -818,6 +825,12 @@ Legislator.prototype._enactGovernment = function (now, round) {
     this.constituency.forEach(function (id) {
         this.scheduler.schedule(now + this.ping, id, { object: this, method: '_whenPing' }, id)
     }, this)
+
+    for (var id in this.peers) {
+        if (id != this.id && this.peers[id].timeout == 0) {
+            delete this.peers[id]
+        }
+    }
 }
 
 Legislator.prototype._whenCollapse = function () {
