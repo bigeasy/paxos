@@ -112,6 +112,80 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
     })
 }
 
+Legislator.prototype._advanceElection = function (now) {
+// TODO Currently, your tests are running all synchronizations to completion
+// before running a consensus pulse, so we're not seeing the results of decided
+// upon a consensus action before all of the synchronizations have been
+// returned.
+    if (this.election.status == 'accepted') {
+        return null
+    } else if (this.election.status == 'proposed') {
+        if (this.election.accepts.length == this.election.promises.length) {
+            this.election.status = 'accepted'
+            return {
+                type: 'consensus',
+                islandId: this.islandId,
+                governments: [ this.government.promise, this.accepted.promise ],
+                route: this.accepted.route,
+                messages: [this._ping(now), {
+                    type: 'commit',
+                    promise: this.accepted.promise
+                }]
+            }
+        }
+        return null
+    } else if (this.election.promises.length < this.election.majority.length) {
+        return null
+    } else {
+        this.election.status = 'proposed'
+        this.newGovernment(now, this.election.majority, {
+            majority: this.election.majority,
+            minority: this.election.minority
+        }, this.promise)
+        return this._stuffProposal([ this._ping(now) ], this.proposals.shift())
+    }
+}
+
+// TODO When we collapse, let's change our constituency to our parliament,
+// except ourselves, to ensure that we're pinging away and waiting for a
+// consensus to form. Wait, we're already doing that.
+//
+// TODO Okay, so let's create our constituency tree, so we know how to propagate
+// messages back to the leader.
+Legislator.prototype._gatherProposals = function (now) {
+    var parliament = this.government.majority.concat(this.government.minority)
+// TODO The constituent must be both connected and synchronized, not just
+// connected.
+    var present = this.parliament.filter(function (id) {
+        var peer = this.peers[id] || {}
+        return id != this.id && peer.timeout == 0
+    }.bind(this))
+    var majoritySize = Math.ceil(parliament.length / 2)
+    if (present.length + 1 < majoritySize) {
+        return null
+    }
+    var majority = [ this.id ].concat(present).slice(0, majoritySize)
+    var minority = this.parliament.filter(function (id) { return ! ~majority.indexOf(id) })
+    this.election = {
+        status: 'proposing',
+        majority: majority,
+        minority: minority,
+        promises: [],
+        accepts: []
+    }
+    return {
+        type: 'consensus',
+        islandId: this.islandId,
+        governments: [ this.government.promise ],
+        route: majority,
+        messages: [{
+            type: 'propose',
+            // Do not increment here, it will be set by `_receivePromise`.
+            promise: Monotonic.increment(this.promise, 0)
+        }]
+    }
+}
+
 Legislator.prototype._consensus = function (now) {
     this._trace('consensus', [ now ])
     // shift any immigrating properties that have already immigrated.
@@ -123,68 +197,9 @@ Legislator.prototype._consensus = function (now) {
     }
     if (this.collapsed) {
         if (this.election) {
-// TODO Currently, your tests are running all synchronizations to completion
-// before running a consensus pulse, so we're not seeing the results of decided
-// upon a consensus action before all of the synchronizations have been
-// returned.
-            if (this.election.status == 'accepted') {
-                return null
-            } else if (this.election.status == 'proposed') {
-                if (this.election.accepts.length == this.election.promises.length) {
-                    this.election.status = 'accepted'
-                    return {
-                        type: 'consensus',
-                        islandId: this.islandId,
-                        governments: [ this.government.promise, this.accepted.promise ],
-                        route: this.accepted.route,
-                        messages: [this._ping(now), {
-                            type: 'commit',
-                            promise: this.accepted.promise
-                        }]
-                    }
-                }
-                return null
-            } else if (this.election.promises.length < this.election.majority.length) {
-                return null
-            } else {
-                this.election.status = 'proposed'
-                this.newGovernment(now, this.election.majority, {
-                    majority: this.election.majority,
-                    minority: this.election.minority
-                }, this.promise)
-            }
+            return this._advanceElection(now)
         } else {
-            var parliament = this.government.majority.concat(this.government.minority)
-// TODO The constituent must be both connected and synchronized, not just
-// connected.
-            var present = this.parliament.filter(function (id) {
-                var peer = this.peers[id] || {}
-                return id != this.id && peer.timeout == 0
-            }.bind(this))
-            var majoritySize = Math.ceil(parliament.length / 2)
-            if (present.length + 1 < majoritySize) {
-                return null
-            }
-            var majority = [ this.id ].concat(present).slice(0, majoritySize)
-            var minority = this.parliament.filter(function (id) { return ! ~majority.indexOf(id) })
-            this.election = {
-                status: 'proposing',
-                majority: majority,
-                minority: minority,
-                promises: [],
-                accepts: []
-            }
-            return {
-                type: 'consensus',
-                islandId: this.islandId,
-                governments: [ this.government.promise ],
-                route: majority,
-                messages: [{
-                    type: 'propose',
-                    // Do not increment here, it will be set by `_receivePromise`.
-                    promise: Monotonic.increment(this.promise, 0)
-                }]
-            }
+            return this._gatherProposals(now)
         }
     } else if (this.government.majority[0] != this.id) {
         return null
@@ -247,24 +262,7 @@ Legislator.prototype._consensus = function (now) {
     }
     var proposal = this.proposals.shift()
     if (proposal != null) {
-        proposal.route.slice(1).forEach(function (id) {
-            var peer = this.getPeer(id)
-            assert(peer.pinged)
-            var round = this.log.find({ promise: peer.decided }).next
-            this._pushEnactments(messages, round, -1)
-        }, this)
-        messages.push({
-            type: 'accept',
-            promise: proposal.promise,
-            value: proposal.value
-        })
-        return {
-            type: 'consensus',
-            islandId: this.islandId,
-            governments: [ this.government.promise ],
-            route: proposal.route.slice(),
-            messages: messages
-        }
+        return this._stuffProposal(messages, proposal)
     }
     if (this.keepAlive) {
         this.keepAlive = false
@@ -277,6 +275,27 @@ Legislator.prototype._consensus = function (now) {
         }
     }
     return null
+}
+
+Legislator.prototype._stuffProposal = function (messages, proposal) {
+    proposal.route.slice(1).forEach(function (id) {
+        var peer = this.getPeer(id)
+        assert(peer.pinged)
+        var round = this.log.find({ promise: peer.decided }).next
+        this._pushEnactments(messages, round, -1)
+    }, this)
+    messages.push({
+        type: 'accept',
+        promise: proposal.promise,
+        value: proposal.value
+    })
+    return {
+        type: 'consensus',
+        islandId: this.islandId,
+        governments: [ this.government.promise ],
+        route: proposal.route.slice(),
+        messages: messages
+    }
 }
 
 Legislator.prototype._outbox = function (now) {
@@ -426,17 +445,22 @@ Legislator.prototype.receive = function (now, pulse, messages) {
 
 Legislator.prototype.collapse = function () {
     this._trace('collapse', [])
+// TODO Combine into a single state flag.
     this.collapsed = true
     this.election = null
+    // Blast all queued work.
     this.proposals.length = 0
     this.immigrating.length = 0
+    // Blast all knowledge of peers.
     for (var id in this.peers) {
         if (id != this.id) {
             delete this.peers[id]
         }
     }
-    var parliament = this.government.majority.concat(this.government.minority)
-    this.constituency = parliament.filter(function (id) {
+    // Ping other parliament members until we can form a government.
+    this.constituency = this.government.majority
+                                       .concat(this.government.minority)
+                                       .filter(function (id) {
         return this.id != id
     }.bind(this))
 }
@@ -478,6 +502,7 @@ Legislator.prototype.sent = function (now, pulse, responses) {
             break
         case 'synchronize':
             delete this.synchronizing[pulse.route[0]]
+// TODO Make this a call to receive ping.
             var peer = this.getPeer(pulse.route[0])
             if (peer.when == null) {
                 peer.when = now
