@@ -186,25 +186,11 @@ Legislator.prototype._gatherProposals = function (now) {
     }
 }
 
-Legislator.prototype._consensus = function (now) {
-    this._trace('consensus', [ now ])
-    // Shift the ids any citizens that have already immigrated.
-    while (
-        this.immigrating.length != 0 &&
-        this.properties[this.immigrating[0].id]
-    ) {
-        this.immigrating.shift()
-    }
-    if (this.collapsed) {
-        if (this.election) {
-            return this._advanceElection(now)
-        } else {
-            return this._gatherProposals(now)
-        }
-    } else if (this.government.majority[0] != this.id) {
-        return null
-    }
+Legislator.prototype._twoPhaseCommit = function (now) {
     var messages = [ this._ping(now) ]
+// TODO Bring immigration cleanup up here.
+// TODO Tidy.
+
 // TODO All this should be put into a function that checks for a next government
 // and puts it onto a queue. It could jump the queue, sure, but I'm leaning
 // toward just putting it in the queue in it's place.
@@ -273,6 +259,27 @@ Legislator.prototype._consensus = function (now) {
         }
     }
     return null
+}
+
+Legislator.prototype._consensus = function (now) {
+    this._trace('consensus', [ now ])
+    // Shift the ids any citizens that have already immigrated.
+    while (
+        this.immigrating.length != 0 &&
+        this.properties[this.immigrating[0].id]
+    ) {
+        this.immigrating.shift()
+    }
+    if (this.collapsed) {
+        if (this.election) {
+            return this._advanceElection(now)
+        } else {
+            return this._gatherProposals(now)
+        }
+    } else if (this.government.majority[0] != this.id) {
+        return null
+    }
+    return this._twoPhaseCommit(now)
 }
 
 Legislator.prototype._stuffProposal = function (messages, proposal) {
