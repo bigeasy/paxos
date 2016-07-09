@@ -205,7 +205,6 @@ Legislator.prototype._consensus = function (now) {
         return null
     }
     var messages = [ this._ping(now) ]
-    if (!this.collapsed) {
 // TODO All this should be put into a function that checks for a next government
 // and puts it onto a queue. It could jump the queue, sure, but I'm leaning
 // toward just putting it in the queue in it's place.
@@ -215,48 +214,47 @@ Legislator.prototype._consensus = function (now) {
 // draining the queue is pretty much synchronous, pretty much instant.
 //
 // Pretty much.
-        if (this.accepted && Monotonic.isBoundary(this.accepted.promise, 0)) {
+    if (this.accepted && Monotonic.isBoundary(this.accepted.promise, 0)) {
+        return {
+            type: 'consensus',
+            islandId: this.islandId,
+            governments: [ this.government.promise, this.accepted.promise ],
+            route: this.accepted.route,
+            messages: [this._ping(now), {
+                type: 'commit',
+                promise: this.accepted.promise
+            }]
+        }
+    } else if (this.immigrating.length) {
+        var immigration = this.immigrating.shift()
+        this.newGovernment(now, this.government.majority, {
+            majority: this.government.majority,
+            minority: this.government.minority,
+            immigrate: {
+                id: immigration.id,
+                properties: immigration.properties,
+                cookie: immigration.cookie
+            }
+        }, Monotonic.increment(this.promise, 0))
+    } else if (this.ponged) {
+        var reshape = this._impeach() || this._exile() || this._expand()
+        if (reshape) {
+            this.ponged = false
+            this.newGovernment(now, reshape.quorum, reshape.government, Monotonic.increment(this.promise, 0))
+        }
+    }
+    if (this.accepted != null) {
+        messages.push({
+            type: 'commit',
+            promise: this.accepted.promise
+        })
+        if (this.proposals.length == 0 || !this._routeEqual(this.proposals[0].route, this.accepted.route)) {
             return {
                 type: 'consensus',
                 islandId: this.islandId,
-                governments: [ this.government.promise, this.accepted.promise ],
+                governments: [ this.government.promise ],
                 route: this.accepted.route,
-                messages: [this._ping(now), {
-                    type: 'commit',
-                    promise: this.accepted.promise
-                }]
-            }
-        } else if (this.immigrating.length) {
-            var immigration = this.immigrating.shift()
-            this.newGovernment(now, this.government.majority, {
-                majority: this.government.majority,
-                minority: this.government.minority,
-                immigrate: {
-                    id: immigration.id,
-                    properties: immigration.properties,
-                    cookie: immigration.cookie
-                }
-            }, Monotonic.increment(this.promise, 0))
-        } else if (this.ponged) {
-            var reshape = this._impeach() || this._exile() || this._expand()
-            if (reshape) {
-                this.ponged = false
-                this.newGovernment(now, reshape.quorum, reshape.government, Monotonic.increment(this.promise, 0))
-            }
-        }
-        if (this.accepted != null) {
-            messages.push({
-                type: 'commit',
-                promise: this.accepted.promise
-            })
-            if (this.proposals.length == 0 || !this._routeEqual(this.proposals[0].route, this.accepted.route)) {
-                return {
-                    type: 'consensus',
-                    islandId: this.islandId,
-                    governments: [ this.government.promise ],
-                    route: this.accepted.route,
-                    messages: messages
-                }
+                messages: messages
             }
         }
     }
