@@ -211,7 +211,17 @@ Legislator.prototype._twoPhaseCommit = function (now) {
                 promise: this.accepted.promise
             }]
         }
-    } else if (this.immigrating.length) {
+    }
+
+    // Shift the ids any citizens that have already immigrated.
+    while (
+        this.immigrating.length != 0 &&
+        this.properties[this.immigrating[0].id]
+    ) {
+        this.immigrating.shift()
+    }
+
+    if (this.immigrating.length) {
         var immigration = this.immigrating.shift()
         this.newGovernment(now, this.government.majority, {
             majority: this.government.majority,
@@ -229,6 +239,7 @@ Legislator.prototype._twoPhaseCommit = function (now) {
             this.newGovernment(now, reshape.quorum, reshape.government, Monotonic.increment(this.promise, 0))
         }
     }
+
     if (this.accepted != null) {
         messages.push({
             type: 'commit',
@@ -244,10 +255,12 @@ Legislator.prototype._twoPhaseCommit = function (now) {
             }
         }
     }
+
     var proposal = this.proposals.shift()
     if (proposal != null) {
         return this._stuffProposal(messages, proposal)
     }
+
     if (this.keepAlive) {
         this.keepAlive = false
         return {
@@ -258,18 +271,12 @@ Legislator.prototype._twoPhaseCommit = function (now) {
             messages: [ this._ping(now) ]
         }
     }
+
     return null
 }
 
 Legislator.prototype._consensus = function (now) {
     this._trace('consensus', [ now ])
-    // Shift the ids any citizens that have already immigrated.
-    while (
-        this.immigrating.length != 0 &&
-        this.properties[this.immigrating[0].id]
-    ) {
-        this.immigrating.shift()
-    }
     if (this.collapsed) {
         if (this.election) {
             return this._advanceElection(now)
