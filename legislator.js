@@ -221,22 +221,29 @@ Legislator.prototype._twoPhaseCommit = function (now) {
         this.immigrating.shift()
     }
 
-    if (this.immigrating.length) {
-        var immigration = this.immigrating.shift()
-        this.newGovernment(now, this.government.majority, {
-            majority: this.government.majority,
-            minority: this.government.minority,
-            immigrate: {
-                id: immigration.id,
-                properties: immigration.properties,
-                cookie: immigration.cookie
+    var isGovernment = this.proposals.length &&
+                       Monotonic.isBoundary(this.proposals[0].promise, 0)
+
+    if (!isGovernment) {
+        if (this.immigrating.length) {
+            var immigration = this.immigrating.shift()
+            this.newGovernment(now, this.government.majority, {
+                majority: this.government.majority,
+                minority: this.government.minority,
+                immigrate: {
+                    id: immigration.id,
+                    properties: immigration.properties,
+                    cookie: immigration.cookie
+                }
+            }, Monotonic.increment(this.promise, 0))
+            isGovernment = true
+        } else if (this.ponged) {
+            var reshape = this._impeach() || this._exile() || this._expand()
+            if (reshape) {
+                this.ponged = false
+                this.newGovernment(now, reshape.quorum, reshape.government, Monotonic.increment(this.promise, 0))
+                isGovernment = true
             }
-        }, Monotonic.increment(this.promise, 0))
-    } else if (this.ponged) {
-        var reshape = this._impeach() || this._exile() || this._expand()
-        if (reshape) {
-            this.ponged = false
-            this.newGovernment(now, reshape.quorum, reshape.government, Monotonic.increment(this.promise, 0))
         }
     }
 
@@ -245,7 +252,7 @@ Legislator.prototype._twoPhaseCommit = function (now) {
             type: 'commit',
             promise: this.accepted.promise
         })
-        if (this.proposals.length == 0 || !this._routeEqual(this.proposals[0].route, this.accepted.route)) {
+        if (this.proposals.length == 0 || isGovernment) {
             return {
                 type: 'consensus',
                 islandId: this.islandId,
@@ -583,17 +590,6 @@ Legislator.prototype.immigrate = function (now, islandId, id, cookie, properties
         response = { enqueued: true, promise: null }
     }
     return response
-}
-
-// TODO When would the routes not be equal. You always clear out the previous
-// government before you begin the business of the pulse.
-Legislator.prototype._routeEqual = function (a, b) {
-    if (a.length != b.length) {
-        return false
-    }
-    return a.filter(function (value, index) {
-        return b[index] == value
-    }).length == a.length
 }
 
 Legislator.prototype._reject = function (message) {
