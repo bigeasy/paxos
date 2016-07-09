@@ -317,45 +317,6 @@ Legislator.prototype._stuffProposal = function (messages, proposal) {
     }
 }
 
-Legislator.prototype._outbox = function (now) {
-    var operation = this.operations.shift()
-    return operation && operation.method.call(this, now, operation)
-}
-
-Legislator.prototype.outbox = function (now) {
-    for (;;) {
-        var operation = this.operations.shift()
-        if (operation == null) {
-            return null
-        }
-        var pulse = operation.method.call(this, now)
-        if (pulse != null) {
-            return pulse
-        }
-    }
-}
-
-Legislator.prototype._checkGovernment = function (now) {
-    if (this.immigrating.length) {
-        var immigration = this.immigrating.shift()
-        this.newGovernment(now, this.government.majority, {
-            majority: this.government.majority,
-            minority: this.government.minority,
-            immigrate: {
-                id: immigration.id,
-                properties: immigration.properties,
-                cookie: immigration.cookie
-            }
-        }, Monotonic.increment(this.promise, 0))
-    } else {
-        var reshape = this._impeach() || this._exile() || this._expand()
-        if (reshape) {
-            this.ponged = false
-            this.newGovernment(now, reshape.quorum, reshape.government, Monotonic.increment(this.promise, 0))
-        }
-    }
-}
-
 Legislator.prototype.consensus = function (now) {
     this._trace('consensus', [ now ])
     var pulse = null
