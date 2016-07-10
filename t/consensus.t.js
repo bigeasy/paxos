@@ -226,10 +226,13 @@ function prove (assert) {
     // Test inability to create new government because of lack of majority.
     legislators[0].collapse()
 
+    console.log('foo')
     assert(legislators[0].consensus(), null, 'cannot choose leaders')
 
     tick()
 
+    // Immigrate, but then restart, and assert that the restarted legislator
+    // does not immigrate. (I don't see a test for success here.)
     legislators.push(new Legislator(1, '5', time, options))
     legislators[0].immigrate(time, 1, '5', legislators[5].cookie, { location: '5' })
 
@@ -237,7 +240,6 @@ function prove (assert) {
 
     time++
 
-    // Test attmepting to immigrate a restarted legislator.
     legislators[1].scheduler.check(time)
     send(legislators[1])
     legislators[5] = new Legislator(1, '5', time, options)

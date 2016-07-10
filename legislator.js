@@ -606,6 +606,7 @@ Legislator.prototype._receivePromise = function (now, pulse, message, responses)
     if (this.accepted == null ||
         Monotonic.compareIndex(this.accepted.promise, message.accepted.promise, 0) < 0
     ) {
+// TODO Not right, right? Previous gets built somewhere else.
         message.accepted.previous = this.accepted
         this.accepted = message.accepted
         this.accepted.route = pulse.route
