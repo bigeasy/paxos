@@ -158,11 +158,9 @@ Legislator.prototype._advanceElection = function (now) {
 // before running a consensus pulse, so we're not seeing the results of decided
 // upon a consensus action before all of the synchronizations have been
 // returned.
-    if (this.election.status == 'accepted') {
-        return null
-    } else if (this.election.status == 'proposed') {
+    if (this.election.status == 'proposed') {
         if (this.election.accepts.length == this.election.promises.length) {
-            this.election.status = 'accepted'
+            this.collapsed = false
             return {
                 type: 'consensus',
                 islandId: this.islandId,
