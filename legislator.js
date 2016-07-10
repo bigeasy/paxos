@@ -575,10 +575,11 @@ Legislator.prototype._receivePropose = function (now, pulse, message, responses)
     this._trace('_receivePropose', [ now, pulse, message, responses ])
 // TODO Mark as collapsed, call `collapse`, let `collapse` decide?
     var compare = Monotonic.compare(message.promise, this.promise)
-    if (this.islandId != pulse.islandId ||
-        compare <= 0 ||
-        !~pulse.governments.indexOf(this.government.promise)
-    ) {
+    if (this.islandId != pulse.islandId) {
+        responses.push(this._reject(message))
+    } else if (compare <= 0) {
+        responses.push(this._reject(message))
+    } else if (!~pulse.governments.indexOf(this.government.promise)) {
         responses.push(this._reject(message))
     } else {
         responses.push({
