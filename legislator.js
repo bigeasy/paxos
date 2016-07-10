@@ -113,40 +113,6 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
     })
 }
 
-Legislator.prototype._advanceElection = function (now) {
-// TODO Currently, your tests are running all synchronizations to completion
-// before running a consensus pulse, so we're not seeing the results of decided
-// upon a consensus action before all of the synchronizations have been
-// returned.
-    if (this.election.status == 'accepted') {
-        return null
-    } else if (this.election.status == 'proposed') {
-        if (this.election.accepts.length == this.election.promises.length) {
-            this.election.status = 'accepted'
-            return {
-                type: 'consensus',
-                islandId: this.islandId,
-                governments: [ this.government.promise, this.accepted.promise ],
-                route: this.accepted.route,
-                messages: [this._ping(now), {
-                    type: 'commit',
-                    promise: this.accepted.promise
-                }]
-            }
-        }
-        return null
-    } else if (this.election.promises.length < this.election.majority.length) {
-        return null
-    } else {
-        this.election.status = 'proposed'
-        this.newGovernment(now, this.election.majority, {
-            majority: this.election.majority,
-            minority: this.election.minority
-        }, this.promise)
-        return this._stuffProposal([ this._ping(now) ], this.proposals.shift())
-    }
-}
-
 // TODO When we collapse, let's change our constituency to our parliament,
 // except ourselves, to ensure that we're pinging away and waiting for a
 // consensus to form. Wait, we're already doing that.
@@ -184,6 +150,40 @@ Legislator.prototype._gatherProposals = function (now) {
             // Do not increment here, it will be set by `_receivePromise`.
             promise: Monotonic.increment(this.promise, 0)
         }]
+    }
+}
+
+Legislator.prototype._advanceElection = function (now) {
+// TODO Currently, your tests are running all synchronizations to completion
+// before running a consensus pulse, so we're not seeing the results of decided
+// upon a consensus action before all of the synchronizations have been
+// returned.
+    if (this.election.status == 'accepted') {
+        return null
+    } else if (this.election.status == 'proposed') {
+        if (this.election.accepts.length == this.election.promises.length) {
+            this.election.status = 'accepted'
+            return {
+                type: 'consensus',
+                islandId: this.islandId,
+                governments: [ this.government.promise, this.accepted.promise ],
+                route: this.accepted.route,
+                messages: [this._ping(now), {
+                    type: 'commit',
+                    promise: this.accepted.promise
+                }]
+            }
+        }
+        return null
+    } else if (this.election.promises.length < this.election.majority.length) {
+        return null
+    } else {
+        this.election.status = 'proposed'
+        this.newGovernment(now, this.election.majority, {
+            majority: this.election.majority,
+            minority: this.election.minority
+        }, this.promise)
+        return this._stuffProposal([ this._ping(now) ], this.proposals.shift())
     }
 }
 
