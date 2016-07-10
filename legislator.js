@@ -878,9 +878,28 @@ Legislator.prototype._enactGovernment = function (now, round) {
         this.scheduler.schedule(now + this.ping, id, { object: this, method: '_whenPing' }, id)
     }, this)
 
-    for (var id in this.peers) {
-        if (id != this.id && this.peers[id].timeout == 0) {
-            delete this.peers[id]
+    // Reset peer tracking information. Leader behavior is different from other
+    // members. We clear out all peer information for peers who are not our
+    // immediate constituents. This will keep us from hoarding stale peer
+    // records. When everyone performs this cleaning, we can then trust
+    // ourselves to return all peer information we've gathered to anyone that
+    // pings us, knowing that it is all flowing from minority members to the
+    // leader. We do not have to version the records, timestamp them, etc.
+    //
+    // If we didn't clear them out, then a stale record for a citizen can be
+    // held onto by a majority member. If the minority member that pings the
+    // citizen is no longer downstream from the majortiy member, that stale
+    // record will not get updated, but it will be reported to the leader.
+    //
+    // We keep peer information if we are the leader, since it all flows back to
+    // the leader. All leader information will soon be updated. Not resetting
+    // the leader during normal operation makes adjustments to citizenship go
+    // faster.
+    if (this.id != this.government.majority[0]) {
+        for (var id in this.peers) {
+            if (this.id != id && ! ~this.constituency.indexOf(id)) {
+                delete this.peers[id]
+            }
         }
     }
 }
