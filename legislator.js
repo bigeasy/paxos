@@ -659,10 +659,11 @@ Legislator.prototype._receiveAccepted = function (now, pulse, message) {
 // promise, you would already have worked through these things.
 Legislator.prototype._receiveCommit = function (now, pulse, message, responses) {
     this._trace('_receiveCommit', [ now, pulse, message, responses ])
-    if (this.islandId != pulse.islandId ||
-        this.accepted == null ||
-        this.accepted.promise != message.promise
-    ) {
+    if (this.islandId != pulse.islandId) {
+        responses.push(this._reject(message))
+    } else if (this.accepted == null) {
+        responses.push(this._reject(message))
+    } else if (this.accepted.promise != message.promise) {
         responses.push(this._reject(message))
     } else {
         var round = this.accepted
@@ -899,6 +900,8 @@ Legislator.prototype._expand = function () {
     }
     assert(~this.government.majority.indexOf(this.id), 'would be leader not in majority')
     var parliamentSize = parliament.length + 2
+// TODO This notion of reachable should include a test to ensure that the
+// minority is not so far behind that it cannot be caught up with the leader.
     var present = parliament.slice(1).concat(this.government.constituents).filter(function (id) {
         var peer = this.peers[id] || {}
         return peer.naturalized && peer.timeout == 0
