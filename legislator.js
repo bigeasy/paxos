@@ -173,6 +173,8 @@ Legislator.prototype._advanceElection = function (now) {
             }
         }
         return null
+// TODO We'll never see this, so we should just assert it. It would be marked
+// failed.
     } else if (this.election.promises.length < this.election.majority.length) {
         return null
     } else {
