@@ -624,12 +624,14 @@ Legislator.prototype._receivePromise = function (now, pulse, message, responses)
 
 Legislator.prototype._receiveAccept = function (now, pulse, message, responses) {
     this._trace('_receiveAccept', [ now, pulse, message, responses ])
-// TODO Think hard; are will this less than catch both two-stage commit and
-// Paxos?
-    if (this.islandId == pulse.islandId &&
-        ~pulse.governments.indexOf(this.government.promise) &&
-        Monotonic.compareIndex(this.promise, message.promise, 0) <= 0
-    ) {
+// TODO Think hard; will this less than catch both two-stage commit and Paxos?
+    if (this.islandId != pulse.islandId) {
+        responses.push(this._reject(message))
+    } else if (! ~pulse.governments.indexOf(this.government.promise)) {
+        responses.push(this._reject(message))
+    } else if (Monotonic.compareIndex(this.promise, message.promise, 0) > 0) {
+        responses.push(this._reject(message))
+    } else {
         this.accepted = JSON.parse(JSON.stringify(message))
         this.promise = this.accepted.promise
         this.accepted.route = pulse.route
@@ -639,8 +641,6 @@ Legislator.prototype._receiveAccept = function (now, pulse, message, responses) 
             promise: this.promise = message.promise,
             accepted: this.accepted
         })
-    } else {
-        responses.push(this._reject(message))
     }
 }
 
