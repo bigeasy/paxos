@@ -689,11 +689,6 @@ Legislator.prototype._receiveCommit = function (now, pulse, message, responses) 
 Legislator.prototype._receiveEnact = function (now, pulse, message) {
     this._trace('_receiveEnact', [ now, pulse, message ])
 
-// TODO Reject? Need `===`?
-    if (this.islandId != pulse.islandId) {
-        return
-    }
-
     this.proposal = null
     this.accepted = null
     this.collapsed = false
