@@ -64,6 +64,7 @@ Legislator.prototype.getPeer = function (id) {
             when: -Infinity,
             timeout: 0,
             when: null,
+// Use a `null` decided instead.
             pinged: false,
             decided: '0/0'
         }
@@ -334,6 +335,10 @@ Legislator.prototype.synchronize = function (now) {
         var id = this.constituency[i]
         var peer = this.getPeer(id)
         var compare = Monotonic.compare(this.getPeer(id).decided, this.getPeer(this.id).decided)
+// TODO Extract this so I can send it back with pong in response to ping.
+// TODO What is skip? Why do I need it?
+// TODO Can I remove the need to track skip and synchronize? Add state to the
+// pulse so that I don't have to track it in the Legislator?
         if ((peer.timeout != 0 || compare < 0) && !peer.skip && !this.synchronizing[id]) {
             var count = 20
             this.synchronizing[id] = true
