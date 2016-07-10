@@ -226,7 +226,6 @@ function prove (assert) {
     // Test inability to create new government because of lack of majority.
     legislators[0].collapse()
 
-    console.log('foo')
     assert(legislators[0].consensus(), null, 'cannot choose leaders')
 
     tick()

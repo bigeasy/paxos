@@ -10,7 +10,7 @@ function Legislator (islandId, id, cookie, options) {
     options || (options = {})
 
     this.islandId = islandId
-    this.id = id
+    this.id = String(id)
     this.cookie = cookie
     this.naturalized = !! options.naturalized
 
@@ -762,7 +762,6 @@ Legislator.prototype._whenPing = function (now, id) {
     var peer = this.getPeer(id)
     peer.skip = false
     if (peer.timeout == 0) {
-        peer.when = now
         peer.timeout = 1
     }
 }
