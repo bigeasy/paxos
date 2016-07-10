@@ -763,6 +763,7 @@ Legislator.prototype._whenKeepAlive = function (now) {
 Legislator.prototype._whenPing = function (now, id) {
     this._trace('_whenPing', [ now, id ])
     var peer = this.getPeer(id)
+// TODO Skip is so dubious.
     peer.skip = false
     if (peer.timeout == 0) {
         peer.timeout = 1
@@ -772,16 +773,12 @@ Legislator.prototype._whenPing = function (now, id) {
 Legislator.prototype._receivePong = function (now, pulse, message, responses) {
     this._trace('_receivePong', [ now, pulse, message, responses ])
     var peer = this.getPeer(message.from)
-    if (peer.when <= message.when) {
-        // TODO Imperfect?
-        var ponged = !peer.pinged || peer.timeout != message.timeout
-        peer.pinged = true
-        peer.timeout = message.timeout
-        peer.naturalized = message.naturalized
-        peer.decided = message.decided
-        peer.when = null
-        this.ponged = ponged || this.ponged
-    }
+    this.ponged = this.ponged || !peer.pinged || peer.timeout != message.timeout
+    peer.pinged = true
+    peer.timeout = message.timeout
+    peer.naturalized = message.naturalized
+    peer.decided = message.decided
+    peer.when = null
 }
 
 Legislator.prototype._receivePing = function (now, pulse, message, responses) {
