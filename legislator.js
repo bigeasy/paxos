@@ -646,7 +646,8 @@ Legislator.prototype._receiveAccept = function (now, pulse, message, responses) 
 
 Legislator.prototype._receiveAccepted = function (now, pulse, message) {
     this._trace('_receiveAccepted', [ now, pulse, message ])
-    if (~pulse.governments.indexOf(this.government.promise) && this.election) {
+    assert(~pulse.governments.indexOf(this.government.promise))
+    if (this.election) {
         assert(!~this.election.accepts.indexOf(message.from))
         this.election.accepts.push(message.from)
     }
