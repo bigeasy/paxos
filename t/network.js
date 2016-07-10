@@ -61,6 +61,13 @@ Network.prototype.tick = function () {
     }
 }
 
+Network.prototype.timeAndTick = function (count) {
+    while (count-- != 0) {
+        this.time++
+        this.tick()
+    }
+}
+
 Network.prototype.addLegislators = function (count) {
     while (count-- != 0) {
         var id = String(this.legislators.length)
