@@ -789,7 +789,7 @@ Legislator.prototype._receivePing = function (now, pulse, message, responses) {
     if (!message.collapsed) {
         for (var id in this.peers) {
             var peer = this.peers[id]
-            if (peer.pinged) {
+            if (peer.pinged && peer.id != message.from)  {
                 responses.push({
                     type: 'pong',
                     from: peer.id,
