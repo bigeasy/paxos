@@ -35,7 +35,8 @@ function Legislator (islandId, id, cookie, options) {
 
     this.length = options.length || 1024
 
-// Randomly adjust election retry by a percentage.
+// TODO Randomly adjust election retry by a percentage. Randomly half or
+// randomly half as much again.
 
     this.ping = options.ping || 1
     this.timeout = options.timeout || 3
@@ -64,7 +65,7 @@ Legislator.prototype.getPeer = function (id) {
             when: -Infinity,
             timeout: 0,
             when: null,
-// Use a `null` decided instead.
+// TODO Use a `null` decided instead.
             pinged: false,
             decided: '0/0'
         }
@@ -79,6 +80,7 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
         return !~government.majority.indexOf(citizen)
             && !~government.minority.indexOf(citizen)
     })
+// TODO Creating this reissue, but then I'm never using it.
     var remapped = government.promise = promise
     this.proposals = this.proposals.splice(0, this.proposals.length).map(function (proposal) {
         proposal.was = proposal.promise
@@ -103,7 +105,7 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
             government: government,
             properties: properties,
 // TODO Null map to indicate collapse or change in leadership. Wait, change in
-// leaership is only ever collapse? Ergo...
+// leader is only ever collapse? Ergo...
             collapsed: this.collapsed,
 // There was a time when I wanted to allow the user to choose leaders.
             map: this.proposals.map(function (proposal) {
@@ -527,6 +529,7 @@ Legislator.prototype.enqueue = function (now, islandId, message) {
 
     var response = this._enqueuable(islandId)
     if (response == null) {
+// TODO Bombs out the current working promise.
         var promise = this.promise = Monotonic.increment(this.promise, 1)
         this.proposals.push({
             promise: promise,
@@ -589,6 +592,8 @@ Legislator.prototype._receivePropose = function (now, pulse, message, responses)
         responses.push({
             type: 'promise',
             from: this.id,
+// TODO Okay to bomb out here, we're resetting, won't be a leader I don't think.
+// Should this force a collapse?
             promise: this.promise = message.promise,
             accepted: this.accepted
         })
@@ -642,11 +647,13 @@ Legislator.prototype._receiveAccept = function (now, pulse, message, responses) 
         responses.push(this._reject(message))
     } else {
         this.accepted = JSON.parse(JSON.stringify(message))
+// TODO Definately bombs out our latest working, issued promise...
         this.promise = this.accepted.promise
         this.accepted.route = pulse.route
         responses.push({
             type: 'accepted',
             from: this.id,
+// TODO ... and bombs it out again.
             promise: this.promise = message.promise,
             accepted: this.accepted
         })
@@ -731,6 +738,7 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
     max.next = message
     message.previous = max.promise
     this.log.insert(message)
+// Forever bombing out our latest promise.
     this.promise = message.promise
 
     if (Monotonic.isBoundary(message.promise, 0)) {
