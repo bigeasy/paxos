@@ -159,28 +159,25 @@ Legislator.prototype._advanceElection = function (now) {
 // upon a consensus action before all of the synchronizations have been
 // returned.
     if (this.election.status == 'proposed') {
-        if (this.election.accepts.length == this.election.promises.length) {
-            this.collapsed = false
-            return {
-                type: 'consensus',
-                islandId: this.islandId,
-                governments: [ this.government.promise, this.accepted.promise ],
+        assert(this.election.accepts.length == this.election.promises.length)
+        this.collapsed = false
+        return {
+            type: 'consensus',
+            islandId: this.islandId,
+            governments: [ this.government.promise, this.accepted.promise ],
 // TODO Real weird. Yes, at this point, we have definately accepted our own
 // election, replacing whatever was accepted when we sent our proposal.
-                route: this.accepted.route,
+            route: this.accepted.route,
 // TODO Does ping belong everywhere still?
-                messages: [this._ping(now), {
-                    type: 'commit',
-                    promise: this.accepted.promise
-                }]
-            }
+            messages: [this._ping(now), {
+                type: 'commit',
+                promise: this.accepted.promise
+            }]
         }
-        return null
 // TODO We'll never see this, so we should just assert it. It would be marked
 // failed.
-    } else if (this.election.promises.length < this.election.majority.length) {
-        return null
     } else {
+        assert(this.election.promises.length == this.election.majority.length)
         this.election.status = 'proposed'
         this.newGovernment(now, this.election.majority, {
             majority: this.election.majority,
