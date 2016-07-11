@@ -165,7 +165,10 @@ Legislator.prototype._advanceElection = function (now) {
                 type: 'consensus',
                 islandId: this.islandId,
                 governments: [ this.government.promise, this.accepted.promise ],
+// TODO Real weird. Yes, at this point, we have definately accepted our own
+// election, replacing whatever was accepted when we sent our proposal.
                 route: this.accepted.route,
+// TODO Does ping belong everywhere still?
                 messages: [this._ping(now), {
                     type: 'commit',
                     promise: this.accepted.promise
@@ -304,10 +307,12 @@ Legislator.prototype._stuffProposal = function (messages, proposal) {
         var round = this.log.find({ promise: peer.decided }).next
         this._pushEnactments(messages, round, -1)
     }, this)
+    var previous = this.collapsed ? this.accepted : null
     messages.push({
         type: 'accept',
         promise: proposal.promise,
-        value: proposal.value
+        value: proposal.value,
+        previous: previous
     })
     return {
         type: 'consensus',
@@ -579,12 +584,9 @@ Legislator.prototype._receiveReject = function (now, pulse, message) {
 Legislator.prototype._receivePropose = function (now, pulse, message, responses) {
     this._trace('_receivePropose', [ now, pulse, message, responses ])
 // TODO Mark as collapsed, call `collapse`, let `collapse` decide?
-    var compare = Monotonic.compare(message.promise, this.promise)
-    if (this.islandId != pulse.islandId) {
-        responses.push(this._reject(message))
-    } else if (compare <= 0) {
-        responses.push(this._reject(message))
-    } else if (!~pulse.governments.indexOf(this.government.promise)) {
+    if (this._rejected(pulse, function (promise) {
+        return Monotonic.compare(message.promise, promise) <= 0
+    })) {
         responses.push(this._reject(message))
     } else {
         responses.push({
@@ -610,11 +612,18 @@ Legislator.prototype._receivePromise = function (now, pulse, message, responses)
     if (this.accepted == null ||
         Monotonic.compareIndex(this.accepted.promise, message.accepted.promise, 0) < 0
     ) {
-// TODO Not right, right? Previous gets built somewhere else.
-        message.accepted.previous = this.accepted
         this.accepted = message.accepted
-        this.accepted.route = pulse.route
     }
+}
+
+Legislator.prototype._rejected = function (pulse, comparator) {
+    if (pulse.islandId != this.islandId) {
+        return true
+    }
+    if (! ~pulse.governments.indexOf(this.government.promise)) {
+        return true
+    }
+    return comparator(this.promise)
 }
 
 // The accepted message must go out on the pulse, we cannot put it in the
@@ -630,11 +639,9 @@ Legislator.prototype._receivePromise = function (now, pulse, message, responses)
 Legislator.prototype._receiveAccept = function (now, pulse, message, responses) {
     this._trace('_receiveAccept', [ now, pulse, message, responses ])
 // TODO Think hard; will this less than catch both two-stage commit and Paxos?
-    if (this.islandId != pulse.islandId) {
-        responses.push(this._reject(message))
-    } else if (! ~pulse.governments.indexOf(this.government.promise)) {
-        responses.push(this._reject(message))
-    } else if (Monotonic.compareIndex(this.promise, message.promise, 0) > 0) {
+    if (this._rejected(pulse, function (promise) {
+        return Monotonic.compareIndex(promise, message.promise, 0) > 0
+    })) {
         responses.push(this._reject(message))
     } else {
         this.accepted = JSON.parse(JSON.stringify(message))
@@ -664,11 +671,9 @@ Legislator.prototype._receiveAccepted = function (now, pulse, message) {
 // promise, you would already have worked through these things.
 Legislator.prototype._receiveCommit = function (now, pulse, message, responses) {
     this._trace('_receiveCommit', [ now, pulse, message, responses ])
-    if (this.islandId != pulse.islandId) {
-        responses.push(this._reject(message))
-    } else if (this.accepted == null) {
-        responses.push(this._reject(message))
-    } else if (this.accepted.promise != message.promise) {
+    if (this._rejected(pulse, function (promise) {
+        return promise != message.promise
+    })) {
         responses.push(this._reject(message))
     } else {
         var round = this.accepted
