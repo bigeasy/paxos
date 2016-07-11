@@ -28,6 +28,7 @@ function Legislator (islandId, id, cookie, options) {
     this.collapsed = false
 
     this.government = { promise: '0/0', minority: [], majority: [] }
+    this.lastIssued = null
     this.promise = '0/0'
 
     this.peers = {}
@@ -88,6 +89,7 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
         proposal.promise = remapped = Monotonic.increment(remapped, 1)
         return proposal
     }.bind(this))
+    this.lastIssued = remapped
     var properties = JSON.parse(JSON.stringify(this.properties))
 // TODO I'd rather have a more intelligent structure.
     if (government.immigrate) {
@@ -530,7 +532,7 @@ Legislator.prototype.enqueue = function (now, islandId, message) {
     var response = this._enqueuable(islandId)
     if (response == null) {
 // TODO Bombs out the current working promise.
-        var promise = this.promise = Monotonic.increment(this.promise, 1)
+        var promise = this.lastIssued = Monotonic.increment(this.lastIssued, 1)
         this.proposals.push({
             promise: promise,
             route: this.government.majority,
