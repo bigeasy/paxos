@@ -350,6 +350,8 @@ Legislator.prototype.synchronize = function (now) {
                 messages: []
             }
 
+            pulse.messages.push(this._pong(now))
+
             var maximum = peer.decided
             if (peer.pinged) {
                 var round
@@ -736,7 +738,7 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
 }
 
 Legislator.prototype._ping = function (now) {
-    return { type: 'ping', from: this.id }
+    return { type: 'ping', from: this.id, collapsed: this.collapsed }
 }
 
 Legislator.prototype._pong = function (now) {
@@ -784,17 +786,19 @@ Legislator.prototype._receivePing = function (now, pulse, message, responses) {
 // TODO Keep a tree to determine if a majority member needs to return the
 // values send by a minority member, for now send everything.
     responses.push(this._pong(now))
-    for (var id in this.peers) {
-        var peer = this.peers[id]
-        if (peer.pinged) {
-            responses.push({
-                type: 'pong',
-                from: peer.id,
-                timeout: peer.timeout,
-                when: peer.when,
-                naturalized: peer.naturalized,
-                decided: peer.decided
-            })
+    if (!message.collapsed) {
+        for (var id in this.peers) {
+            var peer = this.peers[id]
+            if (peer.pinged) {
+                responses.push({
+                    type: 'pong',
+                    from: peer.id,
+                    timeout: peer.timeout,
+                    when: peer.when,
+                    naturalized: peer.naturalized,
+                    decided: peer.decided
+                })
+            }
         }
     }
 // TODO Are you setting/unsetting this correctly when you are collapsed?
