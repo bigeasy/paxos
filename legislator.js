@@ -378,8 +378,8 @@ Legislator.prototype.synchronize = function (now) {
                 route: [ id ],
                 messages: []
             }
-            pulse.messages.push(this._pong(now))
             this._stuffSynchronize(now, peer, pulse.messages)
+            pulse.messages.push(this._pong(now))
             pulse.messages.push(this._ping(now))
             outbox.push(pulse)
         }
@@ -573,7 +573,7 @@ Legislator.prototype._reject = function (message) {
 
 Legislator.prototype._receiveReject = function (now, pulse, message) {
     this._trace('_receiveReject', [ now, pulse, message ])
-    pulse.failed = false
+    pulse.failed = true
 }
 
 Legislator.prototype._receivePropose = function (now, pulse, message, responses) {
@@ -801,6 +801,10 @@ Legislator.prototype._receivePing = function (now, pulse, message, responses) {
                 })
             }
         }
+    }
+    var peer = this.getPeer(message.from)
+    if (pulse.type == 'synchronize' && Monotonic.compare(peer.decided, this.peers[this.id].decided) < 0) {
+        this._stuffSynchronize(now, this.getPeer(message.from), responses)
     }
 // TODO Are you setting/unsetting this correctly when you are collapsed?
     var resetWhenCollapse =
