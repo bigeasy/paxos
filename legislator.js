@@ -480,8 +480,9 @@ Legislator.prototype.sent = function (now, pulse, responses) {
             }
             peer.skip = true
             this.ponged = true
-            this.scheduler.schedule(now + this.ping, pulse.route[0], { object:
-            this, method: '_whenPing' }, pulse.route[0])
+            this.scheduler.schedule(now + this.ping, pulse.route[0], {
+                object: this, method: '_whenPing'
+            }, pulse.route[0])
             break
         }
     }
