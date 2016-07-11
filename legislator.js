@@ -328,6 +328,36 @@ Legislator.prototype.consensus = function (now) {
     return pulse
 }
 
+Legislator.prototype._stuffSynchronize = function (now, peer, messages) {
+    var count = 20
+    var maximum = peer.decided
+    if (peer.pinged) {
+        var round
+        if (peer.decided == '0/0') {
+            var iterator = this.log.iterator()
+            for (;;) {
+                round = iterator.prev()
+// TODO This will abend if the naturalization falls off the end end of the log.
+// You need to check for gaps and missing naturalizations and then timeout the
+// constituents that will never be connected.
+                assert(round, 'cannot find immigration')
+                if (Monotonic.isBoundary(round.promise, 0)) {
+                    var immigrate = round.value.government.immigrate
+                    if (immigrate && immigrate.id == peer.id) {
+                        maximum = round.promise
+                        break
+                    }
+                }
+            }
+        } else {
+// TODO Got a read property of null here.
+            round = this.log.find({ promise: maximum }).next
+        }
+
+        this._pushEnactments(messages, round, count)
+    }
+}
+
 Legislator.prototype.synchronize = function (now) {
     this._trace('synchronize', [ now ])
     var outbox = []
@@ -340,7 +370,6 @@ Legislator.prototype.synchronize = function (now) {
 // TODO Can I remove the need to track skip and synchronize? Add state to the
 // pulse so that I don't have to track it in the Legislator?
         if ((peer.timeout != 0 || compare < 0) && !peer.skip && !this.synchronizing[id]) {
-            var count = 20
             this.synchronizing[id] = true
             var pulse = {
                 type: 'synchronize',
@@ -349,38 +378,9 @@ Legislator.prototype.synchronize = function (now) {
                 route: [ id ],
                 messages: []
             }
-
             pulse.messages.push(this._pong(now))
-
-            var maximum = peer.decided
-            if (peer.pinged) {
-                var round
-                if (peer.decided == '0/0') {
-                    var iterator = this.log.iterator()
-                    for (;;) {
-                        round = iterator.prev()
-// TODO This will abend if the naturalization falls off the end end of the log.
-// You need to check for gaps and missing naturalizations and then timeout the
-// constituents that will never be connected.
-                        assert(round, 'cannot find immigration')
-                        if (Monotonic.isBoundary(round.promise, 0)) {
-                            var immigrate = round.value.government.immigrate
-                            if (immigrate && immigrate.id == id) {
-                                maximum = round.promise
-                                break
-                            }
-                        }
-                    }
-                } else {
-// TODO Got a read property of null here.
-                    round = this.log.find({ promise: maximum }).next
-                }
-
-                this._pushEnactments(pulse.messages, round, count)
-            }
-
+            this._stuffSynchronize(now, peer, pulse.messages)
             pulse.messages.push(this._ping(now))
-
             outbox.push(pulse)
         }
     }
