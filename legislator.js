@@ -64,7 +64,7 @@ Legislator.prototype.getPeer = function (id) {
         peer = this.peers[id] = {
             id: id,
             when: -Infinity,
-            timeout: 0,
+            timeout: 1,
             when: null,
 // TODO Use a `null` decided instead.
             pinged: false,
