@@ -758,7 +758,7 @@ Legislator.prototype._pong = function (now) {
     return {
         type: 'pong',
         from: this.id,
-        timeout: 1,
+        timeout: 0,
         when: now,
         naturalized: this.naturalized,
         decided: this.peers[this.id].decided
