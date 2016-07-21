@@ -862,21 +862,19 @@ Legislator.prototype._enactGovernment = function (now, round) {
             this.constituency = this.government.constituents.slice()
         }
     } else {
+        // Majority updates minority. Minority updates constituents. If there is
+        // no minority, then the majority updates constituents.
         var index = this.government.majority.slice(1).indexOf(this.id)
-        if (~index) { // Majority updates minority.
+        if (~index && this.government.minority.length != 0) {
             var length = this.government.majority.length - 1
             this.constituency = this.government.minority.filter(function (id, i) {
                 return i % length == index
             })
-            assert(this.government.minority.length != 0, 'no minority')
-        } else {
-            var index = this.government.minority.indexOf(this.id)
-            if (~index) { // Minority updates constituents.
-                var length = this.government.minority.length
-                this.constituency = this.government.constituents.filter(function (id, i) {
-                    return i % length == index
-                })
-            }
+        } else if (~(index = this.government.minority.indexOf(this.id))) {
+            var length = this.government.minority.length
+            this.constituency = this.government.constituents.filter(function (id, i) {
+                return i % length == index
+            })
         }
     }
     assert(!this.constituency.length || this.constituency[0] != null)
@@ -901,7 +899,7 @@ Legislator.prototype._enactGovernment = function (now, round) {
     //
     // If we didn't clear them out, then a stale record for a citizen can be
     // held onto by a majority member. If the minority member that pings the
-    // citizen is no longer downstream from the majortiy member, that stale
+    // citizen is no longer downstream from the majority member, that stale
     // record will not get updated, but it will be reported to the leader.
     //
     // We keep peer information if we are the leader, since it all flows back to
