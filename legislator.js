@@ -243,7 +243,7 @@ Legislator.prototype._twoPhaseCommit = function (now) {
             }, Monotonic.increment(this.promise, 0))
             isGovernment = true
         } else if (this.ponged) {
-            var reshape = this._impeach() || this._exile() || this._expand()
+            var reshape = this._impeach() || this._expand() || this._shrink() || this._exile()
             if (reshape) {
                 this.ponged = false
                 this.newGovernment(now, reshape.quorum, reshape.government, Monotonic.increment(this.promise, 0))
@@ -933,7 +933,7 @@ Legislator.prototype._expand = function () {
         return null
     }
     assert(~this.government.majority.indexOf(this.id), 'would be leader not in majority')
-    var parliamentSize = parliament.length + 2
+    var parliamentSize = Math.round(parliament.length / 2) * 2 + 1
 // TODO This notion of reachable should include a test to ensure that the
 // minority is not so far behind that it cannot be caught up with the leader.
     var present = parliament.slice(1).concat(this.government.constituents).filter(function (id) {
@@ -955,34 +955,66 @@ Legislator.prototype._expand = function () {
     }
 }
 
+// Called after expand, so if we have a goverment that has lost a member of the
+// minority, and was not able to replace it when it expanded, we know to kick
+// another minority member so the goverment size will be at the next smalled odd
+// number. Once there through shrink or impeachment, we'll see that the majority
+// is too big and know that we can reshape the government to have a simple
+// majority.
+Legislator.prototype._shrink = function () {
+    this._trace('_shrink', [])
+    var parliament = this.government.majority.concat(this.government.minority)
+    if (parliament.length == 1) {
+        return null
+    }
+    var parliamentSize = Math.floor(parliament.length / 2) * 2 + 1
+    var majoritySize = Math.ceil(parliamentSize / 2)
+    if (parliament.length % 2 == 0) {
+        assert(this.government.majority.length == majoritySize)
+        var minority = this.government.minority.slice()
+        minority.pop()
+        return {
+            quorum: this.government.majority,
+            government: {
+                majority: this.government.majority.slice(),
+                minority: minority
+            }
+        }
+    }
+    if (this.government.majority.length > majoritySize) {
+        var majority = this.government.majority.slice()
+        var minority = this.government.minority.slice()
+        minority.push(majority.pop())
+        return {
+            quorum: this.government.majority,
+            government: {
+                majority: majority,
+                minority: minority
+            }
+        }
+    }
+    assert(this.government.majority.length == majoritySize)
+    return null
+}
+
 Legislator.prototype._impeach = function () {
     this._trace('_impeach', [])
     assert(!this.collapsed)
     var timedout = this.government.minority.filter(function (id) {
         return this.peers[id] && this.peers[id].timeout >= this.timeout
-    }.bind(this)).length != 0
-    if (!timedout) {
+    }.bind(this))
+    if (timedout.length == 0) {
         return null
     }
-    var candidates = this.government.minority.concat(this.government.constituents)
-    var minority = candidates.filter(function (id) {
-        return this.peers[id] && this.peers[id].timeout < this.timeout
-    }.bind(this)).slice(0, this.government.minority.length)
-    if (minority.length == this.government.minority.length) {
-        return {
-            majority: this.government.majority,
-            minority: minority
-        }
-    }
-    var parliament = this.government.majority.concat(this.government.minority)
-    var parliamentSize = parliament.length <= 3 ? 1 : 3
-    var newParliament = this.government.majority.slice(0, parliamentSize)
-    var majoritySize = Math.ceil(parliamentSize / 2)
+    var impeach = timedout.shift()
+    var deducted = this.government.minority.filter(function (id) {
+        return id != impeach
+    })
     return {
         quorum: this.government.majority,
         government: {
-            majority: newParliament.slice(0, majoritySize),
-            minority: newParliament.slice(majoritySize)
+            majority: this.government.majority,
+            minority: deducted
         }
     }
 }

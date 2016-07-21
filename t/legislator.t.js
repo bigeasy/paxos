@@ -97,23 +97,50 @@ function prove (assert) {
                 5: { timeout: 0 }
             }
         }), {
-            majority: [ '0', '1', '2' ],
-            minority: [ '4', '5' ]
-        }, 'impeach replace')
-        assert(legislator._impeach.call({
+            quorum: [ '0', '1', '2' ],
+            government: {
+                majority: [ '0', '1', '2' ],
+                minority: [ '4' ]
+            }
+        }, 'impeach')
+    } ()
+
+    ! function () {
+        var legislator = new Legislator(1, '1', 0)
+
+        assert(legislator._shrink.call({
             _trace: function () {},
             id: '0',
             timeout: 2,
             government: {
                 majority: [ '0', '1', '2' ],
-                minority: [ '3', '4' ]
+                minority: [ '3' ]
             },
             peers: {
                 0: { timeout: 0 },
                 1: { timeout: 0 },
                 2: { timeout: 0 },
-                3: { timeout: 2 },
-                4: { timeout: 0 }
+                3: { timeout: 0 }
+            }
+        }), {
+            quorum: [ '0', '1', '2' ],
+            government: {
+                majority: [ '0', '1', '2' ],
+                minority: []
+            }
+        }, 'shrink minority to three member parliament')
+        assert(legislator._shrink.call({
+            _trace: function () {},
+            id: '0',
+            timeout: 2,
+            government: {
+                majority: [ '0', '1', '2' ],
+                minority: []
+            },
+            peers: {
+                0: { timeout: 0 },
+                1: { timeout: 0 },
+                2: { timeout: 0 }
             }
         }), {
             quorum: [ '0', '1', '2' ],
@@ -121,27 +148,7 @@ function prove (assert) {
                 majority: [ '0', '1' ],
                 minority: [ '2' ]
             }
-        }, 'impeach shrink to three member parliament')
-        assert(legislator._impeach.call({
-            _trace: function () {},
-            id: '0',
-            timeout: 2,
-            government: {
-                majority: [ '0', '1' ],
-                minority: [ '2' ]
-            },
-            peers: {
-                0: { timeout: 0 },
-                1: { timeout: 0 },
-                2: { timeout: 2 }
-            }
-        }), {
-            quorum: [ '0', '1' ],
-            government: {
-                majority: [ '0' ],
-                minority: []
-            }
-        }, 'impeach shrink to dictator')
+        }, 'shrink majority')
     } ()
 
     ! function () {
