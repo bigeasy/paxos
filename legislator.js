@@ -880,7 +880,7 @@ Legislator.prototype._enactGovernment = function (now, round) {
     assert(!this.constituency.length || this.constituency[0] != null)
     this.scheduler.clear()
     if (this.government.majority[0] == this.id) {
-        this.scheduler.schedule(now + this.ping, this.id, { object: this, method: '_whenPulse' })
+        this.scheduler.schedule(now + this.ping, this.id, { object: this, method: '_whenKeepAlive' })
     } else if (~this.government.majority.slice(1).indexOf(this.id)) {
         this.scheduler.schedule(now + this.timeout, this.id, { object: this, method: '_whenCollapse' })
     }
