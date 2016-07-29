@@ -131,11 +131,10 @@ Legislator.prototype._gatherProposals = function (now) {
         var peer = this.peers[id] || {}
         return id != this.id && peer.timeout == 0
     }.bind(this))
-    var majoritySize = Math.ceil(parliament.length / 2)
-    if (present.length + 1 < majoritySize) {
+    if (present.length + 1 < this.government.majority.length) {
         return null
     }
-    var majority = [ this.id ].concat(present).slice(0, majoritySize)
+    var majority = [ this.id ].concat(present).slice(0, this.government.majority.length)
     var minority = this.parliament.filter(function (id) { return ! ~majority.indexOf(id) })
     this.election = {
         status: 'proposing',
