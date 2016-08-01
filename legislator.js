@@ -77,7 +77,7 @@ Legislator.prototype.getPeer = function (id) {
 Legislator.prototype.newGovernment = function (now, quorum, government, promise) {
     this._trace('newGovernment', [ now, quorum, government, promise ])
     assert(!government.constituents)
-    government.constituents = Object.keys(this.properties).filter(function (citizen) {
+    government.constituents = Object.keys(this.properties).sort().filter(function (citizen) {
         return !~government.majority.indexOf(citizen)
             && !~government.minority.indexOf(citizen)
     })
