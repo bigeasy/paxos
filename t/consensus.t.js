@@ -197,7 +197,7 @@ function prove (assert) {
         majority: [ '0', '1', '2' ],
         minority: [ '3', '4' ],
         constituents: [],
-        promise: '8/0'
+        promise: 'a/0'
     }, 'five member parliament')
 
     legislators[0].enqueue(time, 1, { type: 'enqueue', value: 3 })
@@ -214,7 +214,7 @@ function prove (assert) {
         majority: [ '0', '2', '3' ],
         minority: [ '1', '4' ],
         constituents: [],
-        promise: '9/0'
+        promise: 'b/0'
     }, 'recover from isolation')
 
     time++

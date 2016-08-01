@@ -14,6 +14,6 @@ function prove (assert) {
         majority: [ '0', '1', '2' ],
         minority: [ '3', '4' ],
         constituents: [],
-        promise: '8/0'
+        promise: 'a/0'
     }, 'collapsed')
 }

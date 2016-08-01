@@ -244,9 +244,10 @@ Legislator.prototype._twoPhaseCommit = function (now) {
         } else if (this.ponged) {
             var reshape = this._impeach() || this._expand() || this._shrink() || this._exile()
             if (reshape) {
-                this.ponged = false
                 this.newGovernment(now, reshape.quorum, reshape.government, Monotonic.increment(this.promise, 0))
                 isGovernment = true
+            } else {
+                this.ponged = false
             }
         }
     }
@@ -829,6 +830,36 @@ Legislator.prototype._receivePing = function (now, pulse, message, responses) {
     }
 }
 
+// Majority updates minority. Minority updates constituents. If there is
+// no minority, then the majority updates constituents.
+
+//
+Legislator.prototype._determineConstituency = function () {
+    this.constituency = []
+    var parliament = this.government.majority.concat(this.government.minority)
+    if (parliament.length == 1) {
+        if (this.id == this.government.majority[0]) {
+            this.constituency = this.government.constituents.slice()
+        }
+    } else {
+        var index = this.government.majority.slice(1).indexOf(this.id)
+        if (~index) {
+            var length = this.government.majority.length - 1
+            var population = this.government.minority.length
+                           ? this.government.minority
+                           : this.government.constituents
+            this.constituency = population.filter(function (id, i) {
+                return i % length == index
+            })
+        } else if (~(index = this.government.minority.indexOf(this.id))) {
+            var length = this.government.minority.length
+            this.constituency = this.government.constituents.filter(function (id, i) {
+                return i % length == index
+            })
+        }
+    }
+}
+
 Legislator.prototype._enactGovernment = function (now, round) {
     this._trace('_enactGovernment', [ now, round ])
     delete this.election
@@ -855,27 +886,7 @@ Legislator.prototype._enactGovernment = function (now, round) {
 // TODO Decide on whether this is calculated here or as needed.
     this.parliament = this.government.majority.concat(this.government.minority)
 
-    this.constituency = []
-    if (this.parliament.length == 1) {
-        if (this.id == this.government.majority[0]) {
-            this.constituency = this.government.constituents.slice()
-        }
-    } else {
-        // Majority updates minority. Minority updates constituents. If there is
-        // no minority, then the majority updates constituents.
-        var index = this.government.majority.slice(1).indexOf(this.id)
-        if (~index && this.government.minority.length != 0) {
-            var length = this.government.majority.length - 1
-            this.constituency = this.government.minority.filter(function (id, i) {
-                return i % length == index
-            })
-        } else if (~(index = this.government.minority.indexOf(this.id))) {
-            var length = this.government.minority.length
-            this.constituency = this.government.constituents.filter(function (id, i) {
-                return i % length == index
-            })
-        }
-    }
+    this._determineConstituency()
     assert(!this.constituency.length || this.constituency[0] != null)
     this.scheduler.clear()
     if (this.government.majority[0] == this.id) {
@@ -919,6 +930,11 @@ Legislator.prototype._whenCollapse = function () {
     this.collapse()
 }
 
+Legislator.prototype._naturalized = function (id) {
+    var peer = this.peers[id] || {}
+    return peer.naturalized && peer.timeout == 0
+}
+
 // TODO I don't believe I need to form a new government indicating that I've
 // naturalized, merely record that I've been naturalized. It is a property that
 // will return with liveness.
@@ -930,18 +946,33 @@ Legislator.prototype._expand = function () {
         return null
     }
     assert(~this.government.majority.indexOf(this.id), 'would be leader not in majority')
+    // TODO This notion of reachable should include a test to ensure that the
+    // minority is not so far behind that it cannot be caught up with the leader.
+    var naturalized = parliament.slice(1).concat(this.government.constituents)
+                                         .filter(this._naturalized.bind(this))
     var parliamentSize = Math.round(parliament.length / 2) * 2 + 1
-// TODO This notion of reachable should include a test to ensure that the
-// minority is not so far behind that it cannot be caught up with the leader.
-    var present = parliament.slice(1).concat(this.government.constituents).filter(function (id) {
-        var peer = this.peers[id] || {}
-        return peer.naturalized && peer.timeout == 0
-    }.bind(this))
-    if (present.length + 1 < parliamentSize) {
+    if (naturalized.length + 1 < parliamentSize) {
         return null
     }
-    var newParliament = [ this.id ].concat(present).slice(0, parliamentSize)
     var majoritySize = Math.ceil(parliamentSize / 2)
+    var growBy = 1
+    if (parliament.length > 1) {
+        // If we are a dictator, we can immediately grow to the next size
+        // because no one else will compete with us in an election.
+        if (this.government.majority.length < majoritySize) {
+            return {
+                // quorum: this.government.majority,
+                quorum: parliament.slice(0, majoritySize),
+                government: {
+                    majority: parliament.slice(0, majoritySize),
+                    minority: parliament.slice(majoritySize)
+                }
+            }
+        }
+    } else {
+        growBy = 2
+    }
+    var newParliament = [ this.id ].concat(naturalized).slice(0, parliament.length + growBy)
     return {
         // quorum: this.government.majority,
         quorum: newParliament.slice(0, majoritySize),
@@ -963,6 +994,15 @@ Legislator.prototype._shrink = function () {
     var parliament = this.government.majority.concat(this.government.minority)
     if (parliament.length == 1) {
         return null
+    }
+    if (parliament.length == 2) {
+        return {
+            quorum: this.government.majority,
+            government: {
+                majority: [ this.government.majority[0] ],
+                minority: []
+            }
+        }
     }
     var parliamentSize = Math.floor(parliament.length / 2) * 2 + 1
     var majoritySize = Math.ceil(parliamentSize / 2)
@@ -994,12 +1034,14 @@ Legislator.prototype._shrink = function () {
     return null
 }
 
+Legislator.prototype._timedout = function (id) {
+    return this.peers[id] && this.peers[id].timeout >= this.timeout
+}
+
 Legislator.prototype._impeach = function () {
     this._trace('_impeach', [])
     assert(!this.collapsed)
-    var timedout = this.government.minority.filter(function (id) {
-        return this.peers[id] && this.peers[id].timeout >= this.timeout
-    }.bind(this))
+    var timedout = this.government.minority.filter(this._timedout.bind(this))
     if (timedout.length == 0) {
         return null
     }
