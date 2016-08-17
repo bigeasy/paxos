@@ -1,4 +1,4 @@
-require('proof')(21, prove)
+require('proof/redux')(21, prove)
 
 function prove (assert) {
     var Legislator = require('../legislator')

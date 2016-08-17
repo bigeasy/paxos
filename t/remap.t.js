@@ -1,4 +1,4 @@
-require('proof')(3, prove)
+require('proof/redux')(3, prove)
 
 function prove (assert) {
     var Network = require('./network')
