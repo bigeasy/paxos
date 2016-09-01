@@ -484,6 +484,7 @@ Legislator.prototype.sent = function (now, pulse, responses) {
             } else {
                 peer.timeout = now - peer.when
             }
+//            peer.pinged = true
             peer.skip = true
             this.ponged = true
             this.scheduler.schedule(now + this.ping, pulse.route[0], {
@@ -802,7 +803,8 @@ Legislator.prototype._receivePing = function (now, pulse, message, responses) {
     if (!message.collapsed) {
         for (var id in this.peers) {
             var peer = this.peers[id]
-            if (peer.pinged && peer.id != message.from)  {
+// TODO You can use `peer.timeout != 1` wherever you're using `peer.pinged`.
+            if ((peer.pinged || peer.timeout > 1) && peer.id != message.from)  {
                 responses.push({
                     type: 'pong',
                     from: peer.id,
