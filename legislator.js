@@ -346,7 +346,10 @@ Legislator.prototype._stuffSynchronize = function (now, peer, messages) {
 // TODO This will abend if the naturalization falls off the end end of the log.
 // You need to check for gaps and missing naturalizations and then timeout the
 // constituents that will never be connected.
-                assert(round, 'cannot find immigration')
+                // assert(round, 'cannot find immigration')
+                if (round == null) {
+                    return false
+                }
                 if (Monotonic.isBoundary(round.promise, 0)) {
                     var immigrate = round.value.government.immigrate
                     if (immigrate && immigrate.id == peer.id) {
@@ -362,6 +365,7 @@ Legislator.prototype._stuffSynchronize = function (now, peer, messages) {
 
         this._pushEnactments(messages, round, count)
     }
+    return true
 }
 
 Legislator.prototype.synchronize = function (now) {
@@ -377,17 +381,19 @@ Legislator.prototype.synchronize = function (now) {
 // pulse so that I don't have to track it in the Legislator?
         if ((peer.timeout != 0 || compare < 0) && !peer.skip && !this.synchronizing[id]) {
             this.synchronizing[id] = true
+            var messages = []
             var pulse = {
                 type: 'synchronize',
                 islandId: this.islandId,
                 governments: [ this.government.promise ],
                 route: [ id ],
-                messages: []
+                messages: messages,
+                failed: ! this._stuffSynchronize(now, peer, messages)
             }
-            this._stuffSynchronize(now, peer, pulse.messages)
             pulse.messages.push(this._pong(now))
             pulse.messages.push(this._ping(now))
             outbox.push(pulse)
+            console.log('sync', peer, pulse)
         }
     }
     return outbox
@@ -441,6 +447,7 @@ Legislator.prototype.collapse = function () {
 
 Legislator.prototype.sent = function (now, pulse, responses) {
     this._trace('sent', [ now, pulse, responses ])
+    console.error('sent', pulse.failed)
     if (pulse.type == 'consensus') {
         this.pulsing = false
     }
@@ -478,6 +485,7 @@ Legislator.prototype.sent = function (now, pulse, responses) {
             delete this.synchronizing[pulse.route[0]]
 // TODO Make this a call to receive ping.
             var peer = this.getPeer(pulse.route[0])
+            console.log('when', peer.when)
             if (peer.when == null) {
                 peer.when = now
                 peer.timeout = 1
@@ -486,6 +494,7 @@ Legislator.prototype.sent = function (now, pulse, responses) {
             }
 //            peer.pinged = true
             peer.skip = true
+            console.error('peer', peer)
             this.ponged = true
             this.scheduler.schedule(now + this.ping, pulse.route[0], {
                 object: this, method: '_whenPing'
@@ -507,6 +516,18 @@ Legislator.prototype.bootstrap = function (now, properties) {
     }, '1/0')
 }
 
+// TODO Is all this checking necessary? Is it necessary to return the island id
+// and leader? This imagines that the client is going to do the retry, but in
+// reality we often have the cluster performt the retry. The client needs to
+// talk to a server that can be discovered, it can't use the Paxos algorithm for
+// address resolution. From the suggested logic, it will only have a single
+// address, and maybe be told of an actual leader. What happens when that
+// address is lost? Don't see where returning `islandId` and leader helps at
+// all. It is enough to say you failed, backoff and try again. The network layer
+// can perform checks to see if the recepient is the leader and hop to the
+// actual leader if it isn't, reject if it is but collapsed.
+//
+// Once you've externalized this in kibitz, remove it, or pare it down.
 Legislator.prototype._enqueuable = function (islandId) {
     this._trace('_enqueuable', [ islandId ])
     if (this.collapsed || this.islandId != islandId) {
@@ -555,17 +576,76 @@ Legislator.prototype.immigrate = function (now, islandId, id, cookie, properties
     assert(typeof id == 'string', 'id must be a hexidecmimal string')
     var response = this._enqueuable(islandId)
     if (response == null) {
-        this.immigrating = this.immigrating.filter(function (immigration) {
-            return immigration.id != id
-        })
-        this.immigrating.push({
-            type: 'immigrate',
-            id: id,
-            properties: properties,
-            cookie: cookie
-        })
-        response = { enqueued: true, promise: null }
+// TODO This is a note. I'd like to find a place to journal this. I'm continuing
+// to take measures to allow for the reuse of ids. It still feels right to me
+// that a display of government or of the census would be displayed using values
+// meaningful to our dear user; Kubernetes HOSTNAMES, AWS instance names, IP
+// address, and not something that is unique, which always means something that
+// this verbose.
+//
+// Yet, here I am again contending with an issue that would be so simple if ids
+// where required to be unique. When a citizen that is a constituent dies and
+// restarts with the same id it will be pinged by someone in government, it will
+// report that it's empty, and its representative will look for it's immigration
+// record. There's a race now. Is the new instance going to immigrate before its
+// pinged? Or is the representative going to search for an immigration record
+// and not find one, which causes us to abend at the moment?
+//
+// I'd decided to resolve the missing record by syncing with a record that is
+// poison and designed to fail. That takes care of the race when the
+// representative beats the immigration record, but what if the immigration
+// record beats the representative?
+//
+// In that case their will be a new government with the same represenative with
+// the same consitutent, but now there will be an immigration record. The
+// consituent will be naturalized. It will never have been exiled.
+//
+// This is a problem. Implementations are going to need to know that they've
+// restarted. A participant should be exiled before it can immigrate again.
+//
+// Obviously, much easier if the ids are unique. Whole new id means not
+// ambiguity. The new id immigrates, the old id exiles. (Unique ids are easy
+// enough to foist upon our dear user implementation wise. Most implementations
+// reset a process or at least an object, and that new instance can have a new
+// id generated from POSIX time or UUID.)
+//
+// However, we do have an atomic log at our disposal, so every time I think that
+// I should give up and go with unique ids, something comes along to make it
+// simple. I was actually musing about how the client, if they really wanted
+// pretty ids, they could just check and wait for the old id to exile, since it
+// only needs to be unique in the set of current ids. Then, duh, I can do that
+// same check on immigration and reject the immigration if the id already exists
+// in the census.
+//
+// That's what you're looking at here.
+//
+// Now that that is done, though, is there a race condition where the
+// immigration is currently being proposed? The property wouldn't be removed
+// until the proposal was enacted.
+
+//
+        if (id in this.properties) {
+            response = {
+                enqueued: false,
+                islandId: this.islandId,
+                leader: this.government.majority[0]
+            }
+        } else {
+// TODO However, are we checking that we're not proposing the same immigration
+// twice if it added to the `immigrating` array while it is being proposed?
+            this.immigrating = this.immigrating.filter(function (immigration) {
+                return immigration.id != id
+            })
+            this.immigrating.push({
+                type: 'immigrate',
+                id: id,
+                properties: properties,
+                cookie: cookie
+            })
+            response = { enqueued: true, promise: null }
+        }
     }
+    console.error('immigrate', response)
     return response
 }
 
@@ -713,15 +793,32 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
 
     var max = this.log.max()
 
+    // TODO Since we only ever increment by one, this could be more assertive
+    // for the message number. However, I have to stop and recall whether we
+    // skip values for the government number, and I'm pretty sure we do.
+    //
+    // TODO This implies that we can be very certain about a sync if we ensure
+    // that there are no gaps in both the governemnt series and the message
+    // series, which could be done by backfilling any gaps encountered during
+    // failed rounds of Paxos.
+
+    //
     var valid = Monotonic.compare(max.promise, message.promise) < 0
 
+    // TODO Simply skip if it is bad, but now I'm considering failing because it
+    // indicates something wrong on the part of the sender, but then the sender
+    // will fail, so it will timeout and try to ping again. When it does it will
+    // assume that it has correct values for `decided`.
+
+    //
     if (!valid) {
-// TODO When is this called?
+        // tentative -> pulse.failed = true
         return
     }
 
     valid = max.promise != '0/0'
     if (!valid) {
+        // TODO Seems to be a duplicate test.
         valid = max.promise == '0/0' && message.promise == '1/0'
     }
     if (!valid) {
@@ -783,13 +880,16 @@ Legislator.prototype._whenPing = function (now, id) {
 
 Legislator.prototype._receivePong = function (now, pulse, message, responses) {
     this._trace('_receivePong', [ now, pulse, message, responses ])
-    var peer = this.getPeer(message.from)
-    this.ponged = this.ponged || !peer.pinged || peer.timeout != message.timeout
-    peer.pinged = true
-    peer.timeout = message.timeout
-    peer.naturalized = message.naturalized
-    peer.decided = message.decided
-    peer.when = null
+    if (!pulse.failed) {
+        var peer = this.getPeer(message.from)
+        this.ponged = this.ponged || !peer.pinged || peer.timeout != message.timeout
+        peer.pinged = true
+        peer.timeout = message.timeout
+        peer.naturalized = message.naturalized
+        peer.decided = message.decided
+        console.error('reset when', peer.id)
+        peer.when = null
+    }
 }
 
 Legislator.prototype._receivePing = function (now, pulse, message, responses) {
@@ -817,6 +917,10 @@ Legislator.prototype._receivePing = function (now, pulse, message, responses) {
         }
     }
     var peer = this.getPeer(message.from)
+// TODO You've got some figuring to do; you went and made it so that synchronize
+// will sent a `pulse` with a `failed` flag set. If that was the only place you
+// where stuffing synchronize, you'd be done, but here you are. Are you going to
+// find yourself in the same situation returning.
     if (pulse.type == 'synchronize' && Monotonic.compare(peer.decided, this.peers[this.id].decided) < 0) {
         this._stuffSynchronize(now, this.getPeer(message.from), responses)
     }
