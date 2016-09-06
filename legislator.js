@@ -1022,7 +1022,16 @@ Legislator.prototype._enactGovernment = function (now, round) {
     // the leader. All leader information will soon be updated. Not resetting
     // the leader during normal operation makes adjustments to citizenship go
     // faster.
-    if (this.id != this.government.majority[0]) {
+    if (this.id == this.government.majority[0]) {
+        var citizens = this.government.majority
+                           .concat(this.government.minority)
+                           .concat(this.government.constituents)
+        for (var id in this.peers) {
+            if (! ~citizens.indexOf(id)) {
+                delete this.peers[id]
+            }
+        }
+    } else {
         for (var id in this.peers) {
             if (this.id != id && ! ~this.constituency.indexOf(id)) {
                 delete this.peers[id]
