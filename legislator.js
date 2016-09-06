@@ -393,7 +393,6 @@ Legislator.prototype.synchronize = function (now) {
             pulse.messages.push(this._pong(now))
             pulse.messages.push(this._ping(now))
             outbox.push(pulse)
-            console.log('sync', peer, pulse)
         }
     }
     return outbox
@@ -447,7 +446,6 @@ Legislator.prototype.collapse = function () {
 
 Legislator.prototype.sent = function (now, pulse, responses) {
     this._trace('sent', [ now, pulse, responses ])
-    console.error('sent', pulse.failed)
     if (pulse.type == 'consensus') {
         this.pulsing = false
     }
@@ -485,7 +483,6 @@ Legislator.prototype.sent = function (now, pulse, responses) {
             delete this.synchronizing[pulse.route[0]]
 // TODO Make this a call to receive ping.
             var peer = this.getPeer(pulse.route[0])
-            console.log('when', peer.when)
             if (peer.when == null) {
                 peer.when = now
                 peer.timeout = 1
@@ -494,7 +491,6 @@ Legislator.prototype.sent = function (now, pulse, responses) {
             }
 //            peer.pinged = true
             peer.skip = true
-            console.error('peer', peer)
             this.ponged = true
             this.scheduler.schedule(now + this.ping, pulse.route[0], {
                 object: this, method: '_whenPing'
@@ -645,7 +641,6 @@ Legislator.prototype.immigrate = function (now, islandId, id, cookie, properties
             response = { enqueued: true, promise: null }
         }
     }
-    console.error('immigrate', response)
     return response
 }
 
@@ -887,7 +882,6 @@ Legislator.prototype._receivePong = function (now, pulse, message, responses) {
         peer.timeout = message.timeout
         peer.naturalized = message.naturalized
         peer.decided = message.decided
-        console.error('reset when', peer.id)
         peer.when = null
     }
 }
