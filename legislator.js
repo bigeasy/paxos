@@ -55,7 +55,7 @@ function Legislator (islandId, id, cookie, options) {
 }
 
 Legislator.prototype._trace = function (method, vargs) {
-    logger.trace(method, { vargs: vargs })
+    logger.trace(method, { $vargs: vargs })
 }
 
 Legislator.prototype.getPeer = function (id) {
