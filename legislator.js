@@ -514,6 +514,12 @@ Legislator.prototype.bootstrap = function (now, islandId, properties) {
     }, '1/0')
 }
 
+Legislator.prototype.join = function (cookie, islandId) {
+    this._trace('join', [ cookie, islandId ])
+    this.cookie = cookie
+    this.islandId = islandId
+}
+
 Legislator.prototype.naturalize = function () {
     this._trace('naturalize', [])
     this.naturalized = true
