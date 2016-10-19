@@ -18,7 +18,7 @@ function prove (assert) {
     }
 
     var legislators = [ new Legislator(1, '0', time, options) ]
-    legislators[0].bootstrap(time, { location: '0' })
+    legislators[0].bootstrap(time, 1, { location: '0' })
 
     function receive (legislator, outbox, failures) {
         failures || (failures = {})

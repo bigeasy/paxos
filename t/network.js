@@ -74,7 +74,7 @@ Network.prototype.addLegislators = function (count) {
         var legislator = new Legislator(1, id, this.time, this.options)
         this.legislators.push(legislator)
         if (this.legislators.length == 1) {
-            this.legislators[0].bootstrap(this.time, { location: '0' })
+            this.legislators[0].bootstrap(this.time, 1, { location: '0' })
         } else {
             this.legislators[0].immigrate(this.time, 1, id, legislator.cookie, { location: id })
             this.tick()
