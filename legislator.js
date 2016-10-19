@@ -500,9 +500,11 @@ Legislator.prototype.sent = function (now, pulse, responses) {
     }
 }
 
-Legislator.prototype.bootstrap = function (now, properties) {
-    this._trace('bootstrap', [ now, properties ])
+Legislator.prototype.bootstrap = function (now, islandId, properties) {
+    this._trace('bootstrap', [ now, islandId, properties ])
     // Update current state as if we're already leader.
+    this.naturalize()
+    this.islandId = islandId
     this.government.majority.push(this.id)
     this.properties[this.id] = JSON.parse(JSON.stringify(properties))
     this.properties[this.id].immigrated = '1/0'
