@@ -512,6 +512,11 @@ Legislator.prototype.bootstrap = function (now, properties) {
     }, '1/0')
 }
 
+Legislator.prototype.naturalize = function () {
+    this._trace('naturalize', [])
+    this.naturalized = true
+}
+
 // TODO Is all this checking necessary? Is it necessary to return the island id
 // and leader? This imagines that the client is going to do the retry, but in
 // reality we often have the cluster performt the retry. The client needs to
