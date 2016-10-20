@@ -71,11 +71,12 @@ Network.prototype.timeAndTick = function (count) {
 Network.prototype.addLegislators = function (count) {
     while (count-- != 0) {
         var id = String(this.legislators.length)
-        var legislator = new Legislator(1, id, this.time, this.options)
+        var legislator = new Legislator(id, this.options)
         this.legislators.push(legislator)
         if (this.legislators.length == 1) {
             this.legislators[0].bootstrap(this.time, 1, { location: '0' })
         } else {
+            legislator.join(this.time, 1)
             this.legislators[0].immigrate(this.time, 1, id, legislator.cookie, { location: id })
             this.tick()
         }

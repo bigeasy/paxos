@@ -1,7 +1,7 @@
 require('proof/redux')(21, prove)
 
 function prove (assert) {
-    var Legislator = require('../legislator')
+    var Legislator = require('../legislator'), legislator
 
     function dump (legislator) {
         legislator.log.each(function (entry) { console.log(entry) })
@@ -17,7 +17,7 @@ function prove (assert) {
         scheduler: { timerless: true }
     }
 
-    var legislators = [ new Legislator(1, '0', time, options) ]
+    var legislators = [ new Legislator('0', options) ]
     legislators[0].bootstrap(time, 1, { location: '0' })
 
     function receive (legislator, outbox, failures) {
@@ -80,7 +80,8 @@ function prove (assert) {
         promise: '1/0'
     }, 'bootstrap')
 
-    legislators.push(new Legislator(1, '1', time, options))
+    legislators.push(legislator = new Legislator('1', options))
+    legislator.join(time, 1)
 
     assert(legislators[0].immigrate(time, 1, '1', legislators[1].cookie, { location: '1' }).enqueued, 'immigrate')
 
@@ -112,7 +113,8 @@ function prove (assert) {
         '1': { location: '1', immigrated: '2/0' }
     }, 'citizens')
 
-    legislators.push(new Legislator(1, '2', time, options))
+    legislators.push(legislator = new Legislator('2', options))
+    legislator.join(time, 1)
     legislators[0].enqueue(time, 1, { type: 'enqueue', value: 1 })
     legislators[0].immigrate(time, 1, '2', legislators[2].cookie, { location: '2' })
 
@@ -167,9 +169,11 @@ function prove (assert) {
 
     assert(legislators[1].peers[2].timeout, 0, 'liveness ping materialized')
 
-    legislators.push(new Legislator(1, '3', time, options))
+    legislators.push(legislator = new Legislator('3', options))
+    legislator.join(time, 1)
     legislators[0].immigrate(time, 1, '3', legislators[3].cookie, { location: '3' })
-    legislators.push(new Legislator(1, '4', time, options))
+    legislators.push(legislator = new Legislator('4', options))
+    legislator.join(time, 1)
     legislators[0].immigrate(time, 1, '4', legislators[4].cookie, { location: '4' })
     legislators[0].enqueue(time, 1, { type: 'enqueue', value: 2 })
 
@@ -232,7 +236,8 @@ function prove (assert) {
 
     // Immigrate, but then restart, and assert that the restarted legislator
     // does not immigrate. (I don't see a test for success here.)
-    legislators.push(new Legislator(1, '5', time, options))
+    legislators.push(legislator = new Legislator('5', options))
+    legislator.join(time, 1)
     legislators[0].immigrate(time, 1, '5', legislators[5].cookie, { location: '5' })
 
     tick({ 5: 'isolate' })
@@ -241,7 +246,8 @@ function prove (assert) {
 
     legislators[1].scheduler.check(time)
     send(legislators[1])
-    legislators[5] = new Legislator(1, '5', time, options)
+    legislators[5] = new Legislator('5', options)
+    legislators[5].join(time, 1)
     tick()
 
     legislators[0].collapse()

@@ -6,12 +6,11 @@ var slice = [].slice
 var RBTree = require('bintrees').RBTree
 var logger = require('prolific.logger').createLogger('paxos')
 
-function Legislator (islandId, id, cookie, options) {
+function Legislator (id, options) {
+    assert(arguments.length == 2, 'only two arguments now')
     options || (options = {})
 
-    this.islandId = islandId
     this.id = String(id)
-    this.cookie = cookie
     this.naturalized = !! options.naturalized
 
     this.parliamentSize = options.parliamentSize || 5

@@ -32,7 +32,7 @@ function prove (assert) {
     }
 
     ! function () {
-        var legislator = new Legislator(1, '1', 0)
+        var legislator = new Legislator('1', {})
 
         assert(stuff(legislator, {
             parliamentSize: 3,
@@ -111,7 +111,7 @@ function prove (assert) {
     } ()
 
     ! function () {
-        var legislator = new Legislator(1, '1', 0)
+        var legislator = new Legislator('1', {})
 
         assert(stuff(legislator, {
             id: '0',
@@ -148,7 +148,7 @@ function prove (assert) {
     } ()
 
     ! function () {
-        var legislator = new Legislator(1, '1', 0)
+        var legislator = new Legislator('1', {})
 
         assert(stuff(legislator, {
             id: '0',
@@ -228,7 +228,7 @@ function prove (assert) {
     } ()
 
     ! function () {
-        var legislator = new Legislator(1, '1', 0)
+        var legislator = new Legislator('1', {})
 
         assert(stuff(legislator, {
             timeout: 2,
