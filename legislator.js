@@ -51,6 +51,8 @@ function Legislator (id, options) {
 
     this.constituency = []
     this.operations = []
+    this.citizens = []
+    this.minimum = '0/0'
 }
 
 Legislator.prototype._trace = function (method, vargs) {
@@ -62,6 +64,7 @@ Legislator.prototype.getPeer = function (id) {
     if (peer == null) {
         peer = this.peers[id] = {
             id: id,
+// Whoa. Which is it?
             when: -Infinity,
             timeout: 1,
             when: null,
@@ -471,6 +474,21 @@ Legislator.prototype.sent = function (now, pulse, responses) {
             break
         case 'consensus':
             this.scheduler.schedule(now + this.ping, this.id, { object: this, method: '_whenKeepAlive' })
+
+            if (this.id == this.government.majority[0]) {
+                this.getPeer(this.id).pinged = true
+                this.getPeer(this.id).decided = this.log.max().promise
+                this.minimum = this.citizens.reduce(function (minimum, citizen) {
+                    if (minimum == null) {
+                        return null
+                    }
+                    var peer = this.getPeer(citizen)
+                    if (!peer.pinged) {
+                        return null
+                    }
+                    return Monotonic.compare(peer.decided, minimum) < 0 ? peer.decided : minimum
+                }.bind(this), this.log.max().promise) || this.minimum
+            }
             break
         }
     } else {
@@ -1028,12 +1046,12 @@ Legislator.prototype._enactGovernment = function (now, round) {
     // the leader. All leader information will soon be updated. Not resetting
     // the leader during normal operation makes adjustments to citizenship go
     // faster.
+    this.citizens = this.government.majority
+                        .concat(this.government.minority)
+                        .concat(this.government.constituents)
     if (this.id == this.government.majority[0]) {
-        var citizens = this.government.majority
-                           .concat(this.government.minority)
-                           .concat(this.government.constituents)
         for (var id in this.peers) {
-            if (! ~citizens.indexOf(id)) {
+            if (! ~this.citizens.indexOf(id)) {
                 delete this.peers[id]
             }
         }
