@@ -145,29 +145,29 @@ function prove (assert) {
         promise: '5/0'
     }, 'recover from collapse')
 
-    legislators[0].peers[1].timeout = 1
+    legislators[0].pings[1].timeout = 1
 
     legislators[0]._whenKeepAlive(time)
 
     tick()
 
-    assert(legislators[0].peers[1].timeout, 0, 'liveness pulse')
+    assert(legislators[0].pings[1].timeout, 0, 'liveness pulse')
 
     legislators[1]._whenPing(time, '2')
 
-    assert(legislators[1].peers[2].timeout, 1, 'liveness ping timeout set')
+    assert(legislators[1].pings[2].timeout, 1, 'liveness ping timeout set')
 
     tick()
 
-    assert(legislators[1].peers[2].timeout, 0, 'liveness ping resolved')
+    assert(legislators[1].pings[2].timeout, 0, 'liveness ping resolved')
 
-    delete legislators[1].peers[2]
+    delete legislators[1].pings[2]
 
     legislators[1]._whenPing(time, '2')
 
     tick()
 
-    assert(legislators[1].peers[2].timeout, 0, 'liveness ping materialized')
+    assert(legislators[1].pings[2].timeout, 0, 'liveness ping materialized')
 
     legislators.push(legislator = new Legislator('3', options))
     legislator.join(time, 1)

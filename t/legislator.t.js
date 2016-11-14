@@ -5,22 +5,22 @@ function prove (assert) {
 
     function stuff (legislator, options) {
         legislator.id = options.id
-        legislator.peers = {}
+        legislator.pings = {}
         for (var name in options) {
             switch (name) {
             case 'naturalized':
                 options[name].forEach(function (id) {
-                    legislator.peers[id] = { naturalized: true, timeout: 0 }
+                    legislator.pings[id] = { naturalized: true, timeout: 0 }
                 })
                 break
             case 'ponged':
                 options[name].forEach(function (id) {
-                    legislator.peers[id] = { timeout: 0 }
+                    legislator.pings[id] = { timeout: 0 }
                 })
                 break
             case 'timedout':
                 options[name].forEach(function (id) {
-                    legislator.peers[id] = { naturalized: true, timeout: legislator.timeout }
+                    legislator.pings[id] = { naturalized: true, timeout: legislator.timeout }
                 })
                 break
             default:
@@ -244,7 +244,7 @@ function prove (assert) {
                 minority: [ '2' ],
                 constituents: [ '3', '4' ]
             },
-            peers: {
+            pings: {
                 3: { timeout: 0 },
                 4: { timeout: 2 }
             }

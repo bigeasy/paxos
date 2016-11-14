@@ -30,8 +30,8 @@ function Legislator (id, options) {
     this.lastIssued = null
     this.promise = '0/0'
 
-    this.peers = {}
-    this.getPeer(this.id).timeout = 0
+    this.pings = {}
+    this.getPing(this.id).timeout = 0
 
     this.length = options.length || 1024
 
@@ -59,10 +59,10 @@ Legislator.prototype._trace = function (method, vargs) {
     logger.trace(method, { $vargs: vargs })
 }
 
-Legislator.prototype.getPeer = function (id) {
-    var peer = this.peers[id]
-    if (peer == null) {
-        peer = this.peers[id] = {
+Legislator.prototype.getPing = function (id) {
+    var ping = this.pings[id]
+    if (ping == null) {
+        ping = this.pings[id] = {
             id: id,
 // Whoa. Which is it?
             when: -Infinity,
@@ -73,7 +73,7 @@ Legislator.prototype.getPeer = function (id) {
             decided: '0/0'
         }
     }
-    return peer
+    return ping
 }
 
 Legislator.prototype.newGovernment = function (now, quorum, government, promise) {
@@ -130,8 +130,7 @@ Legislator.prototype._gatherProposals = function (now) {
 // TODO The constituent must be both connected and synchronized, not just
 // connected.
     var present = this.parliament.filter(function (id) {
-        var peer = this.peers[id] || {}
-        return id != this.id && peer.timeout == 0
+        return id != this.id && (this.pings[id] || {}).timeout == 0
     }.bind(this))
     if (present.length + 1 < this.government.majority.length) {
         return null
@@ -305,9 +304,9 @@ Legislator.prototype._consensus = function (now) {
 
 Legislator.prototype._stuffProposal = function (messages, proposal) {
     proposal.route.slice(1).forEach(function (id) {
-        var peer = this.getPeer(id)
-        assert(peer.pinged)
-        var round = this.log.find({ promise: peer.decided }).next
+        var ping = this.getPing(id)
+        assert(ping.pinged)
+        var round = this.log.find({ promise: ping.decided }).next
         this._pushEnactments(messages, round, -1)
     }, this)
     var previous = this.collapsed ? this.accepted : null
@@ -336,12 +335,12 @@ Legislator.prototype.consensus = function (now) {
     return pulse
 }
 
-Legislator.prototype._stuffSynchronize = function (now, peer, messages) {
+Legislator.prototype._stuffSynchronize = function (now, ping, messages) {
     var count = 20
-    var maximum = peer.decided
-    if (peer.pinged) {
+    var maximum = ping.decided
+    if (ping.pinged) {
         var round
-        if (peer.decided == '0/0') {
+        if (ping.decided == '0/0') {
             var iterator = this.log.iterator()
             for (;;) {
                 round = iterator.prev()
@@ -354,7 +353,7 @@ Legislator.prototype._stuffSynchronize = function (now, peer, messages) {
                 }
                 if (Monotonic.isBoundary(round.promise, 0)) {
                     var immigrate = round.value.government.immigrate
-                    if (immigrate && immigrate.id == peer.id) {
+                    if (immigrate && immigrate.id == ping.id) {
                         maximum = round.promise
                         break
                     }
@@ -375,13 +374,13 @@ Legislator.prototype.synchronize = function (now) {
     var outbox = []
     for (var i = 0, I = this.constituency.length; i < I; i++) {
         var id = this.constituency[i]
-        var peer = this.getPeer(id)
-        var compare = Monotonic.compare(this.getPeer(id).decided, this.getPeer(this.id).decided)
+        var ping = this.getPing(id)
+        var compare = Monotonic.compare(this.getPing(id).decided, this.getPing(this.id).decided)
 // TODO Extract this so I can send it back with pong in response to ping.
 // TODO What is skip? Why do I need it?
 // TODO Can I remove the need to track skip and synchronize? Add state to the
 // pulse so that I don't have to track it in the Legislator?
-        if ((peer.timeout != 0 || compare < 0) && !peer.skip && !this.synchronizing[id]) {
+        if ((ping.timeout != 0 || compare < 0) && !ping.skip && !this.synchronizing[id]) {
             this.synchronizing[id] = true
             var messages = []
             var pulse = {
@@ -390,7 +389,7 @@ Legislator.prototype.synchronize = function (now) {
                 governments: [ this.government.promise ],
                 route: [ id ],
                 messages: messages,
-                failed: ! this._stuffSynchronize(now, peer, messages)
+                failed: ! this._stuffSynchronize(now, ping, messages)
             }
             pulse.messages.push(this._pong(now))
             pulse.messages.push(this._ping(now))
@@ -432,10 +431,10 @@ Legislator.prototype.collapse = function () {
     // Blast all queued work.
     this.proposals.length = 0
     this.immigrating.length = 0
-    // Blast all knowledge of peers.
-    for (var id in this.peers) {
+    // Blast all knowledge of pings.
+    for (var id in this.pings) {
         if (id != this.id) {
-            delete this.peers[id]
+            delete this.pings[id]
         }
     }
     // Ping other parliament members until we can form a government.
@@ -476,17 +475,17 @@ Legislator.prototype.sent = function (now, pulse, responses) {
             this.scheduler.schedule(now + this.ping, this.id, { object: this, method: '_whenKeepAlive' })
 
             if (this.id == this.government.majority[0]) {
-                this.getPeer(this.id).pinged = true
-                this.getPeer(this.id).decided = this.log.max().promise
+                this.getPing(this.id).pinged = true
+                this.getPing(this.id).decided = this.log.max().promise
                 this.minimum = this.citizens.reduce(function (minimum, citizen) {
                     if (minimum == null) {
                         return null
                     }
-                    var peer = this.getPeer(citizen)
-                    if (!peer.pinged) {
+                    var ping = this.getPing(citizen)
+                    if (!ping.pinged) {
                         return null
                     }
-                    return Monotonic.compare(peer.decided, minimum) < 0 ? peer.decided : minimum
+                    return Monotonic.compare(ping.decided, minimum) < 0 ? ping.decided : minimum
                 }.bind(this), this.log.max().promise) || this.minimum
             }
             break
@@ -499,15 +498,15 @@ Legislator.prototype.sent = function (now, pulse, responses) {
         case 'synchronize':
             delete this.synchronizing[pulse.route[0]]
 // TODO Make this a call to receive ping.
-            var peer = this.getPeer(pulse.route[0])
-            if (peer.when == null) {
-                peer.when = now
-                peer.timeout = 1
+            var ping = this.getPing(pulse.route[0])
+            if (ping.when == null) {
+                ping.when = now
+                ping.timeout = 1
             } else {
-                peer.timeout = now - peer.when
+                ping.timeout = now - ping.when
             }
-//            peer.pinged = true
-            peer.skip = true
+//            ping.pinged = true
+            ping.skip = true
             this.ponged = true
             this.scheduler.schedule(now + this.ping, pulse.route[0], {
                 object: this, method: '_whenPing'
@@ -870,7 +869,7 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
         this._enactGovernment(now, message)
     }
 
-    this.getPeer(this.id).decided = message.promise
+    this.getPing(this.id).decided = message.promise
 }
 
 Legislator.prototype._ping = function (now) {
@@ -884,7 +883,7 @@ Legislator.prototype._pong = function (now) {
         timeout: 0,
         when: now,
         naturalized: this.naturalized,
-        decided: this.peers[this.id].decided
+        decided: this.pings[this.id].decided
     }
 }
 
@@ -895,24 +894,24 @@ Legislator.prototype._whenKeepAlive = function (now) {
 
 Legislator.prototype._whenPing = function (now, id) {
     this._trace('_whenPing', [ now, id ])
-    var peer = this.getPeer(id)
+    var ping = this.getPing(id)
 // TODO Skip is so dubious.
-    peer.skip = false
-    if (peer.timeout == 0) {
-        peer.timeout = 1
+    ping.skip = false
+    if (ping.timeout == 0) {
+        ping.timeout = 1
     }
 }
 
 Legislator.prototype._receivePong = function (now, pulse, message, responses) {
     this._trace('_receivePong', [ now, pulse, message, responses ])
     if (!pulse.failed) {
-        var peer = this.getPeer(message.from)
-        this.ponged = this.ponged || !peer.pinged || peer.timeout != message.timeout
-        peer.pinged = true
-        peer.timeout = message.timeout
-        peer.naturalized = message.naturalized
-        peer.decided = message.decided
-        peer.when = null
+        var ping = this.getPing(message.from)
+        this.ponged = this.ponged || !ping.pinged || ping.timeout != message.timeout
+        ping.pinged = true
+        ping.timeout = message.timeout
+        ping.naturalized = message.naturalized
+        ping.decided = message.decided
+        ping.when = null
     }
 }
 
@@ -925,28 +924,28 @@ Legislator.prototype._receivePing = function (now, pulse, message, responses) {
 // values send by a minority member, for now send everything.
     responses.push(this._pong(now))
     if (!message.collapsed) {
-        for (var id in this.peers) {
-            var peer = this.peers[id]
-// TODO You can use `peer.timeout != 1` wherever you're using `peer.pinged`.
-            if ((peer.pinged || peer.timeout > 1) && peer.id != message.from)  {
+        for (var id in this.pings) {
+            var ping = this.pings[id]
+// TODO You can use `ping.timeout != 1` wherever you're using `ping.pinged`.
+            if ((ping.pinged || ping.timeout > 1) && ping.id != message.from)  {
                 responses.push({
                     type: 'pong',
-                    from: peer.id,
-                    timeout: peer.timeout,
-                    when: peer.when,
-                    naturalized: peer.naturalized,
-                    decided: peer.decided
+                    from: ping.id,
+                    timeout: ping.timeout,
+                    when: ping.when,
+                    naturalized: ping.naturalized,
+                    decided: ping.decided
                 })
             }
         }
     }
-    var peer = this.getPeer(message.from)
+    var ping = this.getPing(message.from)
 // TODO You've got some figuring to do; you went and made it so that synchronize
 // will sent a `pulse` with a `failed` flag set. If that was the only place you
 // where stuffing synchronize, you'd be done, but here you are. Are you going to
 // find yourself in the same situation returning.
-    if (pulse.type == 'synchronize' && Monotonic.compare(peer.decided, this.peers[this.id].decided) < 0) {
-        this._stuffSynchronize(now, this.getPeer(message.from), responses)
+    if (pulse.type == 'synchronize' && Monotonic.compare(ping.decided, this.pings[this.id].decided) < 0) {
+        this._stuffSynchronize(now, this.getPing(message.from), responses)
     }
 // TODO Are you setting/unsetting this correctly when you are collapsed?
     var resetWhenCollapse =
@@ -1006,7 +1005,7 @@ Legislator.prototype._enactGovernment = function (now, round) {
         var index = this.government.constituents.indexOf(this.government.exile)
         this.government.constituents.splice(index, 1)
         delete this.properties[this.government.exile]
-        delete this.peers[this.government.exile]
+        delete this.pings[this.government.exile]
     }
 
     if (this.id != this.government.majority[0]) {
@@ -1029,11 +1028,11 @@ Legislator.prototype._enactGovernment = function (now, round) {
         this.scheduler.schedule(now + this.ping, id, { object: this, method: '_whenPing' }, id)
     }, this)
 
-    // Reset peer tracking information. Leader behavior is different from other
-    // members. We clear out all peer information for peers who are not our
-    // immediate constituents. This will keep us from hoarding stale peer
+    // Reset ping tracking information. Leader behavior is different from other
+    // members. We clear out all ping information for ping who are not our
+    // immediate constituents. This will keep us from hoarding stale ping
     // records. When everyone performs this cleaning, we can then trust
-    // ourselves to return all peer information we've gathered to anyone that
+    // ourselves to return all ping information we've gathered to anyone that
     // pings us, knowing that it is all flowing from minority members to the
     // leader. We do not have to version the records, timestamp them, etc.
     //
@@ -1042,7 +1041,7 @@ Legislator.prototype._enactGovernment = function (now, round) {
     // citizen is no longer downstream from the majority member, that stale
     // record will not get updated, but it will be reported to the leader.
     //
-    // We keep peer information if we are the leader, since it all flows back to
+    // We keep ping information if we are the leader, since it all flows back to
     // the leader. All leader information will soon be updated. Not resetting
     // the leader during normal operation makes adjustments to citizenship go
     // faster.
@@ -1050,15 +1049,15 @@ Legislator.prototype._enactGovernment = function (now, round) {
                         .concat(this.government.minority)
                         .concat(this.government.constituents)
     if (this.id == this.government.majority[0]) {
-        for (var id in this.peers) {
+        for (var id in this.pings) {
             if (! ~this.citizens.indexOf(id)) {
-                delete this.peers[id]
+                delete this.pings[id]
             }
         }
     } else {
-        for (var id in this.peers) {
+        for (var id in this.pings) {
             if (this.id != id && ! ~this.constituency.indexOf(id)) {
-                delete this.peers[id]
+                delete this.pings[id]
             }
         }
     }
@@ -1070,8 +1069,8 @@ Legislator.prototype._whenCollapse = function () {
 }
 
 Legislator.prototype._naturalized = function (id) {
-    var peer = this.peers[id] || {}
-    return peer.naturalized && peer.timeout == 0
+    var ping = this.pings[id] || {}
+    return ping.naturalized && ping.timeout == 0
 }
 
 // TODO I don't believe I need to form a new government indicating that I've
@@ -1174,7 +1173,7 @@ Legislator.prototype._shrink = function () {
 }
 
 Legislator.prototype._timedout = function (id) {
-    return this.peers[id] && this.peers[id].timeout >= this.timeout
+    return this.pings[id] && this.pings[id].timeout >= this.timeout
 }
 
 Legislator.prototype._impeach = function () {
@@ -1201,13 +1200,13 @@ Legislator.prototype._exile = function () {
     this._trace('_exile', [])
     assert(!this.collapsed)
     var responsive = this.government.constituents.filter(function (id) {
-        return !this.peers[id] || this.peers[id].timeout < this.timeout
+        return !this.pings[id] || this.pings[id].timeout < this.timeout
     }.bind(this))
     if (responsive.length == this.government.constituents.length) {
         return null
     }
     var exiles = this.government.constituents.filter(function (id) {
-        return this.peers[id] && this.peers[id].timeout >= this.timeout
+        return this.pings[id] && this.pings[id].timeout >= this.timeout
     }.bind(this))
     return {
         quorum: this.government.majority,
