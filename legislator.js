@@ -1006,6 +1006,13 @@ Legislator.prototype._determineConstituency = function () {
 
 Legislator.prototype._enactGovernment = function (now, round) {
     this._trace('_enactGovernment', [ now, round ])
+
+    this.government.majority
+        .concat(this.government.minority)
+        .concat(this.government.constituents).forEach(function (id) {
+            this.scheduler.unschedule(id)
+        }, this)
+
     delete this.election
     this.collapsed = false
 
