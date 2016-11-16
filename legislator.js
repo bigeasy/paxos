@@ -1007,11 +1007,10 @@ Legislator.prototype._determineConstituency = function () {
 Legislator.prototype._enactGovernment = function (now, round) {
     this._trace('_enactGovernment', [ now, round ])
 
-    this.government.majority
-        .concat(this.government.minority)
-        .concat(this.government.constituents).forEach(function (id) {
-            this.scheduler.unschedule(id)
-        }, this)
+    // While we still have the previous government we clear out any timed events
+    // we might of set to fulfill out duties in the previous government. Note
+    // that we are more discriminating when clearing out the ping records.
+    this.citizens.forEach(function (id) { this.scheduler.unschedule(id) }, this)
 
     delete this.election
     this.collapsed = false
