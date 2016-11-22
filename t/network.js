@@ -4,43 +4,28 @@ function Network () {
     this.legislators = []
     this.failures = []
     this.time = 0
-    this.options = {
-        parliamentSize: 5,
-        ping: 1,
-        timeout: 3,
-        naturalized: true,
-        scheduler: { timerless: true }
-    }
 }
 
-Network.prototype.receive = function (legislator, outbox) {
-    if (outbox.length == 0) {
-        return false
-    }
-    var send = outbox.shift(), responses = {}
+Network.prototype.receive = function (legislator, send) {
+    var responses = {}
     send.route.forEach(function (id) {
         var legislator = this.legislators[id]
-        if (this.failures[id] != 'request' && this.failures[id] != 'isolate') {
+        if (responses[id] != 'request' && responses[id] != 'isolate') {
             responses[id] = legislator.receive(this.time, send, send.messages)
         }
-        if (this.failures[id] == 'response') {
+        if (responses[id] == 'response') {
             delete responses[id]
         }
     }, this)
     legislator.sent(this.time, send, responses)
-    return true
 }
 
 Network.prototype.send = function (legislator) {
-    var sent = false
-    var outbox = legislator.synchronize(this.time)
-    if (outbox.length == 0) {
-        var consensus = legislator.consensus(this.time)
-        if (consensus) {
-            outbox = [ consensus ]
-        }
-    }
-    while (this.receive(legislator, outbox)) {
+    var sent = false, message
+    while (legislator.consumer.head.next) {
+        legislator.consumer.head = legislator.consumer.head.next
+        message = legislator.consumer.head.value
+        this.receive(legislator, message)
         sent = true
     }
     return sent
@@ -71,7 +56,14 @@ Network.prototype.timeAndTick = function (count) {
 Network.prototype.addLegislators = function (count) {
     while (count-- != 0) {
         var id = String(this.legislators.length)
-        var legislator = new Legislator(id, this.options)
+        var legislator = new Legislator(id, {
+            parliamentSize: 5,
+            ping: 1,
+            timeout: 3,
+            naturalized: true,
+            consumer: true,
+            scheduler: { timerless: true }
+        })
         this.legislators.push(legislator)
         if (this.legislators.length == 1) {
             this.legislators[0].bootstrap(this.time, 1, { location: '0' })

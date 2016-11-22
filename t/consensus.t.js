@@ -1,4 +1,4 @@
-require('proof/redux')(21, prove)
+require('proof/redux')(19, prove)
 
 function prove (assert) {
     var Legislator = require('../legislator'), legislator
@@ -14,18 +14,16 @@ function prove (assert) {
         ping: 1,
         timeout: 3,
         naturalized: true,
-        scheduler: { timerless: true }
+        scheduler: { timerless: true },
+        consumer: true
     }
 
     var legislators = [ new Legislator('0', options) ]
     legislators[0].bootstrap(time, 1, { location: '0' })
 
-    function receive (legislator, outbox, failures) {
+    function receive (legislator, send, failures) {
         failures || (failures = {})
-        if (outbox.length == 0) {
-            return false
-        }
-        var send = outbox.shift(), responses = {}
+        var responses = {}
         send.route.forEach(function (id) {
             var legislator = legislators[id]
             if (failures[id] != 'request' && failures[id] != 'isolate') {
@@ -36,20 +34,15 @@ function prove (assert) {
             }
         })
         legislator.sent(time, send, responses)
-        return true
     }
 
     function send (legislator, failures) {
         failures || (failures = {})
-        var sent = false
-        var outbox = legislator.synchronize(time)
-        if (outbox.length == 0) {
-            var consensus = legislator.consensus(time)
-            if (consensus) {
-                outbox = [ consensus ]
-            }
-        }
-        while (receive(legislator, outbox, failures)) {
+        var sent = false, message
+        while (legislator.consumer.head.next) {
+            legislator.consumer.head = legislator.consumer.head.next
+            message = legislator.consumer.head.value
+            receive(legislator, message, failures)
             sent = true
         }
         return sent
@@ -131,8 +124,8 @@ function prove (assert) {
 
     assert(legislators[1].enqueue(time, 1, {}).leader, '0', 'post not leader')
 
-    legislators[0]._whenCollapse()
-    legislators[1]._whenCollapse()
+    legislators[0]._whenCollapse(time)
+    legislators[1]._whenCollapse(time)
 
     assert(!legislators[0].enqueue(time, 1, {}).enqueued, 'post collapsed')
 
@@ -196,6 +189,12 @@ function prove (assert) {
 
     tick()
 
+    time++
+    tick()
+
+    time++
+    tick()
+
     // TODO Always include exiles and naturalization empty and null by default.
     assert(legislators[0].government, {
         majority: [ '0', '1', '2' ],
@@ -204,14 +203,18 @@ function prove (assert) {
         promise: 'a/0'
     }, 'five member parliament')
 
+
     legislators[0].enqueue(time, 1, { type: 'enqueue', value: 3 })
 
-    legislators[1].collapse()
+    legislators[1].collapse(time)
 
     send(legislators[1])
 
-    var consensus = legislators[1].consensus(time)
+    legislators[1]._nudge(time)
 
+    tick({ 1: 'isolate' })
+
+    time++
     tick({ 1: 'isolate' })
 
     assert(legislators[0].government, {
@@ -220,15 +223,17 @@ function prove (assert) {
         constituents: [],
         promise: 'b/0'
     }, 'recover from isolation')
+    return
 
     time++
     legislators[2].scheduler.check(time)
     tick()
 
-    receive(legislators[1], [ consensus ])
+    receive(legislators[1], consensus)
+    return
 
     // Test inability to create new government because of lack of majority.
-    legislators[0].collapse()
+    legislators[0].collapse(time)
 
     assert(legislators[0].consensus(), null, 'cannot choose leaders')
 

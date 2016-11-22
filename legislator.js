@@ -3,6 +3,7 @@ var Monotonic = require('monotonic').asString
 var Scheduler = require('happenstance')
 var push = [].push
 var slice = [].slice
+var Procession = require('procession')
 var RBTree = require('bintrees').RBTree
 var logger = require('prolific.logger').createLogger('paxos')
 
@@ -19,6 +20,34 @@ function Legislator (id, options) {
     this.scheduler = new Scheduler(options.scheduler || {})
     this.synchronizing = {}
 
+    // This is the right data structure for the job. It is an array of proposals
+    // that can have at most one proposals for a new government, where that
+    // proposal is unshifted into the array and all the subsequent proposals
+    // have their promises remapped to the new government.
+    //
+    // Returning to this, I felt that it made no sense, just push the new
+    // governent onto the end of the array, but then you're moving toward scan
+    // the array for an existing government to assert that it is not there, or
+    // else queuing governments based on either the current government, or the
+    // last future government pushed onto the proposal array.
+    //
+    // Although it's not multi-dimensional, I see this structure in my mind as
+    // somehow ether dash shapped, an array of just proposals, or L shaped an
+    // array of proposals with a new government unshifted.
+    //
+    // Sometimes there's a scout leader, and sometimes there's not.
+    //
+    // But, the array is the correct structure. It makes the remapping easy.
+    //
+    // Governments jumping the gun is the right way to go, and here's how we
+    // prioritize them, by constantly unshifting only the next one onto the
+    // array.
+    //
+    // This means that there is a queue of awaiting governments. It is, however,
+    // implicit. We will review our current government when we create a new one,
+    // and when a ping changes the reachable state of a constituent. Recall that
+    // a new government is formed to immigrate or exile a citizen.
+    //
     this.proposals = []
     this.properties = {}
     this.immigrating = []
@@ -53,6 +82,9 @@ function Legislator (id, options) {
     this.operations = []
     this.citizens = []
     this.minimum = '0/0'
+
+    this.outbox = new Procession
+    this.consumer = options.consumer ? this.outbox.createConsumer() : null
 }
 
 Legislator.prototype._trace = function (method, vargs) {
@@ -76,6 +108,13 @@ Legislator.prototype.getPing = function (id) {
     return ping
 }
 
+// We are only ever supposed to call `newGovernment` when we are not in the
+// process of forming a new government. There is only ever supposed to be one in
+// process or in the queue. You'll notice that we call `newGovernment` during
+// bootstrap, during consensus selection and during collapse. Many decisions
+// about the new goverment are based on the current government, so we can't have
+// them queued up, unless we want to also maintain the latest version of the
+// government we hope to have someday, which offends my pragmatic sensibilities.
 Legislator.prototype.newGovernment = function (now, quorum, government, promise) {
     this._trace('newGovernment', [ now, quorum, government, promise ])
     assert(!government.constituents)
@@ -99,6 +138,7 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
         properties[government.immigrate.id].immigrated = promise
         government.constituents.push(government.immigrate.id)
     }
+    assert(this.proposals.length == 0 || !Monotonic.isBoundary(this.proposals[0].promise, 0))
     this.proposals.unshift({
         promise: promise,
         route: quorum,
@@ -163,7 +203,9 @@ Legislator.prototype._advanceElection = function (now) {
 // upon a consensus action before all of the synchronizations have been
 // returned.
     if (this.election.status == 'proposed') {
-        assert(this.election.accepts.length == this.election.promises.length)
+        if (this.election.accepts.length != this.election.promises.length) {
+            return
+        }
         this.collapsed = false
         return {
             type: 'consensus',
@@ -180,7 +222,7 @@ Legislator.prototype._advanceElection = function (now) {
         }
 // TODO We'll never see this, so we should just assert it. It would be marked
 // failed.
-    } else {
+    } else if (this.election.promises.length == this.election.majority.length) {
         assert(this.election.promises.length == this.election.majority.length)
         this.election.status = 'proposed'
         this.newGovernment(now, this.election.majority, {
@@ -242,7 +284,7 @@ Legislator.prototype._twoPhaseCommit = function (now) {
                 }
             }, Monotonic.increment(this.promise, 0))
             isGovernment = true
-        } else if (this.ponged) {
+        } else { // if (this.ponged) {
             var reshape = this._impeach() || this._expand() || this._shrink() || this._exile()
             if (reshape) {
                 this.newGovernment(now, reshape.quorum, reshape.government, Monotonic.increment(this.promise, 0))
@@ -272,17 +314,6 @@ Legislator.prototype._twoPhaseCommit = function (now) {
     var proposal = this.proposals.shift()
     if (proposal != null) {
         return this._stuffProposal(messages, proposal)
-    }
-
-    if (this.keepAlive) {
-        this.keepAlive = false
-        return {
-            type: 'consensus',
-            islandId: this.islandId,
-            governments: [ this.government.promise ],
-            route: this.government.majority,
-            messages: [ this._ping(now) ]
-        }
     }
 
     return null
@@ -325,14 +356,18 @@ Legislator.prototype._stuffProposal = function (messages, proposal) {
     }
 }
 
-Legislator.prototype.consensus = function (now) {
-    this._trace('consensus', [ now ])
+Legislator.prototype._nudge = function (now) {
+    assert(now != null)
+    this._trace('nudge', [ now ])
     var pulse = null
     if (!this.pulsing) {
         pulse = this._consensus(now)
         this.pulsing = !! pulse
     }
-    return pulse
+    if (pulse != null) {
+        this.outbox.push(pulse)
+    }
+    return this.pulsing
 }
 
 Legislator.prototype._stuffSynchronize = function (now, ping, messages) {
@@ -395,6 +430,8 @@ Legislator.prototype.synchronize = function (now) {
 // fires, we honor it, we don't double check that we should. We can however,
 // cancel the message, maybe have a version.
 //
+// TODO Wow. Stuffing as failed?
+//
         if ((ping.timeout != 0 || compare < 0) && !ping.skip && !this.synchronizing[id]) {
             this.synchronizing[id] = true
             var messages = []
@@ -438,7 +475,7 @@ Legislator.prototype.receive = function (now, pulse, messages) {
     return responses
 }
 
-Legislator.prototype.collapse = function () {
+Legislator.prototype.collapse = function (now) {
     this._trace('collapse', [])
 // TODO Combine into a single state flag.
     this.collapsed = true
@@ -452,12 +489,26 @@ Legislator.prototype.collapse = function () {
             delete this.pings[id]
         }
     }
+
+    // Cancel all timers.
+    this.citizens.forEach(function (id) { this.scheduler.unschedule(id) }, this)
+
     // Ping other parliament members until we can form a government.
+    //
+    // TODO Looks like constituency is not important in that it doesn't drive
+    // pings. Pings go from ping to timeout assertion to ping. Maybe double
+    // check eventually?
     this.constituency = this.government.majority
                                        .concat(this.government.minority)
                                        .filter(function (id) {
         return this.id != id
     }.bind(this))
+
+    this.constituency.forEach(function (id) {
+        this.scheduler.schedule(now, id, {
+            object: this, method: '_whenPing'
+        }, id)
+    }, this)
 }
 
 Legislator.prototype.sent = function (now, pulse, responses) {
@@ -483,12 +534,23 @@ Legislator.prototype.sent = function (now, pulse, responses) {
     if (success) {
         switch (pulse.type) {
         case 'synchronize':
-            delete this.synchronizing[pulse.route[0]]
-            this.scheduler.schedule(now + this.ping, pulse.route[0], { object: this, method: '_whenPing' }, pulse.route[0])
+            var pong = responses[pulse.route[0]].filter(function (message) {
+                return message.type == 'pong'
+            }).shift()
+            var delay = pong.decided == this.getPing(this.id).decided
+                      ? now + this.ping : now
+            this.scheduler.schedule(delay, pulse.route[0], {
+                object: this,
+                method: '_whenPing'
+            }, pulse.route[0])
             break
         case 'consensus':
-            this.scheduler.schedule(now + this.ping, this.id, { object: this, method: '_whenKeepAlive' })
-
+            if (!this._nudge(now)) {
+                this.scheduler.schedule(now + this.ping, this.id, {
+                    object: this,
+                    method: '_whenKeepAlive'
+                })
+            }
             if (this.id == this.government.majority[0]) {
                 this.getPing(this.id).pinged = true
                 this.getPing(this.id).decided = this.log.max().promise
@@ -508,7 +570,7 @@ Legislator.prototype.sent = function (now, pulse, responses) {
     } else {
         switch (pulse.type) {
         case 'consensus':
-            this.collapse()
+            this.collapse(now)
             break
         case 'synchronize':
             delete this.synchronizing[pulse.route[0]]
@@ -543,6 +605,7 @@ Legislator.prototype.bootstrap = function (now, islandId, properties) {
         majority: [ this.id ],
         minority: []
     }, '1/0')
+    this._nudge(now)
 }
 
 Legislator.prototype.join = function (cookie, islandId) {
@@ -682,6 +745,7 @@ Legislator.prototype.immigrate = function (now, islandId, id, cookie, properties
                 properties: properties,
                 cookie: cookie
             })
+            this._nudge(now)
             response = { enqueued: true, promise: null }
         }
     }
@@ -904,17 +968,34 @@ Legislator.prototype._pong = function (now) {
 
 Legislator.prototype._whenKeepAlive = function (now) {
     this._trace('_whenKeepAlive', [])
-    this.keepAlive = true
+    this.outbox.push({
+        type: 'consensus',
+        islandId: this.islandId,
+        governments: [ this.government.promise ],
+        route: this.government.majority,
+        messages: [ this._ping(now) ]
+    })
 }
 
 Legislator.prototype._whenPing = function (now, id) {
     this._trace('_whenPing', [ now, id ])
     var ping = this.getPing(id)
-// TODO Skip is so dubious.
-    ping.skip = false
     if (ping.timeout == 0) {
         ping.timeout = 1
     }
+    var compare = Monotonic.compare(this.getPing(id).decided, this.getPing(this.id).decided)
+    var messages = []
+    var pulse = {
+        type: 'synchronize',
+        islandId: this.islandId,
+        governments: [ this.government.promise ],
+        route: [ id ],
+        messages: messages,
+        failed: ! this._stuffSynchronize(now, ping, messages)
+    }
+    pulse.messages.push(this._pong(now))
+    pulse.messages.push(this._ping(now))
+    this.outbox.push(pulse)
 }
 
 Legislator.prototype._receivePong = function (now, pulse, message, responses) {
@@ -927,6 +1008,7 @@ Legislator.prototype._receivePong = function (now, pulse, message, responses) {
         ping.naturalized = message.naturalized
         ping.decided = message.decided
         ping.when = null
+        this._nudge(now)
     }
 }
 
@@ -1046,7 +1128,7 @@ Legislator.prototype._enactGovernment = function (now, round) {
     }
 
     this.constituency.forEach(function (id) {
-        this.scheduler.schedule(now + this.ping, id, { object: this, method: '_whenPing' }, id)
+        this.scheduler.schedule(now, id, { object: this, method: '_whenPing' }, id)
     }, this)
 
     // Reset ping tracking information. Leader behavior is different from other
@@ -1082,11 +1164,13 @@ Legislator.prototype._enactGovernment = function (now, round) {
             }
         }
     }
+
+    this._nudge(now)
 }
 
-Legislator.prototype._whenCollapse = function () {
+Legislator.prototype._whenCollapse = function (now) {
     this._trace('_whenCollapse', [])
-    this.collapse()
+    this.collapse(now)
 }
 
 Legislator.prototype._naturalized = function (id) {
