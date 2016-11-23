@@ -9,7 +9,6 @@ var logger = require('prolific.logger').createLogger('paxos')
 
 function Legislator (id, options) {
     assert(arguments.length == 2, 'only two arguments now')
-    options || (options = {})
 
     this.id = String(id)
     this.naturalized = !! options.naturalized
