@@ -230,7 +230,6 @@ function prove (assert) {
     tick()
 
     receive(legislators[1], consensus)
-    return
 
     // Test inability to create new government because of lack of majority.
     legislators[0].collapse(time)

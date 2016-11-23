@@ -10,7 +10,7 @@ Network.prototype.receive = function (legislator, send) {
     var responses = {}
     send.route.forEach(function (id) {
         var legislator = this.legislators[id]
-        if (responses[id] != 'request' && responses[id] != 'isolate') {
+        if (this.failures[id] != 'request' && this.failures[id] != 'isolate') {
             responses[id] = legislator.receive(this.time, send, send.messages)
         }
         if (responses[id] == 'response') {

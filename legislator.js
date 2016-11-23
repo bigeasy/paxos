@@ -222,7 +222,7 @@ Legislator.prototype._advanceElection = function (now) {
         }
 // TODO We'll never see this, so we should just assert it. It would be marked
 // failed.
-    } else if (this.election.promises.length == this.election.majority.length) {
+    } else {
         assert(this.election.promises.length == this.election.majority.length)
         this.election.status = 'proposed'
         this.newGovernment(now, this.election.majority, {
