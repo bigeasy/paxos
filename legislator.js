@@ -403,53 +403,6 @@ Legislator.prototype._stuffSynchronize = function (now, ping, messages) {
     return true
 }
 
-Legislator.prototype.synchronize = function (now) {
-    this._trace('synchronize', [ now ])
-    var outbox = []
-    for (var i = 0, I = this.constituency.length; i < I; i++) {
-        var id = this.constituency[i]
-        var ping = this.getPing(id)
-        var compare = Monotonic.compare(this.getPing(id).decided, this.getPing(this.id).decided)
-// TODO Extract this so I can send it back with pong in response to ping.
-//
-// TODO What is skip? Why do I need it?
-//
-// TODO Can I remove the need to track skip and synchronize? Add state to the
-// pulse so that I don't have to track it in the Legislator?
-// TODO Is `synchronizing` going to unset by a network request after an exile?
-//
-// TODO Obviously, I've tacked on a handful of reasons not to ping one at time
-// into the ping record. Must workout the details of a binary condition, when to
-// we synchronize, when do we not?
-//
-// TODO It appears that if we are synced and not timed out, we don't ping, so
-// we're not going to detect a lost constituent when we are stable.
-//
-// TODO Essentially, we want to have a synchornize event scheduled and when it
-// fires, we honor it, we don't double check that we should. We can however,
-// cancel the message, maybe have a version.
-//
-// TODO Wow. Stuffing as failed?
-//
-        if ((ping.timeout != 0 || compare < 0) && !ping.skip && !this.synchronizing[id]) {
-            this.synchronizing[id] = true
-            var messages = []
-            var pulse = {
-                type: 'synchronize',
-                islandId: this.islandId,
-                governments: [ this.government.promise ],
-                route: [ id ],
-                messages: messages,
-                failed: ! this._stuffSynchronize(now, ping, messages)
-            }
-            pulse.messages.push(this._pong(now))
-            pulse.messages.push(this._ping(now))
-            outbox.push(pulse)
-        }
-    }
-    return outbox
-}
-
 Legislator.prototype._pushEnactments = function (messages, round, count) {
     while (--count && round) {
         messages.push({
