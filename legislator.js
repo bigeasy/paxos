@@ -83,7 +83,7 @@ function Legislator (id, options) {
     this.minimum = '0/0'
 
     this.outbox = new Procession
-    this.consumer = options.consumer ? this.outbox.createConsumer() : null
+    this.consumer = options.consumer ? this.outbox.async() : null
 }
 
 Legislator.prototype._trace = function (method, vargs) {
