@@ -471,6 +471,7 @@ Legislator.prototype.sent = function (now, pulse, responses) {
 // TODO Sense that it is easier to keep an array of governments from and to that
 // might have a duplicate government, but it's just a sense, and as I write
 // this, I sense that it is wrong.
+// TODO The cryptic message above requires an attempt to decypher.
     if (!~pulse.governments.indexOf(this.government.promise)) {
         return
     }
@@ -503,20 +504,24 @@ Legislator.prototype.sent = function (now, pulse, responses) {
                     method: '_whenKeepAlive'
                 })
             }
-            if (this.id == this.government.majority[0]) {
-                this.getPing(this.id).pinged = true
-                this.getPing(this.id).decided = this.log.max().promise
-                this.minimum = this.citizens.reduce(function (minimum, citizen) {
-                    if (minimum == null) {
-                        return null
-                    }
-                    var ping = this.getPing(citizen)
-                    if (!ping.pinged) {
-                        return null
-                    }
-                    return Monotonic.compare(ping.decided, minimum) < 0 ? ping.decided : minimum
-                }.bind(this), this.log.max().promise) || this.minimum
-            }
+            // You might feel a need to guard this so that only the leader runs
+            // it, but it works of anyone runs it. If they have a ping for every
+            // citizen, they'll calculate a minimum less than or equal to the
+            // minimum calculated by the actual leader. If not they do not have
+            // a ping record for every citizen, they'll continue to use their
+            // current minimum.
+            this.getPing(this.id).pinged = true
+            this.getPing(this.id).decided = this.log.max().promise
+            this.minimum = this.citizens.reduce(function (minimum, citizen) {
+                if (minimum == null) {
+                    return null
+                }
+                var ping = this.getPing(citizen)
+                if (!ping.pinged) {
+                    return null
+                }
+                return Monotonic.compare(ping.decided, minimum) < 0 ? ping.decided : minimum
+            }.bind(this), this.log.max().promise) || this.minimum
             break
         }
     } else {
