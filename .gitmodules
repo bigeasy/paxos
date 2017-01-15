@@ -1,0 +1,6 @@
+[submodule "vendor/lesshat"]
+	path = vendor/lesshat
+	url = https://github.com/madebysource/lesshat.git
+[submodule "source"]
+	path = source
+	url = git@github.com:bigeasy/paxos.git

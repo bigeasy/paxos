@@ -1,18 +1,21 @@
 <!DOCTYPE html>
 <html>
-<meta charset="utf-8">
-<title>y Paxos</title>
-<link rel="stylesheet" type="text/css" href="css/ascetic.css">
-<link rel="stylesheet" type="text/css" href="css/paxos.css">
-
-<body><a href="https://github.com/bigeasy/paxos/"><img style="position: absolute; top: 0; left: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_left_gray_6d6d6d.png" alt="Fork me on GitHub"></a><div class="container">
-
-<div class="unit welcome">
-<h1>Paxos!
-</h1></div>
-
-<!-- TODO Include Highlight.js stylesheet. -->
-<div class="unit description markdown"><p>A replayable, deterministic implemenation of Paxos.</p>
+  <meta charset="utf-8">
+  <title>Operation</title>
+  <!-- <link href='http://fonts.googleapis.com/css?family=Parisienne|Oxygen+Mono|PT+Mono|Offside|Nova+Mono|Averia+Serif+Libre|Alex+Brush|Autour+One|Share+Tech+Mono|Merriweather|Maven+Pro|Raleway' rel='stylesheet' type='text/css'>-->
+  <!-- todo: why doesn't fork me float?-->
+  <link href="https://fonts.googleapis.com/css?family=Cutive+Mono|Sorts+Mill+Goudy|Mate|Oxygen+Mono|Offside|Raleway:400,700" rel="stylesheet" type="text/css">
+  <link href="https://fonts.googleapis.com/css?family=Sorts+Mill+Goudy">
+  <link rel="stylesheet" type="text/css" href="css/ascetic.css">
+  <link rel="stylesheet" type="text/css" href="css/style.css">
+</html>
+<body><a href="https://github.com/bigeasy/operation/"><img style="position: fixed; top: 0; left: 0; border: 0" src="https://s3.amazonaws.com/github/ribbons/forkme_left_gray_6d6d6d.png" alt="Fork me on GitHub"></a>
+  <div class="container">
+    <div class="unit welcome">
+      <h1>Operation</h1>
+      <!-- todo: code font is too small for body text font-->
+    </div>
+    <div class="unit description markdown include" data-file="index.md"><p>A replayable, deterministic implemenation of Paxos.</p>
 <p>Sketch of what to say.</p>
 <ul>
 <li>Reproducable events for unit testing, but still a true Paxos.</li>
@@ -42,17 +45,16 @@ of the island.</p>
 majority members, an array of minority members and an array of constituents.</p>
 <p><code>Legislator.outbox()</code> ~ Returns the next outbound pulse.</p>
 <p><code>Legislator.sent(TK)</code> ~ Reports the results of a pulse.</p>
-</div> <!-- markdown -->
-
-</div> <!-- container -->
+</div>
+  </div>
+  <!-- todo: move into an edify plugin-->
+  <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+    (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+    m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+    ga('create', 'UA-20388260-3', 'bigeasy.github.io');
+    ga('send', 'pageview');
+  </script>
 </body>
-<script>
-(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
-
-ga('create', 'UA-20388260-3', 'bigeasy.github.io');
-ga('send', 'pageview');
-</script>
-</html>
+<!-- vim: set ts=2 sw=2 nowrap:-->

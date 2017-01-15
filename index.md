@@ -1,18 +1,3 @@
-<!DOCTYPE html>
-<html>
-<meta charset="utf-8">
-<title>y Paxos</title>
-<link rel="stylesheet" type="text/css" href="css/ascetic.css">
-<link rel="stylesheet" type="text/css" href="css/paxos.css">
-
-<body><a href="https://github.com/bigeasy/paxos/"><img style="position: absolute; top: 0; left: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_left_gray_6d6d6d.png" alt="Fork me on GitHub"></a><div class="container">
-
-<div class="unit welcome">
-<h1>Paxos!</h3>
-</div>
-
-<!-- TODO Include Highlight.js stylesheet. -->
-<div class="unit description markdown">
 A replayable, deterministic implemenation of Paxos.
 
 Sketch of what to say.
@@ -55,18 +40,3 @@ majority members, an array of minority members and an array of constituents.
 `Legislator.outbox()` ~ Returns the next outbound pulse.
 
 `Legislator.sent(TK)` ~ Reports the results of a pulse.
-
-</div> <!-- markdown -->
-
-</div> <!-- container -->
-</body>
-<script>
-(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
-
-ga('create', 'UA-20388260-3', 'bigeasy.github.io');
-ga('send', 'pageview');
-</script>
-</html>
