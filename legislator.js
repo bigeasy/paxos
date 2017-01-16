@@ -4,7 +4,6 @@ var Scheduler = require('happenstance')
 var push = [].push
 var slice = [].slice
 var Procession = require('procession')
-var RBTree = require('bintrees').RBTree
 var logger = require('prolific.logger').createLogger('paxos')
 
 function Legislator (id, options) {
@@ -15,7 +14,7 @@ function Legislator (id, options) {
 
     this.parliamentSize = options.parliamentSize || 5
 
-    this.log = new RBTree(function (a, b) { return Monotonic.compare(a.promise, b.promise) })
+    this._log = new Procession
     this.scheduler = new Scheduler(options.scheduler || {})
     this.synchronizing = {}
 
@@ -69,13 +68,14 @@ function Legislator (id, options) {
     this.ping = options.ping || 1
     this.timeout = options.timeout || 3
 
-    this.log.insert({
+    this._log.push({
         promise: '0/0',
         value: { government: this.government },
         quorum: [ this.id ],
         decisions: [ this.id ],
         decided: true
     })
+    this.least = this._log.consumer()
 
     this.constituency = []
     this.operations = []
@@ -83,7 +83,7 @@ function Legislator (id, options) {
     this.minimum = '0/0'
 
     this.outbox = new Procession
-    this.consumer = options.consumer ? this.outbox.async() : null
+    this.consumer = options.consumer ? this.outbox.consumer() : null
 }
 
 Legislator.prototype._trace = function (method, vargs) {
@@ -332,12 +332,19 @@ Legislator.prototype._consensus = function (now) {
     return this._twoPhaseCommit(now)
 }
 
+Legislator.prototype._findRound = function (sought) {
+    var iterator = this.least.head
+    while (sought != iterator.value.promise) {
+        iterator = iterator.next
+    }
+    return iterator
+}
+
 Legislator.prototype._stuffProposal = function (messages, proposal) {
     proposal.route.slice(1).forEach(function (id) {
         var ping = this.getPing(id)
         assert(ping.pinged)
-        var round = this.log.find({ promise: ping.decided }).next
-        this._pushEnactments(messages, round, -1)
+        this._pushEnactments(messages, this._findRound(ping.decided), -1)
     }, this)
     var previous = this.collapsed ? this.accepted : null
     messages.push({
@@ -370,47 +377,45 @@ Legislator.prototype._nudge = function (now) {
 }
 
 Legislator.prototype._stuffSynchronize = function (now, ping, messages) {
-    var count = 20
-    var maximum = ping.decided
     if (ping.pinged) {
-        var round
+        var iterator
+
         if (ping.decided == '0/0') {
-            var iterator = this.log.iterator()
+            iterator = this.least.head
             for (;;) {
-                round = iterator.prev()
 // TODO This will abend if the naturalization falls off the end end of the log.
 // You need to check for gaps and missing naturalizations and then timeout the
 // constituents that will never be connected.
-                // assert(round, 'cannot find immigration')
-                if (round == null) {
+                if (iterator == null) {
                     return false
                 }
-                if (Monotonic.isBoundary(round.promise, 0)) {
-                    var immigrate = round.value.government.immigrate
+                // assert(round, 'cannot find immigration')
+                if (Monotonic.isBoundary(iterator.value.promise, 0)) {
+                    var immigrate = iterator.value.value.government.immigrate
                     if (immigrate && immigrate.id == ping.id) {
-                        maximum = round.promise
                         break
                     }
                 }
+                iterator = iterator.next
             }
         } else {
 // TODO Got a read property of null here.
-            round = this.log.find({ promise: maximum }).next
+            iterator = this._findRound(ping.decided)
         }
 
-        this._pushEnactments(messages, round, count)
+        this._pushEnactments(messages, iterator, 20)
     }
     return true
 }
 
-Legislator.prototype._pushEnactments = function (messages, round, count) {
-    while (--count && round) {
+Legislator.prototype._pushEnactments = function (messages, iterator, count) {
+    while (--count && iterator != null) {
         messages.push({
             type: 'enact',
-            promise: round.promise,
-            value: round.value
+            promise: iterator.value.promise,
+            value: iterator.value.value
         })
-        round = round.next
+        iterator = iterator.next
     }
 }
 
@@ -504,6 +509,8 @@ Legislator.prototype.sent = function (now, pulse, responses) {
                     method: '_whenKeepAlive'
                 })
             }
+            // Determine the minimum log entry promise.
+            //
             // You might feel a need to guard this so that only the leader runs
             // it, but it works of anyone runs it. If they have a ping for every
             // citizen, they'll calculate a minimum less than or equal to the
@@ -511,7 +518,7 @@ Legislator.prototype.sent = function (now, pulse, responses) {
             // a ping record for every citizen, they'll continue to use their
             // current minimum.
             this.getPing(this.id).pinged = true
-            this.getPing(this.id).decided = this.log.max().promise
+            this.getPing(this.id).decided = this._log.head.value.promise
             this.minimum = this.citizens.reduce(function (minimum, citizen) {
                 if (minimum == null) {
                     return null
@@ -521,7 +528,7 @@ Legislator.prototype.sent = function (now, pulse, responses) {
                     return null
                 }
                 return Monotonic.compare(ping.decided, minimum) < 0 ? ping.decided : minimum
-            }.bind(this), this.log.max().promise) || this.minimum
+            }.bind(this), this._log.head.value.promise) || this.minimum
             break
         }
     } else {
@@ -851,7 +858,7 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
 
     message = JSON.parse(JSON.stringify(message))
 
-    var max = this.log.max()
+    var max = this._log.head.value
 
     // TODO Since we only ever increment by one, this could be more assertive
     // for the message number. However, I have to stop and recall whether we
@@ -882,9 +889,9 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
         valid = max.promise == '0/0' && message.promise == '1/0'
     }
     if (!valid) {
-        assert(this.log.size == 1)
+        // assert(this.log.size == 1)
         valid = Monotonic.isBoundary(message.promise, 0)
-        valid = valid && this.log.min().promise == '0/0'
+        valid = valid && this.least.head.value.promise == '0/0'
         valid = valid && message.value.government.immigrate
         valid = valid && message.value.government.immigrate.id == this.id
         valid = valid && message.value.government.immigrate.cookie == this.cookie
@@ -897,7 +904,7 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
 // TODO How crufy are these log entries? What else is lying around in them?
     max.next = message
     message.previous = max.promise
-    this.log.insert(message)
+    this._log.push(message)
 // Forever bombing out our latest promise.
     this.promise = message.promise
 

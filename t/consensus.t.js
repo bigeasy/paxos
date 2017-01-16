@@ -1,4 +1,4 @@
-require('proof/redux')(19, prove)
+require('proof/redux')(22, prove)
 
 function prove (assert) {
     var Legislator = require('../legislator'), legislator
@@ -100,7 +100,8 @@ function prove (assert) {
         promise: '2/0'
     }, 'leader and constituent pair')
 
-    assert(legislators[1].log.size, 2, 'synchronized')
+    assert(legislators[1].least.head.next.value.promise, '2/0', 'synchronized')
+    assert(legislators[1]._log.head.value.promise, '2/0', 'synchronized')
     assert(legislators[1].properties, {
         '0': { location: '0', immigrated: '1/0' },
         '1': { location: '1', immigrated: '2/0' }
@@ -120,7 +121,8 @@ function prove (assert) {
         promise: '4/0'
     }, 'three member parliament')
 
-    assert(legislators[2].log.size, 4, 'synchronized')
+    assert(legislators[2].least.head.next.value.promise, '3/0', 'synchronized least')
+    assert(legislators[2]._log.head.value.promise, '4/0', 'synchronized')
 
     assert(legislators[1].enqueue(time, 1, {}).leader, '0', 'post not leader')
 
@@ -172,11 +174,12 @@ function prove (assert) {
 
     while (send(legislators[0]));
 
-    assert(legislators[3].log.size, 1, 'log before naturalization')
+    assert(legislators[3]._log.head.value.promise, '0/0', 'log before naturalization')
 
     tick()
 
-    assert(legislators[3].log.size, 4, 'log after naturalization')
+    assert(legislators[3].least.head.next.value.promise, '6/0', 'log after naturalization')
+    assert(legislators[3]._log.head.value.promise, '7/1', 'log after naturalization')
 
     legislators[0].enqueue(time, 1, { type: 'enqueue', value: 2 })
     legislators[0].enqueue(time, 1, { type: 'enqueue', value: 3 })
