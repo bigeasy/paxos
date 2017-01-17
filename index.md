@@ -40,3 +40,34 @@ majority members, an array of minority members and an array of constituents.
 `Legislator.outbox()` ~ Returns the next outbound pulse.
 
 `Legislator.sent(TK)` ~ Reports the results of a pulse.
+
+## Notes
+
+We can add an integer counter to the nodes. Integer so that it is fast. It will
+have to wrap. This makes for a size limit of 4,294,967,296. Limits are
+disheartening, but visibility means that we'll be able to be aware of the limits
+and set alarms before those limits are reached.
+
+The limit is due to the fact that counter will wrap to keep it within 32-bits,
+which is fast. We could benchmark comparisons with floats and integers and see
+if we're willing to not care.
+
+We introduce the concept of heft to Procession so that developers can assign
+their own limits.
+
+The counter wraps. Hence the limit. That is the limit of the queue's contents,
+not the limit of the queue's lifetime traffic.
+
+Synchronous iteration is done with a simple linked list iterator. Perhaps I
+invite the users to iterate on their own with nodes. Then they can promote the
+nodes to consumers.
+
+Iterators can be manipulated directly. They can be promoted to consumers. They
+are not tracked like consumers. Instead, we mark the nodes as `shifted` when
+the last consumer shifts them. We assert that a node is not shifted when our
+dear user upgrades a node to a consumer.
+
+With this number we can have visibility, counting the maximum held in the queue.
+We can also have optional search. Actually, both heft and search can be
+implemented using a listener object that has a method for adding and removing
+a node.
