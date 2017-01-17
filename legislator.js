@@ -14,7 +14,7 @@ function Legislator (id, options) {
 
     this.parliamentSize = options.parliamentSize || 5
 
-    this._log = new Procession
+    this.log = new Procession
     this.scheduler = new Scheduler(options.scheduler || {})
     this.synchronizing = {}
 
@@ -68,14 +68,14 @@ function Legislator (id, options) {
     this.ping = options.ping || 1
     this.timeout = options.timeout || 3
 
-    this._log.push({
+    this.log.push({
         promise: '0/0',
         value: { government: this.government },
         quorum: [ this.id ],
         decisions: [ this.id ],
         decided: true
     })
-    this.least = this._log.consumer()
+    this.least = this.log.consumer()
 
     this.constituency = []
     this.operations = []
@@ -518,7 +518,7 @@ Legislator.prototype.sent = function (now, pulse, responses) {
             // a ping record for every citizen, they'll continue to use their
             // current minimum.
             this.getPing(this.id).pinged = true
-            this.getPing(this.id).decided = this._log.head.value.promise
+            this.getPing(this.id).decided = this.log.head.value.promise
             this.minimum = this.citizens.reduce(function (minimum, citizen) {
                 if (minimum == null) {
                     return null
@@ -528,7 +528,7 @@ Legislator.prototype.sent = function (now, pulse, responses) {
                     return null
                 }
                 return Monotonic.compare(ping.decided, minimum) < 0 ? ping.decided : minimum
-            }.bind(this), this._log.head.value.promise) || this.minimum
+            }.bind(this), this.log.head.value.promise) || this.minimum
             break
         }
     } else {
@@ -858,7 +858,7 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
 
     message = JSON.parse(JSON.stringify(message))
 
-    var max = this._log.head.value
+    var max = this.log.head.value
 
     // TODO Since we only ever increment by one, this could be more assertive
     // for the message number. However, I have to stop and recall whether we
@@ -904,7 +904,7 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
 // TODO How crufy are these log entries? What else is lying around in them?
     max.next = message
     message.previous = max.promise
-    this._log.push(message)
+    this.log.push(message)
 // Forever bombing out our latest promise.
     this.promise = message.promise
 

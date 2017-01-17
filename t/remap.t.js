@@ -13,6 +13,6 @@ function prove (assert) {
         constituents: [ '3' ],
         promise: '5/0'
     }, 'immigrate')
-    assert(network.legislators[0]._log.head.value.promise, '5/1', 'enqueued')
+    assert(network.legislators[0].log.head.value.promise, '5/1', 'enqueued')
     assert(network.legislators[0]._findRound('5/0').value.value.map, [ { was: '4/1', is: '5/1' } ], 'remapped')
 }
