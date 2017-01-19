@@ -3,6 +3,7 @@ var Monotonic = require('monotonic').asString
 var Scheduler = require('happenstance')
 var push = [].push
 var slice = [].slice
+var Index = require('procession/index')
 var Procession = require('procession')
 var logger = require('prolific.logger').createLogger('paxos')
 
@@ -15,6 +16,11 @@ function Legislator (id, options) {
     this.parliamentSize = options.parliamentSize || 5
 
     this.log = new Procession
+    this.log.addListener(this.index = new Index(function (left, right) {
+        assert(left && right)
+        assert(left.value.promise && right.value.promise)
+        return Monotonic.compare(left.value.promise, right.value.promise)
+    }))
     this.scheduler = new Scheduler(options.scheduler || {})
     this.synchronizing = {}
 
@@ -68,13 +74,6 @@ function Legislator (id, options) {
     this.ping = options.ping || 1
     this.timeout = options.timeout || 3
 
-    this.log.push({
-        promise: '0/0',
-        value: { government: this.government },
-        quorum: [ this.id ],
-        decisions: [ this.id ],
-        decided: true
-    })
     this.least = this.log.consumer()
 
     this.constituency = []
@@ -84,6 +83,16 @@ function Legislator (id, options) {
 
     this.outbox = new Procession
     this.consumer = options.consumer ? this.outbox.consumer() : null
+}
+
+Legislator.prototype._begin = function () {
+    this.log.push({
+        promise: '0/0',
+        value: { government: this.government },
+        quorum: [ this.id ],
+        decisions: [ this.id ],
+        decided: true
+    })
 }
 
 Legislator.prototype._trace = function (method, vargs) {
@@ -333,11 +342,7 @@ Legislator.prototype._consensus = function (now) {
 }
 
 Legislator.prototype._findRound = function (sought) {
-    var iterator = this.least.head
-    while (sought != iterator.value.promise) {
-        iterator = iterator.next
-    }
-    return iterator
+    return this.index.tree.find({ value: { promise: sought } })
 }
 
 Legislator.prototype._stuffProposal = function (messages, proposal) {
@@ -381,7 +386,7 @@ Legislator.prototype._stuffSynchronize = function (now, ping, messages) {
         var iterator
 
         if (ping.decided == '0/0') {
-            iterator = this.least.head
+            iterator = this.least.node.next
             for (;;) {
 // TODO This will abend if the naturalization falls off the end end of the log.
 // You need to check for gaps and missing naturalizations and then timeout the
@@ -559,6 +564,7 @@ Legislator.prototype.sent = function (now, pulse, responses) {
 
 Legislator.prototype.bootstrap = function (now, islandId, properties) {
     this._trace('bootstrap', [ now, islandId, properties ])
+    this._begin()
     // Update current state as if we're already leader.
     this.naturalize()
     this.islandId = islandId
@@ -574,6 +580,7 @@ Legislator.prototype.bootstrap = function (now, islandId, properties) {
 
 Legislator.prototype.join = function (cookie, islandId) {
     this._trace('join', [ cookie, islandId ])
+    this._begin()
     this.cookie = cookie
     this.islandId = islandId
 }
@@ -891,7 +898,7 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
     if (!valid) {
         // assert(this.log.size == 1)
         valid = Monotonic.isBoundary(message.promise, 0)
-        valid = valid && this.least.head.value.promise == '0/0'
+        valid = valid && this.least.peek().promise == '0/0'
         valid = valid && message.value.government.immigrate
         valid = valid && message.value.government.immigrate.id == this.id
         valid = valid && message.value.government.immigrate.cookie == this.cookie

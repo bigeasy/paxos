@@ -39,9 +39,8 @@ function prove (assert) {
     function send (legislator, failures) {
         failures || (failures = {})
         var sent = false, message
-        while (legislator.consumer.head.next) {
-            legislator.consumer.head = legislator.consumer.head.next
-            message = legislator.consumer.head.value
+        while (legislator.consumer.peek()) {
+            message = legislator.consumer.shift()
             receive(legislator, message, failures)
             sent = true
         }
@@ -100,7 +99,7 @@ function prove (assert) {
         promise: '2/0'
     }, 'leader and constituent pair')
 
-    assert(legislators[1].least.head.next.value.promise, '2/0', 'synchronized')
+    assert(legislators[1].least.node.next.peek().promise, '2/0', 'synchronized')
     assert(legislators[1].log.head.value.promise, '2/0', 'synchronized')
     assert(legislators[1].properties, {
         '0': { location: '0', immigrated: '1/0' },
@@ -121,7 +120,7 @@ function prove (assert) {
         promise: '4/0'
     }, 'three member parliament')
 
-    assert(legislators[2].least.head.next.value.promise, '3/0', 'synchronized least')
+    assert(legislators[2].least.node.next.peek().promise, '3/0', 'synchronized least')
     assert(legislators[2].log.head.value.promise, '4/0', 'synchronized')
 
     assert(legislators[1].enqueue(time, 1, {}).leader, '0', 'post not leader')
@@ -178,7 +177,7 @@ function prove (assert) {
 
     tick()
 
-    assert(legislators[3].least.head.next.value.promise, '6/0', 'log after naturalization')
+    assert(legislators[3].least.node.next.peek().promise, '6/0', 'log after naturalization')
     assert(legislators[3].log.head.value.promise, '7/1', 'log after naturalization')
 
     legislators[0].enqueue(time, 1, { type: 'enqueue', value: 2 })
