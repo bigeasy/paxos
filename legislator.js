@@ -634,6 +634,7 @@ Legislator.prototype.enqueue = function (now, islandId, message) {
             route: this.government.majority,
             value: message
         })
+        this._nudge(now)
 
         response = {
             enqueued: true,
