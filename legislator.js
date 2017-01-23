@@ -131,11 +131,12 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
             && !~government.minority.indexOf(citizen)
     })
 // TODO Creating this reissue, but then I'm never using it.
-    var remapped = government.promise = promise
+    var remapped = government.promise = promise, map = {}
     this.proposals = this.proposals.splice(0, this.proposals.length).map(function (proposal) {
         proposal.was = proposal.promise
         proposal.route = government.majority
         proposal.promise = remapped = Monotonic.increment(remapped, 1)
+        map[proposal.was] = proposal.promise
         return proposal
     }.bind(this))
     this.lastIssued = remapped
@@ -159,10 +160,7 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
 // TODO Null map to indicate collapse or change in leadership. Wait, change in
 // leader is only ever collapse? Ergo...
             collapsed: this.collapsed,
-// There was a time when I wanted to allow the user to choose leaders.
-            map: this.proposals.map(function (proposal) {
-                return { was: proposal.was, is: proposal.promise }
-            })
+            map: this.collapsed ? null : map
         }
     })
 }
