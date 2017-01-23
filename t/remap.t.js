@@ -5,6 +5,7 @@ function prove (assert) {
     var network = new Network
     network.addLegislators(3)
     network.legislators[0].enqueue(network.time, 1, { type: 'enqueue', value: 1 })
+    network.legislators[0].enqueue(network.time, 1, { type: 'enqueue', value: 2 })
     network.addLegislators(1)
     assert(network.legislators[0].government, {
         majority: [ '0', '1' ],
@@ -14,5 +15,5 @@ function prove (assert) {
         promise: '5/0'
     }, 'immigrate')
     assert(network.legislators[0].log.head.value.promise, '5/1', 'enqueued')
-    assert(network.legislators[0]._findRound('5/0').value.value.map, [ { was: '4/1', is: '5/1' } ], 'remapped')
+    assert(network.legislators[0]._findRound('5/0').value.value.map, [ { was: '4/2', is: '5/1' } ], 'remapped')
 }

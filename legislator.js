@@ -376,6 +376,7 @@ Legislator.prototype._nudge = function (now) {
         this.pulsing = !! pulse
     }
     if (pulse != null) {
+        this.scheduler.unschedule(this.id)
         this.outbox.push(pulse)
     }
     return this.pulsing
