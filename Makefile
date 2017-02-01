@@ -43,10 +43,12 @@ export CHROME_REFRESH
 PATH  := "$(PATH):$(PWD)/node_modules/.bin"
 SHELL := env PATH=$(PATH) /bin/sh
 
-docco := $(patsubst source/%.js,docco/%.html,$(wildcard source/*.js))
-sources := $(docco) css/style.css index.html
+javascript := $(filter-out ../_%, $(wildcard ../*.js))
+sources := $(patsubst ../%.js,source/%.js.js,$(javascript))
+docco := $(patsubst source/%.js.js,docco/%.js.html,$(sources))
+outputs := $(docco) css/style.css index.html
 
-all: $(sources)
+all: $(outputs)
 
 node_modules/.bin/docco:
 	mkdir -p node_modules
@@ -66,7 +68,7 @@ node_modules/.bin/edify:
 	npm install less edify edify.pug edify.markdown edify.highlight edify.include
 
 watch: all
-	fswatch --exclude '.' --include '\.pug$$' --include '\.less$$' --include '\.md$$' --include '\.js$$' pages css source *.md | while read line; \
+	fswatch --exclude '.' --include '\.pug$$' --include '\.less$$' --include '\.md$$' --include '\.js$$' pages css $(javascript) *.md | while read line; \
 	do \
 		make --no-print-directory all; \
 		osascript -e "$$CHROME_REFRESH"; \
@@ -75,10 +77,15 @@ watch: all
 css/%.css: css/%.less node_modules/.bin/lessc
 	node_modules/.bin/lessc $< > $@ || rm -f $@
 
-docco/%.html: source/%.js node_modules/.bin/docco
+source/%.js.js: ../%.js
+	mkdir -p source
+	cp $< $@
+
+$(docco): $(sources) node_modules/.bin/docco
 	mkdir -p docco
-	node_modules/.bin/docco -o docco -c docco.css source/*.js
-	sed -i '' -e 's/[ \t]*$$//' docco/*.html
+	node_modules/.bin/docco -o docco -c docco.css source/*.js.js
+	sed -i '' -e 's/[ \t]*$$//' docco/*.js.html
+	sed -i '' -e 's/\.js\.js/.js/' docco/*.js.html
 
 index.html: index.md
 
@@ -90,7 +97,10 @@ index.html: index.md
 	    node node_modules/.bin/edify highlight --select '.lang-javascript' --language 'javascript') < $< > $@
 
 clean:
-	rm -f $(sources)
+	rm -f $(outputs)
 
+# Use `--no-less` or else Serve will compile our less minified.
 serve: node_modules/.bin/serve
-	node_modules/.bin/serve -p 4000
+	node_modules/.bin/serve --no-less --port 4000
+
+.INTERMEDIATE: $(sources)

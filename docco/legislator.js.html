@@ -20,12 +20,12 @@
             <div id="jump_page">
 
 
-                <a class="source" href="legislator.html">
+                <a class="source" href="legislator.js.html">
                   legislator.js
                 </a>
 
 
-                <a class="source" href="replay.html">
+                <a class="source" href="replay.js.html">
                   replay.js
                 </a>
 
@@ -58,8 +58,8 @@
 <span class="hljs-keyword">var</span> Scheduler = <span class="hljs-built_in">require</span>(<span class="hljs-string">'happenstance'</span>)
 <span class="hljs-keyword">var</span> push = [].push
 <span class="hljs-keyword">var</span> slice = [].slice
+<span class="hljs-keyword">var</span> Indexer = <span class="hljs-built_in">require</span>(<span class="hljs-string">'procession/indexer'</span>)
 <span class="hljs-keyword">var</span> Procession = <span class="hljs-built_in">require</span>(<span class="hljs-string">'procession'</span>)
-<span class="hljs-keyword">var</span> RBTree = <span class="hljs-built_in">require</span>(<span class="hljs-string">'bintrees'</span>).RBTree
 <span class="hljs-keyword">var</span> logger = <span class="hljs-built_in">require</span>(<span class="hljs-string">'prolific.logger'</span>).createLogger(<span class="hljs-string">'paxos'</span>)
 
 <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Legislator</span> (<span class="hljs-params">id, options</span>) </span>{
@@ -70,9 +70,16 @@
 
     <span class="hljs-keyword">this</span>.parliamentSize = options.parliamentSize || <span class="hljs-number">5</span>
 
-    <span class="hljs-keyword">this</span>.log = <span class="hljs-keyword">new</span> RBTree(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">a, b</span>) </span>{ <span class="hljs-keyword">return</span> Monotonic.compare(a.promise, b.promise) })
+    <span class="hljs-keyword">this</span>.log = <span class="hljs-keyword">new</span> Procession
+    <span class="hljs-keyword">this</span>.log.addListener(<span class="hljs-keyword">this</span>.indexer = <span class="hljs-keyword">new</span> Indexer(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">left, right</span>) </span>{
+        assert(left &amp;&amp; right)
+        assert(left.body.promise &amp;&amp; right.body.promise)
+        <span class="hljs-keyword">return</span> Monotonic.compare(left.body.promise, right.body.promise)
+    }))
     <span class="hljs-keyword">this</span>.scheduler = <span class="hljs-keyword">new</span> Scheduler(options.scheduler || {})
-    <span class="hljs-keyword">this</span>.synchronizing = {}</pre></div></div>
+    <span class="hljs-keyword">this</span>.synchronizing = {}
+
+</pre></div></div>
 
         </li>
 
@@ -121,7 +128,9 @@ a new government is formed to immigrate or exile a citizen.</p>
     <span class="hljs-keyword">this</span>.pings = {}
     <span class="hljs-keyword">this</span>.getPing(<span class="hljs-keyword">this</span>.id).timeout = <span class="hljs-number">0</span>
 
-    <span class="hljs-keyword">this</span>.length = options.length || <span class="hljs-number">1024</span></pre></div></div>
+    <span class="hljs-keyword">this</span>.length = options.length || <span class="hljs-number">1024</span>
+
+</pre></div></div>
 
         </li>
 
@@ -141,13 +150,7 @@ randomly half as much again.</p>
     <span class="hljs-keyword">this</span>.ping = options.ping || <span class="hljs-number">1</span>
     <span class="hljs-keyword">this</span>.timeout = options.timeout || <span class="hljs-number">3</span>
 
-    <span class="hljs-keyword">this</span>.log.insert({
-        <span class="hljs-attr">promise</span>: <span class="hljs-string">'0/0'</span>,
-        <span class="hljs-attr">value</span>: { <span class="hljs-attr">government</span>: <span class="hljs-keyword">this</span>.government },
-        <span class="hljs-attr">quorum</span>: [ <span class="hljs-keyword">this</span>.id ],
-        <span class="hljs-attr">decisions</span>: [ <span class="hljs-keyword">this</span>.id ],
-        <span class="hljs-attr">decided</span>: <span class="hljs-literal">true</span>
-    })
+    <span class="hljs-keyword">this</span>.least = <span class="hljs-keyword">this</span>.log.shifter()
 
     <span class="hljs-keyword">this</span>.constituency = []
     <span class="hljs-keyword">this</span>.operations = []
@@ -155,7 +158,17 @@ randomly half as much again.</p>
     <span class="hljs-keyword">this</span>.minimum = <span class="hljs-string">'0/0'</span>
 
     <span class="hljs-keyword">this</span>.outbox = <span class="hljs-keyword">new</span> Procession
-    <span class="hljs-keyword">this</span>.consumer = options.consumer ? <span class="hljs-keyword">this</span>.outbox.async() : <span class="hljs-literal">null</span>
+    <span class="hljs-keyword">this</span>.shifter = options.shifter ? <span class="hljs-keyword">this</span>.outbox.shifter() : <span class="hljs-literal">null</span>
+}
+
+Legislator.prototype._begin = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+    <span class="hljs-keyword">this</span>.log.push({
+        <span class="hljs-attr">promise</span>: <span class="hljs-string">'0/0'</span>,
+        <span class="hljs-attr">value</span>: { <span class="hljs-attr">government</span>: <span class="hljs-keyword">this</span>.government },
+        <span class="hljs-attr">quorum</span>: [ <span class="hljs-keyword">this</span>.id ],
+        <span class="hljs-attr">decisions</span>: [ <span class="hljs-keyword">this</span>.id ],
+        <span class="hljs-attr">decided</span>: <span class="hljs-literal">true</span>
+    })
 }
 
 Legislator.prototype._trace = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">method, vargs</span>) </span>{
@@ -166,7 +179,8 @@ Legislator.prototype.getPing = <span class="hljs-function"><span class="hljs-key
     <span class="hljs-keyword">var</span> ping = <span class="hljs-keyword">this</span>.pings[id]
     <span class="hljs-keyword">if</span> (ping == <span class="hljs-literal">null</span>) {
         ping = <span class="hljs-keyword">this</span>.pings[id] = {
-            <span class="hljs-attr">id</span>: id,</pre></div></div>
+            <span class="hljs-attr">id</span>: id,
+</pre></div></div>
 
         </li>
 
@@ -183,7 +197,8 @@ Legislator.prototype.getPing = <span class="hljs-function"><span class="hljs-key
 
             <div class="content"><div class='highlight'><pre>            when: -<span class="hljs-literal">Infinity</span>,
             <span class="hljs-attr">timeout</span>: <span class="hljs-number">1</span>,
-            <span class="hljs-attr">when</span>: <span class="hljs-literal">null</span>,</pre></div></div>
+            <span class="hljs-attr">when</span>: <span class="hljs-literal">null</span>,
+</pre></div></div>
 
         </li>
 
@@ -203,7 +218,9 @@ Legislator.prototype.getPing = <span class="hljs-function"><span class="hljs-key
         }
     }
     <span class="hljs-keyword">return</span> ping
-}</pre></div></div>
+}
+
+</pre></div></div>
 
         </li>
 
@@ -230,7 +247,8 @@ government we hope to have someday, which offends my pragmatic sensibilities.</p
     government.constituents = <span class="hljs-built_in">Object</span>.keys(<span class="hljs-keyword">this</span>.properties).sort().filter(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">citizen</span>) </span>{
         <span class="hljs-keyword">return</span> !~government.majority.indexOf(citizen)
             &amp;&amp; !~government.minority.indexOf(citizen)
-    })</pre></div></div>
+    })
+</pre></div></div>
 
         </li>
 
@@ -245,15 +263,17 @@ government we hope to have someday, which offends my pragmatic sensibilities.</p
 
             </div>
 
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">var</span> remapped = government.promise = promise
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">var</span> remapped = government.promise = promise, map = {}
     <span class="hljs-keyword">this</span>.proposals = <span class="hljs-keyword">this</span>.proposals.splice(<span class="hljs-number">0</span>, <span class="hljs-keyword">this</span>.proposals.length).map(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">proposal</span>) </span>{
         proposal.was = proposal.promise
         proposal.route = government.majority
         proposal.promise = remapped = Monotonic.increment(remapped, <span class="hljs-number">1</span>)
+        map[proposal.was] = proposal.promise
         <span class="hljs-keyword">return</span> proposal
     }.bind(<span class="hljs-keyword">this</span>))
     <span class="hljs-keyword">this</span>.lastIssued = remapped
-    <span class="hljs-keyword">var</span> properties = <span class="hljs-built_in">JSON</span>.parse(<span class="hljs-built_in">JSON</span>.stringify(<span class="hljs-keyword">this</span>.properties))</pre></div></div>
+    <span class="hljs-keyword">var</span> properties = <span class="hljs-built_in">JSON</span>.parse(<span class="hljs-built_in">JSON</span>.stringify(<span class="hljs-keyword">this</span>.properties))
+</pre></div></div>
 
         </li>
 
@@ -279,7 +299,8 @@ government we hope to have someday, which offends my pragmatic sensibilities.</p
         <span class="hljs-attr">route</span>: quorum,
         <span class="hljs-attr">value</span>: {
             <span class="hljs-attr">type</span>: <span class="hljs-string">'government'</span>,
-            <span class="hljs-attr">islandId</span>: <span class="hljs-keyword">this</span>.islandId,</pre></div></div>
+            <span class="hljs-attr">islandId</span>: <span class="hljs-keyword">this</span>.islandId,
+</pre></div></div>
 
         </li>
 
@@ -295,7 +316,8 @@ government we hope to have someday, which offends my pragmatic sensibilities.</p
             </div>
 
             <div class="content"><div class='highlight'><pre>            government: government,
-            <span class="hljs-attr">properties</span>: properties,</pre></div></div>
+            <span class="hljs-attr">properties</span>: properties,
+</pre></div></div>
 
         </li>
 
@@ -311,7 +333,13 @@ leader is only ever collapse? Ergo…</p>
 
             </div>
 
-            <div class="content"><div class='highlight'><pre>            collapsed: <span class="hljs-keyword">this</span>.collapsed,</pre></div></div>
+            <div class="content"><div class='highlight'><pre>            collapsed: <span class="hljs-keyword">this</span>.collapsed,
+            <span class="hljs-attr">map</span>: <span class="hljs-keyword">this</span>.collapsed ? <span class="hljs-literal">null</span> : map
+        }
+    })
+}
+
+</pre></div></div>
 
         </li>
 
@@ -322,26 +350,6 @@ leader is only ever collapse? Ergo…</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-11">&#182;</a>
               </div>
-              <p>There was a time when I wanted to allow the user to choose leaders.</p>
-
-            </div>
-
-            <div class="content"><div class='highlight'><pre>            map: <span class="hljs-keyword">this</span>.proposals.map(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">proposal</span>) </span>{
-                <span class="hljs-keyword">return</span> { <span class="hljs-attr">was</span>: proposal.was, <span class="hljs-attr">is</span>: proposal.promise }
-            })
-        }
-    })
-}</pre></div></div>
-
-        </li>
-
-
-        <li id="section-12">
-            <div class="annotation">
-
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-12">&#182;</a>
-              </div>
               <p>TODO When we collapse, let’s change our constituency to our parliament,
 except ourselves, to ensure that we’re pinging away and waiting for a
 consensus to form. Wait, we’re already doing that.</p>
@@ -351,16 +359,17 @@ messages back to the leader.</p>
             </div>
 
             <div class="content"><div class='highlight'><pre>Legislator.prototype._gatherProposals = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">now</span>) </span>{
-    <span class="hljs-keyword">var</span> parliament = <span class="hljs-keyword">this</span>.government.majority.concat(<span class="hljs-keyword">this</span>.government.minority)</pre></div></div>
+    <span class="hljs-keyword">var</span> parliament = <span class="hljs-keyword">this</span>.government.majority.concat(<span class="hljs-keyword">this</span>.government.minority)
+</pre></div></div>
 
         </li>
 
 
-        <li id="section-13">
+        <li id="section-12">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-13">&#182;</a>
+                <a class="pilcrow" href="#section-12">&#182;</a>
               </div>
               <p>TODO The constituent must be both connected and synchronized, not jus
 connected.</p>
@@ -388,16 +397,17 @@ connected.</p>
         <span class="hljs-attr">governments</span>: [ <span class="hljs-keyword">this</span>.government.promise ],
         <span class="hljs-attr">route</span>: majority,
         <span class="hljs-attr">messages</span>: [{
-            <span class="hljs-attr">type</span>: <span class="hljs-string">'propose'</span>,</pre></div></div>
+            <span class="hljs-attr">type</span>: <span class="hljs-string">'propose'</span>,
+</pre></div></div>
 
         </li>
 
 
-        <li id="section-14">
+        <li id="section-13">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-14">&#182;</a>
+                <a class="pilcrow" href="#section-13">&#182;</a>
               </div>
               <p>Do not increment here, it will be set by <code>_receivePromise</code>.</p>
 
@@ -408,16 +418,17 @@ connected.</p>
     }
 }
 
-Legislator.prototype._advanceElection = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">now</span>) </span>{</pre></div></div>
+Legislator.prototype._advanceElection = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">now</span>) </span>{
+</pre></div></div>
 
         </li>
 
 
-        <li id="section-15">
+        <li id="section-14">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-15">&#182;</a>
+                <a class="pilcrow" href="#section-14">&#182;</a>
               </div>
               <p>TODO Currently, your tests are running all synchronizations to completion
 before running a consensus pulse, so we’re not seeing the results of decided
@@ -434,7 +445,25 @@ returned.</p>
         <span class="hljs-keyword">return</span> {
             <span class="hljs-attr">type</span>: <span class="hljs-string">'consensus'</span>,
             <span class="hljs-attr">islandId</span>: <span class="hljs-keyword">this</span>.islandId,
-            <span class="hljs-attr">governments</span>: [ <span class="hljs-keyword">this</span>.government.promise, <span class="hljs-keyword">this</span>.accepted.promise ],</pre></div></div>
+            <span class="hljs-attr">governments</span>: [ <span class="hljs-keyword">this</span>.government.promise, <span class="hljs-keyword">this</span>.accepted.promise ],
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-15">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-15">&#182;</a>
+              </div>
+              <p>TODO Real weird. Yes, at this point, we have definately accepted our own
+election, replacing whatever was accepted when we sent our proposal.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>            route: <span class="hljs-keyword">this</span>.accepted.route,
+</pre></div></div>
 
         </li>
 
@@ -445,12 +474,16 @@ returned.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-16">&#182;</a>
               </div>
-              <p>TODO Real weird. Yes, at this point, we have definately accepted our own
-election, replacing whatever was accepted when we sent our proposal.</p>
+              <p>TODO Does ping belong everywhere still?</p>
 
             </div>
 
-            <div class="content"><div class='highlight'><pre>            route: <span class="hljs-keyword">this</span>.accepted.route,</pre></div></div>
+            <div class="content"><div class='highlight'><pre>            messages: [<span class="hljs-keyword">this</span>._ping(now), {
+                <span class="hljs-attr">type</span>: <span class="hljs-string">'commit'</span>,
+                <span class="hljs-attr">promise</span>: <span class="hljs-keyword">this</span>.accepted.promise
+            }]
+        }
+</pre></div></div>
 
         </li>
 
@@ -460,25 +493,6 @@ election, replacing whatever was accepted when we sent our proposal.</p>
 
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-17">&#182;</a>
-              </div>
-              <p>TODO Does ping belong everywhere still?</p>
-
-            </div>
-
-            <div class="content"><div class='highlight'><pre>            messages: [<span class="hljs-keyword">this</span>._ping(now), {
-                <span class="hljs-attr">type</span>: <span class="hljs-string">'commit'</span>,
-                <span class="hljs-attr">promise</span>: <span class="hljs-keyword">this</span>.accepted.promise
-            }]
-        }</pre></div></div>
-
-        </li>
-
-
-        <li id="section-18">
-            <div class="annotation">
-
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-18">&#182;</a>
               </div>
               <p>TODO We’ll never see this, so we should just assert it. It would be marked
 failed.</p>
@@ -497,16 +511,17 @@ failed.</p>
 }
 
 Legislator.prototype._twoPhaseCommit = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">now</span>) </span>{
-    <span class="hljs-keyword">var</span> messages = [ <span class="hljs-keyword">this</span>._ping(now) ]</pre></div></div>
+    <span class="hljs-keyword">var</span> messages = [ <span class="hljs-keyword">this</span>._ping(now) ]
+</pre></div></div>
 
         </li>
 
 
-        <li id="section-19">
+        <li id="section-18">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-19">&#182;</a>
+                <a class="pilcrow" href="#section-18">&#182;</a>
               </div>
               <p>TODO Bring immigration cleanup up here.
 TODO Tidy.</p>
@@ -516,11 +531,11 @@ TODO Tidy.</p>
         </li>
 
 
-        <li id="section-20">
+        <li id="section-19">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-20">&#182;</a>
+                <a class="pilcrow" href="#section-19">&#182;</a>
               </div>
               <p>TODO All this should be put into a function that checks for a next governmen
 and puts it onto a queue. It could jump the queue, sure, but I’m leaning
@@ -543,16 +558,18 @@ draining the queue is pretty much synchronous, pretty much instant.</p>
                 <span class="hljs-attr">promise</span>: <span class="hljs-keyword">this</span>.accepted.promise
             }]
         }
-    }</pre></div></div>
+    }
+
+</pre></div></div>
 
         </li>
 
 
-        <li id="section-21">
+        <li id="section-20">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-21">&#182;</a>
+                <a class="pilcrow" href="#section-20">&#182;</a>
               </div>
               <p>Shift the ids any citizens that have already immigrated.</p>
 
@@ -630,12 +647,15 @@ Legislator.prototype._consensus = <span class="hljs-function"><span class="hljs-
     <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>._twoPhaseCommit(now)
 }
 
+Legislator.prototype._findRound = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">sought</span>) </span>{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.indexer.tree.find({ <span class="hljs-attr">body</span>: { <span class="hljs-attr">promise</span>: sought } })
+}
+
 Legislator.prototype._stuffProposal = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">messages, proposal</span>) </span>{
     proposal.route.slice(<span class="hljs-number">1</span>).forEach(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">id</span>) </span>{
         <span class="hljs-keyword">var</span> ping = <span class="hljs-keyword">this</span>.getPing(id)
         assert(ping.pinged)
-        <span class="hljs-keyword">var</span> round = <span class="hljs-keyword">this</span>.log.find({ <span class="hljs-attr">promise</span>: ping.decided }).nex
-        <span class="hljs-keyword">this</span>._pushEnactments(messages, round, <span class="hljs-number">-1</span>)
+        <span class="hljs-keyword">this</span>._pushEnactments(messages, <span class="hljs-keyword">this</span>._findRound(ping.decided), <span class="hljs-number">-1</span>)
     }, <span class="hljs-keyword">this</span>)
     <span class="hljs-keyword">var</span> previous = <span class="hljs-keyword">this</span>.collapsed ? <span class="hljs-keyword">this</span>.accepted : <span class="hljs-literal">null</span>
     messages.push({
@@ -662,20 +682,40 @@ Legislator.prototype._nudge = <span class="hljs-function"><span class="hljs-keyw
         <span class="hljs-keyword">this</span>.pulsing = !! pulse
     }
     <span class="hljs-keyword">if</span> (pulse != <span class="hljs-literal">null</span>) {
+        <span class="hljs-keyword">this</span>.scheduler.unschedule(<span class="hljs-keyword">this</span>.id)
         <span class="hljs-keyword">this</span>.outbox.push(pulse)
     }
     <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.pulsing
 }
 
 Legislator.prototype._stuffSynchronize = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">now, ping, messages</span>) </span>{
-    <span class="hljs-keyword">var</span> count = <span class="hljs-number">20</span>
-    <span class="hljs-keyword">var</span> maximum = ping.decided
     <span class="hljs-keyword">if</span> (ping.pinged) {
-        <span class="hljs-keyword">var</span> round
+        <span class="hljs-keyword">var</span> iterator
+
         <span class="hljs-keyword">if</span> (ping.decided == <span class="hljs-string">'0/0'</span>) {
-            <span class="hljs-keyword">var</span> iterator = <span class="hljs-keyword">this</span>.log.iterator()
+            iterator = <span class="hljs-keyword">this</span>.least.node.nex
             <span class="hljs-keyword">for</span> (;;) {
-                round = iterator.prev()</pre></div></div>
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-21">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-21">&#182;</a>
+              </div>
+              <p>TODO This will abend if the naturalization falls off the end end of the log.
+You need to check for gaps and missing naturalizations and then timeout the
+constituents that will never be connected.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>                <span class="hljs-keyword">if</span> (iterator == <span class="hljs-literal">null</span>) {
+                    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>
+                }
+</pre></div></div>
 
         </li>
 
@@ -686,25 +726,20 @@ Legislator.prototype._stuffSynchronize = <span class="hljs-function"><span class
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-22">&#182;</a>
               </div>
-              <p>TODO This will abend if the naturalization falls off the end end of the log.
-You need to check for gaps and missing naturalizations and then timeout the
-constituents that will never be connected.
-assert(round, ‘cannot find immigration’)</p>
+              <p>assert(round, ‘cannot find immigration’)</p>
 
             </div>
 
-            <div class="content"><div class='highlight'><pre>                <span class="hljs-keyword">if</span> (round == <span class="hljs-literal">null</span>) {
-                    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>
-                }
-                <span class="hljs-keyword">if</span> (Monotonic.isBoundary(round.promise, <span class="hljs-number">0</span>)) {
-                    <span class="hljs-keyword">var</span> immigrate = round.value.government.immigrate
+            <div class="content"><div class='highlight'><pre>                <span class="hljs-keyword">if</span> (Monotonic.isBoundary(iterator.body.promise, <span class="hljs-number">0</span>)) {
+                    <span class="hljs-keyword">var</span> immigrate = iterator.body.value.government.immigrate
                     <span class="hljs-keyword">if</span> (immigrate &amp;&amp; immigrate.id == ping.id) {
-                        maximum = round.promise
                         <span class="hljs-keyword">break</span>
                     }
                 }
+                iterator = iterator.nex
             }
-        } <span class="hljs-keyword">else</span> {</pre></div></div>
+        } <span class="hljs-keyword">else</span> {
+</pre></div></div>
 
         </li>
 
@@ -719,22 +754,22 @@ assert(round, ‘cannot find immigration’)</p>
 
             </div>
 
-            <div class="content"><div class='highlight'><pre>            round = <span class="hljs-keyword">this</span>.log.find({ <span class="hljs-attr">promise</span>: maximum }).nex
+            <div class="content"><div class='highlight'><pre>            iterator = <span class="hljs-keyword">this</span>._findRound(ping.decided)
         }
 
-        <span class="hljs-keyword">this</span>._pushEnactments(messages, round, count)
+        <span class="hljs-keyword">this</span>._pushEnactments(messages, iterator, <span class="hljs-number">20</span>)
     }
     <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>
 }
 
-Legislator.prototype._pushEnactments = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">messages, round, count</span>) </span>{
-    <span class="hljs-keyword">while</span> (--count &amp;&amp; round) {
+Legislator.prototype._pushEnactments = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">messages, iterator, count</span>) </span>{
+    <span class="hljs-keyword">while</span> (--count &amp;&amp; iterator != <span class="hljs-literal">null</span>) {
         messages.push({
             <span class="hljs-attr">type</span>: <span class="hljs-string">'enact'</span>,
-            <span class="hljs-attr">promise</span>: round.promise,
-            <span class="hljs-attr">value</span>: round.value
+            <span class="hljs-attr">promise</span>: iterator.body.promise,
+            <span class="hljs-attr">value</span>: iterator.body.value
         })
-        round = round.nex
+        iterator = iterator.nex
     }
 }
 
@@ -752,7 +787,8 @@ Legislator.prototype.receive = <span class="hljs-function"><span class="hljs-key
 }
 
 Legislator.prototype.collapse = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">now</span>) </span>{
-    <span class="hljs-keyword">this</span>._trace(<span class="hljs-string">'collapse'</span>, [])</pre></div></div>
+    <span class="hljs-keyword">this</span>._trace(<span class="hljs-string">'collapse'</span>, [])
+</pre></div></div>
 
         </li>
 
@@ -768,7 +804,8 @@ Legislator.prototype.collapse = <span class="hljs-function"><span class="hljs-ke
             </div>
 
             <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">this</span>.collapsed = <span class="hljs-literal">true</span>
-    <span class="hljs-keyword">this</span>.election = <span class="hljs-literal">null</span></pre></div></div>
+    <span class="hljs-keyword">this</span>.election = <span class="hljs-literal">null</span>
+</pre></div></div>
 
         </li>
 
@@ -784,7 +821,8 @@ Legislator.prototype.collapse = <span class="hljs-function"><span class="hljs-ke
             </div>
 
             <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">this</span>.proposals.length = <span class="hljs-number">0</span>
-    <span class="hljs-keyword">this</span>.immigrating.length = <span class="hljs-number">0</span></pre></div></div>
+    <span class="hljs-keyword">this</span>.immigrating.length = <span class="hljs-number">0</span>
+</pre></div></div>
 
         </li>
 
@@ -803,7 +841,9 @@ Legislator.prototype.collapse = <span class="hljs-function"><span class="hljs-ke
         <span class="hljs-keyword">if</span> (id != <span class="hljs-keyword">this</span>.id) {
             <span class="hljs-keyword">delete</span> <span class="hljs-keyword">this</span>.pings[id]
         }
-    }</pre></div></div>
+    }
+
+</pre></div></div>
 
         </li>
 
@@ -818,7 +858,9 @@ Legislator.prototype.collapse = <span class="hljs-function"><span class="hljs-ke
 
             </div>
 
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">this</span>.citizens.forEach(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">id</span>) </span>{ <span class="hljs-keyword">this</span>.scheduler.unschedule(id) }, <span class="hljs-keyword">this</span>)</pre></div></div>
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">this</span>.citizens.forEach(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">id</span>) </span>{ <span class="hljs-keyword">this</span>.scheduler.unschedule(id) }, <span class="hljs-keyword">this</span>)
+
+</pre></div></div>
 
         </li>
 
@@ -853,7 +895,8 @@ Legislator.prototype.sent = <span class="hljs-function"><span class="hljs-keywor
     <span class="hljs-keyword">this</span>._trace(<span class="hljs-string">'sent'</span>, [ now, pulse, responses ])
     <span class="hljs-keyword">if</span> (pulse.type == <span class="hljs-string">'consensus'</span>) {
         <span class="hljs-keyword">this</span>.pulsing = <span class="hljs-literal">false</span>
-    }</pre></div></div>
+    }
+</pre></div></div>
 
         </li>
 
@@ -902,7 +945,8 @@ TODO The cryptic message above requires an attempt to decypher.</p>
                     <span class="hljs-attr">object</span>: <span class="hljs-keyword">this</span>,
                     <span class="hljs-attr">method</span>: <span class="hljs-string">'_whenKeepAlive'</span>
                 })
-            }</pre></div></div>
+            }
+</pre></div></div>
 
         </li>
 
@@ -913,7 +957,8 @@ TODO The cryptic message above requires an attempt to decypher.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-30">&#182;</a>
               </div>
-              <p>You might feel a need to guard this so that only the leader runs
+              <p>Determine the minimum log entry promise.</p>
+<p>You might feel a need to guard this so that only the leader runs
 it, but it works of anyone runs it. If they have a ping for every
 citizen, they’ll calculate a minimum less than or equal to the
 minimum calculated by the actual leader. If not they do not have
@@ -923,7 +968,7 @@ current minimum.</p>
             </div>
 
             <div class="content"><div class='highlight'><pre>            <span class="hljs-keyword">this</span>.getPing(<span class="hljs-keyword">this</span>.id).pinged = <span class="hljs-literal">true</span>
-            <span class="hljs-keyword">this</span>.getPing(<span class="hljs-keyword">this</span>.id).decided = <span class="hljs-keyword">this</span>.log.max().promise
+            <span class="hljs-keyword">this</span>.getPing(<span class="hljs-keyword">this</span>.id).decided = <span class="hljs-keyword">this</span>.log.head.body.promise
             <span class="hljs-keyword">this</span>.minimum = <span class="hljs-keyword">this</span>.citizens.reduce(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">minimum, citizen</span>) </span>{
                 <span class="hljs-keyword">if</span> (minimum == <span class="hljs-literal">null</span>) {
                     <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>
@@ -933,7 +978,7 @@ current minimum.</p>
                     <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>
                 }
                 <span class="hljs-keyword">return</span> Monotonic.compare(ping.decided, minimum) &lt; <span class="hljs-number">0</span> ? ping.decided : minimum
-            }.bind(<span class="hljs-keyword">this</span>), <span class="hljs-keyword">this</span>.log.max().promise) || <span class="hljs-keyword">this</span>.minimum
+            }.bind(<span class="hljs-keyword">this</span>), <span class="hljs-keyword">this</span>.log.head.body.promise) || <span class="hljs-keyword">this</span>.minimum
             <span class="hljs-keyword">break</span>
         }
     } <span class="hljs-keyword">else</span> {
@@ -942,7 +987,8 @@ current minimum.</p>
             <span class="hljs-keyword">this</span>.collapse(now)
             <span class="hljs-keyword">break</span>
         <span class="hljs-keyword">case</span> <span class="hljs-string">'synchronize'</span>:
-            <span class="hljs-keyword">delete</span> <span class="hljs-keyword">this</span>.synchronizing[pulse.route[<span class="hljs-number">0</span>]]</pre></div></div>
+            <span class="hljs-keyword">delete</span> <span class="hljs-keyword">this</span>.synchronizing[pulse.route[<span class="hljs-number">0</span>]]
+</pre></div></div>
 
         </li>
 
@@ -963,7 +1009,8 @@ current minimum.</p>
                 ping.timeout = <span class="hljs-number">1</span>
             } <span class="hljs-keyword">else</span> {
                 ping.timeout = now - ping.when
-            }</pre></div></div>
+            }
+</pre></div></div>
 
         </li>
 
@@ -989,7 +1036,9 @@ current minimum.</p>
 }
 
 Legislator.prototype.bootstrap = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">now, islandId, properties</span>) </span>{
-    <span class="hljs-keyword">this</span>._trace(<span class="hljs-string">'bootstrap'</span>, [ now, islandId, properties ])</pre></div></div>
+    <span class="hljs-keyword">this</span>._trace(<span class="hljs-string">'bootstrap'</span>, [ now, islandId, properties ])
+    <span class="hljs-keyword">this</span>._begin()
+</pre></div></div>
 
         </li>
 
@@ -1018,6 +1067,7 @@ Legislator.prototype.bootstrap = <span class="hljs-function"><span class="hljs-k
 
 Legislator.prototype.join = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">cookie, islandId</span>) </span>{
     <span class="hljs-keyword">this</span>._trace(<span class="hljs-string">'join'</span>, [ cookie, islandId ])
+    <span class="hljs-keyword">this</span>._begin()
     <span class="hljs-keyword">this</span>.cookie = cookie
     <span class="hljs-keyword">this</span>.islandId = islandId
 }
@@ -1025,7 +1075,9 @@ Legislator.prototype.join = <span class="hljs-function"><span class="hljs-keywor
 Legislator.prototype.naturalize = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
     <span class="hljs-keyword">this</span>._trace(<span class="hljs-string">'naturalize'</span>, [])
     <span class="hljs-keyword">this</span>.naturalized = <span class="hljs-literal">true</span>
-}</pre></div></div>
+}
+
+</pre></div></div>
 
         </li>
 
@@ -1066,7 +1118,9 @@ actual leader if it isn’t, reject if it is but collapsed.</p>
             <span class="hljs-attr">leader</span>: <span class="hljs-keyword">this</span>.government.majority[<span class="hljs-number">0</span>]
         }
     }
-}</pre></div></div>
+}
+
+</pre></div></div>
 
         </li>
 
@@ -1086,7 +1140,8 @@ failure requiring boundary detection.</p>
     <span class="hljs-keyword">this</span>._trace(<span class="hljs-string">'enqueue'</span>, [ now, islandId, message ])
 
     <span class="hljs-keyword">var</span> response = <span class="hljs-keyword">this</span>._enqueuable(islandId)
-    <span class="hljs-keyword">if</span> (response == <span class="hljs-literal">null</span>) {</pre></div></div>
+    <span class="hljs-keyword">if</span> (response == <span class="hljs-literal">null</span>) {
+</pre></div></div>
 
         </li>
 
@@ -1107,6 +1162,7 @@ failure requiring boundary detection.</p>
             <span class="hljs-attr">route</span>: <span class="hljs-keyword">this</span>.government.majority,
             <span class="hljs-attr">value</span>: message
         })
+        <span class="hljs-keyword">this</span>._nudge(now)
 
         response = {
             <span class="hljs-attr">enqueued</span>: <span class="hljs-literal">true</span>,
@@ -1122,7 +1178,8 @@ Legislator.prototype.immigrate = <span class="hljs-function"><span class="hljs-k
     <span class="hljs-keyword">this</span>._trace(<span class="hljs-string">'immigrate'</span>, [ now, islandId, id, cookie, properties ])
     assert(<span class="hljs-keyword">typeof</span> id == <span class="hljs-string">'string'</span>, <span class="hljs-string">'id must be a hexidecmimal string'</span>)
     <span class="hljs-keyword">var</span> response = <span class="hljs-keyword">this</span>._enqueuable(islandId)
-    <span class="hljs-keyword">if</span> (response == <span class="hljs-literal">null</span>) {</pre></div></div>
+    <span class="hljs-keyword">if</span> (response == <span class="hljs-literal">null</span>) {
+</pre></div></div>
 
         </li>
 
@@ -1192,7 +1249,8 @@ until the proposal was enacted.</p>
                 <span class="hljs-attr">islandId</span>: <span class="hljs-keyword">this</span>.islandId,
                 <span class="hljs-attr">leader</span>: <span class="hljs-keyword">this</span>.government.majority[<span class="hljs-number">0</span>]
             }
-        } <span class="hljs-keyword">else</span> {</pre></div></div>
+        } <span class="hljs-keyword">else</span> {
+</pre></div></div>
 
         </li>
 
@@ -1240,7 +1298,8 @@ Legislator.prototype._receiveReject = <span class="hljs-function"><span class="h
 }
 
 Legislator.prototype._receivePropose = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">now, pulse, message, responses</span>) </span>{
-    <span class="hljs-keyword">this</span>._trace(<span class="hljs-string">'_receivePropose'</span>, [ now, pulse, message, responses ])</pre></div></div>
+    <span class="hljs-keyword">this</span>._trace(<span class="hljs-string">'_receivePropose'</span>, [ now, pulse, message, responses ])
+</pre></div></div>
 
         </li>
 
@@ -1262,7 +1321,8 @@ Legislator.prototype._receivePropose = <span class="hljs-function"><span class="
     } <span class="hljs-keyword">else</span> {
         responses.push({
             <span class="hljs-attr">type</span>: <span class="hljs-string">'promise'</span>,
-            <span class="hljs-attr">from</span>: <span class="hljs-keyword">this</span>.id,</pre></div></div>
+            <span class="hljs-attr">from</span>: <span class="hljs-keyword">this</span>.id,
+</pre></div></div>
 
         </li>
 
@@ -1285,7 +1345,8 @@ Should this force a collapse?</p>
 }
 
 Legislator.prototype._receivePromise = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">now, pulse, message, responses</span>) </span>{
-    <span class="hljs-keyword">this</span>._trace(<span class="hljs-string">'_receivePromise'</span>, [ now, pulse, message, responses ])</pre></div></div>
+    <span class="hljs-keyword">this</span>._trace(<span class="hljs-string">'_receivePromise'</span>, [ now, pulse, message, responses ])
+</pre></div></div>
 
         </li>
 
@@ -1323,7 +1384,9 @@ Legislator.prototype._rejected = <span class="hljs-function"><span class="hljs-k
         <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>
     }
     <span class="hljs-keyword">return</span> comparator(<span class="hljs-keyword">this</span>.promise)
-}</pre></div></div>
+}
+
+</pre></div></div>
 
         </li>
 
@@ -1348,7 +1411,8 @@ leader will be able to learn immediately.</p>
 
             <div class="content"><div class='highlight'><pre>
 Legislator.prototype._receiveAccept = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">now, pulse, message, responses</span>) </span>{
-    <span class="hljs-keyword">this</span>._trace(<span class="hljs-string">'_receiveAccept'</span>, [ now, pulse, message, responses ])</pre></div></div>
+    <span class="hljs-keyword">this</span>._trace(<span class="hljs-string">'_receiveAccept'</span>, [ now, pulse, message, responses ])
+</pre></div></div>
 
         </li>
 
@@ -1368,7 +1432,8 @@ Legislator.prototype._receiveAccept = <span class="hljs-function"><span class="h
     })) {
         responses.push(<span class="hljs-keyword">this</span>._reject(message))
     } <span class="hljs-keyword">else</span> {
-        <span class="hljs-keyword">this</span>.accepted = <span class="hljs-built_in">JSON</span>.parse(<span class="hljs-built_in">JSON</span>.stringify(message))</pre></div></div>
+        <span class="hljs-keyword">this</span>.accepted = <span class="hljs-built_in">JSON</span>.parse(<span class="hljs-built_in">JSON</span>.stringify(message))
+</pre></div></div>
 
         </li>
 
@@ -1387,7 +1452,8 @@ Legislator.prototype._receiveAccept = <span class="hljs-function"><span class="h
         <span class="hljs-keyword">this</span>.accepted.route = pulse.route
         responses.push({
             <span class="hljs-attr">type</span>: <span class="hljs-string">'accepted'</span>,
-            <span class="hljs-attr">from</span>: <span class="hljs-keyword">this</span>.id,</pre></div></div>
+            <span class="hljs-attr">from</span>: <span class="hljs-keyword">this</span>.id,
+</pre></div></div>
 
         </li>
 
@@ -1415,7 +1481,9 @@ Legislator.prototype._receiveAccepted = <span class="hljs-function"><span class=
         assert(!~<span class="hljs-keyword">this</span>.election.accepts.indexOf(message.from))
         <span class="hljs-keyword">this</span>.election.accepts.push(message.from)
     }
-}</pre></div></div>
+}
+
+</pre></div></div>
 
         </li>
 
@@ -1468,7 +1536,9 @@ Legislator.prototype._receiveEnact = <span class="hljs-function"><span class="hl
 
     message = <span class="hljs-built_in">JSON</span>.parse(<span class="hljs-built_in">JSON</span>.stringify(message))
 
-    <span class="hljs-keyword">var</span> max = <span class="hljs-keyword">this</span>.log.max()</pre></div></div>
+    <span class="hljs-keyword">var</span> max = <span class="hljs-keyword">this</span>.log.head.body
+
+</pre></div></div>
 
         </li>
 
@@ -1501,7 +1571,9 @@ failed rounds of Paxos.</p>
 
             </div>
 
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">var</span> valid = Monotonic.compare(max.promise, message.promise) &lt; <span class="hljs-number">0</span></pre></div></div>
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">var</span> valid = Monotonic.compare(max.promise, message.promise) &lt; <span class="hljs-number">0</span>
+
+</pre></div></div>
 
         </li>
 
@@ -1531,7 +1603,8 @@ assume that it has correct values for <code>decided</code>.</p>
 
             </div>
 
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> (!valid) {</pre></div></div>
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> (!valid) {
+</pre></div></div>
 
         </li>
 
@@ -1550,7 +1623,8 @@ assume that it has correct values for <code>decided</code>.</p>
     }
 
     valid = max.promise != <span class="hljs-string">'0/0'</span>
-    <span class="hljs-keyword">if</span> (!valid) {</pre></div></div>
+    <span class="hljs-keyword">if</span> (!valid) {
+</pre></div></div>
 
         </li>
 
@@ -1568,17 +1642,7 @@ assume that it has correct values for <code>decided</code>.</p>
             <div class="content"><div class='highlight'><pre>        valid = max.promise == <span class="hljs-string">'0/0'</span> &amp;&amp; message.promise == <span class="hljs-string">'1/0'</span>
     }
     <span class="hljs-keyword">if</span> (!valid) {
-        assert(<span class="hljs-keyword">this</span>.log.size == <span class="hljs-number">1</span>)
-        valid = Monotonic.isBoundary(message.promise, <span class="hljs-number">0</span>)
-        valid = valid &amp;&amp; <span class="hljs-keyword">this</span>.log.min().promise == <span class="hljs-string">'0/0'</span>
-        valid = valid &amp;&amp; message.value.government.immigrate
-        valid = valid &amp;&amp; message.value.government.immigrate.id == <span class="hljs-keyword">this</span>.id
-        valid = valid &amp;&amp; message.value.government.immigrate.cookie == <span class="hljs-keyword">this</span>.cookie
-    }
-    <span class="hljs-keyword">if</span> (!valid) {
-        pulse.failed = <span class="hljs-literal">true</span>
-        <span class="hljs-keyword">return</span>
-    }</pre></div></div>
+</pre></div></div>
 
         </li>
 
@@ -1589,13 +1653,22 @@ assume that it has correct values for <code>decided</code>.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-54">&#182;</a>
               </div>
-              <p>TODO How crufy are these log entries? What else is lying around in them?</p>
+              <p>assert(this.log.size == 1)</p>
 
             </div>
 
-            <div class="content"><div class='highlight'><pre>    max.next = message
-    message.previous = max.promise
-    <span class="hljs-keyword">this</span>.log.insert(message)</pre></div></div>
+            <div class="content"><div class='highlight'><pre>        valid = Monotonic.isBoundary(message.promise, <span class="hljs-number">0</span>)
+        valid = valid &amp;&amp; <span class="hljs-keyword">this</span>.least.peek().promise == <span class="hljs-string">'0/0'</span>
+        valid = valid &amp;&amp; message.value.government.immigrate
+        valid = valid &amp;&amp; message.value.government.immigrate.id == <span class="hljs-keyword">this</span>.id
+        valid = valid &amp;&amp; message.value.government.immigrate.cookie == <span class="hljs-keyword">this</span>.cookie
+    }
+    <span class="hljs-keyword">if</span> (!valid) {
+        pulse.failed = <span class="hljs-literal">true</span>
+        <span class="hljs-keyword">return</span>
+    }
+
+</pre></div></div>
 
         </li>
 
@@ -1605,6 +1678,24 @@ assume that it has correct values for <code>decided</code>.</p>
 
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-55">&#182;</a>
+              </div>
+              <p>TODO How crufy are these log entries? What else is lying around in them?</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>    max.next = message
+    message.previous = max.promise
+    <span class="hljs-keyword">this</span>.log.push(message)
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-56">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-56">&#182;</a>
               </div>
               <p>Forever bombing out our latest promise.</p>
 
@@ -1684,26 +1775,8 @@ Legislator.prototype._receivePing = <span class="hljs-function"><span class="hlj
     <span class="hljs-keyword">this</span>._trace(<span class="hljs-string">'_receivePing'</span>, [ now, pulse, message, responses ])
     <span class="hljs-keyword">if</span> (message.from == <span class="hljs-keyword">this</span>.id) {
         <span class="hljs-keyword">return</span>
-    }</pre></div></div>
-
-        </li>
-
-
-        <li id="section-56">
-            <div class="annotation">
-
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-56">&#182;</a>
-              </div>
-              <p>TODO Keep a tree to determine if a majority member needs to return the
-values send by a minority member, for now send everything.</p>
-
-            </div>
-
-            <div class="content"><div class='highlight'><pre>    responses.push(<span class="hljs-keyword">this</span>._pong(now))
-    <span class="hljs-keyword">if</span> (!message.collapsed) {
-        <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> id <span class="hljs-keyword">in</span> <span class="hljs-keyword">this</span>.pings) {
-            <span class="hljs-keyword">var</span> ping = <span class="hljs-keyword">this</span>.pings[id]</pre></div></div>
+    }
+</pre></div></div>
 
         </li>
 
@@ -1713,6 +1786,26 @@ values send by a minority member, for now send everything.</p>
 
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-57">&#182;</a>
+              </div>
+              <p>TODO Keep a tree to determine if a majority member needs to return the
+values send by a minority member, for now send everything.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>    responses.push(<span class="hljs-keyword">this</span>._pong(now))
+    <span class="hljs-keyword">if</span> (!message.collapsed) {
+        <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> id <span class="hljs-keyword">in</span> <span class="hljs-keyword">this</span>.pings) {
+            <span class="hljs-keyword">var</span> ping = <span class="hljs-keyword">this</span>.pings[id]
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-58">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-58">&#182;</a>
               </div>
               <p>TODO You can use <code>ping.timeout != 1</code> wherever you’re using <code>ping.pinged</code>.</p>
 
@@ -1730,16 +1823,17 @@ values send by a minority member, for now send everything.</p>
             }
         }
     }
-    <span class="hljs-keyword">var</span> ping = <span class="hljs-keyword">this</span>.getPing(message.from)</pre></div></div>
+    <span class="hljs-keyword">var</span> ping = <span class="hljs-keyword">this</span>.getPing(message.from)
+</pre></div></div>
 
         </li>
 
 
-        <li id="section-58">
+        <li id="section-59">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-58">&#182;</a>
+                <a class="pilcrow" href="#section-59">&#182;</a>
               </div>
               <p>TODO You’ve got some figuring to do; you went and made it so that synchronize
 will sent a <code>pulse</code> with a <code>failed</code> flag set. If that was the only place you
@@ -1750,16 +1844,17 @@ find yourself in the same situation returning.</p>
 
             <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> (pulse.type == <span class="hljs-string">'synchronize'</span> &amp;&amp; Monotonic.compare(ping.decided, <span class="hljs-keyword">this</span>.pings[<span class="hljs-keyword">this</span>.id].decided) &lt; <span class="hljs-number">0</span>) {
         <span class="hljs-keyword">this</span>._stuffSynchronize(now, <span class="hljs-keyword">this</span>.getPing(message.from), responses)
-    }</pre></div></div>
+    }
+</pre></div></div>
 
         </li>
 
 
-        <li id="section-59">
+        <li id="section-60">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-59">&#182;</a>
+                <a class="pilcrow" href="#section-60">&#182;</a>
               </div>
               <p>TODO Are you setting/unsetting this correctly when you are collapsed?</p>
 
@@ -1774,21 +1869,9 @@ find yourself in the same situation returning.</p>
             <span class="hljs-attr">object</span>: <span class="hljs-keyword">this</span>, <span class="hljs-attr">method</span>: <span class="hljs-string">'_whenCollapse'</span>
         })
     }
-}</pre></div></div>
+}
 
-        </li>
-
-
-        <li id="section-60">
-            <div class="annotation">
-
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-60">&#182;</a>
-              </div>
-              <p>Majority updates minority. Minority updates constituents. If there is
-no minority, then the majority updates constituents.</p>
-
-            </div>
+</pre></div></div>
 
         </li>
 
@@ -1798,6 +1881,20 @@ no minority, then the majority updates constituents.</p>
 
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-61">&#182;</a>
+              </div>
+              <p>Majority updates minority. Minority updates constituents. If there is
+no minority, then the majority updates constituents.</p>
+
+            </div>
+
+        </li>
+
+
+        <li id="section-62">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-62">&#182;</a>
               </div>
 
             </div>
@@ -1829,16 +1926,18 @@ no minority, then the majority updates constituents.</p>
 }
 
 Legislator.prototype._enactGovernment = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">now, round</span>) </span>{
-    <span class="hljs-keyword">this</span>._trace(<span class="hljs-string">'_enactGovernment'</span>, [ now, round ])</pre></div></div>
+    <span class="hljs-keyword">this</span>._trace(<span class="hljs-string">'_enactGovernment'</span>, [ now, round ])
+
+</pre></div></div>
 
         </li>
 
 
-        <li id="section-62">
+        <li id="section-63">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-62">&#182;</a>
+                <a class="pilcrow" href="#section-63">&#182;</a>
               </div>
               <p>While we still have the previous government we clear out any timed events
 we might of set to fulfill out duties in the previous government. Note
@@ -1851,16 +1950,18 @@ that we are more discriminating when clearing out the ping records.</p>
     <span class="hljs-keyword">delete</span> <span class="hljs-keyword">this</span>.election
     <span class="hljs-keyword">this</span>.collapsed = <span class="hljs-literal">false</span>
 
-    assert(Monotonic.compare(<span class="hljs-keyword">this</span>.government.promise, round.promise) &lt; <span class="hljs-number">0</span>, <span class="hljs-string">'governments out of order'</span>)</pre></div></div>
+    assert(Monotonic.compare(<span class="hljs-keyword">this</span>.government.promise, round.promise) &lt; <span class="hljs-number">0</span>, <span class="hljs-string">'governments out of order'</span>)
+
+</pre></div></div>
 
         </li>
 
 
-        <li id="section-63">
+        <li id="section-64">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-63">&#182;</a>
+                <a class="pilcrow" href="#section-64">&#182;</a>
               </div>
               <p>when we vote to shrink the government, the initial vote has a greater
 quorum than the resulting government. Not sure why this comment is here.</p>
@@ -1879,16 +1980,18 @@ quorum than the resulting government. Not sure why this comment is here.</p>
 
     <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.id != <span class="hljs-keyword">this</span>.government.majority[<span class="hljs-number">0</span>]) {
         <span class="hljs-keyword">this</span>.proposals.length = <span class="hljs-number">0</span>
-    }</pre></div></div>
+    }
+
+</pre></div></div>
 
         </li>
 
 
-        <li id="section-64">
+        <li id="section-65">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-64">&#182;</a>
+                <a class="pilcrow" href="#section-65">&#182;</a>
               </div>
               <p>TODO Decide on whether this is calculated here or as needed.</p>
 
@@ -1907,16 +2010,18 @@ quorum than the resulting government. Not sure why this comment is here.</p>
 
     <span class="hljs-keyword">this</span>.constituency.forEach(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">id</span>) </span>{
         <span class="hljs-keyword">this</span>.scheduler.schedule(now, id, { <span class="hljs-attr">object</span>: <span class="hljs-keyword">this</span>, <span class="hljs-attr">method</span>: <span class="hljs-string">'_whenPing'</span> }, id)
-    }, <span class="hljs-keyword">this</span>)</pre></div></div>
+    }, <span class="hljs-keyword">this</span>)
+
+</pre></div></div>
 
         </li>
 
 
-        <li id="section-65">
+        <li id="section-66">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-65">&#182;</a>
+                <a class="pilcrow" href="#section-66">&#182;</a>
               </div>
               <p>Reset ping tracking information. Leader behavior is different from other
 members. We clear out all ping information for ping who are not our
@@ -1964,16 +2069,18 @@ Legislator.prototype._whenCollapse = <span class="hljs-function"><span class="hl
 Legislator.prototype._naturalized = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">id</span>) </span>{
     <span class="hljs-keyword">var</span> ping = <span class="hljs-keyword">this</span>.pings[id] || {}
     <span class="hljs-keyword">return</span> ping.naturalized &amp;&amp; ping.timeout == <span class="hljs-number">0</span>
-}</pre></div></div>
+}
+
+</pre></div></div>
 
         </li>
 
 
-        <li id="section-66">
+        <li id="section-67">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-66">&#182;</a>
+                <a class="pilcrow" href="#section-67">&#182;</a>
               </div>
               <p>TODO I don’t believe I need to form a new government indicating that I’ve
 naturalized, merely record that I’ve been naturalized. It is a property tha
@@ -1988,16 +2095,17 @@ will return with liveness.</p>
     <span class="hljs-keyword">if</span> (parliament.length == <span class="hljs-keyword">this</span>.parliamentSize) {
         <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>
     }
-    assert(~<span class="hljs-keyword">this</span>.government.majority.indexOf(<span class="hljs-keyword">this</span>.id), <span class="hljs-string">'would be leader not in majority'</span>)</pre></div></div>
+    assert(~<span class="hljs-keyword">this</span>.government.majority.indexOf(<span class="hljs-keyword">this</span>.id), <span class="hljs-string">'would be leader not in majority'</span>)
+</pre></div></div>
 
         </li>
 
 
-        <li id="section-67">
+        <li id="section-68">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-67">&#182;</a>
+                <a class="pilcrow" href="#section-68">&#182;</a>
               </div>
               <p>TODO This notion of reachable should include a test to ensure that the
 minority is not so far behind that it cannot be caught up with the leader.</p>
@@ -2012,24 +2120,8 @@ minority is not so far behind that it cannot be caught up with the leader.</p>
     }
     <span class="hljs-keyword">var</span> majoritySize = <span class="hljs-built_in">Math</span>.ceil(parliamentSize / <span class="hljs-number">2</span>)
     <span class="hljs-keyword">var</span> growBy = <span class="hljs-number">1</span>
-    <span class="hljs-keyword">if</span> (parliament.length &gt; <span class="hljs-number">1</span>) {</pre></div></div>
-
-        </li>
-
-
-        <li id="section-68">
-            <div class="annotation">
-
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-68">&#182;</a>
-              </div>
-              <p>If we are a dictator, we can immediately grow to the next size
-because no one else will compete with us in an election.</p>
-
-            </div>
-
-            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.government.majority.length &lt; majoritySize) {
-            <span class="hljs-keyword">return</span> {</pre></div></div>
+    <span class="hljs-keyword">if</span> (parliament.length &gt; <span class="hljs-number">1</span>) {
+</pre></div></div>
 
         </li>
 
@@ -2039,6 +2131,24 @@ because no one else will compete with us in an election.</p>
 
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-69">&#182;</a>
+              </div>
+              <p>If we are a dictator, we can immediately grow to the next size
+because no one else will compete with us in an election.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.government.majority.length &lt; majoritySize) {
+            <span class="hljs-keyword">return</span> {
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-70">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-70">&#182;</a>
               </div>
               <p>quorum: this.government.majority,</p>
 
@@ -2055,16 +2165,17 @@ because no one else will compete with us in an election.</p>
         growBy = <span class="hljs-number">2</span>
     }
     <span class="hljs-keyword">var</span> newParliament = [ <span class="hljs-keyword">this</span>.id ].concat(naturalized).slice(<span class="hljs-number">0</span>, parliament.length + growBy)
-    <span class="hljs-keyword">return</span> {</pre></div></div>
+    <span class="hljs-keyword">return</span> {
+</pre></div></div>
 
         </li>
 
 
-        <li id="section-70">
+        <li id="section-71">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-70">&#182;</a>
+                <a class="pilcrow" href="#section-71">&#182;</a>
               </div>
               <p>quorum: this.government.majority,</p>
 
@@ -2076,16 +2187,18 @@ because no one else will compete with us in an election.</p>
             <span class="hljs-attr">minority</span>: newParliament.slice(majoritySize)
         }
     }
-}</pre></div></div>
+}
+
+</pre></div></div>
 
         </li>
 
 
-        <li id="section-71">
+        <li id="section-72">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-71">&#182;</a>
+                <a class="pilcrow" href="#section-72">&#182;</a>
               </div>
               <p>Called after expand, so if we have a goverment that has lost a member of the
 minority, and was not able to replace it when it expanded, we know to kick
@@ -2187,7 +2300,9 @@ Legislator.prototype._exile = <span class="hljs-function"><span class="hljs-keyw
     }
 }
 
-<span class="hljs-built_in">module</span>.exports = Legislator</pre></div></div>
+<span class="hljs-built_in">module</span>.exports = Legislator
+
+</pre></div></div>
 
         </li>
 
