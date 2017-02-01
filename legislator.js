@@ -3,7 +3,7 @@ var Monotonic = require('monotonic').asString
 var Scheduler = require('happenstance')
 var push = [].push
 var slice = [].slice
-var Index = require('procession/index')
+var Indexer = require('procession/indexer')
 var Procession = require('procession')
 var logger = require('prolific.logger').createLogger('paxos')
 
@@ -16,10 +16,10 @@ function Legislator (id, options) {
     this.parliamentSize = options.parliamentSize || 5
 
     this.log = new Procession
-    this.log.addListener(this.index = new Index(function (left, right) {
+    this.log.addListener(this.indexer = new Indexer(function (left, right) {
         assert(left && right)
-        assert(left.value.promise && right.value.promise)
-        return Monotonic.compare(left.value.promise, right.value.promise)
+        assert(left.body.promise && right.body.promise)
+        return Monotonic.compare(left.body.promise, right.body.promise)
     }))
     this.scheduler = new Scheduler(options.scheduler || {})
     this.synchronizing = {}
@@ -74,7 +74,7 @@ function Legislator (id, options) {
     this.ping = options.ping || 1
     this.timeout = options.timeout || 3
 
-    this.least = this.log.consumer()
+    this.least = this.log.shifter()
 
     this.constituency = []
     this.operations = []
@@ -82,7 +82,7 @@ function Legislator (id, options) {
     this.minimum = '0/0'
 
     this.outbox = new Procession
-    this.consumer = options.consumer ? this.outbox.consumer() : null
+    this.shifter = options.shifter ? this.outbox.shifter() : null
 }
 
 Legislator.prototype._begin = function () {
@@ -340,7 +340,7 @@ Legislator.prototype._consensus = function (now) {
 }
 
 Legislator.prototype._findRound = function (sought) {
-    return this.index.tree.find({ value: { promise: sought } })
+    return this.indexer.tree.find({ body: { promise: sought } })
 }
 
 Legislator.prototype._stuffProposal = function (messages, proposal) {
@@ -394,8 +394,8 @@ Legislator.prototype._stuffSynchronize = function (now, ping, messages) {
                     return false
                 }
                 // assert(round, 'cannot find immigration')
-                if (Monotonic.isBoundary(iterator.value.promise, 0)) {
-                    var immigrate = iterator.value.value.government.immigrate
+                if (Monotonic.isBoundary(iterator.body.promise, 0)) {
+                    var immigrate = iterator.body.value.government.immigrate
                     if (immigrate && immigrate.id == ping.id) {
                         break
                     }
@@ -416,8 +416,8 @@ Legislator.prototype._pushEnactments = function (messages, iterator, count) {
     while (--count && iterator != null) {
         messages.push({
             type: 'enact',
-            promise: iterator.value.promise,
-            value: iterator.value.value
+            promise: iterator.body.promise,
+            value: iterator.body.value
         })
         iterator = iterator.next
     }
@@ -522,7 +522,7 @@ Legislator.prototype.sent = function (now, pulse, responses) {
             // a ping record for every citizen, they'll continue to use their
             // current minimum.
             this.getPing(this.id).pinged = true
-            this.getPing(this.id).decided = this.log.head.value.promise
+            this.getPing(this.id).decided = this.log.head.body.promise
             this.minimum = this.citizens.reduce(function (minimum, citizen) {
                 if (minimum == null) {
                     return null
@@ -532,7 +532,7 @@ Legislator.prototype.sent = function (now, pulse, responses) {
                     return null
                 }
                 return Monotonic.compare(ping.decided, minimum) < 0 ? ping.decided : minimum
-            }.bind(this), this.log.head.value.promise) || this.minimum
+            }.bind(this), this.log.head.body.promise) || this.minimum
             break
         }
     } else {
@@ -865,7 +865,7 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
 
     message = JSON.parse(JSON.stringify(message))
 
-    var max = this.log.head.value
+    var max = this.log.head.body
 
     // TODO Since we only ever increment by one, this could be more assertive
     // for the message number. However, I have to stop and recall whether we

@@ -22,8 +22,8 @@ Network.prototype.receive = function (legislator, send) {
 
 Network.prototype.send = function (legislator) {
     var sent = false, message
-    while (legislator.consumer.peek()) {
-        message = legislator.consumer.shift()
+    while (legislator.shifter.peek()) {
+        message = legislator.shifter.shift()
         this.receive(legislator, message)
         sent = true
     }
@@ -60,7 +60,7 @@ Network.prototype.addLegislators = function (count) {
             ping: 1,
             timeout: 3,
             naturalized: true,
-            consumer: true,
+            shifter: true,
             scheduler: { timerless: true }
         })
         this.legislators.push(legislator)

@@ -15,7 +15,7 @@ function prove (assert) {
         timeout: 3,
         naturalized: true,
         scheduler: { timerless: true },
-        consumer: true
+        shifter: true
     }
 
     var legislators = [ new Legislator('0', options) ]
@@ -39,8 +39,8 @@ function prove (assert) {
     function send (legislator, failures) {
         failures || (failures = {})
         var sent = false, message
-        while (legislator.consumer.peek()) {
-            message = legislator.consumer.shift()
+        while (legislator.shifter.peek()) {
+            message = legislator.shifter.shift()
             receive(legislator, message, failures)
             sent = true
         }
@@ -100,7 +100,7 @@ function prove (assert) {
     }, 'leader and constituent pair')
 
     assert(legislators[1].least.node.next.peek().promise, '2/0', 'synchronized')
-    assert(legislators[1].log.head.value.promise, '2/0', 'synchronized')
+    assert(legislators[1].log.head.body.promise, '2/0', 'synchronized')
     assert(legislators[1].properties, {
         '0': { location: '0', immigrated: '1/0' },
         '1': { location: '1', immigrated: '2/0' }
@@ -121,7 +121,7 @@ function prove (assert) {
     }, 'three member parliament')
 
     assert(legislators[2].least.node.next.peek().promise, '3/0', 'synchronized least')
-    assert(legislators[2].log.head.value.promise, '4/0', 'synchronized')
+    assert(legislators[2].log.head.body.promise, '4/0', 'synchronized')
 
     assert(legislators[1].enqueue(time, 1, {}).leader, '0', 'post not leader')
 
@@ -173,12 +173,12 @@ function prove (assert) {
 
     while (send(legislators[0]));
 
-    assert(legislators[3].log.head.value.promise, '0/0', 'log before naturalization')
+    assert(legislators[3].log.head.body.promise, '0/0', 'log before naturalization')
 
     tick()
 
     assert(legislators[3].least.node.next.peek().promise, '6/0', 'log after naturalization')
-    assert(legislators[3].log.head.value.promise, '7/1', 'log after naturalization')
+    assert(legislators[3].log.head.body.promise, '7/1', 'log after naturalization')
 
     legislators[0].enqueue(time, 1, { type: 'enqueue', value: 2 })
     legislators[0].enqueue(time, 1, { type: 'enqueue', value: 3 })
