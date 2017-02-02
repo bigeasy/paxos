@@ -11,5 +11,5 @@ function prove (assert) {
     network.timeAndTick(1)
     // Test that multiple messages will interleave their accepts and commits and
     // ride the same pulse.
-    assert(network.legislators[0].log.head.body.value, { value: 3 }, 'enqueued')
+    assert(network.legislators[0].log.head.body.body.value, { value: 3 }, 'enqueued')
 }

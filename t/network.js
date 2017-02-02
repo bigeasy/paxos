@@ -24,7 +24,7 @@ Network.prototype.send = function (legislator) {
     var sent = false, message
     while (legislator.shifter.peek()) {
         message = legislator.shifter.shift()
-        this.receive(legislator, message)
+        this.receive(legislator, message.body)
         sent = true
     }
     return sent
