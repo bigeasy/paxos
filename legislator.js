@@ -150,7 +150,6 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
         promise: promise,
         route: quorum,
         value: {
-            type: 'government',
             islandId: this.islandId,
 // TODO Choke up on this structure, move majority and minority up one.
             government: government,
