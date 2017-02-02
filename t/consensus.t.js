@@ -70,7 +70,8 @@ function prove (assert) {
         minority: [],
         constituents: [],
         promise: '1/0',
-        map: {}
+        map: {},
+        immigrated: { id: { '1/0': '0' }, promise: { '0': '1/0' } }
     }, 'bootstrap')
 
     legislators.push(legislator = new Legislator('1', options))
@@ -98,7 +99,11 @@ function prove (assert) {
         immigrate: { id: '1', properties: { location: '1' }, cookie: 0 },
         constituents: [ '1' ],
         promise: '2/0',
-        map: {}
+        map: {},
+        immigrated: {
+            id: { '1/0': '0', '2/0': '1' },
+            promise: { '0': '1/0', '1': '2/0' }
+        }
     }, 'leader and constituent pair')
 
     assert(legislators[1].least.node.next.peek().promise, '2/0', 'synchronized')
@@ -120,7 +125,11 @@ function prove (assert) {
         minority: [ '2' ],
         constituents: [],
         promise: '4/0',
-        map: {}
+        map: {},
+        immigrated: {
+            id: { '1/0': '0', '2/0': '1', '3/0': '2' },
+            promise: { '0': '1/0', '1': '2/0', '2': '3/0' }
+        }
     }, 'three member parliament')
 
     assert(legislators[2].least.node.next.peek().promise, '3/0', 'synchronized least')
@@ -140,7 +149,11 @@ function prove (assert) {
         minority: [ '2' ],
         constituents: [],
         promise: '5/0',
-        map: null
+        map: null,
+        immigrated: {
+            id: { '1/0': '0', '2/0': '1', '3/0': '2' },
+            promise: { '0': '1/0', '1': '2/0', '2': '3/0' }
+        }
     }, 'recover from collapse')
 
     legislators[0].pings[1].timeout = 1
@@ -207,7 +220,11 @@ function prove (assert) {
         minority: [ '3', '4' ],
         constituents: [],
         promise: 'a/0',
-        map: {}
+        map: {},
+        immigrated: {
+            id: { '1/0': '0', '2/0': '1', '3/0': '2', '6/0': '3', '7/0': '4' },
+            promise: { '0': '1/0', '1': '2/0', '2': '3/0', '3': '6/0', '4': '7/0' }
+        }
     }, 'five member parliament')
 
 
@@ -229,7 +246,11 @@ function prove (assert) {
         minority: [ '1', '4' ],
         constituents: [],
         promise: 'b/0',
-        map: null
+        map: null,
+        immigrated: {
+            id: { '1/0': '0', '2/0': '1', '3/0': '2', '6/0': '3', '7/0': '4' },
+            promise: { '0': '1/0', '1': '2/0', '2': '3/0', '3': '6/0', '4': '7/0' }
+        }
     }, 'recover from isolation')
     return
 

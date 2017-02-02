@@ -12,6 +12,10 @@ function prove (assert) {
         exile: '3',
         constituents: [],
         promise: '6/0',
-        map: {}
+        map: {},
+        immigrated: {
+            id: { '1/0': '0', '2/0': '1', '3/0': '2', '5/0': '3' },
+            promise: { '0': '1/0', '1': '2/0', '2': '3/0', '3': '5/0' }
+        }
     }, 'exile')
 }

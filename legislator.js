@@ -60,7 +60,13 @@ function Legislator (id, options) {
     this.pulsing = false
     this.collapsed = false
 
-    this.government = { promise: '0/0', minority: [], majority: [] }
+    this.government = {
+        promise: '0/0',
+        minority: [],
+        majority: [],
+        immigrated: { id: {}, promise: {} }
+    }
+
     this.lastIssued = null
     this.promise = '0/0'
 
@@ -139,15 +145,19 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
     }.bind(this))
     this.lastIssued = remapped
     var properties = JSON.parse(JSON.stringify(this.properties))
+    var immigrated = JSON.parse(JSON.stringify(this.government.immigrated))
 // TODO I'd rather have a more intelligent structure.
     if (government.immigrate) {
         properties[government.immigrate.id] = JSON.parse(JSON.stringify(government.immigrate.properties))
         properties[government.immigrate.id].immigrated = promise
         government.constituents.push(government.immigrate.id)
+        immigrated.promise[government.immigrate.id] = promise
+        immigrated.id[promise] = government.immigrate.id
     }
 // TODO Null map to indicate collapse or change in leadership. Wait, change in
 // leader is only ever collapse? Ergo...
     government.map = this.collapsed ? null : map
+    government.immigrated = immigrated
     assert(this.proposals.length == 0 || !Monotonic.isBoundary(this.proposals[0].promise, 0))
     this.proposals.unshift({
         promise: promise,
@@ -565,6 +575,8 @@ Legislator.prototype.bootstrap = function (now, islandId, properties) {
     this.government.majority.push(this.id)
     this.properties[this.id] = JSON.parse(JSON.stringify(properties))
     this.properties[this.id].immigrated = '1/0'
+    this.government.immigrated.id['1/0'] = this.id
+    this.government.immigrated.promise[this.id] = '1/0'
     this.newGovernment(now, [ this.id ], {
         majority: [ this.id ],
         minority: []
