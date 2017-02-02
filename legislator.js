@@ -89,10 +89,7 @@ function Legislator (id, options) {
 Legislator.prototype._begin = function () {
     this.log.push({
         promise: '0/0',
-        value: { government: this.government },
-        quorum: [ this.id ],
-        decisions: [ this.id ],
-        decided: true
+        value: { government: this.government }
     })
 }
 
