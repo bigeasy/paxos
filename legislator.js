@@ -92,6 +92,10 @@ function Legislator (id, options) {
     this.shifter = options.shifter ? this.outbox.shifter() : null
 }
 
+// Common initialization for bootstrap and join is the creation of the dummy
+// first entry.
+
+//
 Legislator.prototype._begin = function () {
     this.log.push({
         module: 'paxos',
@@ -100,6 +104,10 @@ Legislator.prototype._begin = function () {
     })
 }
 
+// Minimal helper method to shave some verbosity on the tracing messages. Might
+// want to remove it and accept the verbosity.
+
+//
 Legislator.prototype._trace = function (method, vargs) {
     logger.trace(method, { $vargs: vargs })
 }
@@ -341,6 +349,12 @@ Legislator.prototype._consensus = function (now) {
     return this._twoPhaseCommit(now)
 }
 
+// Find a round of paxos in the log based on the given promise.
+//
+// Not loving how deeply nested these conditions and keys are, but I understand
+// why it is that way, and it would be a full wrapper of `bintrees` to fix it.
+
+//
 Legislator.prototype._findRound = function (sought) {
     return this.indexer.tree.find({ body: { body: { promise: sought } } })
 }
