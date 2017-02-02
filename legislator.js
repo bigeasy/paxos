@@ -94,6 +94,7 @@ function Legislator (id, options) {
 
 Legislator.prototype._begin = function () {
     this.log.push({
+        module: 'paxos',
         promise: '0/0',
         value: { government: this.government }
     })
@@ -874,7 +875,7 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
     // skip values for the government number, and I'm pretty sure we do.
     //
     // TODO This implies that we can be very certain about a sync if we ensure
-    // that there are no gaps in both the governemnt series and the message
+    // that there are no gaps in both the government series and the message
     // series, which could be done by backfilling any gaps encountered during
     // failed rounds of Paxos.
 
@@ -910,10 +911,14 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
         return
     }
 
+    var isGovernment = Monotonic.isBoundary(message.promise, 0)
+
 // TODO How crufy are these log entries? What else is lying around in them?
     max.next = message
     message.previous = max.promise
     this.log.push({
+        module: 'paxos',
+        method: isGovernment ? 'government' : 'entry',
         promise: message.promise,
         previous: max.promise,
         value: message.value
@@ -921,7 +926,7 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
 // Forever bombing out our latest promise.
     this.promise = message.promise
 
-    if (Monotonic.isBoundary(message.promise, 0)) {
+    if (isGovernment) {
         this._enactGovernment(now, message)
     }
 
