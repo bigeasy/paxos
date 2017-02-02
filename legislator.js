@@ -147,6 +147,8 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
     }
     assert(this.proposals.length == 0 || !Monotonic.isBoundary(this.proposals[0].promise, 0))
     this.proposals.unshift({
+        module: 'paxos',
+        method: 'consensus',
         promise: promise,
         route: quorum,
         value: {
@@ -627,6 +629,8 @@ Legislator.prototype.enqueue = function (now, islandId, message) {
 // TODO Bombs out the current working promise.
         var promise = this.lastIssued = Monotonic.increment(this.lastIssued, 1)
         this.proposals.push({
+            module: 'paxos',
+            method: 'consensus',
             promise: promise,
             route: this.government.majority,
             value: message
