@@ -909,7 +909,11 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
 // TODO How crufy are these log entries? What else is lying around in them?
     max.next = message
     message.previous = max.promise
-    this.log.push(message)
+    this.log.push({
+        promise: message.promise,
+        previous: max.promise,
+        value: message.value
+    })
 // Forever bombing out our latest promise.
     this.promise = message.promise
 
