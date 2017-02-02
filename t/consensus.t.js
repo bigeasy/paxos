@@ -1,4 +1,4 @@
-require('proof/redux')(22, prove)
+require('proof/redux')(21, prove)
 
 function prove (assert) {
     var Legislator = require('../legislator'), legislator
@@ -71,7 +71,8 @@ function prove (assert) {
         constituents: [],
         promise: '1/0',
         map: {},
-        immigrated: { id: { '1/0': '0' }, promise: { '0': '1/0' } }
+        immigrated: { id: { '1/0': '0' }, promise: { '0': '1/0' } },
+        properties: { '0': { location: '0' } }
     }, 'bootstrap')
 
     legislators.push(legislator = new Legislator('1', options))
@@ -103,15 +104,15 @@ function prove (assert) {
         immigrated: {
             id: { '1/0': '0', '2/0': '1' },
             promise: { '0': '1/0', '1': '2/0' }
+        },
+        properties: {
+            '0': { location: '0' },
+            '1': { location: '1' }
         }
     }, 'leader and constituent pair')
 
     assert(legislators[1].least.node.next.peek().promise, '2/0', 'synchronized')
     assert(legislators[1].log.head.body.body.promise, '2/0', 'synchronized')
-    assert(legislators[1].properties, {
-        '0': { location: '0', immigrated: '1/0' },
-        '1': { location: '1', immigrated: '2/0' }
-    }, 'citizens')
 
     legislators.push(legislator = new Legislator('2', options))
     legislator.join(time, 1)
@@ -129,6 +130,11 @@ function prove (assert) {
         immigrated: {
             id: { '1/0': '0', '2/0': '1', '3/0': '2' },
             promise: { '0': '1/0', '1': '2/0', '2': '3/0' }
+        },
+        properties: {
+            '0': { location: '0' },
+            '1': { location: '1' },
+            '2': { location: '2' }
         }
     }, 'three member parliament')
 
@@ -153,6 +159,11 @@ function prove (assert) {
         immigrated: {
             id: { '1/0': '0', '2/0': '1', '3/0': '2' },
             promise: { '0': '1/0', '1': '2/0', '2': '3/0' }
+        },
+        properties: {
+            '0': { location: '0' },
+            '1': { location: '1' },
+            '2': { location: '2' }
         }
     }, 'recover from collapse')
 
@@ -224,6 +235,13 @@ function prove (assert) {
         immigrated: {
             id: { '1/0': '0', '2/0': '1', '3/0': '2', '6/0': '3', '7/0': '4' },
             promise: { '0': '1/0', '1': '2/0', '2': '3/0', '3': '6/0', '4': '7/0' }
+        },
+        properties: {
+            '0': { location: '0' },
+            '1': { location: '1' },
+            '2': { location: '2' },
+            '3': { location: '3' },
+            '4': { location: '4' }
         }
     }, 'five member parliament')
 
@@ -250,6 +268,13 @@ function prove (assert) {
         immigrated: {
             id: { '1/0': '0', '2/0': '1', '3/0': '2', '6/0': '3', '7/0': '4' },
             promise: { '0': '1/0', '1': '2/0', '2': '3/0', '3': '6/0', '4': '7/0' }
+        },
+        properties: {
+            '0': { location: '0' },
+            '1': { location: '1' },
+            '2': { location: '2' },
+            '3': { location: '3' },
+            '4': { location: '4' }
         }
     }, 'recover from isolation')
     return

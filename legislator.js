@@ -54,7 +54,6 @@ function Legislator (id, options) {
     // a new government is formed to immigrate or exile a citizen.
     //
     this.proposals = []
-    this.properties = {}
     this.immigrating = []
     this.keepAlive = false
     this.pulsing = false
@@ -64,6 +63,7 @@ function Legislator (id, options) {
         promise: '0/0',
         minority: [],
         majority: [],
+        properties: {},
         immigrated: { id: {}, promise: {} }
     }
 
@@ -130,7 +130,7 @@ Legislator.prototype.getPing = function (id) {
 Legislator.prototype.newGovernment = function (now, quorum, government, promise) {
     this._trace('newGovernment', [ now, quorum, government, promise ])
     assert(!government.constituents)
-    government.constituents = Object.keys(this.properties).sort().filter(function (citizen) {
+    government.constituents = Object.keys(this.government.properties).sort().filter(function (citizen) {
         return !~government.majority.indexOf(citizen)
             && !~government.minority.indexOf(citizen)
     })
@@ -144,12 +144,11 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
         return proposal
     }.bind(this))
     this.lastIssued = remapped
-    var properties = JSON.parse(JSON.stringify(this.properties))
+    var properties = JSON.parse(JSON.stringify(this.government.properties))
     var immigrated = JSON.parse(JSON.stringify(this.government.immigrated))
 // TODO I'd rather have a more intelligent structure.
     if (government.immigrate) {
         properties[government.immigrate.id] = JSON.parse(JSON.stringify(government.immigrate.properties))
-        properties[government.immigrate.id].immigrated = promise
         government.constituents.push(government.immigrate.id)
         immigrated.promise[government.immigrate.id] = promise
         immigrated.id[promise] = government.immigrate.id
@@ -158,6 +157,7 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
 // leader is only ever collapse? Ergo...
     government.map = this.collapsed ? null : map
     government.immigrated = immigrated
+    government.properties = properties
     assert(this.proposals.length == 0 || !Monotonic.isBoundary(this.proposals[0].promise, 0))
     this.proposals.unshift({
         promise: promise,
@@ -274,7 +274,7 @@ Legislator.prototype._twoPhaseCommit = function (now) {
     // Shift the ids any citizens that have already immigrated.
     while (
         this.immigrating.length != 0 &&
-        this.properties[this.immigrating[0].id]
+        this.government.immigrated.promise[this.immigrating[0].id]
     ) {
         this.immigrating.shift()
     }
@@ -573,8 +573,7 @@ Legislator.prototype.bootstrap = function (now, islandId, properties) {
     this.naturalize()
     this.islandId = islandId
     this.government.majority.push(this.id)
-    this.properties[this.id] = JSON.parse(JSON.stringify(properties))
-    this.properties[this.id].immigrated = '1/0'
+    this.government.properties[this.id] = JSON.parse(JSON.stringify(properties))
     this.government.immigrated.id['1/0'] = this.id
     this.government.immigrated.promise[this.id] = '1/0'
     this.newGovernment(now, [ this.id ], {
@@ -705,7 +704,7 @@ Legislator.prototype.immigrate = function (now, islandId, id, cookie, properties
 // until the proposal was enacted.
 
 //
-        if (id in this.properties) {
+        if (id in this.government.properties) {
             response = {
                 enqueued: false,
                 islandId: this.islandId,
@@ -1081,15 +1080,13 @@ Legislator.prototype._enactGovernment = function (now, round) {
 
     assert(Monotonic.compare(this.government.promise, round.promise) < 0, 'governments out of order')
 
-    // when we vote to shrink the government, the initial vote has a greater
-    // quorum than the resulting government. Not sure why this comment is here.
     this.government = JSON.parse(JSON.stringify(round.value.government))
-    this.properties = JSON.parse(JSON.stringify(round.value.properties))
 
     if (this.government.exile) {
         var index = this.government.constituents.indexOf(this.government.exile)
         this.government.constituents.splice(index, 1)
-        delete this.properties[this.government.exile]
+        // TODO Remove! Fall back to a peek at exile.
+        delete this.government.properties[this.government.exile]
         delete this.pings[this.government.exile]
     }
 
