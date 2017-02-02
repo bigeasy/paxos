@@ -22,7 +22,6 @@ function prove (assert) {
     legislators[0].bootstrap(time, 1, { location: '0' })
 
     function receive (legislator, send, failures) {
-        console.log(send)
         failures || (failures = {})
         var responses = {}
         send.route.forEach(function (id) {
