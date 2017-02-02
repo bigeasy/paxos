@@ -1,4 +1,4 @@
-require('proof/redux')(3, prove)
+require('proof/redux')(2, prove)
 
 function prove (assert) {
     var Network = require('./network')
@@ -12,8 +12,8 @@ function prove (assert) {
         minority: [ '2' ],
         immigrate: { id: '3', properties: { location: '3' }, cookie: 2 },
         constituents: [ '3' ],
-        promise: '5/0'
+        promise: '5/0',
+        map: { '4/2': '5/1' }
     }, 'immigrate')
     assert(network.legislators[0].log.head.body.body.promise, '5/1', 'enqueued')
-    assert(network.legislators[0]._findRound('5/0').body.body.value.map, { '4/2': '5/1' }, 'remapped')
 }

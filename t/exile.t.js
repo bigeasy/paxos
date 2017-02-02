@@ -11,6 +11,7 @@ function prove (assert) {
         minority: [ '2' ],
         exile: '3',
         constituents: [],
-        promise: '6/0'
+        promise: '6/0',
+        map: {}
     }, 'exile')
 }

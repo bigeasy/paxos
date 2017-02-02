@@ -145,6 +145,9 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
         properties[government.immigrate.id].immigrated = promise
         government.constituents.push(government.immigrate.id)
     }
+// TODO Null map to indicate collapse or change in leadership. Wait, change in
+// leader is only ever collapse? Ergo...
+    government.map = this.collapsed ? null : map
     assert(this.proposals.length == 0 || !Monotonic.isBoundary(this.proposals[0].promise, 0))
     this.proposals.unshift({
         promise: promise,
@@ -152,11 +155,7 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
         value: {
 // TODO Choke up on this structure, move majority and minority up one.
             government: government,
-            properties: properties,
-// TODO Null map to indicate collapse or change in leadership. Wait, change in
-// leader is only ever collapse? Ergo...
-            collapsed: this.collapsed,
-            map: this.collapsed ? null : map
+            properties: properties
         }
     })
 }

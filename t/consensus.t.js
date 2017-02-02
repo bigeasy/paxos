@@ -69,7 +69,8 @@ function prove (assert) {
         majority: [ '0' ],
         minority: [],
         constituents: [],
-        promise: '1/0'
+        promise: '1/0',
+        map: {}
     }, 'bootstrap')
 
     legislators.push(legislator = new Legislator('1', options))
@@ -96,7 +97,8 @@ function prove (assert) {
         minority: [],
         immigrate: { id: '1', properties: { location: '1' }, cookie: 0 },
         constituents: [ '1' ],
-        promise: '2/0'
+        promise: '2/0',
+        map: {}
     }, 'leader and constituent pair')
 
     assert(legislators[1].least.node.next.peek().promise, '2/0', 'synchronized')
@@ -117,7 +119,8 @@ function prove (assert) {
         majority: [ '0', '1' ],
         minority: [ '2' ],
         constituents: [],
-        promise: '4/0'
+        promise: '4/0',
+        map: {}
     }, 'three member parliament')
 
     assert(legislators[2].least.node.next.peek().promise, '3/0', 'synchronized least')
@@ -136,7 +139,8 @@ function prove (assert) {
         majority: [ '0', '1' ],
         minority: [ '2' ],
         constituents: [],
-        promise: '5/0'
+        promise: '5/0',
+        map: null
     }, 'recover from collapse')
 
     legislators[0].pings[1].timeout = 1
@@ -202,7 +206,8 @@ function prove (assert) {
         majority: [ '0', '1', '2' ],
         minority: [ '3', '4' ],
         constituents: [],
-        promise: 'a/0'
+        promise: 'a/0',
+        map: {}
     }, 'five member parliament')
 
 
@@ -223,7 +228,8 @@ function prove (assert) {
         majority: [ '0', '2', '3' ],
         minority: [ '1', '4' ],
         constituents: [],
-        promise: 'b/0'
+        promise: 'b/0',
+        map: null
     }, 'recover from isolation')
     return
 
