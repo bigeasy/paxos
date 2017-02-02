@@ -162,11 +162,7 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
     this.proposals.unshift({
         promise: promise,
         route: quorum,
-        value: {
-// TODO Choke up on this structure, move majority and minority up one.
-            government: government,
-            properties: properties
-        }
+        value: government
     })
 }
 
@@ -400,7 +396,7 @@ Legislator.prototype._stuffSynchronize = function (now, ping, messages) {
                 }
                 // assert(round, 'cannot find immigration')
                 if (Monotonic.isBoundary(iterator.body.body.promise, 0)) {
-                    var immigrate = iterator.body.body.value.government.immigrate
+                    var immigrate = iterator.body.body.value.immigrate
                     if (immigrate && immigrate.id == ping.id) {
                         break
                     }
@@ -905,9 +901,9 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
         // assert(this.log.size == 1)
         valid = Monotonic.isBoundary(message.promise, 0)
         valid = valid && this.least.peek().promise == '0/0'
-        valid = valid && message.value.government.immigrate
-        valid = valid && message.value.government.immigrate.id == this.id
-        valid = valid && message.value.government.immigrate.cookie == this.cookie
+        valid = valid && message.value.immigrate
+        valid = valid && message.value.immigrate.id == this.id
+        valid = valid && message.value.immigrate.cookie == this.cookie
     }
     if (!valid) {
         pulse.failed = true
@@ -1080,7 +1076,7 @@ Legislator.prototype._enactGovernment = function (now, round) {
 
     assert(Monotonic.compare(this.government.promise, round.promise) < 0, 'governments out of order')
 
-    this.government = JSON.parse(JSON.stringify(round.value.government))
+    this.government = JSON.parse(JSON.stringify(round.value))
 
     if (this.government.exile) {
         var index = this.government.constituents.indexOf(this.government.exile)
