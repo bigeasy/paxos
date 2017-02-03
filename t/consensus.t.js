@@ -116,7 +116,7 @@ function prove (assert) {
 
     legislators.push(legislator = new Legislator('2', options))
     legislator.join(time, 1)
-    legislators[0].enqueue(time, 1, { type: 'enqueue', value: 1 })
+    legislators[0].enqueue(time, 1, 1)
     legislators[0].immigrate(time, 1, '2', legislators[2].cookie, { location: '2' })
 
     tick()
@@ -197,7 +197,7 @@ function prove (assert) {
     legislators.push(legislator = new Legislator('4', options))
     legislator.join(time, 1)
     legislators[0].immigrate(time, 1, '4', legislators[4].cookie, { location: '4' })
-    legislators[0].enqueue(time, 1, { type: 'enqueue', value: 2 })
+    legislators[0].enqueue(time, 1, 2)
 
     while (send(legislators[0]));
 
@@ -208,14 +208,14 @@ function prove (assert) {
     assert(legislators[3].least.node.next.peek().promise, '6/0', 'log after naturalization')
     assert(legislators[3].log.head.body.body.promise, '7/1', 'log after naturalization')
 
-    legislators[0].enqueue(time, 1, { type: 'enqueue', value: 2 })
-    legislators[0].enqueue(time, 1, { type: 'enqueue', value: 3 })
+    legislators[0].enqueue(time, 1, 2)
+    legislators[0].enqueue(time, 1, 3)
 
     tick()
 
     // One more post to propagate the pings to the new memebers back to the
     // leader. TODO Do this by advancing clock to test pings.
-    legislators[0].enqueue(time, 1, { type: 'enqueue', value: 3 })
+    legislators[0].enqueue(time, 1, 3)
 
     tick()
 
@@ -246,7 +246,7 @@ function prove (assert) {
     }, 'five member parliament')
 
 
-    legislators[0].enqueue(time, 1, { type: 'enqueue', value: 3 })
+    legislators[0].enqueue(time, 1, 3)
 
     legislators[1].collapse(time)
 

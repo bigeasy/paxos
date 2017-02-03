@@ -100,7 +100,7 @@ Legislator.prototype._begin = function () {
     this.log.push({
         module: 'paxos',
         promise: '0/0',
-        value: { government: this.government }
+        body: this.government
     })
 }
 
@@ -171,7 +171,7 @@ Legislator.prototype.newGovernment = function (now, quorum, government, promise)
     this.proposals.unshift({
         promise: promise,
         route: quorum,
-        value: government
+        body: government
     })
 }
 
@@ -263,6 +263,14 @@ Legislator.prototype._twoPhaseCommit = function (now) {
 // draining the queue is pretty much synchronous, pretty much instant.
 //
 // Pretty much.
+//
+// Me later: Actually, putting the government at the head of the queue means
+// at this point is used to keep government calculations simple. I suppose e can
+// run those caculations after every change and put it at the end of the queue,
+// but what confuses me is more than one govermental change in the queue.
+//
+// Therefore, if we only ever have one government in the queue, it doesn't save
+// use a world of complexity to `unshift` it instead of `push` it.
     if (this.accepted && Monotonic.isBoundary(this.accepted.promise, 0)) {
         return {
             type: 'consensus',
@@ -335,6 +343,15 @@ Legislator.prototype._twoPhaseCommit = function (now) {
     return null
 }
 
+// This nested if bothers me. Start to imagine how to employ the GoF strategy
+// pattern. Might be happy enough if it where a state flag with a `switch`
+// statemenet. Do not like all the flags and feeling around in the dark for a
+// state. Yet, the `collapsed` flag is used to shut off enqueuing and adjust the
+// nature of the algorithm to be Paxos proper and not two-phase commit, so the
+// strategy pattern is the best approach because then those flags can be a
+// proeprty of the pattern.
+
+//
 Legislator.prototype._consensus = function (now) {
     this._trace('consensus', [ now ])
     if (this.collapsed) {
@@ -369,7 +386,7 @@ Legislator.prototype._stuffProposal = function (messages, proposal) {
     messages.push({
         type: 'accept',
         promise: proposal.promise,
-        value: proposal.value,
+        body: proposal.body,
         previous: previous
     })
     return {
@@ -411,7 +428,7 @@ Legislator.prototype._stuffSynchronize = function (now, ping, messages) {
                 }
                 // assert(round, 'cannot find immigration')
                 if (Monotonic.isBoundary(iterator.body.body.promise, 0)) {
-                    var immigrate = iterator.body.body.value.immigrate
+                    var immigrate = iterator.body.body.body.immigrate
                     if (immigrate && immigrate.id == ping.id) {
                         break
                     }
@@ -433,7 +450,7 @@ Legislator.prototype._pushEnactments = function (messages, iterator, count) {
         messages.push({
             type: 'enact',
             promise: iterator.body.body.promise,
-            value: iterator.body.body.value
+            body: iterator.body.body.body
         })
         iterator = iterator.next
     }
@@ -648,7 +665,7 @@ Legislator.prototype.enqueue = function (now, islandId, message) {
         this.proposals.push({
             promise: promise,
             route: this.government.majority,
-            value: message
+            body: message
         })
         this._nudge(now)
 
@@ -916,9 +933,9 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
         // assert(this.log.size == 1)
         valid = Monotonic.isBoundary(message.promise, 0)
         valid = valid && this.least.peek().promise == '0/0'
-        valid = valid && message.value.immigrate
-        valid = valid && message.value.immigrate.id == this.id
-        valid = valid && message.value.immigrate.cookie == this.cookie
+        valid = valid && message.body.immigrate
+        valid = valid && message.body.immigrate.id == this.id
+        valid = valid && message.body.immigrate.cookie == this.cookie
     }
     if (!valid) {
         pulse.failed = true
@@ -935,7 +952,7 @@ Legislator.prototype._receiveEnact = function (now, pulse, message) {
         method: isGovernment ? 'government' : 'entry',
         promise: message.promise,
         previous: max.promise,
-        value: message.value
+        body: message.body
     })
 // Forever bombing out our latest promise.
     this.promise = message.promise
@@ -1095,7 +1112,7 @@ Legislator.prototype._enactGovernment = function (now, round) {
 
     assert(Monotonic.compare(this.government.promise, round.promise) < 0, 'governments out of order')
 
-    this.government = JSON.parse(JSON.stringify(round.value))
+    this.government = JSON.parse(JSON.stringify(round.body))
 
     if (this.government.exile) {
         var index = this.government.constituents.indexOf(this.government.exile)

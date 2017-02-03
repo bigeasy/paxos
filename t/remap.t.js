@@ -4,8 +4,8 @@ function prove (assert) {
     var Network = require('./network')
     var network = new Network
     network.addLegislators(3)
-    network.legislators[0].enqueue(network.time, 1, { type: 'enqueue', value: 1 })
-    network.legislators[0].enqueue(network.time, 1, { type: 'enqueue', value: 2 })
+    network.legislators[0].enqueue(network.time, 1, 1)
+    network.legislators[0].enqueue(network.time, 1, 2)
     network.addLegislators(1)
     assert(network.legislators[0].government, {
         majority: [ '0', '1' ],
