@@ -41,7 +41,7 @@ function prove (assert) {
         var sent = false, message
         while (legislator.shifter.peek()) {
             message = legislator.shifter.shift()
-            receive(legislator, message.body, failures)
+            receive(legislator, message, failures)
             sent = true
         }
         return sent
@@ -206,7 +206,7 @@ function prove (assert) {
     tick()
 
     assert(legislators[3].least.node.next.peek().promise, '6/0', 'log after naturalization')
-    assert(legislators[3].log.head.body.body.promise, '7/1', 'log after naturalization')
+    assert(legislators[3].log.head.body.promise, '7/1', 'log after naturalization')
 
     legislators[0].enqueue(time, 1, 2)
     legislators[0].enqueue(time, 1, 3)

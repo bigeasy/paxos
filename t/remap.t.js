@@ -25,5 +25,5 @@ function prove (assert) {
             '3': { location: '3' }
         }
     }, 'immigrate')
-    assert(network.legislators[0].log.head.body.body.promise, '5/1', 'enqueued')
+    assert(network.legislators[0].log.head.body.promise, '5/1', 'enqueued')
 }
