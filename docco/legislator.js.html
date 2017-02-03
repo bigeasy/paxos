@@ -74,8 +74,7 @@
     <span class="hljs-keyword">this</span>.log.addListener(<span class="hljs-keyword">this</span>.indexer = <span class="hljs-keyword">new</span> Indexer(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">left, right</span>) </span>{
         assert(left &amp;&amp; right)
         assert(left.body &amp;&amp; right.body)
-        assert(left.body.body.promise &amp;&amp; right.body.body.promise)
-        <span class="hljs-keyword">return</span> Monotonic.compare(left.body.body.promise, right.body.body.promise)
+        <span class="hljs-keyword">return</span> Monotonic.compare(left.body.promise, right.body.promise)
     }))
     <span class="hljs-keyword">this</span>.scheduler = <span class="hljs-keyword">new</span> Scheduler(options.scheduler || {})
     <span class="hljs-keyword">this</span>.synchronizing = {}
@@ -760,7 +759,7 @@ why it is that way, and it would be a full wrapper of <code>bintrees</code> to f
             </div>
 
             <div class="content"><div class='highlight'><pre>Legislator.prototype._findRound = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">sought</span>) </span>{
-    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.indexer.tree.find({ <span class="hljs-attr">body</span>: { <span class="hljs-attr">body</span>: { <span class="hljs-attr">promise</span>: sought } } })
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.indexer.tree.find({ <span class="hljs-attr">body</span>: { <span class="hljs-attr">promise</span>: sought } })
 }
 
 Legislator.prototype._stuffProposal = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">messages, proposal</span>) </span>{
@@ -842,8 +841,8 @@ constituents that will never be connected.</p>
 
             </div>
 
-            <div class="content"><div class='highlight'><pre>                <span class="hljs-keyword">if</span> (Monotonic.isBoundary(iterator.body.body.promise, <span class="hljs-number">0</span>)) {
-                    <span class="hljs-keyword">var</span> immigrate = iterator.body.body.body.immigrate
+            <div class="content"><div class='highlight'><pre>                <span class="hljs-keyword">if</span> (Monotonic.isBoundary(iterator.body.promise, <span class="hljs-number">0</span>)) {
+                    <span class="hljs-keyword">var</span> immigrate = iterator.body.body.immigrate
                     <span class="hljs-keyword">if</span> (immigrate &amp;&amp; immigrate.id == ping.id) {
                         <span class="hljs-keyword">break</span>
                     }
@@ -878,8 +877,8 @@ Legislator.prototype._pushEnactments = <span class="hljs-function"><span class="
     <span class="hljs-keyword">while</span> (--count &amp;&amp; iterator != <span class="hljs-literal">null</span>) {
         messages.push({
             <span class="hljs-attr">type</span>: <span class="hljs-string">'enact'</span>,
-            <span class="hljs-attr">promise</span>: iterator.body.body.promise,
-            <span class="hljs-attr">body</span>: iterator.body.body.body
+            <span class="hljs-attr">promise</span>: iterator.body.promise,
+            <span class="hljs-attr">body</span>: iterator.body.body
         })
         iterator = iterator.nex
     }
@@ -1080,7 +1079,7 @@ current minimum.</p>
             </div>
 
             <div class="content"><div class='highlight'><pre>            <span class="hljs-keyword">this</span>.getPing(<span class="hljs-keyword">this</span>.id).pinged = <span class="hljs-literal">true</span>
-            <span class="hljs-keyword">this</span>.getPing(<span class="hljs-keyword">this</span>.id).decided = <span class="hljs-keyword">this</span>.log.head.body.body.promise
+            <span class="hljs-keyword">this</span>.getPing(<span class="hljs-keyword">this</span>.id).decided = <span class="hljs-keyword">this</span>.log.head.body.promise
             <span class="hljs-keyword">this</span>.minimum = <span class="hljs-keyword">this</span>.citizens.reduce(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">minimum, citizen</span>) </span>{
                 <span class="hljs-keyword">if</span> (minimum == <span class="hljs-literal">null</span>) {
                     <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>
@@ -1090,7 +1089,7 @@ current minimum.</p>
                     <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>
                 }
                 <span class="hljs-keyword">return</span> Monotonic.compare(ping.decided, minimum) &lt; <span class="hljs-number">0</span> ? ping.decided : minimum
-            }.bind(<span class="hljs-keyword">this</span>), <span class="hljs-keyword">this</span>.log.head.body.body.promise) || <span class="hljs-keyword">this</span>.minimum
+            }.bind(<span class="hljs-keyword">this</span>), <span class="hljs-keyword">this</span>.log.head.body.promise) || <span class="hljs-keyword">this</span>.minimum
             <span class="hljs-keyword">break</span>
         }
     } <span class="hljs-keyword">else</span> {
@@ -1649,7 +1648,7 @@ Legislator.prototype._receiveEnact = <span class="hljs-function"><span class="hl
 
     message = <span class="hljs-built_in">JSON</span>.parse(<span class="hljs-built_in">JSON</span>.stringify(message))
 
-    <span class="hljs-keyword">var</span> max = <span class="hljs-keyword">this</span>.log.head.body.body
+    <span class="hljs-keyword">var</span> max = <span class="hljs-keyword">this</span>.log.head.body
 
 </pre></div></div>
 
