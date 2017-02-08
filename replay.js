@@ -1,6 +1,6 @@
 // To generated `events.json`, run the following.
 //
-// node t/paxos/legislator.t.js | grep '^\['  > events.json
+// `node t/paxos/legislator.t.js | grep '^\['  > events.json`
 //
 var assert = require('assert')
 var fs = require('fs')
