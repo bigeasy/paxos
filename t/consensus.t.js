@@ -315,5 +315,5 @@ function prove (assert) {
     tick({ 0: 'isolate' })
     tick()
 
-    assert(denizens[2].islandId, 1, 'island id')
+    assert(denizens[2].republic, 1, 'island id')
 }

@@ -201,7 +201,7 @@ Paxos.prototype._gatherProposals = function (now) {
     }
     return {
         type: 'consensus',
-        islandId: this.islandId,
+        republic: this.republic,
         governments: [ this.government.promise ],
         route: majority,
         messages: [{
@@ -224,7 +224,7 @@ Paxos.prototype._advanceElection = function (now) {
         this.collapsed = false
         return {
             type: 'consensus',
-            islandId: this.islandId,
+            republic: this.republic,
             governments: [ this.government.promise, this.accepted.promise ],
 // TODO Real weird. Yes, at this point, we have definately accepted our own
 // election, replacing whatever was accepted when we sent our proposal.
@@ -273,7 +273,7 @@ Paxos.prototype._twoPhaseCommit = function (now) {
     if (this.accepted && Monotonic.isBoundary(this.accepted.promise, 0)) {
         return {
             type: 'consensus',
-            islandId: this.islandId,
+            republic: this.republic,
             governments: [ this.government.promise, this.accepted.promise ],
             route: this.accepted.route,
             messages: [this._ping(now), {
@@ -326,7 +326,7 @@ Paxos.prototype._twoPhaseCommit = function (now) {
         if (this.proposals.length == 0 || isGovernment) {
             return {
                 type: 'consensus',
-                islandId: this.islandId,
+                republic: this.republic,
                 governments: [ this.government.promise ],
                 route: this.accepted.route,
                 messages: messages
@@ -390,7 +390,7 @@ Paxos.prototype._stuffProposal = function (messages, proposal) {
     })
     return {
         type: 'consensus',
-        islandId: this.islandId,
+        republic: this.republic,
         governments: [ this.government.promise ],
         route: proposal.route.slice(),
         messages: messages
@@ -593,12 +593,12 @@ Paxos.prototype.sent = function (now, pulse, responses) {
     }
 }
 
-Paxos.prototype.bootstrap = function (now, islandId, properties) {
-    this._trace('bootstrap', [ now, islandId, properties ])
+Paxos.prototype.bootstrap = function (now, republic, properties) {
+    this._trace('bootstrap', [ now, republic, properties ])
     this._begin()
     // Update current state as if we're already leader.
     this.naturalize()
-    this.islandId = islandId
+    this.republic = republic
     this.government.majority.push(this.id)
     this.government.properties[this.id] = JSON.parse(JSON.stringify(properties))
     this.government.immigrated.id['1/0'] = this.id
@@ -610,11 +610,11 @@ Paxos.prototype.bootstrap = function (now, islandId, properties) {
     this._nudge(now)
 }
 
-Paxos.prototype.join = function (cookie, islandId) {
-    this._trace('join', [ cookie, islandId ])
+Paxos.prototype.join = function (cookie, republic) {
+    this._trace('join', [ cookie, republic ])
     this._begin()
     this.cookie = cookie
-    this.islandId = islandId
+    this.republic = republic
 }
 
 Paxos.prototype.naturalize = function () {
@@ -628,25 +628,25 @@ Paxos.prototype.naturalize = function () {
 // talk to a server that can be discovered, it can't use the Paxos algorithm for
 // address resolution. From the suggested logic, it will only have a single
 // address, and maybe be told of an actual leader. What happens when that
-// address is lost? Don't see where returning `islandId` and leader helps at
+// address is lost? Don't see where returning `republic` and leader helps at
 // all. It is enough to say you failed, backoff and try again. The network layer
 // can perform checks to see if the recepient is the leader and hop to the
 // actual leader if it isn't, reject if it is but collapsed.
 //
 // Once you've externalized this in kibitz, remove it, or pare it down.
-Paxos.prototype._enqueuable = function (islandId) {
-    this._trace('_enqueuable', [ islandId ])
-    if (this.collapsed || this.islandId != islandId) {
+Paxos.prototype._enqueuable = function (republic) {
+    this._trace('_enqueuable', [ republic ])
+    if (this.collapsed || this.republic != republic) {
         return {
             enqueued: false,
-            islandId: this.islandId,
+            republic: this.republic,
             leader: null
         }
     }
     if (this.government.majority[0] != this.id) {
         return {
             enqueued: false,
-            islandId: this.islandId,
+            republic: this.republic,
             leader: this.government.majority[0]
         }
     }
@@ -654,10 +654,10 @@ Paxos.prototype._enqueuable = function (islandId) {
 
 // Note that a client will have to treat a network failure on submission as a
 // failure requiring boundary detection.
-Paxos.prototype.enqueue = function (now, islandId, message) {
-    this._trace('enqueue', [ now, islandId, message ])
+Paxos.prototype.enqueue = function (now, republic, message) {
+    this._trace('enqueue', [ now, republic, message ])
 
-    var response = this._enqueuable(islandId)
+    var response = this._enqueuable(republic)
     if (response == null) {
 // TODO Bombs out the current working promise.
         var promise = this.lastIssued = Monotonic.increment(this.lastIssued, 1)
@@ -678,10 +678,10 @@ Paxos.prototype.enqueue = function (now, islandId, message) {
     return response
 }
 
-Paxos.prototype.immigrate = function (now, islandId, id, cookie, properties) {
-    this._trace('immigrate', [ now, islandId, id, cookie, properties ])
+Paxos.prototype.immigrate = function (now, republic, id, cookie, properties) {
+    this._trace('immigrate', [ now, republic, id, cookie, properties ])
     assert(typeof id == 'string', 'id must be a hexidecmimal string')
-    var response = this._enqueuable(islandId)
+    var response = this._enqueuable(republic)
     if (response == null) {
 // TODO This is a note. I'd like to find a place to journal this. I'm continuing
 // to take measures to allow for the reuse of ids. It still feels right to me
@@ -734,7 +734,7 @@ Paxos.prototype.immigrate = function (now, islandId, id, cookie, properties) {
         if (id in this.government.properties) {
             response = {
                 enqueued: false,
-                islandId: this.islandId,
+                republic: this.republic,
                 leader: this.government.majority[0]
             }
         } else {
@@ -809,7 +809,7 @@ Paxos.prototype._receivePromise = function (now, pulse, message, responses) {
 }
 
 Paxos.prototype._rejected = function (pulse, comparator) {
-    if (pulse.islandId != this.islandId) {
+    if (pulse.republic != this.republic) {
         return true
     }
     if (! ~pulse.governments.indexOf(this.government.promise)) {
@@ -982,7 +982,7 @@ Paxos.prototype._whenKeepAlive = function (now) {
     this._trace('_whenKeepAlive', [])
     this.outbox.push({
         type: 'consensus',
-        islandId: this.islandId,
+        republic: this.republic,
         governments: [ this.government.promise ],
         route: this.government.majority,
         messages: [ this._ping(now) ]
@@ -999,7 +999,7 @@ Paxos.prototype._whenPing = function (now, id) {
     var messages = []
     var pulse = {
         type: 'synchronize',
-        islandId: this.islandId,
+        republic: this.republic,
         governments: [ this.government.promise ],
         route: [ id ],
         messages: messages,
