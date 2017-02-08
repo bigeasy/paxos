@@ -8,14 +8,15 @@
     "keywords":
     [
                             "paxos", "database", "database", "network", "consensus",
-                            "atomic", "broadcast", "multi-paxos", "queue", "fifo"
+                            "atomic", "broadcast", "multi-paxos", "queue",
+                            "fifo"
     ],
     "author":               "Alan Gutierrez <alan@prettyrobots.com>",
     "contributors":
     [{
-                            "name":   "Demarius Chrite",
-                            "email":  "chrite.demarius@gmail.com",
-                            "web":    "https://github.com/demarius"
+                            "name":  "Demarius Chrite",
+                            "email": "chrite.demarius@gmail.com",
+                            "web":   "https://github.com/demarius"
     }],
     "homepage":             "https://bigeasy.github.io/paxos",
     "bugs":                 "https://github.com/bigeasy/paxos/issues",
@@ -37,6 +38,7 @@
     {
                             "proof":                        "1.2.x"
     },
+    "main":                 "paxos",
     "scripts":
     {
                             "test": "proof platform win32 && proof test */*/*.t.js || t/test"

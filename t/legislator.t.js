@@ -1,7 +1,7 @@
 require('proof/redux')(21, prove)
 
 function prove (assert) {
-    var Legislator = require('../legislator')
+    var Legislator = require('..')
 
     function stuff (legislator, options) {
         legislator.id = options.id

@@ -1,4 +1,4 @@
-var Legislator = require('../legislator')
+var Legislator = require('..')
 
 function Network () {
     this.legislators = []
