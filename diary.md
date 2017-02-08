@@ -130,3 +130,14 @@ time generates a naturalization message and submits it to the leader. The
 message includes the id of the legislator, the location information for the
 legislator, plus a UNIX epoch timestamp generate by the legislator. The
 timestamp is used as a cookie to identify the specific
+
+
+## Naming
+
+Going to be a place where the name does not fit. The class is a paritcipant
+in the island, while the name of the library is `Paxos`. We generally want
+people to see that this is Paxos, and so when we use it in Kibitz we should call
+the member variable `paxos`, but really it is a denizen of Paxos.
+
+And it is a denizen not a legislator. It may or may not be a member of the
+snyod/parilament/government.
