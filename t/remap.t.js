@@ -3,11 +3,11 @@ require('proof/redux')(2, prove)
 function prove (assert) {
     var Network = require('./network')
     var network = new Network
-    network.addLegislators(3)
-    network.legislators[0].enqueue(network.time, 1, 1)
-    network.legislators[0].enqueue(network.time, 1, 2)
-    network.addLegislators(1)
-    assert(network.legislators[0].government, {
+    network.addDenizens(3)
+    network.denizens[0].enqueue(network.time, 1, 1)
+    network.denizens[0].enqueue(network.time, 1, 2)
+    network.addDenizens(1)
+    assert(network.denizens[0].government, {
         majority: [ '0', '1' ],
         minority: [ '2' ],
         immigrate: { id: '3', properties: { location: '3' }, cookie: 2 },
@@ -25,5 +25,5 @@ function prove (assert) {
             '3': { location: '3' }
         }
     }, 'immigrate')
-    assert(network.legislators[0].log.head.body.promise, '5/1', 'enqueued')
+    assert(network.denizens[0].log.head.body.promise, '5/1', 'enqueued')
 }

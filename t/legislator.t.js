@@ -1,40 +1,40 @@
 require('proof/redux')(21, prove)
 
 function prove (assert) {
-    var Legislator = require('..')
+    var Paxos = require('..')
 
-    function stuff (legislator, options) {
-        legislator.id = options.id
-        legislator.pings = {}
+    function stuff (denizen, options) {
+        denizen.id = options.id
+        denizen.pings = {}
         for (var name in options) {
             switch (name) {
             case 'naturalized':
                 options[name].forEach(function (id) {
-                    legislator.pings[id] = { naturalized: true, timeout: 0 }
+                    denizen.pings[id] = { naturalized: true, timeout: 0 }
                 })
                 break
             case 'ponged':
                 options[name].forEach(function (id) {
-                    legislator.pings[id] = { timeout: 0 }
+                    denizen.pings[id] = { timeout: 0 }
                 })
                 break
             case 'timedout':
                 options[name].forEach(function (id) {
-                    legislator.pings[id] = { naturalized: true, timeout: legislator.timeout }
+                    denizen.pings[id] = { naturalized: true, timeout: denizen.timeout }
                 })
                 break
             default:
-                legislator[name] = options[name]
+                denizen[name] = options[name]
                 break
             }
         }
-        return legislator
+        return denizen
     }
 
     ! function () {
-        var legislator = new Legislator('1', {})
+        var denizen = new Paxos('1', {})
 
-        assert(stuff(legislator, {
+        assert(stuff(denizen, {
             parliamentSize: 3,
             id: '0',
             government: {
@@ -50,7 +50,7 @@ function prove (assert) {
                 minority: [ '2' ]
             }
         }, 'expand from dictatorship')
-        assert(stuff(legislator, {
+        assert(stuff(denizen, {
             parliamentSize: 5,
             id: '0',
             government: {
@@ -60,7 +60,7 @@ function prove (assert) {
             },
             naturalized: [ '0', '1', '2', '3' ]
         })._expand(), null, 'expand not enough present')
-        assert(stuff(legislator, {
+        assert(stuff(denizen, {
             parliamentSize: 5,
             id: '0',
             government: {
@@ -76,7 +76,7 @@ function prove (assert) {
                 minority: []
             }
         }, 'expand majority')
-        assert(stuff(legislator, {
+        assert(stuff(denizen, {
             parliamentSize: 5,
             id: '0',
             government: {
@@ -92,7 +92,7 @@ function prove (assert) {
                 minority: [ '3' ]
             }
         }, 'add first member of minority')
-        assert(stuff(legislator, {
+        assert(stuff(denizen, {
             parliamentSize: 5,
             id: '0',
             government: {
@@ -111,9 +111,9 @@ function prove (assert) {
     } ()
 
     ! function () {
-        var legislator = new Legislator('1', {})
+        var denizen = new Paxos('1', {})
 
-        assert(stuff(legislator, {
+        assert(stuff(denizen, {
             id: '0',
             government: {
                 majority: [ '0', '1', '2' ],
@@ -121,7 +121,7 @@ function prove (assert) {
             },
             ponged: [ '3', '4' ]
         })._impeach(), null, 'impeach all good')
-        assert(stuff(legislator, {
+        assert(stuff(denizen, {
             id: '0',
             timeout: 2,
             government: {
@@ -130,7 +130,7 @@ function prove (assert) {
             },
             ponged: [ '4' ]
         })._impeach(), null, 'impeach missing')
-        assert(stuff(legislator, {
+        assert(stuff(denizen, {
             id: '0',
             government: {
                 majority: [ '0', '1', '2' ],
@@ -148,9 +148,9 @@ function prove (assert) {
     } ()
 
     ! function () {
-        var legislator = new Legislator('1', {})
+        var denizen = new Paxos('1', {})
 
-        assert(stuff(legislator, {
+        assert(stuff(denizen, {
             id: '0',
             timeout: 2,
             government: {
@@ -165,7 +165,7 @@ function prove (assert) {
                 minority: [ '4', ]
             }
         }, 'shrink minority to five member parliament')
-        assert(stuff(legislator, {
+        assert(stuff(denizen, {
             id: '0',
             timeout: 2,
             government: {
@@ -180,7 +180,7 @@ function prove (assert) {
                 minority: [ '4', '3', ]
             }
         }, 'shrink to five member parliament')
-        assert(stuff(legislator, {
+        assert(stuff(denizen, {
             id: '0',
             timeout: 2,
             government: {
@@ -195,7 +195,7 @@ function prove (assert) {
                 minority: []
             }
         }, 'shrink minority to three member parliament')
-        assert(stuff(legislator, {
+        assert(stuff(denizen, {
             id: '0',
             timeout: 2,
             government: {
@@ -210,7 +210,7 @@ function prove (assert) {
                 minority: [ '2' ]
             }
         }, 'shrink majority of three member parliament')
-        assert(stuff(legislator, {
+        assert(stuff(denizen, {
             id: '0',
             timeout: 2,
             government: {
@@ -228,16 +228,16 @@ function prove (assert) {
     } ()
 
     ! function () {
-        var legislator = new Legislator('1', {})
+        var denizen = new Paxos('1', {})
 
-        assert(stuff(legislator, {
+        assert(stuff(denizen, {
             timeout: 2,
             government: {
                 constituents: [ '3', '4' ]
             },
             ponged: [ 3, 4 ]
         })._exile(), null, 'exile all good')
-        assert(stuff(legislator, {
+        assert(stuff(denizen, {
             timeout: 2,
             government: {
                 majority: [ '0', '1' ],
@@ -259,8 +259,8 @@ function prove (assert) {
     } ()
 
     ! function () {
-        var legislator
-        Legislator.prototype._determineConstituency.call(legislator = {
+        var denizen
+        Paxos.prototype._determineConstituency.call(denizen = {
             id: '1',
             government: {
                 majority: [ '1' ],
@@ -268,8 +268,8 @@ function prove (assert) {
                 constituents: [ '2', '3' ]
             }
         })
-        assert(legislator.constituency, [ '2', '3' ], 'constituency dictator')
-        Legislator.prototype._determineConstituency.call(legislator = {
+        assert(denizen.constituency, [ '2', '3' ], 'constituency dictator')
+        Paxos.prototype._determineConstituency.call(denizen = {
             id: '2',
             government: {
                 majority: [ '1' ],
@@ -277,8 +277,8 @@ function prove (assert) {
                 constituents: [ '2', '3' ]
             }
         })
-        assert(legislator.constituency, [], 'constituency not in government')
-        Legislator.prototype._determineConstituency.call( legislator = {
+        assert(denizen.constituency, [], 'constituency not in government')
+        Paxos.prototype._determineConstituency.call( denizen = {
             id: '3',
             government: {
                 majority: [ '1', '2','3' ],
@@ -286,8 +286,8 @@ function prove (assert) {
                 constituents: [ '6' ]
             }
         })
-        assert(legislator.constituency, [ '5' ], 'majority constituent in minority')
-        Legislator.prototype._determineConstituency.call( legislator = {
+        assert(denizen.constituency, [ '5' ], 'majority constituent in minority')
+        Paxos.prototype._determineConstituency.call( denizen = {
             id: '3',
             government: {
                 majority: [ '1', '2','3' ],
@@ -295,8 +295,8 @@ function prove (assert) {
                 constituents: [ '6' ]
             }
         })
-        assert(legislator.constituency, [], 'majority constituent in minority missing')
-        Legislator.prototype._determineConstituency.call(legislator = {
+        assert(denizen.constituency, [], 'majority constituent in minority missing')
+        Paxos.prototype._determineConstituency.call(denizen = {
             id: '1',
             government: {
                 majority: [ '1', '2', '3', '4' ],
@@ -304,8 +304,8 @@ function prove (assert) {
                 constituents: [ '4' ]
             },
         })
-        assert(legislator.constituency, [], 'no constituents leader')
-        Legislator.prototype._determineConstituency.call(legislator = {
+        assert(denizen.constituency, [], 'no constituents leader')
+        Paxos.prototype._determineConstituency.call(denizen = {
             id: '2',
             government: {
                 majority: [ '1', '2', '3' ],
@@ -313,6 +313,6 @@ function prove (assert) {
                 constituents: [ '6', '7' ]
             }
         })
-        assert(legislator.constituency, [ '6' ], 'majority with citizen constituents')
+        assert(denizen.constituency, [ '6' ], 'majority with citizen constituents')
     } ()
 }

@@ -1,29 +1,29 @@
-var Legislator = require('..')
+var Paxos = require('..')
 
 function Network () {
-    this.legislators = []
+    this.denizens = []
     this.failures = []
     this.time = 0
 }
 
-Network.prototype.receive = function (legislator, send) {
+Network.prototype.receive = function (denizen, send) {
     var responses = {}
     send.route.forEach(function (id) {
-        var legislator = this.legislators[id]
+        var denizen = this.denizens[id]
         if (this.failures[id] != 'request' && this.failures[id] != 'isolate') {
-            responses[id] = legislator.receive(this.time, send, send.messages)
+            responses[id] = denizen.receive(this.time, send, send.messages)
         }
         if (responses[id] == 'response') {
             delete responses[id]
         }
     }, this)
-    legislator.sent(this.time, send, responses)
+    denizen.sent(this.time, send, responses)
 }
 
-Network.prototype.send = function (legislator) {
+Network.prototype.send = function (denizen) {
     var sent = false, message
-    while (legislator.shifter.peek()) {
-        this.receive(legislator, legislator.shifter.shift())
+    while (denizen.shifter.peek()) {
+        this.receive(denizen, denizen.shifter.shift())
         sent = true
     }
     return sent
@@ -33,10 +33,10 @@ Network.prototype.tick = function () {
     var ticked = true
     while (ticked) {
         ticked = false
-        this.legislators.forEach(function (legislator) {
-            if (this.failures[legislator.id] != 'isolate') {
-                legislator.scheduler.check(this.time)
-                while (this.send(legislator)) {
+        this.denizens.forEach(function (denizen) {
+            if (this.failures[denizen.id] != 'isolate') {
+                denizen.scheduler.check(this.time)
+                while (this.send(denizen)) {
                     ticked = true
                 }
             }
@@ -51,10 +51,10 @@ Network.prototype.timeAndTick = function (count) {
     }
 }
 
-Network.prototype.addLegislators = function (count) {
+Network.prototype.addDenizens = function (count) {
     while (count-- != 0) {
-        var id = String(this.legislators.length)
-        var legislator = new Legislator(id, {
+        var id = String(this.denizens.length)
+        var denizen = new Paxos(id, {
             parliamentSize: 5,
             ping: 1,
             timeout: 3,
@@ -62,12 +62,12 @@ Network.prototype.addLegislators = function (count) {
             shifter: true,
             scheduler: { timerless: true }
         })
-        this.legislators.push(legislator)
-        if (this.legislators.length == 1) {
-            this.legislators[0].bootstrap(this.time, 1, { location: '0' })
+        this.denizens.push(denizen)
+        if (this.denizens.length == 1) {
+            this.denizens[0].bootstrap(this.time, 1, { location: '0' })
         } else {
-            legislator.join(this.time, 1)
-            this.legislators[0].immigrate(this.time, 1, id, legislator.cookie, { location: id })
+            denizen.join(this.time, 1)
+            this.denizens[0].immigrate(this.time, 1, id, denizen.cookie, { location: id })
             this.tick()
         }
     }
