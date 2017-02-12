@@ -1,10 +1,19 @@
+// Common utilities.
 var assert = require('assert')
+
+// Ever increasing serial value with no maximum value.
 var Monotonic = require('monotonic').asString
+
+// A timer with named, cancelable events.
 var Scheduler = require('happenstance')
-var push = [].push
-var slice = [].slice
-var Indexer = require('procession/indexer')
+
+// An evented message queue used for the atomic log.
 var Procession = require('procession')
+
+// A sorted index into the atomic log. TODO Must it be a tree?
+var Indexer = require('procession/indexer')
+
+// Logging conduit.
 var logger = require('prolific.logger').createLogger('paxos')
 
 function Paxos (id, options) {
