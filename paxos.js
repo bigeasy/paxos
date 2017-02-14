@@ -112,16 +112,6 @@ Paxos.prototype._begin = function () {
     })
 }
 
-// Minimal helper method to shave some verbosity on the tracing messages. Might
-// want to remove it and accept the verbosity.
-
-// TODO OUTGOING! WOOT!
-
-//
-Paxos.prototype._trace = function (method, vargs) {
-    logger.trace(method, { $vargs: vargs })
-}
-
 Paxos.prototype.getPing = function (id) {
     var ping = this.pings[id]
     if (ping == null) {
@@ -147,7 +137,6 @@ Paxos.prototype.getPing = function (id) {
 // them queued up, unless we want to also maintain the latest version of the
 // government we hope to have someday, which offends my pragmatic sensibilities.
 Paxos.prototype.newGovernment = function (now, quorum, government, promise) {
-    this._trace('newGovernment', [ now, quorum, government, promise ])
     assert(!government.constituents)
     government.constituents = Object.keys(this.government.properties).sort().filter(function (citizen) {
         return !~government.majority.indexOf(citizen)
@@ -363,7 +352,6 @@ Paxos.prototype._twoPhaseCommit = function (now) {
 
 //
 Paxos.prototype._consensus = function (now) {
-    this._trace('consensus', [ now ])
     if (this.collapsed) {
         if (this.election) {
             return this._advanceElection(now)
@@ -410,7 +398,6 @@ Paxos.prototype._stuffProposal = function (messages, proposal) {
 
 Paxos.prototype._nudge = function (now) {
     assert(now != null)
-    this._trace('nudge', [ now ])
     var pulse = null
     if (!this.pulsing) {
         pulse = this._consensus(now)
@@ -467,7 +454,6 @@ Paxos.prototype._pushEnactments = function (messages, iterator, count) {
 }
 
 Paxos.prototype.receive = function (now, pulse, messages) {
-    this._trace('receive', [ now, pulse, messages ])
     assert(arguments.length == 3 && now != null)
     var responses = []
     for (var i = 0, I = messages.length; i < I; i++) {
@@ -480,7 +466,6 @@ Paxos.prototype.receive = function (now, pulse, messages) {
 }
 
 Paxos.prototype.collapse = function (now) {
-    this._trace('collapse', [])
 // TODO Combine into a single state flag.
     this.collapsed = true
     this.election = null
@@ -518,7 +503,6 @@ Paxos.prototype.collapse = function (now) {
 }
 
 Paxos.prototype.sent = function (now, pulse, responses) {
-    this._trace('sent', [ now, pulse, responses ])
     if (pulse.type == 'consensus') {
         this.pulsing = false
     }
@@ -630,7 +614,6 @@ Paxos.prototype.event = function (envelope) {
 }
 
 Paxos.prototype.bootstrap = function (now, republic, properties) {
-    this._trace('bootstrap', [ now, republic, properties ])
     this._begin()
     // Update current state as if we're already leader.
     this.naturalize()
@@ -647,14 +630,12 @@ Paxos.prototype.bootstrap = function (now, republic, properties) {
 }
 
 Paxos.prototype.join = function (cookie, republic) {
-    this._trace('join', [ cookie, republic ])
     this._begin()
     this.cookie = cookie
     this.republic = republic
 }
 
 Paxos.prototype.naturalize = function () {
-    this._trace('naturalize', [])
     this.naturalized = true
 }
 
@@ -671,7 +652,6 @@ Paxos.prototype.naturalize = function () {
 //
 // Once you've externalized this in kibitz, remove it, or pare it down.
 Paxos.prototype._enqueuable = function (republic) {
-    this._trace('_enqueuable', [ republic ])
     if (this.collapsed || this.republic != republic) {
         return {
             enqueued: false,
@@ -691,7 +671,6 @@ Paxos.prototype._enqueuable = function (republic) {
 // Note that a client will have to treat a network failure on submission as a
 // failure requiring boundary detection.
 Paxos.prototype.enqueue = function (now, republic, message) {
-    this._trace('enqueue', [ now, republic, message ])
 
     var response = this._enqueuable(republic)
     if (response == null) {
@@ -715,7 +694,6 @@ Paxos.prototype.enqueue = function (now, republic, message) {
 }
 
 Paxos.prototype.immigrate = function (now, republic, id, cookie, properties) {
-    this._trace('immigrate', [ now, republic, id, cookie, properties ])
     assert(typeof id == 'string', 'id must be a hexidecmimal string')
     var response = this._enqueuable(republic)
     if (response == null) {
@@ -793,7 +771,6 @@ Paxos.prototype.immigrate = function (now, republic, id, cookie, properties) {
 }
 
 Paxos.prototype._reject = function (message) {
-    this._trace('_reject', [ message ])
     return {
         type: 'reject',
         from: this.id,
@@ -803,12 +780,10 @@ Paxos.prototype._reject = function (message) {
 }
 
 Paxos.prototype._receiveReject = function (now, pulse, message) {
-    this._trace('_receiveReject', [ now, pulse, message ])
     pulse.failed = true
 }
 
 Paxos.prototype._receivePropose = function (now, pulse, message, responses) {
-    this._trace('_receivePropose', [ now, pulse, message, responses ])
 // TODO Mark as collapsed, call `collapse`, let `collapse` decide?
     if (this._rejected(pulse, function (promise) {
         return Monotonic.compare(message.promise, promise) <= 0
@@ -827,7 +802,6 @@ Paxos.prototype._receivePropose = function (now, pulse, message, responses) {
 }
 
 Paxos.prototype._receivePromise = function (now, pulse, message, responses) {
-    this._trace('_receivePromise', [ now, pulse, message, responses ])
     // We won't get called if our government has been superceeded.
     assert(~pulse.governments.indexOf(this.government.promise), 'goverment mismatch')
     assert(this.election, 'no election')
@@ -865,7 +839,6 @@ Paxos.prototype._rejected = function (pulse, comparator) {
 // leader will be able to learn immediately.
 
 Paxos.prototype._receiveAccept = function (now, pulse, message, responses) {
-    this._trace('_receiveAccept', [ now, pulse, message, responses ])
 // TODO Think hard; will this less than catch both two-stage commit and Paxos?
     if (this._rejected(pulse, function (promise) {
         return Monotonic.compareIndex(promise, message.promise, 0) > 0
@@ -887,7 +860,6 @@ Paxos.prototype._receiveAccept = function (now, pulse, message, responses) {
 }
 
 Paxos.prototype._receiveAccepted = function (now, pulse, message) {
-    this._trace('_receiveAccepted', [ now, pulse, message ])
     assert(~pulse.governments.indexOf(this.government.promise))
     if (this.election) {
         assert(!~this.election.accepts.indexOf(message.from))
@@ -900,7 +872,6 @@ Paxos.prototype._receiveAccepted = function (now, pulse, message) {
 // need to make sure that you don't send the commit, ah, but if you'd sent a new
 // promise, you would already have worked through these things.
 Paxos.prototype._receiveCommit = function (now, pulse, message, responses) {
-    this._trace('_receiveCommit', [ now, pulse, message, responses ])
     if (this._rejected(pulse, function (promise) {
         return promise != message.promise
     })) {
@@ -925,7 +896,6 @@ Paxos.prototype._receiveCommit = function (now, pulse, message, responses) {
 }
 
 Paxos.prototype._receiveEnact = function (now, pulse, message) {
-    this._trace('_receiveEnact', [ now, pulse, message ])
 
     this.proposal = null
     this.accepted = null
@@ -1015,7 +985,6 @@ Paxos.prototype._pong = function (now) {
 }
 
 Paxos.prototype._whenKeepAlive = function (now) {
-    this._trace('_whenKeepAlive', [])
     this.outbox.push({
         type: 'consensus',
         republic: this.republic,
@@ -1026,7 +995,6 @@ Paxos.prototype._whenKeepAlive = function (now) {
 }
 
 Paxos.prototype._whenPing = function (now, id) {
-    this._trace('_whenPing', [ now, id ])
     var ping = this.getPing(id)
     if (ping.timeout == 0) {
         ping.timeout = 1
@@ -1047,7 +1015,6 @@ Paxos.prototype._whenPing = function (now, id) {
 }
 
 Paxos.prototype._receivePong = function (now, pulse, message, responses) {
-    this._trace('_receivePong', [ now, pulse, message, responses ])
     if (!pulse.failed) {
         var ping = this.getPing(message.from)
         this.ponged = this.ponged || !ping.pinged || ping.timeout != message.timeout
@@ -1061,7 +1028,6 @@ Paxos.prototype._receivePong = function (now, pulse, message, responses) {
 }
 
 Paxos.prototype._receivePing = function (now, pulse, message, responses) {
-    this._trace('_receivePing', [ now, pulse, message, responses ])
     if (message.from == this.id) {
         return
     }
@@ -1137,8 +1103,6 @@ Paxos.prototype._determineConstituency = function () {
 }
 
 Paxos.prototype._enactGovernment = function (now, round) {
-    this._trace('_enactGovernment', [ now, round ])
-
     // While we still have the previous government we clear out any timed events
     // we might of set to fulfill out duties in the previous government. Note
     // that we are more discriminating when clearing out the ping records.
@@ -1229,7 +1193,6 @@ Paxos.prototype._enactGovernment = function (now, round) {
 }
 
 Paxos.prototype._whenCollapse = function (now) {
-    this._trace('_whenCollapse', [])
     this.collapse(now)
 }
 
@@ -1242,7 +1205,6 @@ Paxos.prototype._naturalized = function (id) {
 // naturalized, merely record that I've been naturalized. It is a property that
 // will return with liveness.
 Paxos.prototype._expand = function () {
-    this._trace('_expand', [])
     assert(!this.collapsed)
     var parliament = this.government.majority.concat(this.government.minority)
     if (parliament.length == this.parliamentSize) {
@@ -1293,7 +1255,6 @@ Paxos.prototype._expand = function () {
 // is too big and know that we can reshape the government to have a simple
 // majority.
 Paxos.prototype._shrink = function () {
-    this._trace('_shrink', [])
     var parliament = this.government.majority.concat(this.government.minority)
     if (parliament.length == 1) {
         return null
@@ -1342,7 +1303,6 @@ Paxos.prototype._timedout = function (id) {
 }
 
 Paxos.prototype._impeach = function () {
-    this._trace('_impeach', [])
     assert(!this.collapsed)
     var timedout = this.government.minority.filter(this._timedout.bind(this))
     if (timedout.length == 0) {
@@ -1362,7 +1322,6 @@ Paxos.prototype._impeach = function () {
 }
 
 Paxos.prototype._exile = function () {
-    this._trace('_exile', [])
     assert(!this.collapsed)
     var responsive = this.government.constituents.filter(function (id) {
         return !this.pings[id] || this.pings[id].timeout < this.timeout
