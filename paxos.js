@@ -97,7 +97,6 @@ function Paxos (id, options) {
     this.minimum = '0/0'
 
     this.outbox = new Procession
-    this.shifter = options.shifter ? this.outbox.shifter() : null
 }
 
 // Common initialization for bootstrap and join is the creation of the dummy
@@ -497,7 +496,7 @@ Paxos.prototype.collapse = function (now) {
         this.scheduler.schedule(now, id, {
             module: 'paxos',
             method: 'ping',
-            body: { id: id }
+            body: null
         })
     }, this)
 }
@@ -599,16 +598,15 @@ Paxos.prototype.event = function (envelope) {
         return
     }
     var now = envelope.now
-    envelope = envelope.body
-    switch (envelope.method) {
+    switch (envelope.body.method) {
     case 'ping':
-        this._whenPing(now, envelope.body.id)
+        this._whenPing(envelope.now, envelope.key)
         break
     case 'keepAlive':
-        this._whenKeepAlive(now)
+        this._whenKeepAlive(envelope.now)
         break
     case 'collapse':
-        this._whenCollapse(now)
+        this._whenCollapse(envelope.now)
         break
     }
 }
@@ -1151,7 +1149,7 @@ Paxos.prototype._enactGovernment = function (now, round) {
         this.scheduler.schedule(now, id, {
             module: 'paxos',
             method: 'ping',
-            body: { id: id }
+            body: null
         })
     }, this)
 

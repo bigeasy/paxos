@@ -58,11 +58,10 @@ Network.prototype.addDenizens = function (count) {
             parliamentSize: 5,
             ping: 1,
             timeout: 3,
-            naturalized: true,
-            shifter: true,
-            scheduler: { timerless: true }
+            naturalized: true
         })
         denizen.scheduler.events.shifter().pump(denizen.event.bind(denizen))
+        denizen.shifter = denizen.outbox.shifter()
         this.denizens.push(denizen)
         if (this.denizens.length == 1) {
             this.denizens[0].bootstrap(this.time, 1, { location: '0' })
