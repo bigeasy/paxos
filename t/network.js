@@ -62,6 +62,7 @@ Network.prototype.addDenizens = function (count) {
             shifter: true,
             scheduler: { timerless: true }
         })
+        denizen.scheduler.events.shifter().pump(denizen.event.bind(denizen))
         this.denizens.push(denizen)
         if (this.denizens.length == 1) {
             this.denizens[0].bootstrap(this.time, 1, { location: '0' })

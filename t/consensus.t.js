@@ -14,11 +14,17 @@ function prove (assert) {
         ping: 1,
         timeout: 3,
         naturalized: true,
-        scheduler: { timerless: true },
         shifter: true
     }
 
-    var denizens = [ new Paxos('0', options) ]
+    function createDenizen (id) {
+        var paxos = new Paxos(id, options)
+        paxos.scheduler.events.shifter().pump(paxos.event.bind(paxos))
+        paxos.shifter = paxos.outbox.shifter()
+        return paxos
+    }
+
+    var denizens = [ createDenizen('0') ]
     denizens[0].bootstrap(time, 1, { location: '0' })
 
     function receive (denizen, send, failures) {
@@ -75,7 +81,7 @@ function prove (assert) {
         properties: { '0': { location: '0' } }
     }, 'bootstrap')
 
-    denizens.push(denizen = new Paxos('1', options))
+    denizens.push(denizen = createDenizen('1'))
     denizen.join(time, 1)
 
     assert(denizens[0].immigrate(time, 1, '1', denizens[1].cookie, { location: '1' }).enqueued, 'immigrate')
@@ -114,7 +120,7 @@ function prove (assert) {
     assert(denizens[1].least.node.next.peek().promise, '2/0', 'synchronized')
     assert(denizens[1].log.head.body.body.promise, '2/0', 'synchronized')
 
-    denizens.push(denizen = new Paxos('2', options))
+    denizens.push(denizen = createDenizen('2'))
     denizen.join(time, 1)
     denizens[0].enqueue(time, 1, 1)
     denizens[0].immigrate(time, 1, '2', denizens[2].cookie, { location: '2' })
@@ -191,10 +197,10 @@ function prove (assert) {
 
     assert(denizens[1].pings[2].timeout, 0, 'liveness ping materialized')
 
-    denizens.push(denizen = new Paxos('3', options))
+    denizens.push(denizen = createDenizen('3'))
     denizen.join(time, 1)
     denizens[0].immigrate(time, 1, '3', denizens[3].cookie, { location: '3' })
-    denizens.push(denizen = new Paxos('4', options))
+    denizens.push(denizen = createDenizen('4'))
     denizen.join(time, 1)
     denizens[0].immigrate(time, 1, '4', denizens[4].cookie, { location: '4' })
     denizens[0].enqueue(time, 1, 2)
@@ -294,7 +300,7 @@ function prove (assert) {
 
     // Immigrate, but then restart, and assert that the restarted denizen
     // does not immigrate. (I don't see a test for success here.)
-    denizens.push(denizen = new Paxos('5', options))
+    denizens.push(denizen = createDenizen('5'))
     denizen.join(time, 1)
     denizens[0].immigrate(time, 1, '5', denizens[5].cookie, { location: '5' })
 
@@ -304,7 +310,7 @@ function prove (assert) {
 
     denizens[1].scheduler.check(time)
     send(denizens[1])
-    denizens[5] = new Paxos('5', options)
+    denizens[5] = createDenizen('5')
     denizens[5].join(time, 1)
     tick()
 

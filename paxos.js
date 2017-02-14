@@ -5,7 +5,7 @@ var assert = require('assert')
 var Monotonic = require('monotonic').asString
 
 // A timer with named, cancelable events.
-var Scheduler = require('happenstance')
+var Scheduler = require('happenstance').Scheduler
 
 // An evented message queue used for the atomic log.
 var Procession = require('procession')
@@ -30,7 +30,7 @@ function Paxos (id, options) {
         assert(left.body && right.body)
         return Monotonic.compare(left.body.promise, right.body.promise)
     }))
-    this.scheduler = new Scheduler(options.scheduler || {})
+    this.scheduler = new Scheduler
     this.synchronizing = {}
 
     // This is the right data structure for the job. It is an array of proposals
@@ -114,6 +114,8 @@ Paxos.prototype._begin = function () {
 
 // Minimal helper method to shave some verbosity on the tracing messages. Might
 // want to remove it and accept the verbosity.
+
+// TODO OUTGOING! WOOT!
 
 //
 Paxos.prototype._trace = function (method, vargs) {
@@ -508,8 +510,10 @@ Paxos.prototype.collapse = function (now) {
 
     this.constituency.forEach(function (id) {
         this.scheduler.schedule(now, id, {
-            object: this, method: '_whenPing'
-        }, id)
+            module: 'paxos',
+            method: 'ping',
+            body: { id: id }
+        })
     }, this)
 }
 
@@ -543,15 +547,17 @@ Paxos.prototype.sent = function (now, pulse, responses) {
             var delay = pong.decided == this.getPing(this.id).decided
                       ? now + this.ping : now
             this.scheduler.schedule(delay, pulse.route[0], {
-                object: this,
-                method: '_whenPing'
-            }, pulse.route[0])
+                module: 'paxos',
+                method: 'ping',
+                body: { id: pulse.route[0] }
+            })
             break
         case 'consensus':
             if (!this._nudge(now)) {
                 this.scheduler.schedule(now + this.ping, this.id, {
-                    object: this,
-                    method: '_whenKeepAlive'
+                    module: 'paxos',
+                    method: 'keepAlive',
+                    body: null
                 })
             }
             // Determine the minimum log entry promise.
@@ -595,10 +601,31 @@ Paxos.prototype.sent = function (now, pulse, responses) {
             ping.skip = true
             this.ponged = true
             this.scheduler.schedule(now + this.ping, pulse.route[0], {
-                object: this, method: '_whenPing'
-            }, pulse.route[0])
+                module: 'paxos',
+                method: 'ping',
+                body: { id: pulse.route[0] }
+            })
             break
         }
+    }
+}
+
+Paxos.prototype.event = function (envelope) {
+    if (envelope.module != 'happenstance' || envelope.method != 'event') {
+        return
+    }
+    var now = envelope.now
+    envelope = envelope.body
+    switch (envelope.method) {
+    case 'ping':
+        this._whenPing(now, envelope.body.id)
+        break
+    case 'keepAlive':
+        this._whenKeepAlive(now)
+        break
+    case 'collapse':
+        this._whenCollapse(now)
+        break
     }
 }
 
@@ -1072,7 +1099,9 @@ Paxos.prototype._receivePing = function (now, pulse, message, responses) {
         message.from == this.government.majority[0]
     if (resetWhenCollapse) {
         this.scheduler.schedule(now + this.timeout, this.id, {
-            object: this, method: '_whenCollapse'
+            module: 'paxos',
+            method: 'collapse',
+            body: null
         })
     }
 }
@@ -1141,13 +1170,25 @@ Paxos.prototype._enactGovernment = function (now, round) {
     assert(!this.constituency.length || this.constituency[0] != null)
     this.scheduler.clear()
     if (this.government.majority[0] == this.id) {
-        this.scheduler.schedule(now + this.ping, this.id, { object: this, method: '_whenKeepAlive' })
+        this.scheduler.schedule(now + this.ping, this.id, {
+            module: 'paxos',
+            method: 'keepAlive',
+            body: null
+        })
     } else if (~this.government.majority.slice(1).indexOf(this.id)) {
-        this.scheduler.schedule(now + this.timeout, this.id, { object: this, method: '_whenCollapse' })
+        this.scheduler.schedule(now + this.timeout, this.id, {
+            module: 'paxos',
+            method: 'collapse',
+            body: null
+        })
     }
 
     this.constituency.forEach(function (id) {
-        this.scheduler.schedule(now, id, { object: this, method: '_whenPing' }, id)
+        this.scheduler.schedule(now, id, {
+            module: 'paxos',
+            method: 'ping',
+            body: { id: id }
+        })
     }, this)
 
     // Reset ping tracking information. Leader behavior is different from other
