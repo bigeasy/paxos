@@ -253,7 +253,7 @@ function prove (assert) {
             government: {
                 majority: [ '0', '1' ],
                 minority: [ '2' ],
-                exile: '4'
+                exile: { id: '4' }
             }
         }, 'exile')
     } ()

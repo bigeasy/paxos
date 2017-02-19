@@ -9,13 +9,13 @@ function prove (assert) {
     assert(network.denizens[0].government, {
         majority: [ '0', '1' ],
         minority: [ '2' ],
-        exile: '3',
+        exile: { id: '3', promise: '5/0', properties: { location: '3' } },
         constituents: [],
         promise: '6/0',
         map: {},
         immigrated: {
-            id: { '1/0': '0', '2/0': '1', '3/0': '2', '5/0': '3' },
-            promise: { '0': '1/0', '1': '2/0', '2': '3/0', '3': '5/0' }
+            id: { '1/0': '0', '2/0': '1', '3/0': '2' },
+            promise: { '0': '1/0', '1': '2/0', '2': '3/0' }
         },
         properties: {
             '0': { location: '0' },

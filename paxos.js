@@ -155,10 +155,19 @@ Paxos.prototype.newGovernment = function (now, quorum, government, promise) {
     var immigrated = JSON.parse(JSON.stringify(this.government.immigrated))
 // TODO I'd rather have a more intelligent structure.
     if (government.immigrate) {
-        properties[government.immigrate.id] = JSON.parse(JSON.stringify(government.immigrate.properties))
-        government.constituents.push(government.immigrate.id)
-        immigrated.promise[government.immigrate.id] = promise
-        immigrated.id[promise] = government.immigrate.id
+        var immigrate = government.immigrate
+        properties[immigrate.id] = JSON.parse(JSON.stringify(government.immigrate.properties))
+        government.constituents.push(immigrate.id)
+        immigrated.promise[immigrate.id] = promise
+        immigrated.id[promise] = immigrate.id
+    } else if (government.exile) {
+        var exile = government.exile
+        exile.promise = immigrated.promise[exile.id]
+        exile.properties = properties[exile.id]
+        delete immigrated.promise[exile.id]
+        delete immigrated.id[exile.promise]
+        delete properties[exile.id]
+        government.constituents.splice(government.constituents.indexOf(exile.id), 1)
     }
 // TODO Null map to indicate collapse or change in leadership. Wait, change in
 // leader is only ever collapse? Ergo...
@@ -1114,11 +1123,8 @@ Paxos.prototype._enactGovernment = function (now, round) {
     this.government = JSON.parse(JSON.stringify(round.body))
 
     if (this.government.exile) {
-        var index = this.government.constituents.indexOf(this.government.exile)
-        this.government.constituents.splice(index, 1)
         // TODO Remove! Fall back to a peek at exile.
-        delete this.government.properties[this.government.exile]
-        delete this.pings[this.government.exile]
+        delete this.pings[this.government.exile.id]
     }
 
     if (this.id != this.government.majority[0]) {
@@ -1335,7 +1341,7 @@ Paxos.prototype._exile = function () {
         government: {
             majority: this.government.majority,
             minority: this.government.minority,
-            exile: exiles.shift()
+            exile: { id: exiles.shift() }
         }
     }
 }
