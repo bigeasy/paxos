@@ -636,6 +636,16 @@ Paxos.prototype.bootstrap = function (now, republic, properties) {
     this._nudge(now)
 }
 
+// TODO At this moment, Kibitz and Paxos disagree on how to attempt to join an
+// island. Kibitz has it wrong. It will call this method multiple times, but
+// that is going to push multiple `0/0` entries into the log. However, we can
+// see that the initial entry is pushed on as the first step of both `bootstrap`
+// and `join` so there's no reason why it cannot be part of the constructor.
+//
+// Which means that this can be called multpile times. It can even be reset,
+// maybe.
+
+//
 Paxos.prototype.join = function (cookie, republic) {
     this._begin()
     this.cookie = cookie
@@ -708,8 +718,8 @@ Paxos.prototype.immigrate = function (now, republic, id, cookie, properties) {
 // to take measures to allow for the reuse of ids. It still feels right to me
 // that a display of government or of the census would be displayed using values
 // meaningful to our dear user; Kubernetes HOSTNAMES, AWS instance names, IP
-// address, and not something that is unique, which always means something that
-// this verbose.
+// address, and not something that is garunteed unique like a UUID, because such
+// things are indistinguishable to the human observer.
 //
 // Yet, here I am again contending with an issue that would be so simple if ids
 // where required to be unique. When a citizen that is a constituent dies and
@@ -719,10 +729,11 @@ Paxos.prototype.immigrate = function (now, republic, id, cookie, properties) {
 // pinged? Or is the representative going to search for an immigration record
 // and not find one, which causes us to abend at the moment?
 //
-// I'd decided to resolve the missing record by syncing with a record that is
-// poison and designed to fail. That takes care of the race when the
-// representative beats the immigration record, but what if the immigration
-// record beats the representative?
+// When we get a sync before immigration, it will not see a cookie or not see
+// the right cookie and fail the sync. These syncs fail, time passes, the time
+// out comes and the record is cleared. That takes care of the race when the
+// sync beats the immigration record, but what if the immigration record beats
+// the representative?
 //
 // In that case their will be a new government with the same represenative with
 // the same consitutent, but now there will be an immigration record. The
