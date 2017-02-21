@@ -382,11 +382,18 @@ Paxos.prototype._findRound = function (sought) {
     return this.indexer.tree.find({ body: { promise: sought } })
 }
 
+// TODO Sending all of the backloged entries at once, which ought to be okay
+// since it will be to members of our synod and not too far behind. If they
+// where, we'd have removed them from the government. Still, it would be nice to
+// send these in batches and assert that everyone shares the same max decided
+// promise.
+
+//
 Paxos.prototype._stuffProposal = function (messages, proposal) {
     proposal.route.slice(1).forEach(function (id) {
         var ping = this.getPing(id)
         assert(ping.pinged)
-        this._pushEnactments(messages, this._findRound(ping.decided), -1)
+        this._pushEnactments(messages, this._findRound(ping.decided).next, -1)
     }, this)
     var previous = this.collapsed ? this.accepted : null
     messages.push({
@@ -442,7 +449,7 @@ Paxos.prototype._stuffSynchronize = function (now, ping, messages) {
             }
         } else {
 // TODO Got a read property of null here.
-            iterator = this._findRound(ping.decided)
+            iterator = this._findRound(ping.decided).next
         }
 
         this._pushEnactments(messages, iterator, 20)
@@ -545,6 +552,7 @@ Paxos.prototype.sent = function (now, pulse, responses) {
             })
             break
         case 'consensus':
+            // TODO Do I set keep alive when we've collapsed? `&& !this.collapse`
             if (!this._nudge(now)) {
                 this.scheduler.schedule(now + this.ping, this.id, {
                     module: 'paxos',
