@@ -390,6 +390,11 @@ Paxos.prototype._findRound = function (sought) {
 
 //
 Paxos.prototype._stuffProposal = function (messages, proposal) {
+    // TODO We still have a problem here. If the recipient is not up to date we
+    // will send an enactment in the pulse and we will receive the enactment
+    // ourslelves, causing us to reset our election.
+    //
+    // Also, we don't want to push here, we want to reduce to the minimum.
     proposal.route.slice(1).forEach(function (id) {
         var ping = this.getPing(id)
         assert(ping.pinged)
@@ -922,12 +927,6 @@ Paxos.prototype._receiveCommit = function (now, pulse, message, responses) {
 }
 
 Paxos.prototype._receiveEnact = function (now, pulse, message) {
-
-    this.proposal = null
-    this.accepted = null
-    this.collapsed = false
-    this.election = false
-
     message = JSON.parse(JSON.stringify(message))
 
     var max = this.log.head.body
@@ -948,6 +947,13 @@ Paxos.prototype._receiveEnact = function (now, pulse, message) {
     // indicates something wrong on the part of the sender, but then the sender
     // will fail, so it will timeout and try to ping again. When it does it will
     // assume that it has correct values for `decided`.
+
+    // Okay, we're not always going to get just the entries we're missing. An
+    // election can seek to bring a minority member up to date by pushing it an
+    // enactment before a proposal. The message bundle will be received by all
+    // members of the proposed government, including the leader that is doing
+    // the pushing, so it's log will have, of course, already enacted the
+    // member -- it pulled the enactment of of it's own log after all.
 
     //
     if (!valid) {
@@ -972,6 +978,11 @@ Paxos.prototype._receiveEnact = function (now, pulse, message) {
         pulse.failed = true
         return
     }
+
+    this.proposal = null
+    this.accepted = null
+    this.collapsed = false
+    this.election = false
 
     var isGovernment = Monotonic.isBoundary(message.promise, 0)
 
