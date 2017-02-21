@@ -89,14 +89,21 @@ function Paxos (id, options) {
     this.ping = options.ping || 1
     this.timeout = options.timeout || 3
 
-    this.least = this.log.shifter()
-
     this.constituency = []
     this.operations = []
     this.citizens = []
     this.minimum = '0/0'
 
     this.outbox = new Procession
+
+    this.least = this.log.shifter()
+
+    // TODO So, does it matter if the user nevers sees `0/0`?
+    this.log.push({
+        module: 'paxos',
+        promise: '0/0',
+        body: this.government
+    })
 }
 
 // Common initialization for bootstrap and join is the creation of the dummy
@@ -634,7 +641,6 @@ Paxos.prototype.event = function (envelope) {
 }
 
 Paxos.prototype.bootstrap = function (now, republic, properties) {
-    this._begin()
     // Update current state as if we're already leader.
     this.naturalize()
     this.republic = republic
@@ -660,7 +666,6 @@ Paxos.prototype.bootstrap = function (now, republic, properties) {
 
 //
 Paxos.prototype.join = function (cookie, republic) {
-    this._begin()
     this.cookie = cookie
     this.republic = republic
 }
