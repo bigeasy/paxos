@@ -164,7 +164,11 @@ Paxos.prototype.newGovernment = function (now, quorum, government, promise) {
     if (government.immigrate) {
         var immigrate = government.immigrate
         properties[immigrate.id] = JSON.parse(JSON.stringify(government.immigrate.properties))
-        government.constituents.push(immigrate.id)
+        if (promise == '1/0') {
+            government.majority.push(immigrate.id)
+        } else {
+            government.constituents.push(immigrate.id)
+        }
         immigrated.promise[immigrate.id] = promise
         immigrated.id[promise] = immigrate.id
     } else if (government.exile) {
@@ -645,12 +649,14 @@ Paxos.prototype.bootstrap = function (now, republic, properties) {
     this.naturalize()
     this.republic = republic
     this.government.majority.push(this.id)
-    this.government.properties[this.id] = JSON.parse(JSON.stringify(properties))
-    this.government.immigrated.id['1/0'] = this.id
-    this.government.immigrated.promise[this.id] = '1/0'
     this.newGovernment(now, [ this.id ], {
-        majority: [ this.id ],
-        minority: []
+        majority: [],
+        minority: [],
+        immigrate: {
+            id: this.id,
+            properties: properties,
+            cookie: null
+        }
     }, '1/0')
     this._nudge(now)
 }

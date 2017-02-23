@@ -76,6 +76,7 @@ function prove (assert) {
         minority: [],
         constituents: [],
         promise: '1/0',
+        immigrate: { id: '0', properties: { location: '0' }, cookie: null },
         map: {},
         immigrated: { id: { '1/0': '0' }, promise: { '0': '1/0' } },
         properties: { '0': { location: '0' } }
