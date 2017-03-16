@@ -406,7 +406,8 @@ Paxos.prototype._stuffProposal = function (messages, proposal) {
     // ourslelves, causing us to reset our election.
     //
     // Also, we don't want to push here, we want to reduce to the minimum.
-    proposal.route.slice(1).forEach(function (id) {
+    var route = proposal.route == null ? this.government.majority.slice() : proposal.route.slice()
+    route.slice(1).forEach(function (id) {
         var ping = this.getPing(id)
         assert(ping.pinged)
         this._pushEnactments(messages, this._findRound(ping.decided).next, -1)
@@ -422,7 +423,7 @@ Paxos.prototype._stuffProposal = function (messages, proposal) {
         type: 'consensus',
         republic: this.republic,
         governments: [ this.government.promise ],
-        route: proposal.route.slice(),
+        route: route,
         messages: messages
     }
 }
@@ -716,10 +717,15 @@ Paxos.prototype.enqueue = function (now, republic, message) {
     var response = this._enqueuable(republic)
     if (response == null) {
 // TODO Bombs out the current working promise.
+        // TODO Note that we used to snapshot the majority here as the route but
+        // that can change. Note that the last issued promise is not driven by
+        // government enactment, it is incremented as we greate new promises and
+        // governments.
         var promise = this.lastIssued = Monotonic.increment(this.lastIssued, 1)
         this.proposals.push({
             promise: promise,
-            route: this.government.majority,
+            route: null,
+            //route: this.government.majority,
             body: message
         })
         this._nudge(now)
@@ -914,6 +920,9 @@ Paxos.prototype._receiveAccepted = function (now, pulse, message) {
 // need to make sure that you don't send the commit, ah, but if you'd sent a new
 // promise, you would already have worked through these things.
 Paxos.prototype._receiveCommit = function (now, pulse, message, responses) {
+    logger.info('_receiveCommit', {
+        now: now, $route: pulse.route, $message: message, $accepted: this.accepted
+    })
     if (this._rejected(pulse, function (promise) {
         return promise != message.promise
     })) {
@@ -935,10 +944,14 @@ Paxos.prototype._receiveCommit = function (now, pulse, message, responses) {
             this._receiveEnact(now, pulse, round)
         }, this)
     }
+    logger.info('_receivedCommit', {
+        now: now, $route: pulse.route, $message: message
+    })
 }
 
 Paxos.prototype._receiveEnact = function (now, pulse, message) {
     message = JSON.parse(JSON.stringify(message))
+    logger.info('_receiveEnact', { now: now, $route: pulse.route, $message: message })
 
     var max = this.log.head.body
 
@@ -996,6 +1009,12 @@ Paxos.prototype._receiveEnact = function (now, pulse, message) {
     this.election = false
 
     var isGovernment = Monotonic.isBoundary(message.promise, 0)
+    logger.info('enact', {
+        outOfOrder: !(isGovernment || Monotonic.increment(max.promise, 1) == message.promise),
+        isGovernment: isGovernment,
+        previous: max.promise,
+        next: message.promise
+    })
 
 // TODO How crufy are these log entries? What else is lying around in them?
     max.next = message
