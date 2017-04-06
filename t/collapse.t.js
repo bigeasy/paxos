@@ -41,7 +41,7 @@ function prove (assert) {
     assert(simplify(pulse), {
         type: 'consensus',
         route: [ '0', '1' ],
-        messages: [ 'ping', 'accept' ]
+        messages: [ 'ping', 'minimum', 'accept' ]
     }, 'accept')
     network.receive(network.denizens[0], pulse)
     pulse = outbox.shift()

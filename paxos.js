@@ -401,6 +401,10 @@ Paxos.prototype._findRound = function (sought) {
 
 //
 Paxos.prototype._stuffProposal = function (messages, proposal) {
+    messages.push({
+        type: 'minimum',
+        promise: this.minimum
+    })
     // TODO We still have a problem here. If the recipient is not up to date we
     // will send an enactment in the pulse and we will receive the enactment
     // ourslelves, causing us to reset our election.
@@ -465,6 +469,18 @@ Paxos.prototype._stuffSynchronize = function (now, ping, messages) {
                 iterator = iterator.next
             }
         } else {
+            messages.push({
+                type: 'minimum',
+                promise: this.minimum
+            })
+
+            // If our minimum promise is greated than the most decided promise
+            // for the contituent then our ping record for the constituent is
+            // out of date.
+            if (Monotonic.compare(ping.decided, this.minimum) < 0) {
+                return true
+            }
+
 // TODO Got a read property of null here.
             iterator = this._findRound(ping.decided).next
         }
@@ -596,7 +612,7 @@ Paxos.prototype.sent = function (now, pulse, responses) {
                     return null
                 }
                 return Monotonic.compare(ping.decided, minimum) < 0 ? ping.decided : minimum
-            }.bind(this), this.log.head.body.promise) || this.minimum
+            }.bind(this), this.pings[this.id].decided) || this.minimum
             break
         }
     } else {
@@ -1091,6 +1107,15 @@ Paxos.prototype._receivePong = function (now, pulse, message, responses) {
         ping.decided = message.decided
         ping.when = null
         this._nudge(now)
+    }
+}
+
+Paxos.prototype._receiveMinimum = function (now, pulse, message) {
+    while (Monotonic.compare(this.least.peek().promise, message.promise) < 0) {
+        this.least.shift()
+    }
+    if (Monotonic.compare(this.minimum, message.promise) < 0) {
+        this.minimum = message.promise
     }
 }
 
