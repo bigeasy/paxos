@@ -106,18 +106,6 @@ function Paxos (id, options) {
     })
 }
 
-// Common initialization for bootstrap and join is the creation of the dummy
-// first entry.
-
-//
-Paxos.prototype._begin = function () {
-    this.log.push({
-        module: 'paxos',
-        promise: '0/0',
-        body: this.government
-    })
-}
-
 Paxos.prototype.getPing = function (id) {
     var ping = this.pings[id]
     if (ping == null) {
