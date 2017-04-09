@@ -1035,13 +1035,6 @@ Paxos.prototype._receiveEnact = function (now, pulse, message) {
 // TODO How crufy are these log entries? What else is lying around in them?
     max.next = message
     message.previous = max.promise
-    this.log.push({
-        module: 'paxos',
-        method: isGovernment ? 'government' : 'entry',
-        promise: message.promise,
-        previous: max.promise,
-        body: message.body
-    })
 // Forever bombing out our latest promise.
     this.promise = message.promise
 
@@ -1050,6 +1043,14 @@ Paxos.prototype._receiveEnact = function (now, pulse, message) {
     }
 
     this.getPing(this.id).decided = message.promise
+
+    this.log.push({
+        module: 'paxos',
+        method: isGovernment ? 'government' : 'entry',
+        promise: message.promise,
+        previous: max.promise,
+        body: message.body
+    })
 }
 
 Paxos.prototype._ping = function (now) {

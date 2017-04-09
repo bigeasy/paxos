@@ -1,4 +1,4 @@
-require('proof')(21, prove)
+require('proof')(23, prove)
 
 function prove (assert) {
     var Paxos = require('..'), denizen
@@ -25,6 +25,17 @@ function prove (assert) {
     }
 
     var denizens = [ createDenizen('0') ]
+
+    var shifter = denizens[0].log.shifter()
+
+    shifter.join(function (envelope) {
+        return envelope.method == 'government'
+    }, function (error, envelope) {
+        if (error) throw error
+        assert(envelope.promise, '1/0', 'government message')
+        assert(denizens[0].government.promise, '1/0', 'government enacted')
+    })
+
     denizens[0].bootstrap(time, 1, { location: '0' })
 
     function receive (denizen, send, failures) {
