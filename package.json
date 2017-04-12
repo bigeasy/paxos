@@ -29,9 +29,9 @@
     "dependencies":
     {
                             "bintrees":                     "1.0.1",
-                            "happenstance":                 "3.0.x",
+                            "happenstance":                 "3.4.x",
                             "monotonic":                    "3.0.x",
-                            "procession":                   "0.2.x",
+                            "procession":                   "0.4.x",
                             "prolific.logger":              "3.0.x"
     },
     "devDependencies":
