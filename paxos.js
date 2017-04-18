@@ -1039,6 +1039,10 @@ Paxos.prototype._receiveEnact = function (now, pulse, message) {
         previous: max.promise,
         body: message.body
     })
+
+    this.constituency.forEach(function (id) {
+        this.scheduler.schedule(now, id, { module: 'paxos', method: 'ping', body: null })
+    }, this)
 }
 
 Paxos.prototype._ping = function (now) {
@@ -1224,14 +1228,6 @@ Paxos.prototype._enactGovernment = function (now, round) {
             body: null
         })
     }
-
-    this.constituency.forEach(function (id) {
-        this.scheduler.schedule(now, id, {
-            module: 'paxos',
-            method: 'ping',
-            body: null
-        })
-    }, this)
 
     // Reset ping tracking information. Leader behavior is different from other
     // members. We clear out all ping information for ping who are not our
