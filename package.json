@@ -32,7 +32,7 @@
                             "happenstance":                 "3.4.x",
                             "monotonic":                    "3.0.x",
                             "procession":                   "0.4.x",
-                            "prolific.logger":              "3.0.x"
+                            "prolific.logger":              "5.0.x"
     },
     "devDependencies":
     {
