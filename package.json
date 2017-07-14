@@ -29,7 +29,7 @@
     "dependencies":
     {
                             "bintrees":                     "1.0.1",
-                            "happenstance":                 "3.4.x",
+                            "happenstance":                 "3.6.x",
                             "monotonic":                    "3.0.x",
                             "procession":                   "0.4.x",
                             "prolific.logger":              "5.0.x"
