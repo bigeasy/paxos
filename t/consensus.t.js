@@ -129,7 +129,7 @@ function prove (assert) {
         }
     }, 'leader and constituent pair')
 
-    assert(denizens[1].least.node.next.peek().promise, '2/0', 'synchronized')
+    assert(denizens[1].log.trailer.node.next.next.body.promise, '2/0', 'synchronized')
     assert(denizens[1].log.head.body.body.promise, '2/0', 'synchronized')
 
     denizens.push(denizen = createDenizen('2'))
@@ -156,7 +156,7 @@ function prove (assert) {
         }
     }, 'three member parliament')
 
-    assert(denizens[2].least.node.next.peek().promise, '3/0', 'synchronized least')
+    assert(denizens[2].log.trailer.node.next.next.body.promise, '3/0', 'synchronized least')
     assert(denizens[2].log.head.body.body.promise, '4/0', 'synchronized')
 
     assert(denizens[1].enqueue(time, 1, {}).leader, '0', 'post not leader')
@@ -223,7 +223,7 @@ function prove (assert) {
 
     tick()
 
-    assert(denizens[3].least.node.next.peek().promise, '6/0', 'log after naturalization')
+    assert(denizens[3].log.trailer.node.next.next.body.promise, '6/0', 'log after naturalization')
     assert(denizens[3].log.head.body.promise, '7/1', 'log after naturalization')
 
     denizens[0].enqueue(time, 1, 2)

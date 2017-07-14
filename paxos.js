@@ -9,6 +9,7 @@ var Scheduler = require('happenstance').Scheduler
 
 // An evented message queue used for the atomic log.
 var Procession = require('procession')
+var Window = require('procession/window')
 
 // A sorted index into the atomic log. TODO Must it be a tree?
 var Indexer = require('procession/indexer')
@@ -24,7 +25,7 @@ function Paxos (id, options) {
 
     this.parliamentSize = options.parliamentSize || 5
 
-    this.log = new Procession
+    this.log = new Window
     this.log.addListener(this.indexer = new Indexer(function (left, right) {
         assert(left && right)
         assert(left.body && right.body)
@@ -96,7 +97,7 @@ function Paxos (id, options) {
 
     this.outbox = new Procession
 
-    this.least = this.log.shifter()
+//    this.least = this.log.shifter()
 
     // TODO So, does it matter if the user nevers sees `0/0`?
     this.log.push({
@@ -439,7 +440,7 @@ Paxos.prototype._stuffSynchronize = function (now, ping, messages) {
         var iterator
 
         if (ping.decided == '0/0') {
-            iterator = this.least.node.next
+            iterator = this.log.trailer.node.next
             for (;;) {
 // TODO This will abend if the naturalization falls off the end end of the log.
 // You need to check for gaps and missing naturalizations and then timeout the
@@ -997,7 +998,7 @@ Paxos.prototype._receiveEnact = function (now, pulse, message) {
     if (!valid) {
         // assert(this.log.size == 1)
         valid = Monotonic.isBoundary(message.promise, 0)
-        valid = valid && this.least.peek().promise == '0/0'
+        valid = valid && this.log.trailer.peek().promise == '0/0'
         valid = valid && message.body.immigrate
         valid = valid && message.body.immigrate.id == this.id
         valid = valid && message.body.immigrate.cookie == this.cookie
@@ -1104,8 +1105,8 @@ Paxos.prototype._receivePong = function (now, pulse, message, responses) {
 }
 
 Paxos.prototype._receiveMinimum = function (now, pulse, message) {
-    while (Monotonic.compare(this.least.peek().promise, message.promise) < 0) {
-        this.least.shift()
+    while (Monotonic.compare(this.log.trailer.peek().promise, message.promise) < 0) {
+        this.log.trailer.shift()
     }
     if (Monotonic.compare(this.minimum, message.promise) < 0) {
         this.minimum = message.promise
