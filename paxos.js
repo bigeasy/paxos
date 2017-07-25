@@ -131,13 +131,14 @@ Paxos.prototype.getPing = function (id) {
 // about the new goverment are based on the current government, so we can't have
 // them queued up, unless we want to also maintain the latest version of the
 // government we hope to have someday, which offends my pragmatic sensibilities.
+
+//
 Paxos.prototype.newGovernment = function (now, quorum, government, promise) {
     assert(!government.constituents)
     government.constituents = Object.keys(this.government.properties).sort().filter(function (citizen) {
         return !~government.majority.indexOf(citizen)
             && !~government.minority.indexOf(citizen)
     })
-// TODO Creating this reissue, but then I'm never using it.
     var remapped = government.promise = promise, map = {}
     this.proposals = this.proposals.splice(0, this.proposals.length).map(function (proposal) {
         proposal.was = proposal.promise
@@ -188,6 +189,8 @@ Paxos.prototype.newGovernment = function (now, quorum, government, promise) {
 //
 // TODO Okay, so let's create our constituency tree, so we know how to propagate
 // messages back to the leader.
+
+//
 Paxos.prototype._gatherProposals = function (now) {
     var parliament = this.government.majority.concat(this.government.minority)
 // TODO The constituent must be both connected and synchronized, not just
@@ -278,6 +281,12 @@ Paxos.prototype._twoPhaseCommit = function (now) {
 //
 // Therefore, if we only ever have one government in the queue, it doesn't save
 // use a world of complexity to `unshift` it instead of `push` it.
+
+// ---
+
+    // If we have just accepted a new government, we want to complete this
+    // two-phase commit wihtout piggybacking a new two-phase commit onto this
+    // pulse.
     if (this.accepted && Monotonic.isBoundary(this.accepted.promise, 0)) {
         return {
             type: 'consensus',
@@ -291,7 +300,9 @@ Paxos.prototype._twoPhaseCommit = function (now) {
         }
     }
 
-    // Shift the ids any citizens that have already immigrated.
+    // Shift the ids any citizens that have already immigrated. TODO I remember
+    // being happy about this when I introduced it, but now I can see how to
+    // cover it in testing.
     while (
         this.immigrating.length != 0 &&
         this.government.immigrated.promise[this.immigrating[0].id]
@@ -299,10 +310,13 @@ Paxos.prototype._twoPhaseCommit = function (now) {
         this.immigrating.shift()
     }
 
+    // Check to see if we're constructing a user proposed government.
     var isGovernment = this.proposals.length &&
                        Monotonic.isBoundary(this.proposals[0].promise, 0)
 
+    // If not, check to see if we should form a new government.
     if (!isGovernment) {
+        // Either to accommodate an immigration.
         if (this.immigrating.length) {
             var immigration = this.immigrating.shift()
             this.newGovernment(now, this.government.majority, {
@@ -315,7 +329,10 @@ Paxos.prototype._twoPhaseCommit = function (now) {
                 }
             }, Monotonic.increment(this.promise, 0))
             isGovernment = true
-        } else { // if (this.ponged) {
+        } else { /* if (this.ponged) { */
+            // Or else based on new information. TODO Only run this if you've
+            // actually been ponged with information that would necessitate
+            // changing the government.
             var reshape = this._impeach() || this._expand() || this._shrink() || this._exile()
             if (reshape) {
                 this.newGovernment(now, reshape.quorum, reshape.government, Monotonic.increment(this.promise, 0))
@@ -326,11 +343,21 @@ Paxos.prototype._twoPhaseCommit = function (now) {
         }
     }
 
+    //
     if (this.accepted != null) {
         messages.push({
             type: 'commit',
             promise: this.accepted.promise
         })
+        // TODO The second case here looks as though it was handled above. Ah,
+        // but it was not. With this logic we're not going to piggyback a new
+        // government onto a pulse that is committing a proposal.
+        //
+        // Trying to document the logic of this method for myself having not
+        // seeing it a while and _this is tricky_: we're basically setting
+        // ourselves up to come back through this function a second time pulling
+        // our new government proposal off of the top of the list of
+        // proposalsthe top of the list of proposals.
         if (this.proposals.length == 0 || isGovernment) {
             return {
                 type: 'consensus',
@@ -342,11 +369,25 @@ Paxos.prototype._twoPhaseCommit = function (now) {
         }
     }
 
+    // Now we stuff our proposal.
     var proposal = this.proposals.shift()
     if (proposal != null) {
         return this._stuffProposal(messages, proposal)
     }
 
+    // TODO The above could be made slightly more sane if we did two things.
+    // First we extracted reshape logic into a separate class that could be unit
+    // tested. As you updated the state of the reshaper, it would propose new
+    // governmental shapes.
+    //
+    // TODO Secondly, we really do want some way to simplify the queue jumping
+    // of a new government. We want to garuntee that we're doing one government
+    // at a time. We need to reconsider the likelyhood and utility of user
+    // sepcified government shapes. I'm muddled when I consider how to go about
+    // preventing two governments being unshifted to the head of the proposal
+    // queue at once.
+
+    //
     return null
 }
 
