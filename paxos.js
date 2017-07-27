@@ -191,7 +191,7 @@ Paxos.prototype.newGovernment = function (now, quorum, government, promise) {
 // messages back to the leader.
 
 //
-Paxos.prototype._gatherProposals = function (now) {
+Paxos.prototype._maybeProposeGovernment = function (now) {
     var parliament = this.government.majority.concat(this.government.minority)
 // TODO The constituent must be both connected and synchronized, not just
 // connected.
@@ -404,13 +404,13 @@ Paxos.prototype._consensus = function (now) {
     if (this.collapsed) {
         if (this.election) {
             return this._advanceElection(now)
-        } else {
-            return this._gatherProposals(now)
         }
-    } else if (this.government.majority[0] != this.id) {
-        return null
+        return this._maybeProposeGovernment(now)
     }
-    return this._twoPhaseCommit(now)
+    if (this.government.majority[0] == this.id) {
+        return this._twoPhaseCommit(now)
+    }
+    return null
 }
 
 // Find a round of paxos in the log based on the given promise.
