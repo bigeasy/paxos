@@ -1,4 +1,4 @@
-require('proof')(6, prove)
+require('proof')(8, prove)
 
 function prove (okay) {
     var Proposer = require('../proposer')
@@ -12,7 +12,12 @@ function prove (okay) {
 
     var prepare = []
 
+    proposer.recieve({ method: 'accepted' }) // test accepted and not accepting
+    proposer.recieve({ method: 'committed' }) // test committed and not committing
+
     proposer.prepare(prepare)
+
+    proposer.recieve({ method: 'promise', promise: '1/0' }) // test promise wrong promise
 
     okay(prepare, [{
         to: '0', method: 'prepare', promise: '2/0',
@@ -31,6 +36,9 @@ function prove (okay) {
         })
     })
 
+    okay(proposer.state, 'accepting', 'accepting')
+    proposer.recieve({ method: 'accepted', promise: '1/0' }) // test accepted wrong promise
+
     okay(accept, [{
         to: '0', method: 'accept', promise: '2/0', value: { majority: [ '0', '1' ], minority: [ '2' ] }
     }, {
@@ -45,6 +53,9 @@ function prove (okay) {
             proposer.recieve(response, commit)
         })
     })
+
+    okay(proposer.state, 'committing', 'committing')
+    proposer.recieve({ method: 'committed', promise: '1/0' }) // test committed wrong promise
 
     // TODO Wha?
     /*
