@@ -146,7 +146,7 @@ Paxos.prototype.newGovernment = function (now, quorum, government, promise) {
         proposal.promise = remapped = Monotonic.increment(remapped, 1)
         map[proposal.was] = proposal.promise
         return proposal
-    }.bind(this))
+    })
     this.lastIssued = remapped
     var properties = JSON.parse(JSON.stringify(this.government.properties))
     var immigrated = JSON.parse(JSON.stringify(this.government.immigrated))
@@ -691,7 +691,7 @@ Paxos.prototype.event = function (envelope) {
     }
 }
 
-Paxos.prototype.bootstrap = function (now, republic, properties) {
+Paxos.prototype._bootstrap = function (now, republic, properties) {
     // Update current state as if we're already leader.
     this.naturalize()
     this.republic = republic
@@ -705,6 +705,10 @@ Paxos.prototype.bootstrap = function (now, republic, properties) {
             cookie: null
         }
     }, '1/0')
+}
+
+Paxos.prototype.bootstrap = function (now, republic, properties) {
+    this._bootstrap(now, republic, properties)
     this._nudge(now)
 }
 

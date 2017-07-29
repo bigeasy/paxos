@@ -7,17 +7,17 @@ function prove (okay) {
     var government = [ '0', '1', '2' ]
     var proposer = new Proposer(government.slice(), '1/0', '0')
     var legislators = government.map(function (id) {
-        return new Legislator(government.slice(), '1/0', id)
+        return new Legislator('1/0', id)
     })
 
     var prepare = []
 
-    proposer.recieve({ method: 'accepted' }) // test accepted and not accepting
-    proposer.recieve({ method: 'committed' }) // test committed and not committing
+    proposer.receive({ method: 'accepted' }) // test accepted and not accepting
+    proposer.receive({ method: 'committed' }) // test committed and not committing
 
     proposer.prepare(prepare)
 
-    proposer.recieve({ method: 'promise', promise: '1/0' }) // test promise wrong promise
+    proposer.receive({ method: 'promise', promise: '1/0' }) // test promise wrong promise
 
     okay(prepare, [{
         to: '0', method: 'prepare', promise: '2/0',
@@ -30,14 +30,14 @@ function prove (okay) {
     var accept = []
     prepare.forEach(function (message) {
         var responses = []
-        legislators[+message.to].recieve(message, responses)
+        legislators[+message.to].receive(message, responses)
         responses.forEach(function (response) {
-            proposer.recieve(response, accept)
+            proposer.receive(response, accept)
         })
     })
 
     okay(proposer.state, 'accepting', 'accepting')
-    proposer.recieve({ method: 'accepted', promise: '1/0' }) // test accepted wrong promise
+    proposer.receive({ method: 'accepted', promise: '1/0' }) // test accepted wrong promise
 
     okay(accept, [{
         to: '0', method: 'accept', promise: '2/0', value: { majority: [ '0', '1' ], minority: [ '2' ] }
@@ -48,14 +48,14 @@ function prove (okay) {
     var commit = []
     accept.forEach(function (message) {
         var responses = []
-        legislators[+message.to].recieve(message, responses)
+        legislators[+message.to].receive(message, responses)
         responses.forEach(function (response) {
-            proposer.recieve(response, commit)
+            proposer.receive(response, commit)
         })
     })
 
     okay(proposer.state, 'committing', 'committing')
-    proposer.recieve({ method: 'committed', promise: '1/0' }) // test committed wrong promise
+    proposer.receive({ method: 'committed', promise: '1/0' }) // test committed wrong promise
 
     // TODO Wha?
     /*
@@ -75,9 +75,9 @@ function prove (okay) {
     var done = []
     commit.forEach(function (message) {
         var responses = []
-        legislators[+message.to].recieve(message, responses)
+        legislators[+message.to].receive(message, responses)
         responses.forEach(function (response) {
-            proposer.recieve(response, done)
+            proposer.receive(response, done)
         })
     })
 

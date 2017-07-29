@@ -25,7 +25,7 @@ Proposer.prototype.prepare = function (messages) {
     }, this)
 }
 
-Proposer.prototype.recieve = function (message, messages) {
+Proposer.prototype.receive = function (message, messages) {
     switch (message.method) {
     case 'promise':
         if (this.state == 'preparing') {
