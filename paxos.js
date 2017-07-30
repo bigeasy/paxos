@@ -1136,6 +1136,12 @@ Paxos.prototype._whenPing = function (now, id) {
     this.outbox.push(pulse)
 }
 
+// Note that we communicate naturalization in out pong message. In this way it
+// is different from immigration and exile. We do not need to create a new
+// government to communicate naturalization. It is a property that is returned
+// with liveness. Liveness is an inferred property.
+
+//
 Paxos.prototype._receivePong = function (now, pulse, message, responses) {
     if (!pulse.failed) {
         var ping = this.getPing(message.from)
@@ -1321,9 +1327,6 @@ Paxos.prototype._naturalized = function (id) {
     return ping.naturalized && ping.timeout == 0
 }
 
-// TODO I don't believe I need to form a new government indicating that I've
-// naturalized, merely record that I've been naturalized. It is a property that
-// will return with liveness.
 Paxos.prototype._expand = function () {
     assert(!this.collapsed)
     var parliament = this.government.majority.concat(this.government.minority)
