@@ -35,6 +35,9 @@
 // TODO Try to recall what you need to do to grow correctly. Who is supposed to
 // be in that quorum?
 
+// TODO Work into the words above that preserving a quorum is urgent, but not
+// expanding a quorum to the desired parliament size.
+
 //
 function Shape (parlimentSize, government) {
     this._shouldExpand = parlimentSize != government.parlimentSize
@@ -107,6 +110,9 @@ Shape.prototype.update = function (id, reachable) {
             var majority = this._government.majority.slice()
             var minority = this._government.minority.slice()
             minority.unshift(majority.pop())
+            if (minority.length == majority.length) {
+                minority.pop()
+            }
             return {
                 quorum: this._government.majority,
                 government: {
@@ -124,10 +130,13 @@ Shape.prototype.update = function (id, reachable) {
             }
         })
     }
-    if (Object.keys(this._seen) == this._expected) {
+    if (Object.keys(this._seen).length == this._expected) {
         throw new Error
     }
-    return null
+    if (this._unhealthy) {
+        return null
+    }
+    return this._exiles.shift() || null
 }
 
 module.exports = Shape

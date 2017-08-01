@@ -1,4 +1,4 @@
-require('proof')(8, prove)
+require('proof')(9, prove)
 
 function prove (okay) {
     var Shape = require('../shape')
@@ -84,17 +84,35 @@ function prove (okay) {
         constituents: [ '4', '5', '6' ]
     })
 
-
     okay([
         shape.update('6', false),
         shape.update('5', false)
     ], [ null, null ], 'not ready to shrink again')
 
+    reshape = shape.update('4', false)
+
     okay(reshape, {
-        quorum: [ '0', '1', '2', '3' ],
+        quorum: [ '0', '1', '2' ],
         government: {
-            majority: [ '0', '1', '2' ],
-            minority: [ '3' ]
+            majority: [ '0', '1' ],
+            minority: [ '2' ]
         }
     }, 'shrink again')
+
+    shape = new Shape(7, {
+        majority: reshape.government.majority,
+        minority: reshape.government.minority,
+        constituents: [ '4', '5', '6' ]
+    })
+
+    reshape = shape.update('4', false)
+
+    okay(reshape, {
+        quorum: [ '0', '1' ],
+        government: {
+            majority: [ '0', '1' ],
+            minority: [ '2' ],
+            exile: '4'
+        }
+    }, 'exile')
 }
