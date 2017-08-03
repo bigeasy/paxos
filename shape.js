@@ -83,9 +83,7 @@ Shape.prototype.update = function (id, reachable) {
     }
     this._seen[id] = true
 
-    // We want to flush any exiles if the entire population has been seen.
     var seen = Object.keys(this._seen).length
-    var entirePopulationSeen = seen == this._population
 
     // Majority members are not our resposibility. They trigger their own
     // collapse.
