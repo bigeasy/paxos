@@ -1,19 +1,34 @@
-// Unreachable will never be corrected, but we don't track that here. We create
-// a new shape for each government, then prime it with what we already know.
+// Monitor the reachability of denizens in order to suggest the shape of a new
+// government. The `Shape.update` method is invoked with a denizen id and a
+// reachability status. `Shape.update` returns either a new government to
+// appoint or `null`. Once `Shape.update` returns a new government to appoint
+// the `Shape` object is used up and should be replaced.
+
+// We determine reachability elsewhere so that the `Shape.update` method is only
+// ever called with a true or false value for reachable. For the purposes of
+// `Shape` reachability is defined as follows.
+
+// * A denizen is reachable if the denizen responds to pings and it naturalized.
+// * A denizen is unreachable if the denizen does not respond to pings.
+
+// If the the denizen responds to pings, but is not naturalized, it is neither
+// reachable nor unreachable and we don't want to hear about it.
+
+// Notes:
 
 // Could think harder about priorities as they releate to healing. Wouldn't want
 // to starve the recovery of the cluster by performing immigrations only, when
 // newly naturalized citizens could join the legislature and preserve the
 // republic.
 
-// Note that I currently favor impeachment because the minority updates the
-// constituents. A non-functioning minority member keeps all constitutents in
-// the dark.
+// Note that we currently favor impeachment because the minority updates the
+// constituents. A non-functioning minority member would keep all of its
+// constitutents in the dark.
 
-// Then I favor shrinking the government as soon as it becomes obvious that the
+// We favor filling empty seats in government as soon as they are detected.
+
+// We favor shrinking the government as soon as it becomes obvious that the
 // government size is less than the population of the island.
-
-// Exile occurs immediately.
 
 // All this assuming an external mechnism for tracking pings that will calculate
 // when a paricular participant is reachable or unreachable. After `update`
@@ -40,33 +55,54 @@
 
 //
 function Shape (parlimentSize, government) {
-    this._shouldExpand = parlimentSize != government.parlimentSize
     this._parliamentSize = government.majority.length * 2 - 1
-    this._shouldShrink = government
+    this._shouldExpand = parlimentSize != this._parliamentSize
     this._government = government
     this._unreachable = 0
-    this._expected = government.minority.length + government.constituents.length
-    this._population = government.majority.length + this._expected
-    this._parliament = government.majority.concat(government.minority)
-    this._unhealthy = this._parliament.length != this._parliamentSize
-    this._minorityPresent = 0
-    this._shapes = [[], [], [], []]
+    this._population = government.majority.length + government.minority.length + government.constituents.length
+    this._seatsAreEmpty = government.majority.length + government.minority.length != this._parliamentSize
     this._seen = {}
     this._minority = []
     this._exiles = []
+    this._expandable = []
 }
 
+
+// `Shape.update` determines if a new government should be created that has a
+// new shape. Note that immigration takes place is elsewhere.
+
+//
 Shape.prototype.update = function (id, reachable) {
+    // We are interested in denizens when they are first reachable or when they
+    // become unreachable. We ignore denizens that continue to be reachable.
     var seen = !! this._seen[id]
     if (reachable && seen) {
         return null
     }
     this._seen[id] = true
+
+    // We want to flush any exiles if the entire population has been seen.
+    var seen = Object.keys(this._seen).length
+    var entirePopulationSeen = seen == this._population
+
+    // Majority members are not our resposibility. They trigger their own
+    // collapse.
+    if (~this._government.majority.indexOf(id)) {
+        return null
+    }
+
+    // If the citizen is a minority member we look for impeachments. Also, we
+    // want to take certain actions only after we have ensured that the the
+    // government is as healthy as it can be.
+
+    //
     var minority = ~this._government.minority.indexOf(id)
     if (minority) {
         if (reachable) {
             this._minority.push(id)
         }  else {
+            // If minority member is not reachable we impeach it &mdash; remove
+            // it from the government &mdash; immediately.
             return {
                 quorum: this._government.majority,
                 government: {
@@ -77,24 +113,26 @@ Shape.prototype.update = function (id, reachable) {
                 }
             }
         }
+        // If our minority is present and correct we might release an exile if
+        // one detected one, but we'll keep looking for a citizen to fill an
+        // empty seat if a seat is empty.
         if (
             this._minority.length == this._government.minority.length &&
-            this._expected.length == this._government.minority.length &&
-            this._parliament.length > 1
+            (this._seatsAreEmpty || seen == this._population)
         ) {
-            var parliamentSize = Math.floor(this._parliament.length / 2) * 2 + 1
-            var majoritySize = Math.ceil(parliamentSize / 2)
-            if (this._parliament.length % 2 == 0) {
-            }
-        }
-        var exile = this._exiles.shift()
-        if (exile) {
-            return exile
+            return this._exiles.shift() || null
         }
         return null
     }
+
+    // The citizen is not a minority member.
+
+    //
     if (reachable) {
-        if (this._unhealthy) {
+        if (this._seatsAreEmpty) {
+            // Our government has empty seats and we have found a citizen we can
+            // appoint to the minority. This appointment can take priority over
+            // any impeachments so let's go.
             return {
                 quorum: this.government.majority,
                 government: {
@@ -102,9 +140,22 @@ Shape.prototype.update = function (id, reachable) {
                     minority: this.government.minority.concat(id)
                 }
             }
+        } else if (this._shouldExpand) {
+            this._expandable.push(id)
         }
     } else {
+        // Count as unreachable.
         this._unreachable++
+
+        // If the reachable population is less than the size of our current
+        // government we need to shrink the government size.
+        //
+        // This allows us to move to a more survivable state. A five member
+        // government, for example, can survive two failures. If a five member
+        // government has only four members, however, it can only survive one
+        // failure and with only it's majority of three it cannot survive any
+        // failures. Shrinking to a three member government means those three
+        // members can survive one failure.
         var parliamentSize = this._government.majority.length * 2 - 1
         if (parliamentSize > this._population - this._unreachable) {
             var majority = this._government.majority.slice()
@@ -121,6 +172,8 @@ Shape.prototype.update = function (id, reachable) {
                 }
             }
         }
+
+        // Record the unreachable citizen as a potential exile.
         this._exiles.push({
             quorum: this._government.majority,
             government: {
@@ -130,13 +183,35 @@ Shape.prototype.update = function (id, reachable) {
             }
         })
     }
-    if (Object.keys(this._seen).length == this._expected) {
-        throw new Error
-    }
-    if (this._unhealthy) {
+
+    // If as seat is empty we're going to wait for a citizen to fill those seat.
+    if (this._seatsAreEmpty && seen != this._population) {
         return null
     }
-    return this._exiles.shift() || null
+
+    // TODO Is the quorum the new majority or the old majority?
+    // TODO Think about growth commit race conditions again.
+
+    //
+    if (this._government.minority.length == this._minority.length) {
+        if (this._shouldExpand && this._expandable.length >= 2) {
+            // We should expand and we have citzens who can be appointed to the
+            // government so let's grow the government.
+            var majority = this._government.majority.slice()
+            var minority = this._government.minority.slice()
+            minority.push(this._expandable.shift(), this._expandable.shift())
+            majority.push(minority.shift())
+            return {
+                quorum: majority,
+                government: { majority: majority, minority: minority }
+            }
+        }
+
+        // Otherwise let's exile someone if we have someone to exile.
+        return this._exiles.shift() || null
+    }
+
+    return null
 }
 
 module.exports = Shape

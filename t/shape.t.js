@@ -1,4 +1,4 @@
-require('proof')(9, prove)
+require('proof')(10, prove)
 
 function prove (okay) {
     var Shape = require('../shape')
@@ -104,6 +104,8 @@ function prove (okay) {
         minority: reshape.government.minority,
         constituents: [ '4', '5', '6' ]
     })
+
+    okay(shape.update('2', true), null, 'no exile yet')
 
     reshape = shape.update('4', false)
 
