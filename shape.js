@@ -50,8 +50,10 @@
 // TODO Try to recall what you need to do to grow correctly. Who is supposed to
 // be in that quorum?
 
-// TODO Work into the words above that preserving a quorum is urgent, but not
-// expanding a quorum to the desired parliament size.
+// TODO Work into the words above that filling seats is urgent, but not
+// expanding the government to the desired government size.
+
+// TODO Stop saying "quorum" when you mean "seats filled."
 
 //
 function Shape (parlimentSize, government) {
