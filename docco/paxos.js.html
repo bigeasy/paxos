@@ -20,13 +20,38 @@
             <div id="jump_page">
 
 
+                <a class="source" href="legislator.js.html">
+                  legislator.js
+                </a>
+
+
+                <a class="source" href="log.js.html">
+                  log.js
+                </a>
+
+
                 <a class="source" href="paxos.js.html">
                   paxos.js
                 </a>
 
 
+                <a class="source" href="proposer.js.html">
+                  proposer.js
+                </a>
+
+
+                <a class="source" href="redux.js.html">
+                  redux.js
+                </a>
+
+
                 <a class="source" href="replay.js.html">
                   replay.js
+                </a>
+
+
+                <a class="source" href="shape.js.html">
+                  shape.js
                 </a>
 
             </div>
@@ -369,7 +394,7 @@ government we hope to have someday, which offends my pragmatic sensibilities.</p
         proposal.promise = remapped = Monotonic.increment(remapped, <span class="hljs-number">1</span>)
         map[proposal.was] = proposal.promise
         <span class="hljs-keyword">return</span> proposal
-    }.bind(<span class="hljs-keyword">this</span>))
+    })
     <span class="hljs-keyword">this</span>.lastIssued = remapped
     <span class="hljs-keyword">var</span> properties = <span class="hljs-built_in">JSON</span>.parse(<span class="hljs-built_in">JSON</span>.stringify(<span class="hljs-keyword">this</span>.government.properties))
     <span class="hljs-keyword">var</span> immigrated = <span class="hljs-built_in">JSON</span>.parse(<span class="hljs-built_in">JSON</span>.stringify(<span class="hljs-keyword">this</span>.government.immigrated))
@@ -465,7 +490,7 @@ messages back to the leader.</p>
 
             </div>
 
-            <div class="content"><div class='highlight'><pre>Paxos.prototype._gatherProposals = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">now</span>) </span>{
+            <div class="content"><div class='highlight'><pre>Paxos.prototype._maybeProposeGovernment = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">now</span>) </span>{
     <span class="hljs-keyword">var</span> parliament = <span class="hljs-keyword">this</span>.government.majority.concat(<span class="hljs-keyword">this</span>.government.minority)
 </pre></div></div>
 
@@ -974,13 +999,13 @@ proeprty of the pattern.</p>
     <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.collapsed) {
         <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.election) {
             <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>._advanceElection(now)
-        } <span class="hljs-keyword">else</span> {
-            <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>._gatherProposals(now)
         }
-    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.government.majority[<span class="hljs-number">0</span>] != <span class="hljs-keyword">this</span>.id) {
-        <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>._maybeProposeGovernment(now)
     }
-    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>._twoPhaseCommit(now)
+    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.government.majority[<span class="hljs-number">0</span>] == <span class="hljs-keyword">this</span>.id) {
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>._twoPhaseCommit(now)
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>
 }
 
 </pre></div></div>
@@ -1515,7 +1540,7 @@ Paxos.prototype.event = <span class="hljs-function"><span class="hljs-keyword">f
     }
 }
 
-Paxos.prototype.bootstrap = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">now, republic, properties</span>) </span>{
+Paxos.prototype._bootstrap = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">now, republic, properties</span>) </span>{
 </pre></div></div>
 
         </li>
@@ -1543,6 +1568,10 @@ Paxos.prototype.bootstrap = <span class="hljs-function"><span class="hljs-keywor
             <span class="hljs-attr">cookie</span>: <span class="hljs-literal">null</span>
         }
     }, <span class="hljs-string">'1/0'</span>)
+}
+
+Paxos.prototype.bootstrap = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">now, republic, properties</span>) </span>{
+    <span class="hljs-keyword">this</span>._bootstrap(now, republic, properties)
     <span class="hljs-keyword">this</span>._nudge(now)
 }
 
@@ -2318,7 +2347,37 @@ Paxos.prototype._whenPing = <span class="hljs-function"><span class="hljs-keywor
     <span class="hljs-keyword">this</span>.outbox.push(pulse)
 }
 
-Paxos.prototype._receivePong = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">now, pulse, message, responses</span>) </span>{
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-89">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-89">&#182;</a>
+              </div>
+              <p>Note that we communicate naturalization in out pong message. In this way it
+is different from immigration and exile. We do not need to create a new
+government to communicate naturalization. It is a property that is returned
+with liveness. Liveness is an inferred property.</p>
+
+            </div>
+
+        </li>
+
+
+        <li id="section-90">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-90">&#182;</a>
+              </div>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>Paxos.prototype._receivePong = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">now, pulse, message, responses</span>) </span>{
     <span class="hljs-keyword">if</span> (!pulse.failed) {
         <span class="hljs-keyword">var</span> ping = <span class="hljs-keyword">this</span>.getPing(message.from)
         <span class="hljs-keyword">this</span>.ponged = <span class="hljs-keyword">this</span>.ponged || !ping.pinged || ping.timeout != message.timeout
@@ -2349,11 +2408,11 @@ Paxos.prototype._receivePing = <span class="hljs-function"><span class="hljs-key
         </li>
 
 
-        <li id="section-89">
+        <li id="section-91">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-89">&#182;</a>
+                <a class="pilcrow" href="#section-91">&#182;</a>
               </div>
               <p>TODO Keep a tree to determine if a majority member needs to return the
 values send by a minority member, for now send everything.</p>
@@ -2369,11 +2428,11 @@ values send by a minority member, for now send everything.</p>
         </li>
 
 
-        <li id="section-90">
+        <li id="section-92">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-90">&#182;</a>
+                <a class="pilcrow" href="#section-92">&#182;</a>
               </div>
               <p>TODO You can use <code>ping.timeout != 1</code> wherever you’re using <code>ping.pinged</code>.</p>
 
@@ -2397,11 +2456,11 @@ values send by a minority member, for now send everything.</p>
         </li>
 
 
-        <li id="section-91">
+        <li id="section-93">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-91">&#182;</a>
+                <a class="pilcrow" href="#section-93">&#182;</a>
               </div>
               <p>TODO You’ve got some figuring to do; you went and made it so that synchronize
 will sent a <code>pulse</code> with a <code>failed</code> flag set. If that was the only place you
@@ -2418,11 +2477,11 @@ find yourself in the same situation returning.</p>
         </li>
 
 
-        <li id="section-92">
+        <li id="section-94">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-92">&#182;</a>
+                <a class="pilcrow" href="#section-94">&#182;</a>
               </div>
               <p>TODO Are you setting/unsetting this correctly when you are collapsed?</p>
 
@@ -2446,11 +2505,11 @@ find yourself in the same situation returning.</p>
         </li>
 
 
-        <li id="section-93">
+        <li id="section-95">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-93">&#182;</a>
+                <a class="pilcrow" href="#section-95">&#182;</a>
               </div>
               <p>Majority updates minority. Minority updates constituents. If there is
 no minority, then the majority updates constituents.</p>
@@ -2460,11 +2519,11 @@ no minority, then the majority updates constituents.</p>
         </li>
 
 
-        <li id="section-94">
+        <li id="section-96">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-94">&#182;</a>
+                <a class="pilcrow" href="#section-96">&#182;</a>
               </div>
 
             </div>
@@ -2501,11 +2560,11 @@ Paxos.prototype._enactGovernment = <span class="hljs-function"><span class="hljs
         </li>
 
 
-        <li id="section-95">
+        <li id="section-97">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-95">&#182;</a>
+                <a class="pilcrow" href="#section-97">&#182;</a>
               </div>
               <p>While we still have the previous government we clear out any timed events
 we might of set to fulfill out duties in the previous government. Note
@@ -2528,11 +2587,11 @@ that we are more discriminating when clearing out the ping records.</p>
         </li>
 
 
-        <li id="section-96">
+        <li id="section-98">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-96">&#182;</a>
+                <a class="pilcrow" href="#section-98">&#182;</a>
               </div>
               <p>TODO Remove! Fall back to a peek at exile.</p>
 
@@ -2550,11 +2609,11 @@ that we are more discriminating when clearing out the ping records.</p>
         </li>
 
 
-        <li id="section-97">
+        <li id="section-99">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-97">&#182;</a>
+                <a class="pilcrow" href="#section-99">&#182;</a>
               </div>
               <p>TODO Decide on whether this is calculated here or as needed.</p>
 
@@ -2584,11 +2643,11 @@ that we are more discriminating when clearing out the ping records.</p>
         </li>
 
 
-        <li id="section-98">
+        <li id="section-100">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-98">&#182;</a>
+                <a class="pilcrow" href="#section-100">&#182;</a>
               </div>
               <p>Reset ping tracking information. Leader behavior is different from other
 members. We clear out all ping information for ping who are not our
@@ -2637,24 +2696,7 @@ Paxos.prototype._naturalized = <span class="hljs-function"><span class="hljs-key
     <span class="hljs-keyword">return</span> ping.naturalized &amp;&amp; ping.timeout == <span class="hljs-number">0</span>
 }
 
-</pre></div></div>
-
-        </li>
-
-
-        <li id="section-99">
-            <div class="annotation">
-
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-99">&#182;</a>
-              </div>
-              <p>TODO I don’t believe I need to form a new government indicating that I’ve
-naturalized, merely record that I’ve been naturalized. It is a property that
-will return with liveness.</p>
-
-            </div>
-
-            <div class="content"><div class='highlight'><pre>Paxos.prototype._expand = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+Paxos.prototype._expand = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
     assert(!<span class="hljs-keyword">this</span>.collapsed)
     <span class="hljs-keyword">var</span> parliament = <span class="hljs-keyword">this</span>.government.majority.concat(<span class="hljs-keyword">this</span>.government.minority)
     <span class="hljs-keyword">if</span> (parliament.length == <span class="hljs-keyword">this</span>.parliamentSize) {
@@ -2666,11 +2708,11 @@ will return with liveness.</p>
         </li>
 
 
-        <li id="section-100">
+        <li id="section-101">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-100">&#182;</a>
+                <a class="pilcrow" href="#section-101">&#182;</a>
               </div>
               <p>TODO This notion of reachable should include a test to ensure that the
 minority is not so far behind that it cannot be caught up with the leader.</p>
@@ -2691,11 +2733,11 @@ minority is not so far behind that it cannot be caught up with the leader.</p>
         </li>
 
 
-        <li id="section-101">
+        <li id="section-102">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-101">&#182;</a>
+                <a class="pilcrow" href="#section-102">&#182;</a>
               </div>
               <p>If we are a dictator, we can immediately grow to the next size
 because no one else will compete with us in an election.</p>
@@ -2709,11 +2751,11 @@ because no one else will compete with us in an election.</p>
         </li>
 
 
-        <li id="section-102">
+        <li id="section-103">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-102">&#182;</a>
+                <a class="pilcrow" href="#section-103">&#182;</a>
               </div>
               <p>quorum: this.government.majority,</p>
 
@@ -2736,11 +2778,11 @@ because no one else will compete with us in an election.</p>
         </li>
 
 
-        <li id="section-103">
+        <li id="section-104">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-103">&#182;</a>
+                <a class="pilcrow" href="#section-104">&#182;</a>
               </div>
               <p>quorum: this.government.majority,</p>
 
@@ -2759,11 +2801,11 @@ because no one else will compete with us in an election.</p>
         </li>
 
 
-        <li id="section-104">
+        <li id="section-105">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-104">&#182;</a>
+                <a class="pilcrow" href="#section-105">&#182;</a>
               </div>
               <p>Called after expand, so if we have a goverment that has lost a member of the
 minority, and was not able to replace it when it expanded, we know to kick

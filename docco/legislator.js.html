@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>legislator.js</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+
+      <ul id="jump_to">
+        <li>
+          <a class="large" href="javascript:void(0);">Jump To &hellip;</a>
+          <a class="small" href="javascript:void(0);">+</a>
+          <div id="jump_wrapper">
+          <div id="jump_page_wrapper">
+            <div id="jump_page">
+
+
+                <a class="source" href="legislator.js.html">
+                  legislator.js
+                </a>
+
+
+                <a class="source" href="log.js.html">
+                  log.js
+                </a>
+
+
+                <a class="source" href="paxos.js.html">
+                  paxos.js
+                </a>
+
+
+                <a class="source" href="proposer.js.html">
+                  proposer.js
+                </a>
+
+
+                <a class="source" href="redux.js.html">
+                  redux.js
+                </a>
+
+
+                <a class="source" href="replay.js.html">
+                  replay.js
+                </a>
+
+
+                <a class="source" href="shape.js.html">
+                  shape.js
+                </a>
+
+            </div>
+          </div>
+        </li>
+      </ul>
+
+    <ul class="sections">
+
+          <li id="title">
+              <div class="annotation">
+                  <h1>legislator.js</h1>
+              </div>
+          </li>
+
+
+
+        <li id="section-1">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">var</span> Monotonic = <span class="hljs-built_in">require</span>(<span class="hljs-string">'monotonic'</span>)
+
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Legislator</span> (<span class="hljs-params">promise, id</span>) </span>{
+    <span class="hljs-keyword">this</span>.promise = promise
+    <span class="hljs-keyword">this</span>.id = id
+    <span class="hljs-keyword">this</span>.accepted = <span class="hljs-literal">null</span>
+    <span class="hljs-keyword">this</span>.committed = <span class="hljs-literal">false</span>
+}
+
+Legislator.prototype.receive = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">message, responses</span>) </span>{
+    <span class="hljs-keyword">switch</span> (message.method) {
+    <span class="hljs-keyword">case</span> <span class="hljs-string">'prepare'</span>:
+        <span class="hljs-keyword">if</span> (Monotonic.compare(<span class="hljs-keyword">this</span>.promise, message.promise) &lt; <span class="hljs-number">0</span>) {
+            <span class="hljs-keyword">this</span>.promise = message.promise
+            responses.push({ <span class="hljs-attr">from</span>: <span class="hljs-keyword">this</span>.id, <span class="hljs-attr">method</span>: <span class="hljs-string">'promise'</span>, <span class="hljs-attr">promise</span>: <span class="hljs-keyword">this</span>.promise })
+        } <span class="hljs-keyword">else</span> {
+            responses.push({ <span class="hljs-attr">from</span>: <span class="hljs-keyword">this</span>.id, <span class="hljs-attr">method</span>: <span class="hljs-string">'reject'</span>, <span class="hljs-attr">promise</span>: <span class="hljs-keyword">this</span>.promise })
+        }
+        <span class="hljs-keyword">break</span>
+    <span class="hljs-keyword">case</span> <span class="hljs-string">'accept'</span>:
+        <span class="hljs-keyword">if</span> (Monotonic.compare(<span class="hljs-keyword">this</span>.promise, message.promise) == <span class="hljs-number">0</span>) {
+            <span class="hljs-keyword">this</span>.accepted = message.value
+            responses.push({ <span class="hljs-attr">from</span>: <span class="hljs-keyword">this</span>.id, <span class="hljs-attr">method</span>: <span class="hljs-string">'accepted'</span>, <span class="hljs-attr">promise</span>: <span class="hljs-keyword">this</span>.promise })
+        } <span class="hljs-keyword">else</span> {
+            responses.push({ <span class="hljs-attr">from</span>: <span class="hljs-keyword">this</span>.id, <span class="hljs-attr">method</span>: <span class="hljs-string">'reject'</span>, <span class="hljs-attr">promise</span>: <span class="hljs-keyword">this</span>.promise })
+        }
+        <span class="hljs-keyword">break</span>
+    <span class="hljs-keyword">case</span> <span class="hljs-string">'commit'</span>:
+        <span class="hljs-keyword">if</span> (Monotonic.compare(<span class="hljs-keyword">this</span>.promise, message.promise) == <span class="hljs-number">0</span>) {
+            <span class="hljs-keyword">this</span>.committed = <span class="hljs-literal">true</span>
+            responses.push({ <span class="hljs-attr">from</span>: <span class="hljs-keyword">this</span>.id, <span class="hljs-attr">method</span>: <span class="hljs-string">'committed'</span>, <span class="hljs-attr">promise</span>: <span class="hljs-keyword">this</span>.promise })
+        } <span class="hljs-keyword">else</span> {
+            responses.push({ <span class="hljs-attr">from</span>: <span class="hljs-keyword">this</span>.id, <span class="hljs-attr">method</span>: <span class="hljs-string">'reject'</span>, <span class="hljs-attr">promise</span>: <span class="hljs-keyword">this</span>.promise })
+        }
+    }
+}
+
+<span class="hljs-built_in">module</span>.exports = Legislator
+
+</pre></div></div>
+
+        </li>
+
+    </ul>
+  </div>
+</body>
+</html>
