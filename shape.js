@@ -77,8 +77,7 @@ function Shape (parlimentSize, government) {
 Shape.prototype.update = function (id, reachable) {
     // We are interested in denizens when they are first reachable or when they
     // become unreachable. We ignore denizens that continue to be reachable.
-    var seen = !! this._seen[id]
-    if (reachable && seen) {
+    if (reachable && this._seen[id]) {
         return null
     }
     this._seen[id] = true
