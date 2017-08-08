@@ -7,6 +7,7 @@ function Proposer (government, promise) {
     this.state = 'preparing'
     this.government = government
     this.promise = Monotonic.increment(promise, 0)
+    this.chain = null
     this.promised = null
     this.accepted = null
     this.committed = null
@@ -25,6 +26,10 @@ Proposer.prototype.prepare = function (messages) {
     }, this)
 }
 
+function getPromise (chain) {
+    return chain == null ? '0/0' : chain.promise
+}
+
 Proposer.prototype.receive = function (message, messages) {
     switch (message.method) {
     case 'promise':
@@ -32,6 +37,9 @@ Proposer.prototype.receive = function (message, messages) {
             if (message.promise == this.promise) {
                 assert(!~this.promised.indexOf(message.from))
                 this.promised.push(message.from)
+                if (Monotonic.compare(getPromise(this.chain), getPromise(message.register)) < 0) {
+                    this.chain = message.register
+                }
             }
             if (this.promised.length == Math.ceil(this.government.length / 2)) {
                 // If we have a quorum we move to the accept state.
