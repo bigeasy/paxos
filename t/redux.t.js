@@ -30,7 +30,6 @@ function prove (okay) {
     var proposer = new Proposer(proposal.body.majority.concat(proposal.body.minority), denizens[0].promise)
 
     var prepare = []
-    proposer.prepare(prepare)
 
     function consume (messages) {
         var subsequent = []
@@ -45,4 +44,25 @@ function prove (okay) {
     }
 
     var accept = consume(prepare)
+
+    var reduxes = []
+
+    function createRedux (id) {
+        var denizen = new Redux(id, options)
+        denizen.outbox.shifter().pump(function (message) {
+            var responses = {}
+            message.to.forEach(function (id) {
+                responses[id] = reduxes[id].request(message)
+            })
+            denizen.response(message, responses)
+        })
+        return denizen
+    }
+
+    var Redux = require('../redux')
+    var redux = createRedux('0')
+
+    reduxes.push(redux)
+
+    redux.bootstrap(0, 0)
 }

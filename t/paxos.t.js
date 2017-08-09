@@ -1,89 +1,53 @@
-require('proof')(8, prove)
+require('proof')(3, prove)
 
 function prove (okay) {
     var Proposer = require('../proposer')
     var Legislator = require('../legislator')
 
-    var government = [ '0', '1', '2' ]
-    var proposer = new Proposer(government.slice(), '1/0', '0')
-    var legislators = government.map(function (id) {
+    var queue = []
+    var government = { majority: [ '0', '1' ], minority: [ '2' ] }
+    var proposer = new Proposer(government, '1/0', queue)
+    var legislators = government.majority.concat(government.minority).map(function (id) {
         return new Legislator('1/0', id)
     })
 
-    var prepare = []
+    proposer.prepare()
 
-    proposer.receive({ method: 'accepted' }) // test accepted and not accepting
-    proposer.receive({ method: 'committed' }) // test committed and not committing
+    var pulse = proposer.queue.shift()
 
-    proposer.prepare(prepare)
+    okay(pulse, {
+        to: [ '0', '1' ],
+        method: 'prepare',
+        promise: '2/0'
+    }, 'propose')
 
-    proposer.receive({ method: 'promise', promise: '1/0' }) // test promise wrong promise
-
-    okay(prepare, [{
-        to: '0', method: 'prepare', promise: '2/0',
-    }, {
-        to: '1', method: 'prepare', promise: '2/0',
-    }, {
-        to: '2', method: 'prepare', promise: '2/0'
-    }], 'prepare')
-
-    var accept = []
-    prepare.forEach(function (message) {
-        var responses = []
-        legislators[+message.to].receive(message, responses)
-        responses.forEach(function (response) {
-            proposer.receive(response, accept)
+    function transmit (pulse) {
+        var responses = {}
+        pulse.to.forEach(function (id) {
+            responses[id] = legislators[id].request(pulse)
         })
-    })
+        proposer.response(pulse, responses)
+    }
 
-    okay(proposer.state, 'accepting', 'accepting')
-    proposer.receive({ method: 'accepted', promise: '1/0' }) // test accepted wrong promise
+    transmit(pulse)
 
-    okay(accept, [{
-        to: '0', method: 'accept', promise: '2/0', value: { majority: [ '0', '1' ], minority: [ '2' ] }
-    }, {
-        to: '1', method: 'accept', promise: '2/0', value: { majority: [ '0', '1' ], minority: [ '2' ] }
-    }], 'accept')
+    pulse = proposer.queue.shift()
 
-    var commit = []
-    accept.forEach(function (message) {
-        var responses = []
-        legislators[+message.to].receive(message, responses)
-        responses.forEach(function (response) {
-            proposer.receive(response, commit)
-        })
-    })
+    okay(pulse, {
+        method: 'accept',
+        to: [ '0', '1' ],
+        promise: '2/0',
+        value: { majority: [ '0', '1' ], minority: [ '2' ] },
+        previous: null
+    }, 'accept')
 
-    okay(proposer.state, 'committing', 'committing')
-    proposer.receive({ method: 'committed', promise: '1/0' }) // test committed wrong promise
+    transmit(pulse)
 
-    // TODO Wha?
-    /*
-    okay(commit, {
-        to: '0', method: 'commit', promise: '2/0'
-    }, {
-        to: '1', method: 'commit', promise: '2/0'
+    pulse = proposer.queue.shift()
+
+    okay(pulse, {
+        method: 'commit',
+        to: [ '0', '1' ],
+        promise: '2/0'
     }, 'commit')
-    */
-
-    okay(commit, [{
-        to: '0', method: 'commit', promise: '2/0'
-    }, {
-        to: '1', method: 'commit', promise: '2/0'
-    }], 'commit')
-
-    var done = []
-    commit.forEach(function (message) {
-        var responses = []
-        legislators[+message.to].receive(message, responses)
-        responses.forEach(function (response) {
-            proposer.receive(response, done)
-        })
-    })
-
-    okay(done, [], 'done')
-    okay(proposer.state, 'committed', 'proposer committed')
-    okay(legislators.map(function (legislator) {
-        return legislator.committed
-    }), [ true, true, false ], 'legislator committed')
 }

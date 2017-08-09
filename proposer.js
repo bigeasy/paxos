@@ -3,97 +3,63 @@ var assert = require('assert')
 var Monotonic = require('monotonic').asString
 
 // TODO Convert from a government structure.
-function Proposer (government, promise) {
+function Proposer (government, promise, queue) {
     this.state = 'preparing'
     this.government = government
     this.promise = Monotonic.increment(promise, 0)
-    this.chain = null
-    this.promised = null
-    this.accepted = null
-    this.committed = null
+    this.previous = null
+    this.queue = queue
 }
 
-Proposer.prototype.prepare = function (messages) {
-    this.promised = []
-    this.accepted = []
-    this.committed = []
-    this.government.forEach(function (denizen) {
-        messages.push({
-            to: denizen,
-            method: 'prepare',
+Proposer.prototype.prepare = function () {
+    this.queue.push({
+        method: 'prepare',
+        to: this.government.majority,
+        promise: this.promise
+    })
+}
+
+function getPromise (object) {
+    return object == null ? '0/0' : object.promise
+}
+
+Proposer.prototype.response = function (pulse, responses) {
+    var method = pulse.method
+    for (var id in responses) {
+        if (responses[id] == null) {
+            method = 'failed'
+        } else if (responses[id].method == 'reject') {
+            method = 'failed'
+            if (Monotonic.compare(this.promise, responses[id].promise) < 0) {
+                this.promise = responses[id].promise
+            }
+        }
+    }
+    switch (method) {
+    case 'failed':
+        break
+    case 'prepare':
+        for (var id in responses) {
+            if (Monotonic.compare(getPromise(this.previous), getPromise(responses[id].register)) < 0) {
+                this.previous = responses[id].register
+            }
+        }
+        this.queue.push({
+            method: 'accept',
+            to: this.government.majority,
+            promise: this.promise,
+            value: this.government,
+            previous: this.previous
+        })
+        break
+    case 'accept':
+        this.queue.push({
+            method: 'commit',
+            to: this.government.majority,
             promise: this.promise
         })
-    }, this)
-}
-
-function getPromise (chain) {
-    return chain == null ? '0/0' : chain.promise
-}
-
-Proposer.prototype.receive = function (message, messages) {
-    switch (message.method) {
-    case 'promise':
-        if (this.state == 'preparing') {
-            if (message.promise == this.promise) {
-                assert(!~this.promised.indexOf(message.from))
-                this.promised.push(message.from)
-                if (Monotonic.compare(getPromise(this.chain), getPromise(message.register)) < 0) {
-                    this.chain = message.register
-                }
-            }
-            if (this.promised.length == Math.ceil(this.government.length / 2)) {
-                // If we have a quorum we move to the accept state.
-                this.state = 'accepting'
-                // The first element in the government is the our node id. We
-                // want to become the leader of the government we're proposing.
-                // To do so we reorder our quorum based on the order of the
-                // government array provided.
-                var promised = this.promised
-                var majority = this.government.filter(function (id) {
-                    return ~promised.indexOf(id)
-                })
-                var minority = this.government.filter(function (id) {
-                    return !~majority.indexOf(id)
-                })
-                majority.forEach(function (id) {
-                    messages.push({
-                        to: id,
-                        method: 'accept',
-                        promise: this.promise,
-                        value: { majority: majority, minority: minority }
-                    })
-                }, this)
-            }
-        }
         break
-    case 'accepted':
-        if (this.state == 'accepting') {
-            if (message.promise == this.promise) {
-                assert(!~this.accepted.indexOf(message.from))
-                this.accepted.push(message.from)
-            }
-            if (this.accepted.length == this.promised.length) {
-                this.state = 'committing'
-                this.promised.forEach(function (id) {
-                    messages.push({
-                        to: id,
-                        method: 'commit',
-                        promise: this.promise
-                    })
-                }, this)
-            }
-        }
-        break
-    case 'committed':
-        if (this.state == 'committing') {
-            if (message.promise == this.promise) {
-                assert(!~this.committed.indexOf(message.from))
-                this.committed.push(message.from)
-            }
-            if (this.committed.length == this.accepted.length) {
-                this.state = 'committed'
-            }
-        }
+    case 'commit':
         break
     }
 }

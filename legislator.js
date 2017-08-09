@@ -7,31 +7,31 @@ function Legislator (promise, id) {
     this.register = null
 }
 
-Legislator.prototype.receive = function (message, responses) {
+Legislator.prototype.request = function (message) {
     switch (message.method) {
     case 'prepare':
         if (Monotonic.compare(this.promise, message.promise) < 0) {
             this.promise = message.promise
-            responses.push({ from: this.id, method: 'promise', promise: this.promise, register: this.register })
-        } else {
-            responses.push({ from: this.id, method: 'reject', promise: this.promise })
+            return {
+                from: this.id,
+                method: 'promise',
+                promise: this.promise,
+                register: this.register
+            }
         }
-        break
+        return { from: this.id, method: 'reject', promise: this.promise }
     case 'accept':
         if (Monotonic.compare(this.promise, message.promise) == 0) {
             this.register = message.value
-            responses.push({ from: this.id, method: 'accepted', promise: this.promise })
-        } else {
-            responses.push({ from: this.id, method: 'reject', promise: this.promise })
+            return { from: this.id, method: 'accepted', promise: this.promise }
         }
-        break
+        return { from: this.id, method: 'reject', promise: this.promise }
     case 'commit':
         if (Monotonic.compare(this.promise, message.promise) == 0) {
             this.committed = true
-            responses.push({ from: this.id, method: 'committed', promise: this.promise })
-        } else {
-            responses.push({ from: this.id, method: 'reject', promise: this.promise })
+            return { from: this.id, method: 'committed', promise: this.promise }
         }
+        return { from: this.id, method: 'reject', promise: this.promise }
     }
 }
 
