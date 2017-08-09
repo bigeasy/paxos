@@ -48,7 +48,7 @@ Proposer.prototype.response = function (pulse, responses) {
             method: 'accept',
             to: this.government.majority,
             promise: this.promise,
-            value: this.government,
+            government: this.government,
             previous: this.previous
         })
         break

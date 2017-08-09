@@ -1,10 +1,10 @@
 var Monotonic = require('monotonic')
 
-function Legislator (promise, id) {
+function Legislator (promise, id, paxos) {
     this.promise = promise
     this.id = id
-    this.committed = false
     this.register = null
+    this.paxos = paxos
 }
 
 Legislator.prototype.request = function (message) {
@@ -22,13 +22,17 @@ Legislator.prototype.request = function (message) {
         return { from: this.id, method: 'reject', promise: this.promise }
     case 'accept':
         if (Monotonic.compare(this.promise, message.promise) == 0) {
-            this.register = message.value
+            this.register = {
+                promise: message.promise,
+                value: message.government,
+                previous: message.previous
+            }
             return { from: this.id, method: 'accepted', promise: this.promise }
         }
         return { from: this.id, method: 'reject', promise: this.promise }
     case 'commit':
         if (Monotonic.compare(this.promise, message.promise) == 0) {
-            this.committed = true
+            this.paxos.enact(this.register)
             return { from: this.id, method: 'committed', promise: this.promise }
         }
         return { from: this.id, method: 'reject', promise: this.promise }

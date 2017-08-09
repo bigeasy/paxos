@@ -2,7 +2,7 @@ require('proof')(1, prove)
 
 function prove (okay) {
     var Denizen = require('../paxos')
-    var Legislator = require('../legislator')
+    var Legislator = require('../acceptor')
     var Proposer = require('../proposer')
 
     var options = {

@@ -1,14 +1,22 @@
-require('proof')(3, prove)
+require('proof')(5, prove)
 
 function prove (okay) {
     var Proposer = require('../proposer')
-    var Legislator = require('../legislator')
+    var Legislator = require('../acceptor')
 
     var queue = []
     var government = { majority: [ '0', '1' ], minority: [ '2' ] }
     var proposer = new Proposer(government, '1/0', queue)
     var legislators = government.majority.concat(government.minority).map(function (id) {
-        return new Legislator('1/0', id)
+        return new Legislator('1/0', id, {
+            enact: function (entry) {
+                okay(entry, {
+                    promise: '2/0',
+                    value: { majority: [ '0', '1' ], minority: [ '2' ] },
+                    previous: null
+                }, 'entry ' + id)
+            }
+        })
     })
 
     proposer.prepare()
@@ -37,7 +45,7 @@ function prove (okay) {
         method: 'accept',
         to: [ '0', '1' ],
         promise: '2/0',
-        value: { majority: [ '0', '1' ], minority: [ '2' ] },
+        government: { majority: [ '0', '1' ], minority: [ '2' ] },
         previous: null
     }, 'accept')
 
@@ -50,4 +58,6 @@ function prove (okay) {
         to: [ '0', '1' ],
         promise: '2/0'
     }, 'commit')
+
+    transmit(pulse)
 }
