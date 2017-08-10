@@ -696,7 +696,7 @@ Paxos.prototype.event = function (envelope) {
     }
 }
 
-Paxos.prototype._bootstrap = function (now, republic, properties) {
+Paxos.prototype.bootstrap = function (now, republic, properties) {
     // Update current state as if we're already leader.
     this.naturalize()
 
@@ -721,11 +721,6 @@ Paxos.prototype._bootstrap = function (now, republic, properties) {
     this.recorder = new Acceptor('0/0', this.id, this)
 
     this.writer.prepare()
-}
-
-Paxos.prototype.bootstrap = function (now, republic, properties) {
-    this._bootstrap(now, republic, properties)
-    this._nudge(now)
 }
 
 // TODO At this moment, Kibitz and Paxos disagree on how to attempt to join an
