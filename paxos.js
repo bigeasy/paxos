@@ -20,9 +20,8 @@ var logger = require('prolific.logger').createLogger('paxos')
 var Proposer = require('./proposer')
 var Acceptor = require('./acceptor')
 
-function Paxos (id, options) {
-    assert(arguments.length == 2, 'only two arguments now')
-
+function Paxos (republic, id, options) {
+    this.republic = republic
     this.id = String(id)
     this.naturalized = !! options.naturalized
 
@@ -696,11 +695,9 @@ Paxos.prototype.event = function (envelope) {
     }
 }
 
-Paxos.prototype.bootstrap = function (now, republic, properties) {
+Paxos.prototype.bootstrap = function (now, properties) {
     // Update current state as if we're already leader.
     this.naturalize()
-
-    this.republic = republic
 
     var government = {
         promise: '1/0',

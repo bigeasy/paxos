@@ -18,7 +18,7 @@ function prove (assert) {
     }
 
     function createDenizen (id) {
-        var paxos = new Paxos(id, options)
+        var paxos = new Paxos(1, id, options)
         paxos.scheduler.events.shifter().pump(paxos.event.bind(paxos))
         paxos.shifter = paxos.outbox.shifter()
         paxos.outbox2.shifter().pump(function (message) {
@@ -43,7 +43,7 @@ function prove (assert) {
         assert(denizens[0].government.promise, '1/0', 'government enacted')
     })
 
-    denizens[0].bootstrap(time, 1, { location: '0' })
+    denizens[0].bootstrap(time, { location: '0' })
 
     assert(denizens[0].government, {
         majority: [ '0' ],
