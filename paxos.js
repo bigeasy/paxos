@@ -17,6 +17,9 @@ var Indexer = require('procession/indexer')
 // Logging conduit.
 var logger = require('prolific.logger').createLogger('paxos')
 
+var Proposer = require('./proposer')
+var Acceptor = require('./acceptor')
+
 function Paxos (id, options) {
     assert(arguments.length == 2, 'only two arguments now')
 
@@ -96,6 +99,8 @@ function Paxos (id, options) {
     this.minimum = '0/0'
 
     this.outbox = new Procession
+
+    this.outbox2 = new Procession
 
 //    this.least = this.log.shifter()
 
@@ -694,17 +699,28 @@ Paxos.prototype.event = function (envelope) {
 Paxos.prototype._bootstrap = function (now, republic, properties) {
     // Update current state as if we're already leader.
     this.naturalize()
+
     this.republic = republic
-    this.government.majority.push(this.id)
-    this.newGovernment(now, [ this.id ], {
-        majority: [],
+
+    var government = {
+        promise: '1/0',
+        majority: [ this.id ],
         minority: [],
-        immigrate: {
-            id: this.id,
-            properties: properties,
-            cookie: null
-        }
-    }, '1/0')
+        constituents: [],
+        map: {},
+        immigrate: { id: '0', properties: { location: '0' }, cookie: null },
+        properties: {},
+        immigrated: { promise: {}, id: {} }
+    }
+
+    government.properties[this.id] = properties
+    government.immigrated.promise[this.id] = '1/0'
+    government.immigrated.id['1/0'] = this.id
+
+    this.writer = new Proposer(government, '0/0', this.outbox2)
+    this.recorder = new Acceptor('0/0', this.id, this)
+
+    this.writer.prepare()
 }
 
 Paxos.prototype.bootstrap = function (now, republic, properties) {
@@ -997,6 +1013,29 @@ Paxos.prototype._receiveCommit = function (now, pulse, message, responses) {
     logger.info('_receivedCommit', {
         now: now, $route: pulse.route, $message: message
     })
+}
+
+Paxos.prototype.request = function (now, pulse) {
+    return this.recorder.request(now, pulse)
+}
+
+Paxos.prototype.response = function (now, pulse, responses) {
+    this.writer.response(now, pulse, responses)
+}
+
+Paxos.prototype._commit = function (now, entry) {
+    var entries = []
+    while (entry) {
+        entries.push({ promise: entry.promise, value: entry.value })
+        entry = entry.previous
+    }
+
+    for (var i = 0, entry; (entry = entries[i]) != null; i++) {
+        this._receiveEnact(now, {}, {
+            promise: entry.promise,
+            body: entry.value
+        })
+    }
 }
 
 Paxos.prototype._receiveEnact = function (now, pulse, message) {

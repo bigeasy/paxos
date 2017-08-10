@@ -7,7 +7,7 @@ function Legislator (promise, id, paxos) {
     this.paxos = paxos
 }
 
-Legislator.prototype.request = function (message) {
+Legislator.prototype.request = function (now, message) {
     switch (message.method) {
     case 'prepare':
         if (Monotonic.compare(this.promise, message.promise) < 0) {
@@ -32,7 +32,7 @@ Legislator.prototype.request = function (message) {
         return { from: this.id, method: 'reject', promise: this.promise }
     case 'commit':
         if (Monotonic.compare(this.promise, message.promise) == 0) {
-            this.paxos.enact(this.register)
+            this.paxos._commit(now, this.register)
             return { from: this.id, method: 'committed', promise: this.promise }
         }
         return { from: this.id, method: 'reject', promise: this.promise }

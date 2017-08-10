@@ -21,6 +21,13 @@ function prove (assert) {
         var paxos = new Paxos(id, options)
         paxos.scheduler.events.shifter().pump(paxos.event.bind(paxos))
         paxos.shifter = paxos.outbox.shifter()
+        paxos.outbox2.shifter().pump(function (message) {
+            var responses = {}
+            message.to.forEach(function (id) {
+                responses[id] = denizens[id].request(time, message)
+            })
+            paxos.response(time, message, responses)
+        })
         return paxos
     }
 
@@ -37,6 +44,17 @@ function prove (assert) {
     })
 
     denizens[0].bootstrap(time, 1, { location: '0' })
+
+    assert(denizens[0].government, {
+        majority: [ '0' ],
+        minority: [],
+        constituents: [],
+        promise: '1/0',
+        immigrate: { id: '0', properties: { location: '0' }, cookie: null },
+        map: {},
+        immigrated: { id: { '1/0': '0' }, promise: { '0': '1/0' } },
+        properties: { '0': { location: '0' } }
+    }, 'bootstrap')
 
     function receive (denizen, send, failures) {
         failures || (failures = {})
@@ -81,17 +99,6 @@ function prove (assert) {
     }
 
     tick()
-
-    assert(denizens[0].government, {
-        majority: [ '0' ],
-        minority: [],
-        constituents: [],
-        promise: '1/0',
-        immigrate: { id: '0', properties: { location: '0' }, cookie: null },
-        map: {},
-        immigrated: { id: { '1/0': '0' }, promise: { '0': '1/0' } },
-        properties: { '0': { location: '0' } }
-    }, 'bootstrap')
 
     denizens.push(denizen = createDenizen('1'))
     denizen.join(time, 1)

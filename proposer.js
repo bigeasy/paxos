@@ -11,7 +11,7 @@ function Proposer (government, promise, queue) {
     this.queue = queue
 }
 
-Proposer.prototype.prepare = function () {
+Proposer.prototype.prepare = function (now) {
     this.queue.push({
         method: 'prepare',
         to: this.government.majority,
@@ -23,7 +23,7 @@ function getPromise (object) {
     return object == null ? '0/0' : object.promise
 }
 
-Proposer.prototype.response = function (pulse, responses) {
+Proposer.prototype.response = function (now, pulse, responses) {
     var method = pulse.method
     for (var id in responses) {
         if (responses[id] == null) {

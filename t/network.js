@@ -62,6 +62,13 @@ Network.prototype.addDenizens = function (count) {
         })
         denizen.scheduler.events.shifter().pump(denizen.event.bind(denizen))
         denizen.shifter = denizen.outbox.shifter()
+        denizen.outbox2.shifter().pump(function (message) {
+            var responses = {}
+            message.to.forEach(function (id) {
+                responses[id] = this.denizens[id].request(this.time, message)
+            }, this)
+            denizen.response(this.time, message, responses)
+        }.bind(this))
         this.denizens.push(denizen)
         if (this.denizens.length == 1) {
             this.denizens[0].bootstrap(this.time, 1, { location: '0' })
