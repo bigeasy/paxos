@@ -695,6 +695,10 @@ Paxos.prototype.event = function (envelope) {
     }
 }
 
+Paxos.prototype._send = function (message) {
+    this.outbox2.push(message)
+}
+
 Paxos.prototype.bootstrap = function (now, properties) {
     // Update current state as if we're already leader.
     this.naturalize()
@@ -714,7 +718,7 @@ Paxos.prototype.bootstrap = function (now, properties) {
     government.immigrated.promise[this.id] = '1/0'
     government.immigrated.id['1/0'] = this.id
 
-    this.writer = new Proposer(government, '0/0', this.outbox2)
+    this.writer = new Proposer(this, government, '0/0')
     this.recorder = new Acceptor('0/0', this.id, this)
 
     this.writer.prepare()

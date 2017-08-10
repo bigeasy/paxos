@@ -1,4 +1,5 @@
-function Writer (proposals) {
+function Writer (proposals, promise) {
+    this.version = [ promise, this.collapsed = false ]
     this._proposals = proposals
     this._writing = []
 }
@@ -45,6 +46,10 @@ Writer.prototype.response = function (messages) {
             return responses
         }
     }
+}
+
+Writer.prototype.createWriter = function () {
+    return this
 }
 
 module.exports = Writer

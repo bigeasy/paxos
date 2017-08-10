@@ -1,13 +1,14 @@
+var Recorder = require('./recorder')
 var Monotonic = require('monotonic')
 
-function Legislator (promise, id, paxos) {
+function Acceptor (promise, id, paxos) {
     this.promise = promise
     this.id = id
     this.register = null
-    this.paxos = paxos
+    this._paxos = paxos
 }
 
-Legislator.prototype.request = function (now, message) {
+Acceptor.prototype.request = function (now, message) {
     switch (message.method) {
     case 'prepare':
         if (Monotonic.compare(this.promise, message.promise) < 0) {
@@ -32,11 +33,15 @@ Legislator.prototype.request = function (now, message) {
         return { from: this.id, method: 'reject', promise: this.promise }
     case 'commit':
         if (Monotonic.compare(this.promise, message.promise) == 0) {
-            this.paxos._commit(now, this.register)
+            this._paxos._commit(now, this.register)
             return { from: this.id, method: 'committed', promise: this.promise }
         }
         return { from: this.id, method: 'reject', promise: this.promise }
     }
 }
 
-module.exports = Legislator
+Acceptor.prototype.createRecorder = function () {
+    return new Recorder(this._paxos)
+}
+
+module.exports = Acceptor

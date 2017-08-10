@@ -5,8 +5,11 @@ function prove (okay) {
     var Acceptor = require('../acceptor')
 
     var queue = []
+    var paxos = {
+        _send: function (message) { queue.push(message) }
+    }
     var government = { majority: [ '0', '1' ], minority: [ '2' ] }
-    var proposer = new Proposer(government, '1/0', queue)
+    var proposer = new Proposer(paxos, government, '1/0')
     var acceptors = government.majority.concat(government.minority).map(function (id) {
         return new Acceptor('1/0', id, {
             _commit: function (now, entry) {
@@ -21,11 +24,12 @@ function prove (okay) {
 
     proposer.prepare(0)
 
-    var pulse = proposer.queue.shift()
+    var pulse = queue.shift()
 
     okay(pulse, {
-        to: [ '0', '1' ],
         method: 'prepare',
+        to: [ '0', '1' ],
+        sync: [],
         promise: '2/0'
     }, 'propose')
 
@@ -39,11 +43,12 @@ function prove (okay) {
 
     transmit(pulse)
 
-    pulse = proposer.queue.shift()
+    pulse = queue.shift()
 
     okay(pulse, {
         method: 'accept',
         to: [ '0', '1' ],
+        sync: [],
         promise: '2/0',
         government: { majority: [ '0', '1' ], minority: [ '2' ] },
         previous: null
@@ -51,11 +56,12 @@ function prove (okay) {
 
     transmit(pulse)
 
-    pulse = proposer.queue.shift()
+    pulse = queue.shift()
 
     okay(pulse, {
         method: 'commit',
         to: [ '0', '1' ],
+        sync: [],
         promise: '2/0'
     }, 'commit')
 

@@ -2,8 +2,8 @@
 // messages absorb some of the complexity of the code. (Divide them. Restrict
 // their structure.)
 
-function Recorder (listener) {
-    this._listener = listener
+function Recorder (paxos) {
+    this._paxos = paxos
     this._register = null
 }
 
@@ -22,7 +22,7 @@ Recorder.prototype.request = function (request) {
             if (message.promise == this._register.promise) {
                 var resgister = [ this._register, this._register = null ][0]
                 responses.push({ promise: request.promise, method: 'committed' })
-                this._listener.commit({
+                this._paxos.commit({
                     promise: register.promise,
                     value: register.value
                 })
@@ -30,6 +30,10 @@ Recorder.prototype.request = function (request) {
             break
         }
     }
+}
+
+Recorder.prototype.createRecorder = function () {
+    return this
 }
 
 module.exports = Recorder
