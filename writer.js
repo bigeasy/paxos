@@ -23,17 +23,10 @@ Writer.prototype.nudge = function () {
 }
 
 Writer.prototype.response = function (now, request, responses) {
-    for (var id in responses) {
-        if (responses[id].method == 'reject') {
-            throw new Error
-        }
-    }
-    var pulse = null
-    console.log(arguments)
     for (var i = 0, message; message = request.messages[i]; i++) {
         switch (message.method) {
         case 'write':
-            var pulse = {
+            var nextRequest = {
                 version: this._version,
                 to: this._writing[0].quorum,
                 messages: [{ method: 'commit', promise: this._writing[0].promise }]
@@ -48,13 +41,13 @@ Writer.prototype.response = function (now, request, responses) {
                 !Monotonic.isBoundary(this.proposals[0].promise, 0)
             ) {
                 this._writing.push(this.proposals.shift())
-                pulse.messages.push({
+                nextRequest.messages.push({
                     method: 'write',
                     promise: this._writing[1].promise,
                     body: this._writing[1].body
                 })
             }
-            this._paxos._send(pulse)
+            this._paxos._send(nextRequest)
             break
         case 'commit':
             this._writing.shift()
