@@ -1020,7 +1020,20 @@ Paxos.prototype.request = function (now, pulse) {
 
 Paxos.prototype.response = function (now, request, responses) {
     if (request.version[0] == this._writer.version[0] && request.version[1] == this._writer.version[1]) {
-        this._writer.response(now, request, responses)
+        var promise = '0/0', failed = false
+        for (var id in responses) {
+            if (responses[id] == null) {
+                failed = true
+            } else {
+                if (Monotonic.compare(promise, responses[id].promise) < 0) {
+                    promise = responses[id].promise
+                }
+                if (responses[id].method == 'reject') {
+                    failed = true
+                }
+            }
+        }
+        this._writer.response(now, request, responses, failed ? promise : null)
     }
 }
 

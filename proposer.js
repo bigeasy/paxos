@@ -25,20 +25,12 @@ function getPromise (object) {
     return object == null ? '0/0' : object.promise
 }
 
-Proposer.prototype.response = function (now, pulse, responses) {
-    var method = pulse.method
-    for (var id in responses) {
-        if (responses[id] == null) {
-            method = 'failed'
-        } else if (responses[id].method == 'reject') {
-            method = 'failed'
-            if (Monotonic.compare(this.promise, responses[id].promise) < 0) {
-                this.promise = responses[id].promise
-            }
-        }
-    }
-    switch (method) {
+Proposer.prototype.response = function (now, request, responses, promise) {
+    switch (promise == null ? request.method : 'failed') {
     case 'failed':
+        this.promise = Monotonic.increment(promise, 0)
+        // TODO Backoff and try again.
+        throw new Error
         break
     case 'prepare':
         for (var id in responses) {
