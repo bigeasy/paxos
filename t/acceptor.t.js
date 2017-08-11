@@ -28,6 +28,7 @@ function prove (okay) {
 
     okay(pulse, {
         method: 'prepare',
+        version: [ '1/0', true ],
         to: [ '0', '1' ],
         sync: [],
         promise: '2/0'
@@ -47,6 +48,7 @@ function prove (okay) {
 
     okay(pulse, {
         method: 'accept',
+        version: [ '1/0', true ],
         to: [ '0', '1' ],
         sync: [],
         promise: '2/0',
@@ -60,6 +62,7 @@ function prove (okay) {
 
     okay(pulse, {
         method: 'commit',
+        version: [ '1/0', true ],
         to: [ '0', '1' ],
         sync: [],
         promise: '2/0'

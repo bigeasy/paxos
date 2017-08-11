@@ -1,54 +1,70 @@
-function Writer (proposals, promise) {
+var Monotonic = require('monotonic').asString
+
+function Writer (paxos, promise) {
+    this._paxos = paxos
     this.version = [ promise, this.collapsed = false ]
-    this._proposals = proposals
+    this.proposals = []
     this._writing = []
 }
 
 Writer.prototype.nudge = function () {
-    if (this._writing.length == 0 && this._proposals.length != 0) {
-        // TODO So in order for it to be event driven it needs to go into a
-        // procession and then somewhere the sync needs to be added.
-    }
-}
-
-Writer.prototype._writeIf = function (condition, responses) {
-    if (this._proposals.length && condition) {
-        this._writing.push(this._proposals.shift())
-        responses.push({
-            to: this._quorum,
-            method: 'write',
-            promise: this._writing[0].promise
+    if (this._writing.length == 0 && this.proposals.length != 0) {
+        this._writing.push(this.proposals.shift())
+        this._paxos._send({
+            version: this._version,
+            to: this._writing[0].quorum,
+            messages: [{
+                method: 'write',
+                promise: this._writing[0].promise,
+                body: this._writing[0].body
+            }]
         })
     }
 }
 
-Writer.prototype.response = function (messages) {
-    var requests = []
-    for (var i = 0; i < messages.length; i++) {
-        var message = messages[i]
+Writer.prototype.response = function (now, request, responses) {
+    for (var id in responses) {
+        if (responses[id].method == 'reject') {
+            throw new Error
+        }
+    }
+    var pulse = null
+    console.log(arguments)
+    for (var i = 0, message; message = request.messages[i]; i++) {
         switch (message.method) {
         case 'write':
-            if (message.promise == (this._writing[0] || {}).promise) {
-                requests.push({
-                    to: this._quorum,
-                    method: 'commit',
-                    promise: this._writing[0].promise
+            var pulse = {
+                version: this._version,
+                to: this._writing[0].quorum,
+                messages: [{ method: 'commit', promise: this._writing[0].promise }]
+            }
+            // The quorum might change. Also, we want to make sure we're working
+            // through thorugh government changes as quickly as possible without
+            // ordinary business in between. Imagine an impeachment, followed by
+            // exile, followed by shape change.
+            if (
+                this.proposals.length != 0 &&
+                !Monotonic.isBoundary(this._writing[0].promise, 0) &&
+                !Monotonic.isBoundary(this.proposals[0].promise, 0)
+            ) {
+                this._writing.push(this.proposals.shift())
+                pulse.messages.push({
+                    method: 'write',
+                    promise: this._writing[1].promise,
+                    body: this._writing[1].body
                 })
             }
-            this._writeIf(!Monotonic.isBoundary(this._proposal.promise, 0), messages)
-            return responses
+            this._paxos._send(pulse)
+            break
         case 'commit':
-            var responses = []
-            this._writeIf(Monotonic.isBoundary(this._proposal.promise, 0), messages)
-            if (message.promise == this._writing[0].promise) {
-                this._writing.shift()
-            }
-            return responses
+            this._writing.shift()
+            this.nudge()
+            break
         }
     }
 }
 
-Writer.prototype.createWriter = function () {
+Writer.prototype.createWriter = function (promise) {
     return this
 }
 

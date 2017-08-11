@@ -20,6 +20,9 @@ var logger = require('prolific.logger').createLogger('paxos')
 var Proposer = require('./proposer')
 var Acceptor = require('./acceptor')
 
+var Writer = require('./writer')
+var Recorder = require('./recorder')
+
 function Paxos (republic, id, options) {
     this.republic = republic
     this.id = String(id)
@@ -718,10 +721,10 @@ Paxos.prototype.bootstrap = function (now, properties) {
     government.immigrated.promise[this.id] = '1/0'
     government.immigrated.id['1/0'] = this.id
 
-    this.writer = new Proposer(this, government, '0/0')
-    this.recorder = new Acceptor('0/0', this.id, this)
+    this._writer = new Proposer(this, government, '0/0')
+    this._recorder = new Acceptor('0/0', this.id, this)
 
-    this.writer.prepare()
+    this._writer.prepare()
 }
 
 // TODO At this moment, Kibitz and Paxos disagree on how to attempt to join an
@@ -1012,11 +1015,13 @@ Paxos.prototype._receiveCommit = function (now, pulse, message, responses) {
 }
 
 Paxos.prototype.request = function (now, pulse) {
-    return this.recorder.request(now, pulse)
+    return this._recorder.request(now, pulse)
 }
 
-Paxos.prototype.response = function (now, pulse, responses) {
-    this.writer.response(now, pulse, responses)
+Paxos.prototype.response = function (now, request, responses) {
+    if (request.version[0] == this._writer.version[0] && request.version[1] == this._writer.version[1]) {
+        this._writer.response(now, request, responses)
+    }
 }
 
 Paxos.prototype._commit = function (now, entry) {
@@ -1275,17 +1280,14 @@ Paxos.prototype._determineConstituency = function () {
 }
 
 Paxos.prototype._enactGovernment = function (now, round) {
-    // While we still have the previous government we clear out any timed events
-    // we might of set to fulfill out duties in the previous government. Note
-    // that we are more discriminating when clearing out the ping records.
-    this.citizens.forEach(function (id) { this.scheduler.unschedule(id) }, this)
-
-    delete this.election
-    this.collapsed = false
+    this.scheduler.clear()
 
     assert(Monotonic.compare(this.government.promise, round.promise) < 0, 'governments out of order')
 
     this.government = JSON.parse(JSON.stringify(round.body))
+
+    this._writer = this._writer.createWriter(round.promise)
+    this._recorder = this._recorder.createRecorder()
 
     if (this.government.exile) {
         // TODO Remove! Fall back to a peek at exile.

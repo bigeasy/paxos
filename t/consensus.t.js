@@ -21,12 +21,12 @@ function prove (assert) {
         var paxos = new Paxos(1, id, options)
         paxos.scheduler.events.shifter().pump(paxos.event.bind(paxos))
         paxos.shifter = paxos.outbox.shifter()
-        paxos.outbox2.shifter().pump(function (message) {
+        paxos.outbox2.shifter().pump(function (request) {
             var responses = {}
-            message.to.forEach(function (id) {
-                responses[id] = denizens[id].request(time, message)
+            request.to.forEach(function (id) {
+                responses[id] = denizens[id].request(time, request)
             })
-            paxos.response(time, message, responses)
+            paxos.response(time, request, responses)
         })
         return paxos
     }

@@ -1,20 +1,20 @@
-var assert = require('assert')
-
 var Monotonic = require('monotonic').asString
+
+var Completion = require('./completion')
 
 // TODO Convert from a government structure.
 function Proposer (paxos, government, promise) {
-    this.version = [ promise, this.collapsed = true ]
-    this.state = 'preparing'
+    this._paxos = paxos
     this.government = government
+    this.version = [ promise, this.collapsed = true ]
     this.promise = Monotonic.increment(promise, 0)
     this.previous = null
-    this._paxos = paxos
 }
 
 Proposer.prototype.prepare = function (now) {
     this._paxos._send({
         method: 'prepare',
+        version: this.version,
         to: this.government.majority,
         sync: [],
         promise: this.promise
@@ -48,6 +48,7 @@ Proposer.prototype.response = function (now, pulse, responses) {
         }
         this._paxos._send({
             method: 'accept',
+            version: this.version,
             to: this.government.majority,
             sync: [],
             promise: this.promise,
@@ -58,6 +59,7 @@ Proposer.prototype.response = function (now, pulse, responses) {
     case 'accept':
         this._paxos._send({
             method: 'commit',
+            version: this.version,
             to: this.government.majority,
             sync: [],
             promise: this.promise
@@ -69,7 +71,7 @@ Proposer.prototype.response = function (now, pulse, responses) {
 }
 
 Proposer.prototype.createWriter = function (promise) {
-    return new Writer(this._paxos, promise)
+    return new Completion(this._paxos, this.version, promise)
 }
 
 module.exports = Proposer
