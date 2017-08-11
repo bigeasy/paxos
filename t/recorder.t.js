@@ -16,7 +16,7 @@ function prove (okay) {
     var entries = [ [], [] ]
     var recorders = [ '0', '1' ].map(function (id) {
         return new Recorder({
-            _commit: function (entry) {
+            _commit: function (now, entry) {
                 entries[id].push(entry)
             }
         }, '1/0')
