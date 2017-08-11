@@ -34,7 +34,7 @@ Recorder.prototype.request = function (now, request) {
                 return { method: 'reject', promise: '0/0' }
             }
             var register = [ this._register, this._register = null ][0]
-            this._paxos._commit({
+            this._paxos._commit(now, {
                 promise: register.promise,
                 body: register.body,
                 previous: null

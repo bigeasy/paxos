@@ -161,11 +161,7 @@ Paxos.prototype.newGovernment = function (now, quorum, government, promise) {
     if (government.immigrate) {
         var immigrate = government.immigrate
         properties[immigrate.id] = JSON.parse(JSON.stringify(government.immigrate.properties))
-        if (promise == '1/0') {
-            government.majority.push(immigrate.id)
-        } else {
-            government.constituents.push(immigrate.id)
-        }
+        government.constituents.push(immigrate.id)
         immigrated.promise[immigrate.id] = promise
         immigrated.id[promise] = immigrate.id
     } else if (government.exile) {
@@ -183,11 +179,8 @@ Paxos.prototype.newGovernment = function (now, quorum, government, promise) {
     government.immigrated = immigrated
     government.properties = properties
     assert(this.proposals.length == 0 || !Monotonic.isBoundary(this.proposals[0].promise, 0))
-    this.proposals.unshift({
-        promise: promise,
-        route: quorum,
-        body: government
-    })
+    this._writer.unshift({ promise: promise, quorum: quorum, body: government })
+    this._writer.nudge()
 }
 
 // TODO When we collapse, let's change our constituency to our parliament,
@@ -469,7 +462,22 @@ Paxos.prototype._stuffProposal = function (messages, proposal) {
     }
 }
 
-Paxos.prototype._nudge = function (now) {
+Paxos.prototype._nudgeRedux = function (now) {
+    if (this.immigrating.length != 0) {
+        var immigration = this.immigrating[0]
+        this.newGovernment(now, this.government.majority, {
+            majority: this.government.majority,
+            minority: this.government.minority,
+            immigrate: {
+                id: immigration.id,
+                properties: immigration.properties,
+                cookie: immigration.cookie
+            }
+        }, Monotonic.increment(this.promise, 0))
+    }
+}
+
+Paxos.prototype.__nudge = function (now) {
     assert(now != null)
     var pulse = null
     if (!this.pulsing) {
@@ -706,16 +714,20 @@ Paxos.prototype.bootstrap = function (now, properties) {
     // Update current state as if we're already leader.
     this.naturalize()
 
+    this.cookie = 0
+
     var government = {
         promise: '1/0',
         majority: [ this.id ],
         minority: [],
         constituents: [],
         map: {},
-        immigrate: { id: '0', properties: { location: '0' }, cookie: null },
+        immigrate: { id: '0', properties: { location: '0' }, cookie: 0 },
         properties: {},
         immigrated: { promise: {}, id: {} }
     }
+
+    this.immigrating.push({ id: this.id })
 
     government.properties[this.id] = properties
     government.immigrated.promise[this.id] = '1/0'
@@ -759,7 +771,7 @@ Paxos.prototype.naturalize = function () {
 //
 // Once you've externalized this in kibitz, remove it, or pare it down.
 Paxos.prototype._enqueuable = function (republic) {
-    if (this.collapsed || this.republic != republic) {
+    if (this._writer.collapsed || this.republic != republic) {
         return {
             enqueued: false,
             republic: this.republic,
@@ -805,10 +817,6 @@ Paxos.prototype.enqueue = function (now, republic, message) {
     return response
 }
 
-Paxos.prototype.immigrate = function (now, republic, id, cookie, properties) {
-    assert(typeof id == 'string', 'id must be a hexidecmimal string')
-    var response = this._enqueuable(republic)
-    if (response == null) {
 // TODO This is a note. I'd like to find a place to journal this. I'm continuing
 // to take measures to allow for the reuse of ids. It still feels right to me
 // that a display of government or of the census would be displayed using values
@@ -858,6 +866,14 @@ Paxos.prototype.immigrate = function (now, republic, id, cookie, properties) {
 // until the proposal was enacted.
 
 //
+Paxos.prototype.immigrate = function (now, republic, id, cookie, properties) {
+    var response = this._enqueuable(republic)
+    if (response == null) {
+        // Do not allow the user to initiate the immigration of an id that
+        // already exists. This will happen if a denizen crash restarts and
+        // tries to rejoin before Paxos can determine that the denizen is no
+        // longer viable. The immigrating denizen should enter a back off and
+        // retry loop in order to wait for exile.
         if (id in this.government.properties) {
             response = {
                 enqueued: false,
@@ -865,21 +881,39 @@ Paxos.prototype.immigrate = function (now, republic, id, cookie, properties) {
                 leader: this.government.majority[0]
             }
         } else {
-// TODO However, are we checking that we're not proposing the same immigration
-// twice if it added to the `immigrating` array while it is being proposed?
-            this.immigrating = this.immigrating.filter(function (immigration) {
-                return immigration.id != id
-            })
-            this.immigrating.push({
-                type: 'immigrate',
-                id: id,
-                properties: properties,
-                cookie: cookie
-            })
-            this._nudge(now)
-            response = { enqueued: true, promise: null }
+            // TODO However, are we checking that we're not proposing the same immigration
+            // twice if it added to the `immigrating` array while it is being proposed?
+            //
+            // No, this is a race condition.
+            //
+            // We could be in the middle of immigrating when the immigrant crash restarts
+            // and submits a new cookie. That immigrant will never sync or naturalize. It
+            // needs to try again.
+            //
+            // We can make it a general case that if the cookies mismatch
+            // every one is very disappointed. Thus, we can catch this on sync.
+            for (var i = 0, immigrant; (immigrant = this.immigrating[i]) != null; i++) {
+                if (immigrant.id == id) {
+                    break
+                }
+            }
+            if (i == this.immigrating.length) {
+                this.immigrating.push({
+                    type: 'immigrate',
+                    id: id,
+                    properties: properties,
+                    cookie: cookie
+                })
+            } else {
+                this.immigrating[i].properties = properties
+                this.immigrating[i].cookie = cookie
+            }
+            response = { enqueued: true }
+
+            this._nudgeRedux(now)
         }
     }
+
     return response
 }
 
@@ -1040,12 +1074,12 @@ Paxos.prototype.response = function (now, request, responses) {
 Paxos.prototype._commit = function (now, entry) {
     var entries = []
     while (entry) {
-        entries.push({ promise: entry.promise, value: entry.value })
+        entries.push({ promise: entry.promise, body: entry.body })
         entry = entry.previous
     }
 
     for (var i = 0, entry; (entry = entries[i]) != null; i++) {
-        this._receiveEnact(now, {}, { promise: entry.promise, body: entry.value })
+        this._receiveEnact(now, {}, entry)
     }
 }
 
@@ -1086,10 +1120,7 @@ Paxos.prototype._receiveEnact = function (now, pulse, message) {
     }
 
     valid = max.promise != '0/0'
-    if (!valid) {
-        // TODO Seems to be a duplicate test.
-        valid = max.promise == '0/0' && message.promise == '1/0'
-    }
+
     if (!valid) {
         // assert(this.log.size == 1)
         valid = Monotonic.isBoundary(message.promise, 0)
@@ -1098,7 +1129,9 @@ Paxos.prototype._receiveEnact = function (now, pulse, message) {
         valid = valid && message.body.immigrate.id == this.id
         valid = valid && message.body.immigrate.cookie == this.cookie
     }
+
     if (!valid) {
+        // TODO We can see failure when the returned max is still 0/0.
         pulse.failed = true
         return
     }
@@ -1302,6 +1335,9 @@ Paxos.prototype._enactGovernment = function (now, round) {
     if (this.government.exile) {
         // TODO Remove! Fall back to a peek at exile.
         delete this.pings[this.government.exile.id]
+    } else if (this.government.immigrate) {
+        assert(this.immigrating.length > 0 && this.government.immigrate.id == this.immigrating[0].id)
+        this.immigrating.shift()
     }
 
     if (this.id != this.government.majority[0]) {
@@ -1361,8 +1397,6 @@ Paxos.prototype._enactGovernment = function (now, round) {
             }
         }
     }
-
-    this._nudge(now)
 }
 
 Paxos.prototype._whenCollapse = function (now) {

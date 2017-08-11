@@ -1,4 +1,4 @@
-require('proof')(3, prove)
+require('proof')(5, prove)
 
 function prove (assert) {
     var Paxos = require('..'), denizen
@@ -50,13 +50,11 @@ function prove (assert) {
         minority: [],
         constituents: [],
         promise: '1/0',
-        immigrate: { id: '0', properties: { location: '0' }, cookie: null },
+        immigrate: { id: '0', properties: { location: '0' }, cookie: 0 },
         map: {},
         immigrated: { id: { '1/0': '0' }, promise: { '0': '1/0' } },
         properties: { '0': { location: '0' } }
     }, 'bootstrap')
-
-    return
 
     function receive (denizen, send, failures) {
         failures || (failures = {})
@@ -100,12 +98,31 @@ function prove (assert) {
         }
     }
 
-    tick()
+    // tick()
 
     denizens.push(denizen = createDenizen('1'))
     denizen.join(time, 1)
 
     assert(denizens[0].immigrate(time, 1, '1', denizens[1].cookie, { location: '1' }).enqueued, 'immigrate')
+
+    assert(denizens[0].government, {
+        majority: [ '0' ],
+        minority: [],
+        immigrate: { id: '1', properties: { location: '1' }, cookie: 0 },
+        constituents: [ '1' ],
+        promise: '2/0',
+        map: {},
+        immigrated: {
+            id: { '1/0': '0', '2/0': '1' },
+            promise: { '0': '1/0', '1': '2/0' }
+        },
+        properties: {
+            '0': { location: '0' },
+            '1': { location: '1' }
+        }
+    }, 'leader and constituent pair')
+
+    return
 
     tick({ 1: 'request' })
 
