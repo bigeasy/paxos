@@ -721,10 +721,10 @@ Paxos.prototype.bootstrap = function (now, properties) {
     government.immigrated.promise[this.id] = '1/0'
     government.immigrated.id['1/0'] = this.id
 
-    this._writer = new Proposer(this, government, '0/0')
-    this._recorder = new Acceptor('0/0', this.id, this)
+    this._writer = new Writer(this, '1/0')
+    this._recorder = new Recorder(this, '1/0')
 
-    this._writer.prepare()
+    this._receiveEnact(now, {}, { promise: '1/0', body: government })
 }
 
 // TODO At this moment, Kibitz and Paxos disagree on how to attempt to join an
@@ -1045,10 +1045,7 @@ Paxos.prototype._commit = function (now, entry) {
     }
 
     for (var i = 0, entry; (entry = entries[i]) != null; i++) {
-        this._receiveEnact(now, {}, {
-            promise: entry.promise,
-            body: entry.value
-        })
+        this._receiveEnact(now, {}, { promise: entry.promise, body: entry.value })
     }
 }
 
