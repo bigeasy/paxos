@@ -56,9 +56,9 @@
 // TODO Stop saying "quorum" when you mean "seats filled."
 
 //
-function Shape (parlimentSize, government) {
+function Shape (parliamentSize, government) {
     this._parliamentSize = government.majority.length * 2 - 1
-    this._shouldExpand = parlimentSize != this._parliamentSize
+    this._shouldExpand = parliamentSize != this._parliamentSize
     this._government = government
     this._unreachable = 0
     this._population = government.majority.length + government.minority.length + government.constituents.length

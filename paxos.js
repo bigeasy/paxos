@@ -23,6 +23,9 @@ var Acceptor = require('./acceptor')
 var Writer = require('./writer')
 var Recorder = require('./recorder')
 
+var Pinger = require('./pinger')
+var Shape = require('./shape')
+
 function Paxos (republic, id, options) {
     this.republic = republic
     this.id = String(id)
@@ -85,7 +88,6 @@ function Paxos (republic, id, options) {
     this.promise = '0/0'
 
     this.pings = {}
-    this.getPing(this.id).timeout = 0
 
     this.length = options.length || 1024
 
@@ -104,6 +106,8 @@ function Paxos (republic, id, options) {
 
     this.outbox2 = new Procession
 
+    this._pinger = new Pinger(null, this.timeout)
+
 //    this.least = this.log.shifter()
 
     // TODO So, does it matter if the user nevers sees `0/0`?
@@ -114,19 +118,10 @@ function Paxos (republic, id, options) {
     })
 }
 
-Paxos.prototype.getPing = function (id) {
+Paxos.prototype._getPing_ = function (id) {
     var ping = this.pings[id]
     if (ping == null) {
-        ping = this.pings[id] = {
-            id: id,
-// Whoa. Which is it?
-            when: -Infinity,
-            timeout: 1,
-            when: null,
-// TODO Use a `null` decided instead.
-            pinged: false,
-            decided: '0/0'
-        }
+        ping = this.pings[id] = { id: id, timeout: 1, when: -Infinity, decided: '0/0' }
     }
     return ping
 }
@@ -491,47 +486,57 @@ Paxos.prototype.__nudge = function (now) {
     return this.pulsing
 }
 
-Paxos.prototype._stuffSynchronize = function (now, ping, messages) {
-    if (ping.pinged) {
-        var iterator
-
-        if (ping.decided == '0/0') {
-            iterator = this.log.trailer.node.next
-            for (;;) {
+Paxos.prototype._stuffSynchronize = function (pings, sync, count) {
+    var ping = pings[0]
+    for (var i = 1, I = pings.length; i < I; i++) {
+        assert(ping.committed != null && pings[i].committed != null)
+        if (Monotonic.compare(pings[i].committed, ping.committed) < 0) {
+            ping = pings[i]
+        }
+        assert(ping.committed != '0/0')
+    }
+    var iterator
+    if (ping.committed == null) {
+        return true
+    } else if (ping.committed == '0/0') {
+        iterator = this.log.trailer.node.next
+        for (;;) {
 // TODO This will abend if the naturalization falls off the end end of the log.
 // You need to check for gaps and missing naturalizations and then timeout the
 // constituents that will never be connected.
-                if (iterator == null) {
-                    return false
-                }
-                // assert(round, 'cannot find immigration')
-                if (Monotonic.isBoundary(iterator.body.promise, 0)) {
-                    var immigrate = iterator.body.body.immigrate
-                    if (immigrate && immigrate.id == ping.id) {
-                        break
-                    }
-                }
-                iterator = iterator.next
+            if (iterator == null) {
+                return false
             }
-        } else {
-            messages.push({
-                type: 'minimum',
-                promise: this.minimum
-            })
-
-            // If our minimum promise is greated than the most decided promise
-            // for the contituent then our ping record for the constituent is
-            // out of date.
-            if (Monotonic.compare(ping.decided, this.minimum) < 0) {
-                return true
+            // assert(round, 'cannot find immigration')
+            if (Monotonic.isBoundary(iterator.body.promise, 0)) {
+                var immigrate = iterator.body.body.immigrate
+                if (immigrate && immigrate.id == ping.id) {
+                    break
+                }
             }
-
-// TODO Got a read property of null here.
-            iterator = this._findRound(ping.decided).next
+            iterator = iterator.next
+        }
+    } else {
+        // If our minimum promise is greater than the most decided promise for
+        // the contituent then our ping record for the constituent is out of
+        // date.
+        if (Monotonic.compare(ping.committed, this.minimum) < 0) {
+            return false
         }
 
-        this._pushEnactments(messages, iterator, 20)
+// TODO Got a read property of null here.
+        iterator = this._findRound(ping.committed).next
     }
+
+    while (--count && iterator != null) {
+        sync.commits.push({
+            promise: iterator.body.promise,
+            body: iterator.body.body,
+            previous: null
+        })
+        iterator = iterator.next
+    }
+
     return true
 }
 
@@ -688,6 +693,32 @@ Paxos.prototype.sent = function (now, pulse, responses) {
     }
 }
 
+// Determine the minimum log entry promise.
+//
+// You might feel a need to guard this so that only the leader runs it, but it
+// works of anyone runs it. If they have a ping for every citizen, they'll
+// calculate a minimum less than or equal to the minimum calculated by the
+// actual leader. If not they do not have a ping record for every citizen,
+// they'll continue to use their current minimum.
+//
+// Would rather this was on object that was updated only when we got ping
+// information back.
+
+//
+Paxos.prototype._minimize = function () {
+    var minimum = this.getPing(this.id).committed
+    for (var i = 0, citizen; (citizen = this.citizens[i]) != null; i++) {
+        var ping = this.pings[citizen]
+        if (ping == null) {
+            return
+        }
+        if (Monotonic.compare(ping.committed, minimum) < 0) {
+            minimum = ping.comitted
+        }
+    }
+    this.minimum = minimum
+}
+
 Paxos.prototype.event = function (envelope) {
     if (envelope.module != 'happenstance' || envelope.method != 'event') {
         return
@@ -706,8 +737,20 @@ Paxos.prototype.event = function (envelope) {
     }
 }
 
-Paxos.prototype._send = function (message) {
-    this.outbox2.push(message)
+Paxos.prototype._send = function (request) {
+    request.sync = {
+        from: this.id,
+        minimum: this.minimum,
+        committed: this.log.head.body.promise,
+        cookie: this.cookie,
+        commits: []
+    }
+    var pings = []
+    for (var i = 0, to; (to = request.to[i]) != null; i++) {
+        pings.push(this._pinger.getPing(to))
+    }
+    this._stuffSynchronize(pings, request.sync, 20)
+    this.outbox2.push(request)
 }
 
 Paxos.prototype.bootstrap = function (now, properties) {
@@ -1048,11 +1091,50 @@ Paxos.prototype._receiveCommit = function (now, pulse, message, responses) {
     })
 }
 
-Paxos.prototype.request = function (now, pulse) {
-    return this._recorder.request(now, pulse)
+// TODO Note that minimum only ever goes up so a delayed minimum is not going to
+// ever be invalid. We don't want to run it in case it rejects our start.
+
+//
+Paxos.prototype.request = function (now, request) {
+    var sync = {
+        from: this.id,
+        committed: this.log.head.body.promise,
+        cookie: this.cookie,
+        commits: []
+    }
+
+    if (Monotonic.compare(request.sync.committed, sync.committed) < 0) {
+        // We are ahead of the bozo trying to update us, so update him back.
+        this._stuffSynchronize(now, sync, sync, 20)
+        return { method: 'reject', promise: sync.committed, sync: sync }
+    }
+
+    // Sync.
+    for (var i = 0, commit; (commit = request.sync.commits[i]) != null; i++) {
+        this._commit(commit)
+    }
+
+    // We don't want to advance the minimum if we have no items yet.
+    if (this.log.head.body.body.promise != '0/0') {
+        while (Monotonic.compare(this.log.trailer.peek().promise, request.sync.minimum) < 0) {
+            this.log.trailer.shift()
+        }
+        if (Monotonic.compare(this.minimum, request.sync.minimum) < 0) {
+            this.minimum = request.sync.minimum
+        }
+    }
+
+    return this._recorder.request(now, request, sync)
 }
 
 Paxos.prototype.response = function (now, request, responses) {
+    // If anyone we tried to update is ahead of us, we learn from them.
+    for (var i = 0, response; (response = responses[i]) != null; i++) {
+        for (var j = 0, commit; (commit = response.sync.commits[j]) != null; i++) {
+            this._commit(commit)
+        }
+    }
+    // Only handle a response if it was issued by our current writer/proposer.
     if (request.version[0] == this._writer.version[0] && request.version[1] == this._writer.version[1]) {
         var promise = '0/0', failed = false
         for (var id in responses) {
@@ -1159,7 +1241,13 @@ Paxos.prototype._receiveEnact = function (now, pulse, message) {
         this._enactGovernment(now, message)
     }
 
-    this.getPing(this.id).decided = message.promise
+    var pinger = new Pinger(new Shape(this.parliamentSize, this.government), this.timeout)
+
+    pinger.ingest(now, this._pinger, this.constituency)
+
+    this._pinger = pinger
+
+    this._pinger.update(now, this.id, { naturalized: this.naturalized, committed: message.promise })
 
     this.log.push({
         module: 'paxos',

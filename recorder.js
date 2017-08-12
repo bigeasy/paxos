@@ -11,7 +11,7 @@ function Recorder (paxos, promise) {
     this._register = null
 }
 
-Recorder.prototype.request = function (now, request) {
+Recorder.prototype.request = function (now, request, sync) {
     for (var i = 0, message; (message = request.messages[i]) != null; i++) {
         switch (message.method) {
         case 'write':
@@ -19,10 +19,10 @@ Recorder.prototype.request = function (now, request) {
                 Monotonic.increment(this._promise, 0) != message.promise &&
                 Monotonic.increment(this._promise, 1) != message.promise
             ) {
-                return { method: 'reject', promise: '0/0' }
+                return { method: 'reject', promise: '0/0', sync: sync }
             }
             if (this._register != null) {
-                return { method: 'reject', promise: '0/0' }
+                return { method: 'reject', promise: '0/0', sync: sync }
             }
             this._register = {
                 promise: this._promise = message.promise,
@@ -31,7 +31,7 @@ Recorder.prototype.request = function (now, request) {
             break
         case 'commit':
             if (this._register.promise != message.promise) {
-                return { method: 'reject', promise: '0/0' }
+                return { method: 'reject', promise: '0/0', sync: sync }
             }
             var register = [ this._register, this._register = null ][0]
             this._paxos._commit(now, {
@@ -42,7 +42,7 @@ Recorder.prototype.request = function (now, request) {
             break
         }
     }
-    return { method: 'response', promise: '0/0' }
+    return { method: 'response', promise: '0/0', sync: sync }
 }
 
 Recorder.prototype.createRecorder = function () {

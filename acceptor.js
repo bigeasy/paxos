@@ -8,7 +8,7 @@ function Acceptor (promise, id, paxos) {
     this._paxos = paxos
 }
 
-Acceptor.prototype.request = function (now, message) {
+Acceptor.prototype.request = function (now, message, sync) {
     switch (message.method) {
     case 'prepare':
         if (Monotonic.compare(this.promise, message.promise) < 0) {
@@ -16,7 +16,8 @@ Acceptor.prototype.request = function (now, message) {
             return {
                 method: 'promise',
                 promise: this.promise,
-                register: this.register
+                register: this.register,
+                sync: sync
             }
         }
     case 'accept':
@@ -26,15 +27,15 @@ Acceptor.prototype.request = function (now, message) {
                 value: message.government,
                 previous: message.previous
             }
-            return { method: 'accepted', promise: this.promise }
+            return { method: 'accepted', promise: this.promise, sync: sync }
         }
     case 'commit':
         if (Monotonic.compare(this.promise, message.promise) == 0) {
             this._paxos._commit(now, this.register)
-            return { method: 'committed', promise: this.promise }
+            return { method: 'committed', promise: this.promise, sync: sync }
         }
     }
-    return { method: 'reject', promise: this.promise }
+    return { method: 'reject', promise: this.promise, sync: sync }
 }
 
 Acceptor.prototype.createRecorder = function (promise) {

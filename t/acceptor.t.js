@@ -37,7 +37,7 @@ function prove (okay) {
     function transmit (pulse) {
         var responses = {}
         pulse.to.forEach(function (id) {
-            responses[id] = acceptors[id].request(0, pulse)
+            responses[id] = acceptors[id].request(0, pulse, null)
         })
         proposer.response(0, pulse, responses)
     }
