@@ -1,7 +1,12 @@
 require('proof')(5, prove)
 
-function prove (assert) {
+function prove (okay) {
     var Paxos = require('..'), denizen
+
+    var Network = require('./network')
+    var network = new Network
+
+    network.push()
 
     function dump (denizen) {
         denizen.log.each(function (entry) { console.log(entry) })
@@ -31,21 +36,19 @@ function prove (assert) {
         return paxos
     }
 
-    var denizens = [ createDenizen('0') ]
-
-    var shifter = denizens[0].log.shifter()
+    var shifter = network.denizens[0].log.shifter()
 
     shifter.join(function (envelope) {
         return envelope.method == 'government'
     }, function (error, envelope) {
         if (error) throw error
-        assert(envelope.promise, '1/0', 'government message')
-        assert(denizens[0].government.promise, '1/0', 'government enacted')
+        okay(envelope.promise, '1/0', 'government message')
+        okay(network.denizens[0].government.promise, '1/0', 'government enacted')
     })
 
-    denizens[0].bootstrap(time, { location: '0' })
+    network.denizens[0].bootstrap(network.time, { location: '0' })
 
-    assert(denizens[0].government, {
+    okay(network.denizens[0].government, {
         majority: [ '0' ],
         minority: [],
         constituents: [],
@@ -56,56 +59,13 @@ function prove (assert) {
         properties: { '0': { location: '0' } }
     }, 'bootstrap')
 
-    function receive (denizen, send, failures) {
-        failures || (failures = {})
-        var responses = {}
-        send.route.forEach(function (id) {
-            var denizen = denizens[id]
-            if (failures[id] != 'request' && failures[id] != 'isolate') {
-                responses[id] = denizen.receive(time, send, send.messages)
-            }
-            if (failures[id] == 'response') {
-                delete responses[id]
-            }
-        })
-        denizen.sent(time, send, responses)
-    }
+    network.push()
 
-    function send (denizen, failures) {
-        failures || (failures = {})
-        var sent = false, message
-        while (denizen.shifter.peek()) {
-            message = denizen.shifter.shift()
-            receive(denizen, message, failures)
-            sent = true
-        }
-        return sent
-    }
+    okay(network.denizens[0].immigrate(time, 1, '1', network.denizens[1].cookie, { location: '1' }).enqueued, 'immigrate')
 
-    function tick (failures) {
-        failures || (failures = {})
-        var ticked = true
-        while (ticked) {
-            ticked = false
-            denizens.forEach(function (denizen) {
-                if (failures[denizen.id] != 'isolate') {
-                    denizen.scheduler.check(time)
-                    while (send(denizen, failures)) {
-                        ticked = true
-                    }
-                }
-            })
-        }
-    }
+    network.tick()
 
-    // tick()
-
-    denizens.push(denizen = createDenizen('1'))
-    denizen.join(time, 1)
-
-    assert(denizens[0].immigrate(time, 1, '1', denizens[1].cookie, { location: '1' }).enqueued, 'immigrate')
-
-    assert(denizens[0].government, {
+    okay(network.denizens[0].government, {
         majority: [ '0' ],
         minority: [],
         immigrate: { id: '1', properties: { location: '1' }, cookie: 0 },

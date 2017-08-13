@@ -26,7 +26,8 @@ var Recorder = require('./recorder')
 var Pinger = require('./pinger')
 var Shape = require('./shape')
 
-function Paxos (republic, id, options) {
+function Paxos (now, republic, id, options) {
+    this.cookie = now
     this.republic = republic
     this.id = String(id)
     this.naturalized = !! options.naturalized
@@ -116,6 +117,9 @@ function Paxos (republic, id, options) {
         promise: '0/0',
         body: this.government
     })
+
+    this._writer = new Writer(this, '1/0')
+    this._recorder = new Recorder(this, '1/0')
 }
 
 Paxos.prototype._getPing_ = function (id) {
@@ -757,8 +761,6 @@ Paxos.prototype.bootstrap = function (now, properties) {
     // Update current state as if we're already leader.
     this.naturalize()
 
-    this.cookie = 0
-
     var government = {
         promise: '1/0',
         majority: [ this.id ],
@@ -775,9 +777,6 @@ Paxos.prototype.bootstrap = function (now, properties) {
     government.properties[this.id] = properties
     government.immigrated.promise[this.id] = '1/0'
     government.immigrated.id['1/0'] = this.id
-
-    this._writer = new Writer(this, '1/0')
-    this._recorder = new Recorder(this, '1/0')
 
     this._receiveEnact(now, {}, { promise: '1/0', body: government })
 }
@@ -1098,6 +1097,7 @@ Paxos.prototype._receiveCommit = function (now, pulse, message, responses) {
 Paxos.prototype.request = function (now, request) {
     var sync = {
         from: this.id,
+        minimum: this.minimum,
         committed: this.log.head.body.promise,
         cookie: this.cookie,
         commits: []
@@ -1124,7 +1124,11 @@ Paxos.prototype.request = function (now, request) {
         }
     }
 
-    return this._recorder.request(now, request, sync)
+    if (request.method == 'synchronize') {
+        return { sync: sync }
+    } else {
+        return this._recorder.request(now, request, sync)
+    }
 }
 
 Paxos.prototype.response = function (now, request, responses) {
@@ -1133,6 +1137,9 @@ Paxos.prototype.response = function (now, request, responses) {
         for (var j = 0, commit; (commit = response.sync.commits[j]) != null; i++) {
             this._commit(commit)
         }
+    }
+    if (request.method == 'synchronize') {
+        return
     }
     // Only handle a response if it was issued by our current writer/proposer.
     if (request.version[0] == this._writer.version[0] && request.version[1] == this._writer.version[1]) {
@@ -1257,9 +1264,9 @@ Paxos.prototype._receiveEnact = function (now, pulse, message) {
         body: message.body
     })
 
-    this.constituency.forEach(function (id) {
+    for (var i = 0, id; (id = this.constituency[i]) != null; i++) {
         this.scheduler.schedule(now, id, { module: 'paxos', method: 'ping', body: null })
-    }, this)
+    }
 }
 
 Paxos.prototype._ping = function (now) {
@@ -1288,23 +1295,19 @@ Paxos.prototype._whenKeepAlive = function (now) {
 }
 
 Paxos.prototype._whenPing = function (now, id) {
-    var ping = this.getPing(id)
-    if (ping.timeout == 0) {
-        ping.timeout = 1
+    var request = {
+        method: 'synchronize',
+        to: [ id ],
+        sync: {
+            from: this.id,
+            committed: this.log.head.body.promise,
+            minimum: this.minimum,
+            cookie: this.cookie,
+            commits: []
+        }
     }
-    var compare = Monotonic.compare(this.getPing(id).decided, this.getPing(this.id).decided)
-    var messages = []
-    var pulse = {
-        type: 'synchronize',
-        republic: this.republic,
-        governments: [ this.government.promise ],
-        route: [ id ],
-        messages: messages,
-        failed: ! this._stuffSynchronize(now, ping, messages)
-    }
-    pulse.messages.push(this._pong(now))
-    pulse.messages.push(this._ping(now))
-    this.outbox.push(pulse)
+    this._stuffSynchronize([ this._pinger.getPing(id) ], request.sync, 20)
+    this.outbox2.push(request)
 }
 
 // Note that we communicate naturalization in out pong message. In this way it

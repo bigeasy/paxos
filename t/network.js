@@ -6,18 +6,18 @@ function Network () {
     this.time = 0
 }
 
-Network.prototype.receive = function (denizen, send) {
+Network.prototype.receive = function (denizen, request) {
     var responses = {}
-    send.route.forEach(function (id) {
+    request.to.forEach(function (id) {
         var denizen = this.denizens[id]
         if (this.failures[id] != 'request' && this.failures[id] != 'isolate') {
-            responses[id] = denizen.receive(this.time, send, send.messages)
+            responses[id] = this.denizens[id].request(this.time, request)
         }
-        if (responses[id] == 'response') {
-            delete responses[id]
+        if (this.failures[id] == 'response' || this.failures[denizen.id] == 'isolate') {
+            responses[id] = null
         }
     }, this)
-    denizen.sent(this.time, send, responses)
+    denizen.response(this.time, request, responses)
 }
 
 Network.prototype.send = function (denizen) {
@@ -30,17 +30,22 @@ Network.prototype.send = function (denizen) {
 }
 
 Network.prototype.tick = function () {
+    var vargs = Array.prototype.slice.call(arguments)
+    var count = typeof vargs[0] == 'number' ? vargs.shift() : Infinity
+    var denizens = vargs.length == 0
+                 ? this.denizens
+                 : vargs.shift().map(function (id) { return this.denizens[id] }.bind(this))
     var ticked = true
-    while (ticked) {
+    while (ticked && count--) {
         ticked = false
-        this.denizens.forEach(function (denizen) {
+        for (var i = 0, denizen; (denizen = denizens[i]) != null; i++) {
             if (this.failures[denizen.id] != 'isolate') {
                 denizen.scheduler.check(this.time)
                 while (this.send(denizen)) {
                     ticked = true
                 }
             }
-        }, this)
+        }
     }
 }
 
@@ -51,37 +56,29 @@ Network.prototype.timeAndTick = function (count) {
     }
 }
 
-Network.prototype.addDenizens = function (count) {
+Network.prototype.push = function () {
+    var id = String(this.denizens.length)
+    var denizen = new Paxos(this.time, 1, id, {
+        parliamentSize: 5,
+        ping: 1,
+        timeout: 3,
+        naturalized: true
+    })
+    denizen.scheduler.events.shifter().pump(denizen.event.bind(denizen))
+    denizen.shifter = denizen.outbox2.shifter()
+    this.denizens.push(denizen)
+}
+
+Network.prototype.populate = function (count) {
     while (count-- != 0) {
-        var id = String(this.denizens.length)
-        var denizen = new Paxos(id, {
-            parliamentSize: 5,
-            ping: 1,
-            timeout: 3,
-            naturalized: true
-        })
-        denizen.scheduler.events.shifter().pump(denizen.event.bind(denizen))
-        denizen.shifter = denizen.outbox.shifter()
-        denizen.outbox2.shifter().pump(function (message) {
-            var responses = {}
-            message.to.forEach(function (id) {
-                responses[id] = this.denizens[id].request(this.time, message)
-            }, this)
-            denizen.response(this.time, message, responses)
-        }.bind(this))
-        this.denizens.push(denizen)
+        this.push()
         if (this.denizens.length == 1) {
-            this.denizens[0].bootstrap(this.time, 1, { location: '0' })
+            this.denizens[0].bootstrap(this.time, { location: '0' })
         } else {
             denizen.join(this.time, 1)
             this.denizens[0].immigrate(this.time, 1, id, denizen.cookie, { location: id })
-            this.tick()
         }
     }
-    this.time++
-    this.tick()
-    this.time++
-    this.tick()
 }
 
 Network.prototype.isolate = function (id) {
