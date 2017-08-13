@@ -12,30 +12,6 @@ function prove (okay) {
         denizen.log.each(function (entry) { console.log(entry) })
     }
 
-    var time = 0
-
-    var options = {
-        parliamentSize: 5,
-        ping: 1,
-        timeout: 3,
-        naturalized: true,
-        shifter: true
-    }
-
-    function createDenizen (id) {
-        var paxos = new Paxos(1, id, options)
-        paxos.scheduler.events.shifter().pump(paxos.event.bind(paxos))
-        paxos.shifter = paxos.outbox.shifter()
-        paxos.outbox2.shifter().pump(function (request) {
-            var responses = {}
-            request.to.forEach(function (id) {
-                responses[id] = denizens[id].request(time, request)
-            })
-            paxos.response(time, request, responses)
-        })
-        return paxos
-    }
-
     var shifter = network.denizens[0].log.shifter()
 
     shifter.join(function (envelope) {
@@ -61,7 +37,7 @@ function prove (okay) {
 
     network.push()
 
-    okay(network.denizens[0].immigrate(time, 1, '1', network.denizens[1].cookie, { location: '1' }).enqueued, 'immigrate')
+    okay(network.denizens[0].immigrate(network.time, 1, '1', network.denizens[1].cookie, { location: '1' }).enqueued, 'immigrate')
 
     network.tick()
 

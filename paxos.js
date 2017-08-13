@@ -1097,6 +1097,7 @@ Paxos.prototype._receiveCommit = function (now, pulse, message, responses) {
 Paxos.prototype.request = function (now, request) {
     var sync = {
         from: this.id,
+        naturalized: this.naturalized,
         minimum: this.minimum,
         committed: this.log.head.body.promise,
         cookie: this.cookie,
@@ -1111,7 +1112,7 @@ Paxos.prototype.request = function (now, request) {
 
     // Sync.
     for (var i = 0, commit; (commit = request.sync.commits[i]) != null; i++) {
-        this._commit(commit)
+        this._commit(now, commit)
     }
 
     // We don't want to advance the minimum if we have no items yet.
@@ -1133,12 +1134,22 @@ Paxos.prototype.request = function (now, request) {
 
 Paxos.prototype.response = function (now, request, responses) {
     // If anyone we tried to update is ahead of us, we learn from them.
-    for (var i = 0, response; (response = responses[i]) != null; i++) {
+    for (var i = 0, response; (response = responses[request.to[i]]) != null; i++) {
+        this._pinger.update(now, request.to[i], response.sync)
         for (var j = 0, commit; (commit = response.sync.commits[j]) != null; i++) {
             this._commit(commit)
         }
     }
+    // TODO Probably run every time, probably always fails.
     if (request.method == 'synchronize') {
+        var delay = this.log.head.body.promise == responses[request.to[0]].sync.committed
+                  ? now + this.ping
+                  : now
+        this.scheduler.schedule(delay, request.to[0], {
+            module: 'paxos',
+            method: 'ping',
+            body: { id: request.to[0] }
+        })
         return
     }
     // Only handle a response if it was issued by our current writer/proposer.
@@ -1426,7 +1437,7 @@ Paxos.prototype._enactGovernment = function (now, round) {
     if (this.government.exile) {
         // TODO Remove! Fall back to a peek at exile.
         delete this.pings[this.government.exile.id]
-    } else if (this.government.immigrate) {
+    } else if (this.government.immigrate && this.government.majority[0] == this.id) {
         assert(this.immigrating.length > 0 && this.government.immigrate.id == this.immigrating[0].id)
         this.immigrating.shift()
     }

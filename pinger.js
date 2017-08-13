@@ -18,7 +18,7 @@ Pinger.prototype.ingest = function (now, pinger, constituency) {
 Pinger.prototype.getPing = function (id) {
     var ping = this._pings[id]
     if (ping == null) {
-        ping = this._pings[id] = { id: id, naturalized: false, when: null, committed: 'x' }
+        ping = this._pings[id] = { id: id, naturalized: false, when: null, committed: null }
     }
     return ping
 }
