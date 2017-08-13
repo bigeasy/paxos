@@ -5,9 +5,8 @@ var Monotonic = require('monotonic').asString
 // messages absorb some of the complexity of the code. (Divide them. Restrict
 // their structure.)
 
-function Recorder (paxos, promise) {
+function Recorder (paxos) {
     this._paxos = paxos
-    this._promise = promise
     this._register = null
 }
 
@@ -16,16 +15,17 @@ Recorder.prototype.request = function (now, request, sync) {
         switch (message.method) {
         case 'write':
             if (
-                Monotonic.increment(this._promise, 0) != message.promise &&
-                Monotonic.increment(this._promise, 1) != message.promise
+                Monotonic.increment(this._paxos.promise, 0) != message.promise &&
+                Monotonic.increment(this._paxos.promise, 1) != message.promise
             ) {
+            console.log(this._paxos.promise, this._paxos.id, message)
                 return { method: 'reject', promise: '0/0', sync: sync }
             }
             if (this._register != null) {
                 return { method: 'reject', promise: '0/0', sync: sync }
             }
             this._register = {
-                promise: this._promise = message.promise,
+                promise: this._paxos.promise = message.promise,
                 body: message.body
             }
             break

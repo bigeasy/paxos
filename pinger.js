@@ -1,8 +1,10 @@
 var assert = require('assert')
 
-function Pinger (shape, timeout) {
+var noop = function () {}
+
+function Pinger (paxos, shape) {
+    this._paxos = paxos
     this._pings = {}
-    this._timeout = timeout
     this._shape = shape
 }
 
@@ -23,19 +25,28 @@ Pinger.prototype.getPing = function (id) {
     return ping
 }
 
+Pinger.prototype._updateShape = function (now, id, reacahble) {
+    var shape = this._shape.update(id, reacahble)
+    if (shape != null) {
+        this._shape = { update: noop }
+        this._paxos.newGovernment(now, shape.quorum, shape.government)
+    }
+}
+
+
 Pinger.prototype.update = function (now, id, sync) {
     var ping = this.getPing(id)
     if (sync == null) {
         if (ping.when == null) {
             ping.when = now
-        } else if (now - ping.when > this._timeout) {
-            this._shape.update(id, false)
+        } else if (now - ping.when > this._paxos.timeout) {
+            this._updateShape(now, id, false)
         }
     } else {
         if (ping.naturalized != sync.naturalized) {
             assert(sync.naturalized)
             ping.naturalized = true
-            this._shape.update(id, true)
+            this._updateShape(now, id, true)
         }
         ping.when = null
         ping.committed = sync.committed

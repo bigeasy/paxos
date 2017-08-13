@@ -1,4 +1,4 @@
-require('proof')(5, prove)
+require('proof')(6, prove)
 
 function prove (okay) {
     var Paxos = require('..'), denizen
@@ -58,48 +58,28 @@ function prove (okay) {
         }
     }, 'leader and constituent pair')
 
-    return
+    network.populate(1)
 
-    tick({ 1: 'request' })
+    network.tick()
 
-    time++
-
-    assert(denizens[0].scheduler.check(time), 'ping missed')
-
-    tick({ 1: 'request' })
-
-    time++
-
-    denizens[0].scheduler.check(time)
-
-    tick()
-
-    assert(denizens[0].government, {
-        majority: [ '0' ],
-        minority: [],
-        immigrate: { id: '1', properties: { location: '1' }, cookie: 0 },
-        constituents: [ '1' ],
-        promise: '2/0',
+    okay(network.denizens[2].government, {
+        majority: [ '0', '1' ],
+        minority: [ '2' ],
+        constituents: [],
+        promise: '4/0',
         map: {},
         immigrated: {
-            id: { '1/0': '0', '2/0': '1' },
-            promise: { '0': '1/0', '1': '2/0' }
+            id: { '1/0': '0', '2/0': '1', '3/0': '2' },
+            promise: { '0': '1/0', '1': '2/0', '2': '3/0' }
         },
         properties: {
             '0': { location: '0' },
-            '1': { location: '1' }
+            '1': { location: '1' },
+            '2': { location: '2' }
         }
-    }, 'leader and constituent pair')
+    }, 'three member parliament')
 
-    assert(denizens[1].log.trailer.node.next.next.body.promise, '2/0', 'synchronized')
-    assert(denizens[1].log.head.body.body.promise, '2/0', 'synchronized')
-
-    denizens.push(denizen = createDenizen('2'))
-    denizen.join(time, 1)
-    denizens[0].enqueue(time, 1, 1)
-    denizens[0].immigrate(time, 1, '2', denizens[2].cookie, { location: '2' })
-
-    tick()
+    return
 
     assert(denizens[0].government, {
         majority: [ '0', '1' ],

@@ -141,6 +141,7 @@ Paxos.prototype._getPing_ = function (id) {
 //
 Paxos.prototype.newGovernment = function (now, quorum, government, promise) {
     assert(!government.constituents)
+    promise = Monotonic.increment(this.promise, 0)
     government.constituents = Object.keys(this.government.properties).sort().filter(function (citizen) {
         return !~government.majority.indexOf(citizen)
             && !~government.minority.indexOf(citizen)
@@ -472,7 +473,7 @@ Paxos.prototype._nudgeRedux = function (now) {
                 properties: immigration.properties,
                 cookie: immigration.cookie
             }
-        }, Monotonic.increment(this.promise, 0))
+        })
     }
 }
 
@@ -1259,7 +1260,7 @@ Paxos.prototype._receiveEnact = function (now, pulse, message) {
         this._enactGovernment(now, message)
     }
 
-    var pinger = new Pinger(new Shape(this.parliamentSize, this.government), this.timeout)
+    var pinger = new Pinger(this, new Shape(this.parliamentSize, this.government))
 
     pinger.ingest(now, this._pinger, this.constituency)
 

@@ -75,8 +75,8 @@ Network.prototype.populate = function (count) {
         if (this.denizens.length == 1) {
             this.denizens[0].bootstrap(this.time, { location: '0' })
         } else {
-            denizen.join(this.time, 1)
-            this.denizens[0].immigrate(this.time, 1, id, denizen.cookie, { location: id })
+            var denizen = this.denizens[this.denizens.length - 1]
+            this.denizens[0].immigrate(this.time, 1, denizen.id, denizen.cookie, { location: denizen.id })
         }
     }
 }

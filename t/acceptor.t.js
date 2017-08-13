@@ -11,7 +11,9 @@ function prove (okay) {
     var government = { majority: [ '0', '1' ], minority: [ '2' ] }
     var proposer = new Proposer(paxos, government, '1/0')
     var acceptors = government.majority.concat(government.minority).map(function (id) {
-        return new Acceptor('1/0', id, {
+        return new Acceptor({
+            promise: '1/0',
+            id: id,
             _commit: function (now, entry) {
                 okay(entry, {
                     promise: '2/0',

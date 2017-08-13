@@ -1,3 +1,5 @@
+// TODO Rename Shaper.
+
 // Monitor the reachability of denizens in order to suggest the shape of a new
 // government. The `Shape.update` method is invoked with a denizen id and a
 // reachability status. `Shape.update` returns either a new government to

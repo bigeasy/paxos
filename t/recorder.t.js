@@ -16,10 +16,11 @@ function prove (okay) {
     var entries = [ [], [] ]
     var recorders = [ '0', '1' ].map(function (id) {
         return new Recorder({
+            promise: '1/0',
             _commit: function (now, entry) {
                 entries[id].push(entry)
             }
-        }, '1/0')
+        })
     })
 
     Array.prototype.push.apply(writer.proposals, [{

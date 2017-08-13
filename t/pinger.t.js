@@ -1,4 +1,4 @@
-require('proof')(2, prove)
+require('proof')(3, prove)
 
 function prove (okay) {
     var Pinger = require('../pinger')
@@ -8,6 +8,20 @@ function prove (okay) {
         id: '1', reachable: false, label: 'unreachable'
     }]
     var pinger = new Pinger({
+        timeout: 1000,
+        newGovernment: function (now, quorum, government) {
+            okay({
+                quorum: quorum,
+                government: government
+            }, {
+                quorum: [ '0', '1' ],
+                government: {
+                    majority: [ '0', '1' ],
+                    minority: [ '2' ]
+                }
+            }, 'reshaped')
+        }
+    }, {
         update: function (id, reachable) {
             var expectation = expect.shift()
             okay({
@@ -17,8 +31,17 @@ function prove (okay) {
                 id: expectation.id,
                 reachable: expectation.reachable
             }, expectation.label)
+            if (!reachable) {
+                return {
+                    quorum: [ '0', '1' ],
+                    government: {
+                        majority: [ '0', '1' ],
+                        minority: [ '2' ]
+                    }
+                }
+            }
         }
-    }, 1000)
+    })
 
     pinger.update(0, '1', { naturalized: false })
     pinger.update(0, '1', { naturalized: true })
