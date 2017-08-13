@@ -41,7 +41,7 @@ function prove (okay) {
 
     network.tick()
 
-    okay(network.denizens[0].government, {
+    okay(network.denizens[1].government, {
         majority: [ '0' ],
         minority: [],
         immigrate: { id: '1', properties: { location: '1' }, cookie: 0 },
