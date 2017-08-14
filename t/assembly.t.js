@@ -5,7 +5,7 @@ function prove (okay) {
     var assembly = new Assembly({
         majority: [ '0', '1', '2' ],
         minority: [ '3', '4' ]
-    })
+    }, '2')
     okay(assembly.update('2', true), null, 'first')
     okay(assembly.update('3', true), null, 'second reachable')
     okay(assembly.update('3', true), null, 'second still reachable')

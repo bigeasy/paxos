@@ -1,18 +1,18 @@
-require('proof')(1, prove)
+require('proof')(2, prove)
 
 function prove (okay) {
     var Writer = require('../writer')
     var Recorder = require('../recorder')
 
     var writer = new Writer({
-        _send: function (pulse) {
+        _send: function (request) {
             var responses = {}
-            pulse.to.forEach(function (id) {
-                responses[id] = recorders[id].request(0, pulse)
+            request.to.forEach(function (id) {
+                responses[id] = recorders[id].request(0, request, {})
             })
-            writer.response(0, pulse, responses)
+            writer.response(0, request, responses)
         }
-    })
+    }, '1/0')
     var entries = [ [], [] ]
     var recorders = [ '0', '1' ].map(function (id) {
         return new Recorder({
@@ -22,6 +22,8 @@ function prove (okay) {
             }
         })
     })
+
+    okay(writer.version, [ '1/0', false ], 'version')
 
     Array.prototype.push.apply(writer.proposals, [{
         promise: '1/1',
