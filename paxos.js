@@ -264,6 +264,10 @@ Paxos.prototype._collapse = function (now) {
     this.scheduler.clear()
 
     this._pinger = new Pinger(this, new Assembly(this.government, this.id))
+    this._pinger.update(now, this.id, {
+        naturalized: this.naturalized,
+        committed: this.log.head.body.promise
+    })
     this.proposals.length = 0
     this.immigrating.length = 0
 
@@ -581,6 +585,7 @@ Paxos.prototype.response = function (now, request, responses) {
     for (var i = 0, I = request.to.length; i < I; i++) {
         var response = responses[request.to[i]]
         if (response == null) {
+            responses[request.to[i]] = { sync: { committed: '0/0' } }
             this._pinger.update(now, request.to[i], null)
         } else {
             this._pinger.update(now, request.to[i], response.sync)

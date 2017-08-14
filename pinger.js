@@ -51,13 +51,13 @@ Pinger.prototype.update = function (now, id, sync) {
             this._updateShape(now, id, false)
         }
     } else {
+        ping.when = null
+        ping.committed = sync.committed
         if (ping.naturalized != sync.naturalized) {
             assert(sync.naturalized)
             ping.naturalized = true
             this._updateShape(now, id, true)
         }
-        ping.when = null
-        ping.committed = sync.committed
         // TODO Schedule next ping.
     }
 }

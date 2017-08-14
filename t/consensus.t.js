@@ -88,7 +88,7 @@ function prove (okay) {
 
     network.time += 3
 
-    network.send(1, [ '0' ])
+    network.send(2, [ '0' ])
 
     return
 
