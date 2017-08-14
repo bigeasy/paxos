@@ -30,6 +30,7 @@ Acceptor.prototype.request = function (now, message, sync) {
     case 'commit':
         if (Monotonic.compare(this._paxos.promise, message.promise) == 0) {
             this._paxos._commit(now, this.register)
+            sync.committed = this.register.promise
             return { method: 'committed', promise: this._paxos.promise, sync: sync }
         }
     }

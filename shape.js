@@ -69,8 +69,8 @@ function Shape (parliamentSize, government) {
     this._minority = []
     this._exiles = []
     this._expandable = []
+    this.collapsed = false
 }
-
 
 // `Shape.update` determines if a new government should be created that has a
 // new shape. Note that immigration takes place is elsewhere.

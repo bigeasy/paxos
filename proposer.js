@@ -11,6 +11,10 @@ function Proposer (paxos, government, promise) {
     this.previous = null
 }
 
+Proposer.prototype.unshift = function (government) {
+    this.government = government
+}
+
 Proposer.prototype.prepare = function (now) {
     this._paxos._send({
         method: 'prepare',

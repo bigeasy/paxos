@@ -26,6 +26,14 @@ Pinger.prototype.getPing = function (id) {
 }
 
 Pinger.prototype._updateShape = function (now, id, reacahble) {
+    if (
+        !reacahble &&
+        !this._shape.collapsed &&
+        ~this._paxos.government.majority.indexOf(id)
+    ) {
+        this._shape = { update: noop }
+        this._paxos._collapse(now)
+    }
     var shape = this._shape.update(id, reacahble)
     if (shape != null) {
         this._shape = { update: noop }
@@ -39,7 +47,7 @@ Pinger.prototype.update = function (now, id, sync) {
     if (sync == null) {
         if (ping.when == null) {
             ping.when = now
-        } else if (now - ping.when > this._paxos.timeout) {
+        } else if (now - ping.when >= this._paxos.timeout) {
             this._updateShape(now, id, false)
         }
     } else {

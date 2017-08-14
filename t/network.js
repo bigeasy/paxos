@@ -20,7 +20,7 @@ Network.prototype.receive = function (denizen, request) {
     denizen.response(this.time, request, responses)
 }
 
-Network.prototype.send = function (denizen) {
+Network.prototype._send = function (denizen) {
     var sent = false, message
     while (denizen.shifter.peek()) {
         this.receive(denizen, denizen.shifter.shift())
@@ -29,7 +29,7 @@ Network.prototype.send = function (denizen) {
     return sent
 }
 
-Network.prototype.tick = function () {
+Network.prototype.send = function () {
     var vargs = Array.prototype.slice.call(arguments)
     var count = typeof vargs[0] == 'number' ? vargs.shift() : Infinity
     var denizens = vargs.length == 0
@@ -41,7 +41,7 @@ Network.prototype.tick = function () {
         for (var i = 0, denizen; (denizen = denizens[i]) != null; i++) {
             if (this.failures[denizen.id] != 'isolate') {
                 denizen.scheduler.check(this.time)
-                while (this.send(denizen)) {
+                while (this._send(denizen)) {
                     ticked = true
                 }
             }

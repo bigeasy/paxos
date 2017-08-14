@@ -39,7 +39,7 @@ function prove (okay) {
 
     okay(network.denizens[0].immigrate(network.time, 1, '1', network.denizens[1].cookie, { location: '1' }).enqueued, 'immigrate')
 
-    network.tick()
+    network.send()
 
     okay(network.denizens[1].government, {
         majority: [ '0' ],
@@ -60,7 +60,7 @@ function prove (okay) {
 
     network.populate(1)
 
-    network.tick()
+    network.send()
 
     okay(network.denizens[2].government, {
         majority: [ '0', '1' ],
@@ -79,24 +79,19 @@ function prove (okay) {
         }
     }, 'three member parliament')
 
+
+    network.failures[1] = 'isolate'
+
+    network.time++
+
+    network.send([ '0' ])
+
+    network.time += 3
+
+    network.send(1, [ '0' ])
+
     return
 
-    assert(denizens[0].government, {
-        majority: [ '0', '1' ],
-        minority: [ '2' ],
-        constituents: [],
-        promise: '4/0',
-        map: {},
-        immigrated: {
-            id: { '1/0': '0', '2/0': '1', '3/0': '2' },
-            promise: { '0': '1/0', '1': '2/0', '2': '3/0' }
-        },
-        properties: {
-            '0': { location: '0' },
-            '1': { location: '1' },
-            '2': { location: '2' }
-        }
-    }, 'three member parliament')
 
     assert(denizens[2].log.trailer.node.next.next.body.promise, '3/0', 'synchronized least')
     assert(denizens[2].log.head.body.body.promise, '4/0', 'synchronized')

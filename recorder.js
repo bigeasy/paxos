@@ -39,6 +39,7 @@ Recorder.prototype.request = function (now, request, sync) {
                 body: register.body,
                 previous: null
             })
+            sync.committed = register.promise
             break
         }
     }

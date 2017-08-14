@@ -17,14 +17,15 @@ var Indexer = require('procession/indexer')
 // Logging conduit.
 var logger = require('prolific.logger').createLogger('paxos')
 
+var Assembly = require('./assembly')
 var Proposer = require('./proposer')
 var Acceptor = require('./acceptor')
 
+var Shape = require('./shape')
 var Writer = require('./writer')
 var Recorder = require('./recorder')
 
 var Pinger = require('./pinger')
-var Shape = require('./shape')
 
 function Paxos (now, republic, id, options) {
     this.cookie = now
@@ -568,41 +569,28 @@ Paxos.prototype.receive = function (now, pulse, messages) {
     return responses
 }
 
-Paxos.prototype.collapse = function (now) {
-// TODO Combine into a single state flag.
-    this.collapsed = true
-    this.election = null
-    // Blast all queued work.
+Paxos.prototype._prepare = function () {
+    this._writer = new Proposer(this, null, this.promise)
+    this._acceptor = new Acceptor(this)
+}
+
+Paxos.prototype._collapse = function (now) {
+    this.scheduler.clear()
+
+    this._pinger = new Pinger(this, new Assembly(this.government, this.id))
     this.proposals.length = 0
     this.immigrating.length = 0
-    // Blast all knowledge of pings.
-    for (var id in this.pings) {
-        if (id != this.id) {
-            delete this.pings[id]
-        }
-    }
 
-    // Cancel all timers.
-    this.citizens.forEach(function (id) { this.scheduler.unschedule(id) }, this)
-
-    // Ping other parliament members until we can form a government.
-    //
-    // TODO Looks like constituency is not important in that it doesn't drive
-    // pings. Pings go from ping to timeout assertion to ping. Maybe double
-    // check eventually?
-    this.constituency = this.government.majority
-                                       .concat(this.government.minority)
-                                       .filter(function (id) {
-        return this.id != id
-    }.bind(this))
-
-    this.constituency.forEach(function (id) {
-        this.scheduler.schedule(now, id, {
-            module: 'paxos',
-            method: 'ping',
-            body: null
-        })
-    }, this)
+    this.government.majority.concat(this.government.minority)
+        .filter(function (id) {
+            return id != this.id
+        }.bind(this)).forEach(function (id) {
+            this.scheduler.schedule(now, id, {
+                module: 'paxos',
+                method: 'ping',
+                body: { method: 'collpase' }
+            })
+        }, this)
 }
 
 Paxos.prototype.sent = function (now, pulse, responses) {
@@ -737,7 +725,7 @@ Paxos.prototype.event = function (envelope) {
         this._whenKeepAlive(envelope.now)
         break
     case 'collapse':
-        this._whenCollapse(envelope.now)
+        this._collapse(envelope.now)
         break
     }
 }
@@ -1135,10 +1123,15 @@ Paxos.prototype.request = function (now, request) {
 
 Paxos.prototype.response = function (now, request, responses) {
     // If anyone we tried to update is ahead of us, we learn from them.
-    for (var i = 0, response; (response = responses[request.to[i]]) != null; i++) {
-        this._pinger.update(now, request.to[i], response.sync)
-        for (var j = 0, commit; (commit = response.sync.commits[j]) != null; i++) {
-            this._commit(commit)
+    for (var i = 0, I = request.to.length; i < I; i++) {
+        var response = responses[request.to[i]]
+        if (response == null) {
+            this._pinger.update(now, request.to[i], null)
+        } else {
+            this._pinger.update(now, request.to[i], response.sync)
+            for (var j = 0, commit; (commit = response.sync.commits[j]) != null; i++) {
+                this._commit(commit)
+            }
         }
     }
     // TODO Probably run every time, probably always fails.
@@ -1146,11 +1139,19 @@ Paxos.prototype.response = function (now, request, responses) {
         var delay = this.log.head.body.promise == responses[request.to[0]].sync.committed
                   ? now + this.ping
                   : now
-        this.scheduler.schedule(delay, request.to[0], {
-            module: 'paxos',
-            method: 'ping',
-            body: { id: request.to[0] }
-        })
+        if (this.constituency.length == 0) {
+            this.scheduler.schedule(delay, request.to[0], {
+                module: 'paxos',
+                method: 'keepAlive',
+                body: null
+            })
+        } else {
+            this.scheduler.schedule(delay, request.to[0], {
+                module: 'paxos',
+                method: 'ping',
+                body: null
+            })
+        }
         return
     }
     // Only handle a response if it was issued by our current writer/proposer.
@@ -1297,12 +1298,10 @@ Paxos.prototype._pong = function (now) {
 }
 
 Paxos.prototype._whenKeepAlive = function (now) {
-    this.outbox.push({
-        type: 'consensus',
-        republic: this.republic,
-        governments: [ this.government.promise ],
-        route: this.government.majority,
-        messages: [ this._ping(now) ]
+    this._send({
+        method: 'synchronize',
+        to: this.government.majority,
+        sync: null
     })
 }
 
@@ -1453,7 +1452,7 @@ Paxos.prototype._enactGovernment = function (now, round) {
     this._determineConstituency()
     assert(!this.constituency.length || this.constituency[0] != null)
     this.scheduler.clear()
-    if (this.government.majority[0] == this.id) {
+    if (this.government.majority[0] == this.id && this.government.majority.length != 1) {
         this.scheduler.schedule(now + this.ping, this.id, {
             module: 'paxos',
             method: 'keepAlive',

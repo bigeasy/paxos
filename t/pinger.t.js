@@ -9,6 +9,7 @@ function prove (okay) {
     }]
     var pinger = new Pinger({
         timeout: 1000,
+        government: { majority: [] },
         newGovernment: function (now, quorum, government) {
             okay({
                 quorum: quorum,

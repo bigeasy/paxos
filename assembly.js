@@ -12,9 +12,12 @@ var assert = require('assert')
 // Create an assembly with the given government.
 
 //
-function Assembly (government) {
+function Assembly (government, id) {
     this._government = government
     this._reachable = []
+    this.collapsed = true
+
+    this.update(id, true)
 }
 
 // We assume that update will be called first with the id of this citzen and
