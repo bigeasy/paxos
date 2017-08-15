@@ -28,21 +28,36 @@ var Recorder = require('./recorder')
 var Pinger = require('./pinger')
 
 function Paxos (now, republic, id, options) {
-    this.cookie = now
-    this.republic = republic
+    // Uniquely identify ourselves relative to the other participants.
     this.id = String(id)
+
+    // Use the create time as a cookie to identify this instance of this id.
+    this.cookie = now
+
+    // A republic identifies a paritcular instance of the Paxos algorithm.
+    this.republic = republic
+
+    // Maybe start out naturalized if no futher updates necessary.
     this.naturalized = !! options.naturalized
 
     this.parliamentSize = options.parliamentSize || 5
 
+    // The atomic log is a linked list. When head of the list is advanced the
+    // entries in the list go out of scope and can be collected by the garbage
+    // collector. We advance the head of the list when we are certain that all
+    // participants have received a copy of the entry and added it to their
+    // logs. Note that outstanding user iterators prevent this garbage
+    // collection, but when we advance the head the entries are dead to us.
     this.log = new Window
     this.log.addListener(this.indexer = new Indexer(function (left, right) {
         assert(left && right)
         assert(left.body && right.body)
         return Monotonic.compare(left.body.promise, right.body.promise)
     }))
+
+    // Implements a calendar for events that we can check during runtime or
+    // ignore during debugging playback.
     this.scheduler = new Scheduler
-    this.synchronizing = {}
 
     // This is the right data structure for the job. It is an array of proposals
     // that can have at most one proposals for a new government, where that
@@ -74,8 +89,7 @@ function Paxos (now, republic, id, options) {
     //
     this.proposals = []
     this.immigrating = []
-    this.keepAlive = false
-    this.pulsing = false
+    // TODO OUTGOING.
     this.collapsed = false
 
     this.government = {
@@ -86,12 +100,10 @@ function Paxos (now, republic, id, options) {
         immigrated: { id: {}, promise: {} }
     }
 
+    this._promises = { active: '0/0', issued: null }
+
     this.lastIssued = null
     this.promise = '0/0'
-
-    this.pings = {}
-
-    this.length = options.length || 1024
 
 // TODO Randomly adjust election retry by a percentage. Randomly half or
 // randomly half as much again.
@@ -100,8 +112,8 @@ function Paxos (now, republic, id, options) {
     this.timeout = options.timeout || 3
 
     this.constituency = []
-    this.operations = []
     this.citizens = []
+
     this.minimum = '0/0'
 
     this.outbox = new Procession
@@ -700,7 +712,6 @@ Paxos.prototype._receiveEnact = function (now, pulse, message) {
     this.proposal = null
     this.accepted = null
     this.collapsed = false
-    this.election = false
 
     var isGovernment = Monotonic.isBoundary(message.promise, 0)
     logger.info('enact', {
