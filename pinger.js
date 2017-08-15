@@ -12,7 +12,11 @@ Pinger.prototype.ingest = function (now, pinger, constituency) {
     for (var i = 0, constituent; (constituent = constituency[i]) != null; i++) {
         var ping = pinger._pings[constituent]
         if (ping != null) {
-            this.update(now, constituent, ping.when ? null : ping)
+            if (ping.when == null) {
+                this.update(ping.when, constituent, null)
+            } else {
+                this.update(now, constituent, ping)
+            }
         }
     }
 }
