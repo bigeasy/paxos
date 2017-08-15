@@ -13,9 +13,7 @@ function Recorder (paxos) {
 Recorder.prototype.request = function (now, request, sync) {
     switch (request.method) {
     case 'prepare':
-        var Acceptor = require('./acceptor')
-        this._paxos._recorder = new Acceptor(this._paxos)
-        return this._paxos._recorder.request(now, request, sync)
+        return this._paxos._prepare(now, request, sync)
     case 'write':
         for (var i = 0, message; (message = request.messages[i]) != null; i++) {
             switch (message.method) {

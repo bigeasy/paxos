@@ -268,9 +268,9 @@ Paxos.prototype._stuffSynchronize = function (pings, sync, count) {
     return true
 }
 
-Paxos.prototype._prepare = function () {
-    this._writer = new Proposer(this, this.promise)
-    this._acceptor = new Acceptor(this)
+Paxos.prototype._prepare = function (now, request, sync) {
+    this._recorder = new Acceptor(this)
+    return this._recorder.request(now, request, sync)
 }
 
 Paxos.prototype._collapse = function (now) {
