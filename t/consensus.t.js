@@ -1,4 +1,4 @@
-require('proof')(8, prove)
+require('proof')(11, prove)
 
 function prove (okay) {
     var Paxos = require('..'), denizen
@@ -79,6 +79,10 @@ function prove (okay) {
         }
     }, 'three member parliament')
 
+    okay(!network.denizens[0].immigrate(network.time, 1, '1', network.denizens[1].cookie, { location: '1' }).enqueued, 'already immigrated')
+    okay(!network.denizens[1].enqueue(network.time, 1, {}).enqueued, 'enqueue not leader')
+
+    okay(!network.denizens[1].immigrate(network.time, 1, '4', 0, { location: '4' }).enqueued, 'immigrate not leader')
 
     network.failures[1] = 'isolate'
 
