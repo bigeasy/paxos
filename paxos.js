@@ -106,8 +106,6 @@ function Paxos (now, republic, id, options) {
 
     this.outbox = new Procession
 
-    this.outbox2 = new Procession
-
     this._pinger = new Pinger(null, this.timeout)
 
 //    this.least = this.log.shifter()
@@ -349,7 +347,7 @@ Paxos.prototype._send = function (request) {
         pings.push(this._pinger.getPing(to))
     }
     this._stuffSynchronize(pings, request.sync, 20)
-    this.outbox2.push(request)
+    this.outbox.push(request)
 }
 
 Paxos.prototype.bootstrap = function (now, properties) {

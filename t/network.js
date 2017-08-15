@@ -65,7 +65,7 @@ Network.prototype.push = function () {
         naturalized: true
     })
     denizen.scheduler.events.shifter().pump(denizen.event.bind(denizen))
-    denizen.shifter = denizen.outbox2.shifter()
+    denizen.shifter = denizen.outbox.shifter()
     this.denizens.push(denizen)
 }
 
