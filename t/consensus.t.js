@@ -90,6 +90,8 @@ function prove (okay) {
 
     network.send(2, [ '0' ])
 
+    network.send([ '0' ])
+
     return
 
 

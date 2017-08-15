@@ -256,13 +256,14 @@ Paxos.prototype._stuffSynchronize = function (pings, sync, count) {
 }
 
 Paxos.prototype._prepare = function () {
-    this._writer = new Proposer(this, null, this.promise)
+    this._writer = new Proposer(this, this.promise)
     this._acceptor = new Acceptor(this)
 }
 
 Paxos.prototype._collapse = function (now) {
     this.scheduler.clear()
 
+    this._writer = new Proposer(this, this.promise)
     this._pinger = new Pinger(this, new Assembly(this.government, this.id))
     this._pinger.update(now, this.id, {
         naturalized: this.naturalized,

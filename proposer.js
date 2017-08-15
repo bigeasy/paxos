@@ -3,23 +3,27 @@ var Monotonic = require('monotonic').asString
 var Completion = require('./completion')
 
 // TODO Convert from a government structure.
-function Proposer (paxos, government, promise) {
+function Proposer (paxos, promise) {
     this._paxos = paxos
-    this.government = government
     this.version = [ promise, this.collapsed = true ]
     this.promise = Monotonic.increment(promise, 0)
     this.previous = null
+    this.proposal = null
 }
 
-Proposer.prototype.unshift = function (government) {
-    this.government = government
+Proposer.prototype.unshift = function (proposal) {
+    this.proposal = proposal
+}
+
+Proposer.prototype.nudge = function (now) {
+    this.prepare(now)
 }
 
 Proposer.prototype.prepare = function (now) {
     this._paxos._send({
         method: 'prepare',
         version: this.version,
-        to: this.government.majority,
+        to: this.proposal.quorum,
         sync: [],
         promise: this.promise
     })
@@ -45,10 +49,10 @@ Proposer.prototype.response = function (now, request, responses, promise) {
         this._paxos._send({
             method: 'accept',
             version: this.version,
-            to: this.government.majority,
+            to: this.proposal.quorum,
             sync: [],
             promise: this.promise,
-            government: this.government,
+            body: this.proposal.body,
             previous: this.previous
         })
         break
@@ -56,7 +60,7 @@ Proposer.prototype.response = function (now, request, responses, promise) {
         this._paxos._send({
             method: 'commit',
             version: this.version,
-            to: this.government.majority,
+            to: this.proposal.quorum,
             sync: [],
             promise: this.promise
         })

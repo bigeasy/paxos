@@ -23,6 +23,7 @@ Writer.prototype.nudge = function () {
         this._writing.push(this.proposals.shift())
         this._unshifted = false
         this._paxos._send({
+            method: 'write',
             version: this.version,
             to: this._writing[0].quorum,
             messages: [{
@@ -38,11 +39,11 @@ Writer.prototype.response = function (now, request, responses) {
     for (var i = 0, message; message = request.messages[i]; i++) {
         switch (message.method) {
         case 'collapse':
-            conssole.log('here')
             this._paxos._prepare()
             break
         case 'write':
             var nextRequest = {
+                method: 'write',
                 version: this.version,
                 to: this._writing[0].quorum,
                 messages: [{ method: 'commit', promise: this._writing[0].promise }]

@@ -14,7 +14,7 @@ Acceptor.prototype.request = function (now, message, sync) {
             return {
                 method: 'promise',
                 promise: this._paxos.promise,
-                register: this.register,
+                previous: this.register,
                 sync: sync
             }
         }
@@ -22,7 +22,7 @@ Acceptor.prototype.request = function (now, message, sync) {
         if (Monotonic.compare(this._paxos.promise, message.promise) == 0) {
             this.register = {
                 promise: message.promise,
-                value: message.government,
+                body: message.body,
                 previous: message.previous
             }
             return { method: 'accepted', promise: this._paxos.promise, sync: sync }

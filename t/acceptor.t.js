@@ -9,7 +9,11 @@ function prove (okay) {
         _send: function (message) { queue.push(message) }
     }
     var government = { majority: [ '0', '1' ], minority: [ '2' ] }
-    var proposer = new Proposer(paxos, government, '1/0')
+    var proposer = new Proposer(paxos, '1/0')
+    proposer.unshift({
+        quorum: government.majority,
+        body: government
+    })
     var acceptors = government.majority.concat(government.minority).map(function (id) {
         return new Acceptor({
             promise: '1/0',
@@ -17,7 +21,7 @@ function prove (okay) {
             _commit: function (now, entry) {
                 okay(entry, {
                     promise: '2/0',
-                    value: { majority: [ '0', '1' ], minority: [ '2' ] },
+                    body: { majority: [ '0', '1' ], minority: [ '2' ] },
                     previous: null
                 }, 'entry ' + id)
             }
@@ -54,7 +58,7 @@ function prove (okay) {
         to: [ '0', '1' ],
         sync: [],
         promise: '2/0',
-        government: { majority: [ '0', '1' ], minority: [ '2' ] },
+        body: { majority: [ '0', '1' ], minority: [ '2' ] },
         previous: null
     }, 'accept')
 
