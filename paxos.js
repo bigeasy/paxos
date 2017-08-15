@@ -1,6 +1,9 @@
 // Common utilities.
 var assert = require('assert')
 
+// Return the first not null-like value.
+var coalesce = require('extant')
+
 // Ever increasing serial value with no maximum value.
 var Monotonic = require('monotonic').asString
 
@@ -40,7 +43,7 @@ function Paxos (now, republic, id, options) {
     // Maybe start out naturalized if no futher updates necessary.
     this.naturalized = !! options.naturalized
 
-    this.parliamentSize = options.parliamentSize || 5
+    this.parliamentSize = coalesce(options.parliamentSize, 5)
 
     // The atomic log is a linked list. When head of the list is advanced the
     // entries in the list go out of scope and can be collected by the garbage
@@ -108,8 +111,8 @@ function Paxos (now, republic, id, options) {
 // TODO Randomly adjust election retry by a percentage. Randomly half or
 // randomly half as much again.
 
-    this.ping = options.ping || 1
-    this.timeout = options.timeout || 3
+    this.ping = coalesce(options.ping, 1000)
+    this.timeout = coalesce(options.timeout, 5000)
 
     this.constituency = []
     this.citizens = []
