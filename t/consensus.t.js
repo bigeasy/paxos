@@ -1,4 +1,4 @@
-require('proof')(7, prove)
+require('proof')(8, prove)
 
 function prove (okay) {
     var Paxos = require('..'), denizen
@@ -88,7 +88,9 @@ function prove (okay) {
 
     network.time += 3
 
-    network.send(2, [ '0' ])
+    network.send(1, [ '0' ])
+
+    okay(!network.denizens[0].enqueue(network.time, 1, {}).enqueued, 'post collapsed')
 
     network.send([ '0' ])
 
@@ -119,8 +121,6 @@ function prove (okay) {
 
     denizens[0]._whenCollapse(time)
     denizens[1]._whenCollapse(time)
-
-    assert(!denizens[0].enqueue(time, 1, {}).enqueued, 'post collapsed')
 
     tick()
 
