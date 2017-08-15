@@ -1,14 +1,12 @@
-// TODO Rename Shaper.
-
 // Monitor the reachability of denizens in order to suggest the shape of a new
-// government. The `Shape.update` method is invoked with a denizen id and a
-// reachability status. `Shape.update` returns either a new government to
-// appoint or `null`. Once `Shape.update` returns a new government to appoint
-// the `Shape` object is used up and should be replaced.
+// government. The `Shaper.update` method is invoked with a denizen id and a
+// reachability status. `Shaper.update` returns either a new government to
+// appoint or `null`. Once `Shaper.update` returns a new government to appoint
+// the `Shaper` object is used up and should be replaced.
 
-// We determine reachability elsewhere so that the `Shape.update` method is only
-// ever called with a true or false value for reachable. For the purposes of
-// `Shape` reachability is defined as follows.
+// We determine reachability elsewhere so that the `Shaper.update` method is
+// only ever called with a true or false value for reachable. For the purposes
+// of `Shaper` reachability is defined as follows.
 
 // * A denizen is reachable if the denizen responds to pings and it naturalized.
 // * A denizen is unreachable if the denizen does not respond to pings.
@@ -34,10 +32,11 @@
 
 // All this assuming an external mechnism for tracking pings that will calculate
 // when a paricular participant is reachable or unreachable. After `update`
-// returns a reshape operation, the `Shape` object is consumed. At that point
-// you should no longer call `Shape`. Put a dummy shape object in its place.
+// returns a reshape operation, the `Shaper` object is consumed. At that point
+// you should no longer call `Shaper`. Put a dummy shape object in its place.
 
-// A new `Shape` object should then be created when a new government is created.
+// A new `Shaper` object should then be created when a new government is
+// created.
 
 // I'm imagining that the unreachability of a participant will be remembered so
 // that when a new government is created the unreachability can replayed. Causes
@@ -58,7 +57,7 @@
 // TODO Stop saying "quorum" when you mean "seats filled."
 
 //
-function Shape (parliamentSize, government) {
+function Shaper (parliamentSize, government) {
     this._parliamentSize = government.majority.length * 2 - 1
     this._shouldExpand = parliamentSize != this._parliamentSize
     this._government = government
@@ -72,11 +71,11 @@ function Shape (parliamentSize, government) {
     this.collapsed = false
 }
 
-// `Shape.update` determines if a new government should be created that has a
+// `Shaper.update` determines if a new government should be created that has a
 // new shape. Note that immigration takes place is elsewhere.
 
 //
-Shape.prototype.update = function (id, reachable) {
+Shaper.prototype.update = function (id, reachable) {
     // We are interested in denizens when they are first reachable or when they
     // become unreachable. We ignore denizens that continue to be reachable.
     if (reachable && this._seen[id]) {
@@ -215,4 +214,4 @@ Shape.prototype.update = function (id, reachable) {
     return null
 }
 
-module.exports = Shape
+module.exports = Shaper

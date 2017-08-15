@@ -1,10 +1,10 @@
 require('proof')(10, prove)
 
 function prove (okay) {
-    var Shape = require('../shape')
-    var shape
+    var Shaper = require('../shaper')
+    var shaper
 
-    shape = new Shape(7, {
+    shaper = new Shaper(7, {
         majority: [ '0', '1', '2', '3' ],
         minority: [ '4', '5', '6' ],
         constituents: []
@@ -12,15 +12,15 @@ function prove (okay) {
 
     var reshape
 
-    reshape = shape.update('5', true)
+    reshape = shaper.update('5', true)
 
     okay(reshape, null, 'minority present no-op')
 
-    reshape = shape.update('5', true)
+    reshape = shaper.update('5', true)
 
     okay(reshape, null, 'okay seen')
 
-    reshape = shape.update('4', false)
+    reshape = shaper.update('4', false)
 
     okay(reshape, {
         quorum: [ '0', '1', '2', '3' ],
@@ -30,13 +30,13 @@ function prove (okay) {
         }
     }, 'impeach')
 
-    shape = new Shape(7, {
+    shaper = new Shaper(7, {
         majority: reshape.government.majority,
         minority: reshape.government.minority,
         constituents: [ '4' ]
     })
 
-    reshape = shape.update('5', false)
+    reshape = shaper.update('5', false)
 
     okay(reshape, {
         quorum: [ '0', '1', '2', '3' ],
@@ -46,13 +46,13 @@ function prove (okay) {
         }
     }, 'impeach again')
 
-    shape = new Shape(7, {
+    shaper = new Shaper(7, {
         majority: reshape.government.majority,
         minority: reshape.government.minority,
         constituents: [ '4', '5' ]
     })
 
-    reshape = shape.update('6', false)
+    reshape = shaper.update('6', false)
 
     okay(reshape, {
         quorum: [ '0', '1', '2', '3' ],
@@ -62,13 +62,13 @@ function prove (okay) {
         }
     }, 'impeach yet again')
 
-    shape = new Shape(7, {
+    shaper = new Shaper(7, {
         majority: reshape.government.majority,
         minority: reshape.government.minority,
         constituents: [ '4', '5', '6' ]
     })
 
-    reshape = shape.update('6', false)
+    reshape = shaper.update('6', false)
 
     okay(reshape, {
         quorum: [ '0', '1', '2', '3' ],
@@ -78,18 +78,18 @@ function prove (okay) {
         }
     }, 'shrink')
 
-    shape = new Shape(7, {
+    shaper = new Shaper(7, {
         majority: reshape.government.majority,
         minority: reshape.government.minority,
         constituents: [ '4', '5', '6' ]
     })
 
     okay([
-        shape.update('6', false),
-        shape.update('5', false)
+        shaper.update('6', false),
+        shaper.update('5', false)
     ], [ null, null ], 'not ready to shrink again')
 
-    reshape = shape.update('4', false)
+    reshape = shaper.update('4', false)
 
     okay(reshape, {
         quorum: [ '0', '1', '2' ],
@@ -99,15 +99,15 @@ function prove (okay) {
         }
     }, 'shrink again')
 
-    shape = new Shape(7, {
+    shaper = new Shaper(7, {
         majority: reshape.government.majority,
         minority: reshape.government.minority,
         constituents: [ '4', '5', '6' ]
     })
 
-    okay(shape.update('2', true), null, 'no exile yet')
+    okay(shaper.update('2', true), null, 'no exile yet')
 
-    reshape = shape.update('4', false)
+    reshape = shaper.update('4', false)
 
     okay(reshape, {
         quorum: [ '0', '1' ],

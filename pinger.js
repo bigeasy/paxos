@@ -2,10 +2,10 @@ var assert = require('assert')
 
 var noop = function () {}
 
-function Pinger (paxos, shape) {
+function Pinger (paxos, shaper) {
     this._paxos = paxos
     this._pings = {}
-    this._shape = shape
+    this._shaper = shaper
 }
 
 Pinger.prototype.ingest = function (now, pinger, constituency) {
@@ -28,15 +28,15 @@ Pinger.prototype.getPing = function (id) {
 Pinger.prototype._updateShape = function (now, id, reacahble) {
     if (
         !reacahble &&
-        !this._shape.collapsed &&
+        !this._shaper.collapsed &&
         ~this._paxos.government.majority.indexOf(id)
     ) {
-        this._shape = { update: noop }
+        this._shaper = { update: noop }
         this._paxos._collapse(now)
     }
-    var shape = this._shape.update(id, reacahble)
+    var shape = this._shaper.update(id, reacahble)
     if (shape != null) {
-        this._shape = { update: noop }
+        this._shaper = { update: noop }
         this._paxos.newGovernment(now, shape.quorum, shape.government)
     }
 }

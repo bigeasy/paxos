@@ -24,7 +24,7 @@ var Assembly = require('./assembly')
 var Proposer = require('./proposer')
 var Acceptor = require('./acceptor')
 
-var Shape = require('./shape')
+var Shaper = require('./shaper')
 var Writer = require('./writer')
 var Recorder = require('./recorder')
 
@@ -734,7 +734,7 @@ Paxos.prototype._receiveEnact = function (now, pulse, message) {
         this._enactGovernment(now, message)
     }
 
-    var pinger = new Pinger(this, new Shape(this.parliamentSize, this.government))
+    var pinger = new Pinger(this, new Shaper(this.parliamentSize, this.government))
 
     pinger.ingest(now, this._pinger, this.constituency)
 
