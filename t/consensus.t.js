@@ -1,4 +1,4 @@
-require('proof')(6, prove)
+require('proof')(7, prove)
 
 function prove (okay) {
     var Paxos = require('..'), denizen
@@ -92,6 +92,23 @@ function prove (okay) {
 
     network.send([ '0' ])
 
+    okay(network.denizens[0].government, {
+        majority: [ '0', '2' ],
+        minority: [ '1' ],
+        constituents: [],
+        promise: '5/0',
+        map: null,
+        immigrated: {
+            id: { '1/0': '0', '2/0': '1', '3/0': '2' },
+            promise: { '0': '1/0', '1': '2/0', '2': '3/0' }
+        },
+        properties: {
+            '0': { location: '0' },
+            '1': { location: '1' },
+            '2': { location: '2' }
+        }
+    }, 'recover from collapse')
+
     return
 
 
@@ -106,23 +123,6 @@ function prove (okay) {
     assert(!denizens[0].enqueue(time, 1, {}).enqueued, 'post collapsed')
 
     tick()
-
-    assert(denizens[0].government, {
-        majority: [ '0', '1' ],
-        minority: [ '2' ],
-        constituents: [],
-        promise: '5/0',
-        map: null,
-        immigrated: {
-            id: { '1/0': '0', '2/0': '1', '3/0': '2' },
-            promise: { '0': '1/0', '1': '2/0', '2': '3/0' }
-        },
-        properties: {
-            '0': { location: '0' },
-            '1': { location: '1' },
-            '2': { location: '2' }
-        }
-    }, 'recover from collapse')
 
     denizens[0].pings[1].timeout = 1
 

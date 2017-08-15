@@ -181,7 +181,7 @@ Paxos.prototype.newGovernment = function (now, quorum, government, promise) {
     }
 // TODO Null map to indicate collapse or change in leadership. Wait, change in
 // leader is only ever collapse? Ergo...
-    government.map = this.collapsed ? null : map
+    government.map = this._writer.collapsed ? null : map
     government.immigrated = immigrated
     government.properties = properties
     assert(this.proposals.length == 0 || !Monotonic.isBoundary(this.proposals[0].promise, 0))
