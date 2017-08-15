@@ -38,9 +38,6 @@ Writer.prototype.nudge = function () {
 Writer.prototype.response = function (now, request, responses) {
     for (var i = 0, message; message = request.messages[i]; i++) {
         switch (message.method) {
-        case 'collapse':
-            this._paxos._prepare()
-            break
         case 'write':
             var nextRequest = {
                 method: 'write',
