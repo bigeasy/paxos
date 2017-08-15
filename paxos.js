@@ -847,19 +847,6 @@ Paxos.prototype._enactGovernment = function (now, round) {
     this.citizens = this.government.majority
                         .concat(this.government.minority)
                         .concat(this.government.constituents)
-    if (this.id == this.government.majority[0]) {
-        for (var id in this.pings) {
-            if (! ~this.citizens.indexOf(id)) {
-                delete this.pings[id]
-            }
-        }
-    } else {
-        for (var id in this.pings) {
-            if (this.id != id && ! ~this.constituency.indexOf(id)) {
-                delete this.pings[id]
-            }
-        }
-    }
 }
 
 module.exports = Paxos
