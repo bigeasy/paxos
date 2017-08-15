@@ -282,7 +282,15 @@ Paxos.prototype._collapse = function (now) {
         naturalized: this.naturalized,
         committed: this.log.head.body.promise
     })
+
     this.proposals.length = 0
+
+    // TODO This is fine. Realize that immigration is a special type of
+    // somethign that is built on top of proposals. Ah, or maybe assembly is the
+    // shaper and a shaper creates the next shaper. Thus, shaper is the
+    // abstraction that is above writer/recorder. Also, Assembly could be called
+    // something else, gatherer or collector or roll call or sergent at arms.
+
     this.immigrating.length = 0
 
     this.government.majority.concat(this.government.minority)
