@@ -528,6 +528,8 @@ Paxos.prototype.immigrate = function (now, republic, id, cookie, properties) {
 
 //
 Paxos.prototype.request = function (now, request) {
+    // TODO Reject if it is the wrong republic.
+    // TODO Reject if it a message from an exile, wrong id and cookie.
     var sync = {
         from: this.id,
         naturalized: this.naturalized,
@@ -640,37 +642,19 @@ Paxos.prototype._enact = function (now, message) {
 
     var max = this.log.head.body
 
-    // TODO Since we only ever increment by one, this could be more assertive
-    // for the message number. However, I have to stop and recall whether we
-    // skip values for the government number, and I'm pretty sure we do.
-    //
-    // TODO This implies that we can be very certain about a sync if we ensure
-    // that there are no gaps in both the government series and the message
-    // series, which could be done by backfilling any gaps encountered during
-    // failed rounds of Paxos.
-
-    //
-    var valid = Monotonic.compare(max.promise, message.promise) < 0
-
-    // TODO Simply skip if it is bad, but now I'm considering failing because it
-    // indicates something wrong on the part of the sender, but then the sender
-    // will fail, so it will timeout and try to ping again. When it does it will
-    // assume that it has correct values for `decided`.
-
-    // Okay, we're not always going to get just the entries we're missing. An
-    // election can seek to bring a minority member up to date by pushing it an
-    // enactment before a proposal. The message bundle will be received by all
-    // members of the proposed government, including the leader that is doing
-    // the pushing, so it's log will have, of course, already enacted the
-    // member -- it pulled the enactment of of it's own log after all.
-
-    //
-    if (!valid) {
-        // tentative -> pulse.failed = true
+    // We already have this entry. The value is invariant, so let's assert that
+    // the given value matches the one we have.
+    if (Monotonic.compare(max.promise, message.promise) >= 0) {
+        // TODO Difficult to see how we could get here and not have a copy of
+        // the message in our log. If we received a delayed sync message that
+        // has commits that precede our minimum, seems like it would have been
+        // rejected at entry, the committed versions would be off.
+        assert(Monotonic.compare(this.minimum, message.promise) <= 0)
+        // TODO Deep equal comparison of JSON value.
         return
     }
 
-    valid = max.promise != '0/0'
+    var valid = max.promise != '0/0'
 
     if (!valid) {
         // assert(this.log.size == 1)
