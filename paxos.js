@@ -382,7 +382,7 @@ Paxos.prototype.bootstrap = function (now, properties) {
 
     this._shaper.immigrate({ id: this.id, cookie: 0 })
 
-    this._receiveEnact(now, {}, { promise: '1/0', body: government })
+    this._enact(now, { promise: '1/0', body: government })
 }
 
 Paxos.prototype.naturalize = function () {
@@ -630,13 +630,13 @@ Paxos.prototype._commit = function (now, entry) {
     }
 
     for (var i = 0, entry; (entry = entries[i]) != null; i++) {
-        this._receiveEnact(now, {}, entry)
+        this._enact(now, entry)
     }
 }
 
-Paxos.prototype._receiveEnact = function (now, pulse, message) {
+Paxos.prototype._enact = function (now, message) {
     message = JSON.parse(JSON.stringify(message))
-    logger.info('_receiveEnact', { now: now, $route: pulse.route, $message: message })
+    logger.info('_receiveEnact', { now: now, $message: message })
 
     var max = this.log.head.body
 
