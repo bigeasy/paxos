@@ -20,10 +20,12 @@ var Indexer = require('procession/indexer')
 // Logging conduit.
 var logger = require('prolific.logger').createLogger('paxos')
 
+// The participants in the Paxos strategy.
 var Assembly = require('./assembly')
 var Proposer = require('./proposer')
 var Acceptor = require('./acceptor')
 
+// The participants in the two-phase commit strategy.
 var Shaper = require('./shaper')
 var Writer = require('./writer')
 var Recorder = require('./recorder')
@@ -92,20 +94,17 @@ function Paxos (now, republic, id, options) {
     //
     this.proposals = []
     this.immigrating = []
-    // TODO OUTGOING.
-    this.collapsed = false
 
     this.government = {
         promise: '0/0',
         minority: [],
         majority: [],
+        constituents: [],
         properties: {},
         immigrated: { id: {}, promise: {} }
     }
 
-    this._promises = { active: '0/0', issued: null }
-
-    this.lastIssued = null
+    this._promised = null
     this.promise = '0/0'
 
 // TODO Randomly adjust election retry by a percentage. Randomly half or
@@ -134,6 +133,7 @@ function Paxos (now, republic, id, options) {
 
     this._writer = new Writer(this, '1/0')
     this._recorder = new Recorder(this, '1/0')
+    this._shaper = new Shaper(this.parliamentSize, this.government)
 }
 
 // We are only ever supposed to call `newGovernment` when we are not in the
@@ -146,6 +146,7 @@ function Paxos (now, republic, id, options) {
 
 //
 Paxos.prototype.newGovernment = function (now, quorum, government, promise) {
+    this._shaper.decided = true
     assert(!government.constituents)
     promise = Monotonic.increment(this.promise, 0)
     government.constituents = Object.keys(this.government.properties).sort().filter(function (citizen) {
@@ -160,7 +161,7 @@ Paxos.prototype.newGovernment = function (now, quorum, government, promise) {
         map[proposal.was] = proposal.promise
         return proposal
     })
-    this.lastIssued = remapped
+    this._promised = remapped
     var properties = JSON.parse(JSON.stringify(this.government.properties))
     var immigrated = JSON.parse(JSON.stringify(this.government.immigrated))
 // TODO I'd rather have a more intelligent structure.
@@ -197,21 +198,6 @@ Paxos.prototype.newGovernment = function (now, quorum, government, promise) {
 //
 Paxos.prototype._findRound = function (sought) {
     return this.indexer.tree.find({ body: { promise: sought } })
-}
-
-Paxos.prototype._nudgeRedux = function (now) {
-    if (this.immigrating.length != 0) {
-        var immigration = this.immigrating[0]
-        this.newGovernment(now, this.government.majority, {
-            majority: this.government.majority,
-            minority: this.government.minority,
-            immigrate: {
-                id: immigration.id,
-                properties: immigration.properties,
-                cookie: immigration.cookie
-            }
-        })
-    }
 }
 
 Paxos.prototype._stuffSynchronize = function (pings, sync, count) {
@@ -282,8 +268,6 @@ Paxos.prototype._collapse = function (now) {
         naturalized: this.naturalized,
         committed: this.log.head.body.promise
     })
-
-    this.proposals.length = 0
 
     // TODO This is fine. Realize that immigration is a special type of
     // somethign that is built on top of proposals. Ah, or maybe assembly is the
@@ -383,7 +367,7 @@ Paxos.prototype.bootstrap = function (now, properties) {
         minority: [],
         constituents: [],
         map: {},
-        immigrate: { id: '0', properties: { location: '0' }, cookie: 0 },
+        immigrate: { id: '0', properties: properties, cookie: 0 },
         properties: {},
         immigrated: { promise: {}, id: {} }
     }
@@ -393,6 +377,10 @@ Paxos.prototype.bootstrap = function (now, properties) {
     government.properties[this.id] = properties
     government.immigrated.promise[this.id] = '1/0'
     government.immigrated.id['1/0'] = this.id
+
+    this._promised = '1/0'
+
+    this._shaper.immigrate({ id: this.id, cookie: 0 })
 
     this._receiveEnact(now, {}, { promise: '1/0', body: government })
 }
@@ -441,8 +429,8 @@ Paxos.prototype.enqueue = function (now, republic, message) {
         // that can change. Note that the last issued promise is not driven by
         // government enactment, it is incremented as we greate new promises and
         // governments.
-        var promise = this.lastIssued = Monotonic.increment(this.lastIssued, 1)
-        this.proposals.push({
+        var promise = this._promised = Monotonic.increment(this._promised, 1)
+        this._writer.push({
             promise: promise,
             route: null,
             //route: this.government.majority,
@@ -524,39 +512,14 @@ Paxos.prototype.immigrate = function (now, republic, id, cookie, properties) {
                 leader: this.government.majority[0]
             }
         } else {
-            // TODO However, are we checking that we're not proposing the same immigration
-            // twice if it added to the `immigrating` array while it is being proposed?
-            //
-            // No, this is a race condition.
-            //
-            // We could be in the middle of immigrating when the immigrant crash restarts
-            // and submits a new cookie. That immigrant will never sync or naturalize. It
-            // needs to try again.
-            //
-            // We can make it a general case that if the cookies mismatch
-            // every one is very disappointed. Thus, we can catch this on sync.
-            for (var i = 0, immigrant; (immigrant = this.immigrating[i]) != null; i++) {
-                if (immigrant.id == id) {
-                    break
-                }
-            }
-            if (i == this.immigrating.length) {
-                this.immigrating.push({
-                    type: 'immigrate',
-                    id: id,
-                    properties: properties,
-                    cookie: cookie
-                })
-            } else {
-                this.immigrating[i].properties = properties
-                this.immigrating[i].cookie = cookie
-            }
             response = { enqueued: true }
 
-            this._nudgeRedux(now)
+            var shape = this._shaper.immigrate({ id, properties: properties, cookie: cookie })
+            if (shape != null) {
+                this.newGovernment(now, shape.quorum, shape.government)
+            }
         }
     }
-
     return response
 }
 
@@ -636,6 +599,10 @@ Paxos.prototype.response = function (now, request, responses) {
         }
         return
     }
+    // TODO If the recepient is at '0/0' and we attempted to synchronize it,
+    // then we must not have had the right cookie, let's mark it as unreachable
+    // for exile.
+
     // Only handle a response if it was issued by our current writer/proposer.
     if (request.version[0] == this._writer.version[0] && request.version[1] == this._writer.version[1]) {
         var promise = '0/0', failed = false
@@ -720,10 +687,6 @@ Paxos.prototype._receiveEnact = function (now, pulse, message) {
         return
     }
 
-    this.proposal = null
-    this.accepted = null
-    this.collapsed = false
-
     var isGovernment = Monotonic.isBoundary(message.promise, 0)
     logger.info('enact', {
         outOfOrder: !(isGovernment || Monotonic.increment(max.promise, 1) == message.promise),
@@ -742,7 +705,7 @@ Paxos.prototype._receiveEnact = function (now, pulse, message) {
         this._enactGovernment(now, message)
     }
 
-    var pinger = new Pinger(this, new Shaper(this.parliamentSize, this.government))
+    var pinger = new Pinger(this, this._shaper = this._shaper.createShaper(this))
 
     pinger.ingest(now, this._pinger, this.constituency)
 
@@ -802,13 +765,13 @@ Paxos.prototype._enactGovernment = function (now, round) {
 
     this._writer = this._writer.createWriter(round.promise)
     this._recorder = this._recorder.createRecorder()
+    this._shaper = this._shaper.createShaper(this)
 
     if (this.government.exile) {
         // TODO Remove! Fall back to a peek at exile.
         delete this.pings[this.government.exile.id]
     } else if (this.government.immigrate && this.government.majority[0] == this.id) {
-        assert(this.immigrating.length > 0 && this.government.immigrate.id == this.immigrating[0].id)
-        this.immigrating.shift()
+        this._shaper.immigrated(this.government.immigrate.id)
     }
 
     if (this.id != this.government.majority[0]) {

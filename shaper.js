@@ -1,3 +1,5 @@
+var assert = require('assert')
+
 // Monitor the reachability of denizens in order to suggest the shape of a new
 // government. The `Shaper.update` method is invoked with a denizen id and a
 // reachability status. `Shaper.update` returns either a new government to
@@ -68,6 +70,7 @@ function Shaper (parliamentSize, government) {
     this._minority = []
     this._exiles = []
     this._expandable = []
+    this._immigrating = []
     this.collapsed = false
 }
 
@@ -82,6 +85,10 @@ Shaper.prototype.update = function (id, reachable) {
         return null
     }
     this._seen[id] = true
+
+    if (this.decided) {
+        return null
+    }
 
     var seen = Object.keys(this._seen).length
 
@@ -208,10 +215,82 @@ Shaper.prototype.update = function (id, reachable) {
         }
 
         // Otherwise let's exile someone if we have someone to exile.
-        return this._exiles.shift() || null
+        return this._immigration() || this._exiles.shift() || null
     }
 
     return null
+}
+
+Shaper.prototype.immigrated = function (id) {
+    assert(this._immigrating.length > 0 && id == this._immigrating[0].id)
+    this._immigrating.shift()
+}
+
+Shaper.prototype.immigrate = function (immigration) {
+    // We do not going to reject a duplicate immigration for a particular id.
+    //
+    // Here is a race condition and how it will shake itself out.
+    //
+    // We could be in the middle of immigrating a partuclar id when the
+    // immigrant crash restarts and submits a new cookie. We will update the
+    // cookie here, but that's not going to be the same as the cookie that got
+    // written into the log.
+    //
+    // We can make it a general case that if the cookies mismatch
+    // every one is very disappointed. Thus, we can catch this on sync.
+    for (var i = 0, I = this._immigrating.length; i < I; i++) {
+        if (this._immigrating[i].id == immigration.id) {
+            break
+        }
+    }
+    if (i == this._immigrating.length) {
+        this._immigrating.push(immigration)
+    } else {
+        this._immigrating[i].properties = properties
+        this._immigrating[i].cookie = cookie
+    }
+
+    if (this.decided) {
+        return null
+    }
+
+    // If as seat is empty we're going to wait for a citizen to fill that seat.
+    if (this._seatsAreEmpty && Object.keys(this._seen).length != this._population) {
+        return null
+    }
+
+    if (this._government.minority.length == this._minority.length) {
+        return this._immigration()
+    }
+
+    return null
+}
+
+Shaper.prototype._immigration = function () {
+    if (this._immigrating.length) {
+        var immigration = this._immigrating[0]
+        return {
+            quorum: this._government.majority,
+            government: {
+                majority: this._government.majority,
+                minority: this._government.minority,
+                immigrate: {
+                    id: immigration.id,
+                    properties: immigration.properties,
+                    cookie: immigration.cookie
+                }
+            }
+        }
+    }
+    return null
+}
+
+Shaper.prototype.createShaper = function (paxos) {
+    var shaper = new Shaper(paxos.parliamentSize, paxos.government)
+    for (var i = 0, immigration; (immigration = this._immigrating[i]) != null; i++) {
+        shaper.immigrate(immigration)
+    }
+    return shaper
 }
 
 module.exports = Shaper

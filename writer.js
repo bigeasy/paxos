@@ -9,8 +9,14 @@ function Writer (paxos, promise) {
     this._writing = []
 }
 
+Writer.prototype.push = function (proposal) {
+    this.proposals.push({
+        quorum: this._paxos.majority,
+        promise: this._paxos._promised = Monotonic.increment(this._paxos._promised, 1),
+        body: proposal.body
+    })
+}
 Writer.prototype.unshift = function (proposal) {
-    assert(!this._unshifted)
     this.proposals.unshift({
         quorum: proposal.quorum,
         promise: proposal.promise,
