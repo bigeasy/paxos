@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>recorder.js</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+
+      <ul id="jump_to">
+        <li>
+          <a class="large" href="javascript:void(0);">Jump To &hellip;</a>
+          <a class="small" href="javascript:void(0);">+</a>
+          <div id="jump_wrapper">
+          <div id="jump_page_wrapper">
+            <div id="jump_page">
+
+
+                <a class="source" href="acceptor.js.html">
+                  acceptor.js
+                </a>
+
+
+                <a class="source" href="assembly.js.html">
+                  assembly.js
+                </a>
+
+
+                <a class="source" href="completion.js.html">
+                  completion.js
+                </a>
+
+
+                <a class="source" href="legislator.js.html">
+                  legislator.js
+                </a>
+
+
+                <a class="source" href="log.js.html">
+                  log.js
+                </a>
+
+
+                <a class="source" href="paxos.js.html">
+                  paxos.js
+                </a>
+
+
+                <a class="source" href="pinger.js.html">
+                  pinger.js
+                </a>
+
+
+                <a class="source" href="proposer.js.html">
+                  proposer.js
+                </a>
+
+
+                <a class="source" href="recorder.js.html">
+                  recorder.js
+                </a>
+
+
+                <a class="source" href="redux.js.html">
+                  redux.js
+                </a>
+
+
+                <a class="source" href="relay.js.html">
+                  relay.js
+                </a>
+
+
+                <a class="source" href="replay.js.html">
+                  replay.js
+                </a>
+
+
+                <a class="source" href="shape.js.html">
+                  shape.js
+                </a>
+
+
+                <a class="source" href="shaper.js.html">
+                  shaper.js
+                </a>
+
+
+                <a class="source" href="writer.js.html">
+                  writer.js
+                </a>
+
+            </div>
+          </div>
+        </li>
+      </ul>
+
+    <ul class="sections">
+
+          <li id="title">
+              <div class="annotation">
+                  <h1>recorder.js</h1>
+              </div>
+          </li>
+
+
+
+        <li id="section-1">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">var</span> assert = <span class="hljs-built_in">require</span>(<span class="hljs-string">'assert'</span>)
+<span class="hljs-keyword">var</span> Monotonic = <span class="hljs-built_in">require</span>(<span class="hljs-string">'monotonic'</span>).asString
+
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-2">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <p>TODO Remember that the code is more complicated than the messaging. Let the
+messages absorb some of the complexity of the code. (Divide them. Restrict
+their structure.)</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Recorder</span> (<span class="hljs-params">paxos</span>) </span>{
+    <span class="hljs-keyword">this</span>._paxos = paxos
+    <span class="hljs-keyword">this</span>._register = <span class="hljs-literal">null</span>
+}
+
+Recorder.prototype.request = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">now, request, sync</span>) </span>{
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-3">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-3">&#182;</a>
+              </div>
+              <p>Anything else is going to get caught synchronization and rejected.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>    assert(<span class="hljs-regexp">/^prepare|write$/</span>.test(request.method))
+    <span class="hljs-keyword">switch</span> (request.method) {
+    <span class="hljs-keyword">case</span> <span class="hljs-string">'prepare'</span>:
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>._paxos._prepare(now, request, sync)
+    <span class="hljs-keyword">case</span> <span class="hljs-string">'write'</span>:
+        <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>, message; (message = request.messages[i]) != <span class="hljs-literal">null</span>; i++) {
+            <span class="hljs-keyword">switch</span> (message.method) {
+            <span class="hljs-keyword">case</span> <span class="hljs-string">'write'</span>:
+                <span class="hljs-keyword">if</span> (
+                    Monotonic.increment(<span class="hljs-keyword">this</span>._paxos.promise, <span class="hljs-number">0</span>) != message.promise &amp;&amp;
+                    Monotonic.increment(<span class="hljs-keyword">this</span>._paxos.promise, <span class="hljs-number">1</span>) != message.promise
+                ) {
+                    <span class="hljs-keyword">return</span> { <span class="hljs-attr">method</span>: <span class="hljs-string">'reject'</span>, <span class="hljs-attr">promise</span>: <span class="hljs-string">'0/0'</span>, <span class="hljs-attr">sync</span>: sync }
+                }
+                <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._register != <span class="hljs-literal">null</span>) {
+                    <span class="hljs-keyword">return</span> { <span class="hljs-attr">method</span>: <span class="hljs-string">'reject'</span>, <span class="hljs-attr">promise</span>: <span class="hljs-string">'0/0'</span>, <span class="hljs-attr">sync</span>: sync }
+                }
+                <span class="hljs-keyword">this</span>._register = {
+                    <span class="hljs-attr">promise</span>: <span class="hljs-keyword">this</span>._paxos.promise = message.promise,
+                    <span class="hljs-attr">body</span>: message.body
+                }
+                <span class="hljs-keyword">break</span>
+            <span class="hljs-keyword">case</span> <span class="hljs-string">'commit'</span>:
+                <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._register.promise != message.promise) {
+                    <span class="hljs-keyword">return</span> { <span class="hljs-attr">method</span>: <span class="hljs-string">'reject'</span>, <span class="hljs-attr">promise</span>: <span class="hljs-string">'0/0'</span>, <span class="hljs-attr">sync</span>: sync }
+                }
+                <span class="hljs-keyword">var</span> register = [ <span class="hljs-keyword">this</span>._register, <span class="hljs-keyword">this</span>._register = <span class="hljs-literal">null</span> ][<span class="hljs-number">0</span>]
+                <span class="hljs-keyword">this</span>._paxos._commit(now, {
+                    <span class="hljs-attr">promise</span>: register.promise,
+                    <span class="hljs-attr">body</span>: register.body,
+                    <span class="hljs-attr">previous</span>: <span class="hljs-literal">null</span>
+                })
+                sync.committed = register.promise
+                <span class="hljs-keyword">break</span>
+            }
+        }
+        <span class="hljs-keyword">return</span> { <span class="hljs-attr">method</span>: <span class="hljs-string">'response'</span>, <span class="hljs-attr">promise</span>: <span class="hljs-string">'0/0'</span>, <span class="hljs-attr">sync</span>: sync }
+    }
+}
+
+Recorder.prototype.createRecorder = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>
+}
+
+<span class="hljs-built_in">module</span>.exports = Recorder
+
+</pre></div></div>
+
+        </li>
+
+    </ul>
+  </div>
+</body>
+</html>

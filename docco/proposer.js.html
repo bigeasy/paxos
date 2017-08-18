@@ -20,6 +20,21 @@
             <div id="jump_page">
 
 
+                <a class="source" href="acceptor.js.html">
+                  acceptor.js
+                </a>
+
+
+                <a class="source" href="assembly.js.html">
+                  assembly.js
+                </a>
+
+
+                <a class="source" href="completion.js.html">
+                  completion.js
+                </a>
+
+
                 <a class="source" href="legislator.js.html">
                   legislator.js
                 </a>
@@ -35,13 +50,28 @@
                 </a>
 
 
+                <a class="source" href="pinger.js.html">
+                  pinger.js
+                </a>
+
+
                 <a class="source" href="proposer.js.html">
                   proposer.js
                 </a>
 
 
+                <a class="source" href="recorder.js.html">
+                  recorder.js
+                </a>
+
+
                 <a class="source" href="redux.js.html">
                   redux.js
+                </a>
+
+
+                <a class="source" href="relay.js.html">
+                  relay.js
                 </a>
 
 
@@ -52,6 +82,16 @@
 
                 <a class="source" href="shape.js.html">
                   shape.js
+                </a>
+
+
+                <a class="source" href="shaper.js.html">
+                  shaper.js
+                </a>
+
+
+                <a class="source" href="writer.js.html">
+                  writer.js
                 </a>
 
             </div>
@@ -78,9 +118,9 @@
 
             </div>
 
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">var</span> assert = <span class="hljs-built_in">require</span>(<span class="hljs-string">'assert'</span>)
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">var</span> Monotonic = <span class="hljs-built_in">require</span>(<span class="hljs-string">'monotonic'</span>).asString
 
-<span class="hljs-keyword">var</span> Monotonic = <span class="hljs-built_in">require</span>(<span class="hljs-string">'monotonic'</span>).asString
+<span class="hljs-keyword">var</span> Completion = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./completion'</span>)
 
 </pre></div></div>
 
@@ -97,37 +137,40 @@
 
             </div>
 
-            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Proposer</span> (<span class="hljs-params">government, promise</span>) </span>{
-    <span class="hljs-keyword">this</span>.state = <span class="hljs-string">'preparing'</span>
-    <span class="hljs-keyword">this</span>.government = government
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Proposer</span> (<span class="hljs-params">paxos, promise</span>) </span>{
+    <span class="hljs-keyword">this</span>._paxos = paxos
+    <span class="hljs-keyword">this</span>.version = [ promise, <span class="hljs-keyword">this</span>.collapsed = <span class="hljs-literal">true</span> ]
     <span class="hljs-keyword">this</span>.promise = Monotonic.increment(promise, <span class="hljs-number">0</span>)
-    <span class="hljs-keyword">this</span>.promised = <span class="hljs-literal">null</span>
-    <span class="hljs-keyword">this</span>.accepted = <span class="hljs-literal">null</span>
-    <span class="hljs-keyword">this</span>.committed = <span class="hljs-literal">null</span>
+    <span class="hljs-keyword">this</span>.previous = <span class="hljs-literal">null</span>
+    <span class="hljs-keyword">this</span>.proposal = <span class="hljs-literal">null</span>
 }
 
-Proposer.prototype.prepare = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">messages</span>) </span>{
-    <span class="hljs-keyword">this</span>.promised = []
-    <span class="hljs-keyword">this</span>.accepted = []
-    <span class="hljs-keyword">this</span>.committed = []
-    <span class="hljs-keyword">this</span>.government.forEach(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">denizen</span>) </span>{
-        messages.push({
-            <span class="hljs-attr">to</span>: denizen,
-            <span class="hljs-attr">method</span>: <span class="hljs-string">'prepare'</span>,
-            <span class="hljs-attr">promise</span>: <span class="hljs-keyword">this</span>.promise
-        })
-    }, <span class="hljs-keyword">this</span>)
+Proposer.prototype.unshift = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">proposal</span>) </span>{
+    <span class="hljs-keyword">this</span>.proposal = proposal
 }
 
-Proposer.prototype.receive = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">message, messages</span>) </span>{
-    <span class="hljs-keyword">switch</span> (message.method) {
-    <span class="hljs-keyword">case</span> <span class="hljs-string">'promise'</span>:
-        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.state == <span class="hljs-string">'preparing'</span>) {
-            <span class="hljs-keyword">if</span> (message.promise == <span class="hljs-keyword">this</span>.promise) {
-                assert(!~<span class="hljs-keyword">this</span>.promised.indexOf(message.from))
-                <span class="hljs-keyword">this</span>.promised.push(message.from)
-            }
-            <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.promised.length == <span class="hljs-built_in">Math</span>.ceil(<span class="hljs-keyword">this</span>.government.length / <span class="hljs-number">2</span>)) {
+Proposer.prototype.nudge = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">now</span>) </span>{
+    <span class="hljs-keyword">this</span>.prepare(now)
+}
+
+Proposer.prototype.prepare = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">now</span>) </span>{
+    <span class="hljs-keyword">this</span>._paxos._send({
+        <span class="hljs-attr">method</span>: <span class="hljs-string">'prepare'</span>,
+        <span class="hljs-attr">version</span>: <span class="hljs-keyword">this</span>.version,
+        <span class="hljs-attr">to</span>: <span class="hljs-keyword">this</span>.proposal.quorum,
+        <span class="hljs-attr">sync</span>: [],
+        <span class="hljs-attr">promise</span>: <span class="hljs-keyword">this</span>.promise
+    })
+}
+
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">getPromise</span> (<span class="hljs-params">object</span>) </span>{
+    <span class="hljs-keyword">return</span> object == <span class="hljs-literal">null</span> ? <span class="hljs-string">'0/0'</span> : object.promise
+}
+
+Proposer.prototype.response = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">now, request, responses, promise</span>) </span>{
+    <span class="hljs-keyword">switch</span> (promise == <span class="hljs-literal">null</span> ? request.method : <span class="hljs-string">'failed'</span>) {
+    <span class="hljs-keyword">case</span> <span class="hljs-string">'failed'</span>:
+        <span class="hljs-keyword">this</span>.promise = Monotonic.increment(promise, <span class="hljs-number">0</span>)
 </pre></div></div>
 
         </li>
@@ -139,77 +182,44 @@ Proposer.prototype.receive = <span class="hljs-function"><span class="hljs-keywo
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-3">&#182;</a>
               </div>
-              <p>If we have a quorum we move to the accept state.</p>
+              <p>TODO Backoff and try again.</p>
 
             </div>
 
-            <div class="content"><div class='highlight'><pre>                <span class="hljs-keyword">this</span>.state = <span class="hljs-string">'accepting'</span>
-</pre></div></div>
-
-        </li>
-
-
-        <li id="section-4">
-            <div class="annotation">
-
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-4">&#182;</a>
-              </div>
-              <p>The first element in the government is the our node id. We
-want to become the leader of the government we’re proposing.
-To do so we reorder our quorum based on the order of the
-government array provided.</p>
-
-            </div>
-
-            <div class="content"><div class='highlight'><pre>                <span class="hljs-keyword">var</span> promised = <span class="hljs-keyword">this</span>.promised
-                <span class="hljs-keyword">var</span> majority = <span class="hljs-keyword">this</span>.government.filter(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">id</span>) </span>{
-                    <span class="hljs-keyword">return</span> ~promised.indexOf(id)
-                })
-                <span class="hljs-keyword">var</span> minority = <span class="hljs-keyword">this</span>.government.filter(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">id</span>) </span>{
-                    <span class="hljs-keyword">return</span> !~majority.indexOf(id)
-                })
-                majority.forEach(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">id</span>) </span>{
-                    messages.push({
-                        <span class="hljs-attr">to</span>: id,
-                        <span class="hljs-attr">method</span>: <span class="hljs-string">'accept'</span>,
-                        <span class="hljs-attr">promise</span>: <span class="hljs-keyword">this</span>.promise,
-                        <span class="hljs-attr">value</span>: { <span class="hljs-attr">majority</span>: majority, <span class="hljs-attr">minority</span>: minority }
-                    })
-                }, <span class="hljs-keyword">this</span>)
-            }
-        }
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>
         <span class="hljs-keyword">break</span>
-    <span class="hljs-keyword">case</span> <span class="hljs-string">'accepted'</span>:
-        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.state == <span class="hljs-string">'accepting'</span>) {
-            <span class="hljs-keyword">if</span> (message.promise == <span class="hljs-keyword">this</span>.promise) {
-                assert(!~<span class="hljs-keyword">this</span>.accepted.indexOf(message.from))
-                <span class="hljs-keyword">this</span>.accepted.push(message.from)
-            }
-            <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.accepted.length == <span class="hljs-keyword">this</span>.promised.length) {
-                <span class="hljs-keyword">this</span>.state = <span class="hljs-string">'committing'</span>
-                <span class="hljs-keyword">this</span>.promised.forEach(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">id</span>) </span>{
-                    messages.push({
-                        <span class="hljs-attr">to</span>: id,
-                        <span class="hljs-attr">method</span>: <span class="hljs-string">'commit'</span>,
-                        <span class="hljs-attr">promise</span>: <span class="hljs-keyword">this</span>.promise
-                    })
-                }, <span class="hljs-keyword">this</span>)
+    <span class="hljs-keyword">case</span> <span class="hljs-string">'prepare'</span>:
+        <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> id <span class="hljs-keyword">in</span> responses) {
+            <span class="hljs-keyword">if</span> (Monotonic.compare(getPromise(<span class="hljs-keyword">this</span>.previous), getPromise(responses[id].register)) &lt; <span class="hljs-number">0</span>) {
+                <span class="hljs-keyword">this</span>.previous = responses[id].register
             }
         }
+        <span class="hljs-keyword">this</span>._paxos._send({
+            <span class="hljs-attr">method</span>: <span class="hljs-string">'accept'</span>,
+            <span class="hljs-attr">version</span>: <span class="hljs-keyword">this</span>.version,
+            <span class="hljs-attr">to</span>: <span class="hljs-keyword">this</span>.proposal.quorum,
+            <span class="hljs-attr">sync</span>: [],
+            <span class="hljs-attr">promise</span>: <span class="hljs-keyword">this</span>.promise,
+            <span class="hljs-attr">body</span>: <span class="hljs-keyword">this</span>.proposal.body,
+            <span class="hljs-attr">previous</span>: <span class="hljs-keyword">this</span>.previous
+        })
         <span class="hljs-keyword">break</span>
-    <span class="hljs-keyword">case</span> <span class="hljs-string">'committed'</span>:
-        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.state == <span class="hljs-string">'committing'</span>) {
-            <span class="hljs-keyword">if</span> (message.promise == <span class="hljs-keyword">this</span>.promise) {
-                assert(!~<span class="hljs-keyword">this</span>.committed.indexOf(message.from))
-                <span class="hljs-keyword">this</span>.committed.push(message.from)
-            }
-            <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.committed.length == <span class="hljs-keyword">this</span>.accepted.length) {
-                <span class="hljs-keyword">this</span>.state = <span class="hljs-string">'committed'</span>
-            }
-        }
+    <span class="hljs-keyword">case</span> <span class="hljs-string">'accept'</span>:
+        <span class="hljs-keyword">this</span>._paxos._send({
+            <span class="hljs-attr">method</span>: <span class="hljs-string">'commit'</span>,
+            <span class="hljs-attr">version</span>: <span class="hljs-keyword">this</span>.version,
+            <span class="hljs-attr">to</span>: <span class="hljs-keyword">this</span>.proposal.quorum,
+            <span class="hljs-attr">sync</span>: [],
+            <span class="hljs-attr">promise</span>: <span class="hljs-keyword">this</span>.promise
+        })
+        <span class="hljs-keyword">break</span>
+    <span class="hljs-keyword">case</span> <span class="hljs-string">'commit'</span>:
         <span class="hljs-keyword">break</span>
     }
+}
+
+Proposer.prototype.createWriter = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">promise</span>) </span>{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Completion(<span class="hljs-keyword">this</span>._paxos, <span class="hljs-keyword">this</span>.version, promise)
 }
 
 <span class="hljs-built_in">module</span>.exports = Proposer

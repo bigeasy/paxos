@@ -2,7 +2,7 @@
 
 <html>
 <head>
-  <title>shape.js</title>
+  <title>shaper.js</title>
   <meta http-equiv="content-type" content="text/html; charset=UTF-8">
   <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
   <link rel="stylesheet" media="all" href="docco.css" />
@@ -103,7 +103,7 @@
 
           <li id="title">
               <div class="annotation">
-                  <h1>shape.js</h1>
+                  <h1>shaper.js</h1>
               </div>
           </li>
 
@@ -115,13 +115,12 @@
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-1">&#182;</a>
               </div>
-              <p>Monitor the reachability of denizens in order to suggest the shape of a new
-government. The <code>Shape.update</code> method is invoked with a denizen id and a
-reachability status. <code>Shape.update</code> returns either a new government to
-appoint or <code>null</code>. Once <code>Shape.update</code> returns a new government to appoint
-the <code>Shape</code> object is used up and should be replaced.</p>
 
             </div>
+
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">var</span> assert = <span class="hljs-built_in">require</span>(<span class="hljs-string">'assert'</span>)
+
+</pre></div></div>
 
         </li>
 
@@ -132,9 +131,11 @@ the <code>Shape</code> object is used up and should be replaced.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-2">&#182;</a>
               </div>
-              <p>We determine reachability elsewhere so that the <code>Shape.update</code> method is only
-ever called with a true or false value for reachable. For the purposes of
-<code>Shape</code> reachability is defined as follows.</p>
+              <p>Monitor the reachability of denizens in order to suggest the shape of a new
+government. The <code>Shaper.update</code> method is invoked with a denizen id and a
+reachability status. <code>Shaper.update</code> returns either a new government to
+appoint or <code>null</code>. Once <code>Shaper.update</code> returns a new government to appoint
+the <code>Shaper</code> object is used up and should be replaced.</p>
 
             </div>
 
@@ -147,10 +148,9 @@ ever called with a true or false value for reachable. For the purposes of
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-3">&#182;</a>
               </div>
-              <ul>
-<li>A denizen is reachable if the denizen responds to pings and it naturalized.</li>
-<li>A denizen is unreachable if the denizen does not respond to pings.</li>
-</ul>
+              <p>We determine reachability elsewhere so that the <code>Shaper.update</code> method is
+only ever called with a true or false value for reachable. For the purposes
+of <code>Shaper</code> reachability is defined as follows.</p>
 
             </div>
 
@@ -163,8 +163,10 @@ ever called with a true or false value for reachable. For the purposes of
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-4">&#182;</a>
               </div>
-              <p>If the the denizen responds to pings, but is not naturalized, it is neither
-reachable nor unreachable and we don’t want to hear about it.</p>
+              <ul>
+<li>A denizen is reachable if the denizen responds to pings and it naturalized.</li>
+<li>A denizen is unreachable if the denizen does not respond to pings.</li>
+</ul>
 
             </div>
 
@@ -177,7 +179,8 @@ reachable nor unreachable and we don’t want to hear about it.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-5">&#182;</a>
               </div>
-              <p>Notes:</p>
+              <p>If the the denizen responds to pings, but is not naturalized, it is neither
+reachable nor unreachable and we don’t want to hear about it.</p>
 
             </div>
 
@@ -190,10 +193,7 @@ reachable nor unreachable and we don’t want to hear about it.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-6">&#182;</a>
               </div>
-              <p>Could think harder about priorities as they releate to healing. Wouldn’t want
-to starve the recovery of the cluster by performing immigrations only, when
-newly naturalized citizens could join the legislature and preserve the
-republic.</p>
+              <p>Notes:</p>
 
             </div>
 
@@ -206,9 +206,10 @@ republic.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-7">&#182;</a>
               </div>
-              <p>Note that we currently favor impeachment because the minority updates the
-constituents. A non-functioning minority member would keep all of its
-constitutents in the dark.</p>
+              <p>Could think harder about priorities as they releate to healing. Wouldn’t want
+to starve the recovery of the cluster by performing immigrations only, when
+newly naturalized citizens could join the legislature and preserve the
+republic.</p>
 
             </div>
 
@@ -221,7 +222,9 @@ constitutents in the dark.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-8">&#182;</a>
               </div>
-              <p>We favor filling empty seats in government as soon as they are detected.</p>
+              <p>Note that we currently favor impeachment because the minority updates the
+constituents. A non-functioning minority member would keep all of its
+constitutents in the dark.</p>
 
             </div>
 
@@ -234,8 +237,7 @@ constitutents in the dark.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-9">&#182;</a>
               </div>
-              <p>We favor shrinking the government as soon as it becomes obvious that the
-government size is less than the population of the island.</p>
+              <p>We favor filling empty seats in government as soon as they are detected.</p>
 
             </div>
 
@@ -248,10 +250,8 @@ government size is less than the population of the island.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-10">&#182;</a>
               </div>
-              <p>All this assuming an external mechnism for tracking pings that will calculate
-when a paricular participant is reachable or unreachable. After <code>update</code>
-returns a reshape operation, the <code>Shape</code> object is consumed. At that point
-you should no longer call <code>Shape</code>. Put a dummy shape object in its place.</p>
+              <p>We favor shrinking the government as soon as it becomes obvious that the
+government size is less than the population of the island.</p>
 
             </div>
 
@@ -264,7 +264,10 @@ you should no longer call <code>Shape</code>. Put a dummy shape object in its pl
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-11">&#182;</a>
               </div>
-              <p>A new <code>Shape</code> object should then be created when a new government is created.</p>
+              <p>All this assuming an external mechnism for tracking pings that will calculate
+when a paricular participant is reachable or unreachable. After <code>update</code>
+returns a reshape operation, the <code>Shaper</code> object is consumed. At that point
+you should no longer call <code>Shaper</code>. Put a dummy shape object in its place.</p>
 
             </div>
 
@@ -277,11 +280,8 @@ you should no longer call <code>Shape</code>. Put a dummy shape object in its pl
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-12">&#182;</a>
               </div>
-              <p>I’m imagining that the unreachability of a participant will be remembered so
-that when a new government is created the unreachability can replayed. Causes
-me to muse about whether it should be possible for a citizen to become
-reachable again, whether we should continue to ping the citizen, or if we
-simply surrender.</p>
+              <p>A new <code>Shaper</code> object should then be created when a new government is
+created.</p>
 
             </div>
 
@@ -294,9 +294,11 @@ simply surrender.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-13">&#182;</a>
               </div>
-              <p>In the case of collapse when we switch to paxos, it seems that we’ll keep on
-trying and trying such that we could recover from a network outage in the
-case of paxos.</p>
+              <p>I’m imagining that the unreachability of a participant will be remembered so
+that when a new government is created the unreachability can replayed. Causes
+me to muse about whether it should be possible for a citizen to become
+reachable again, whether we should continue to ping the citizen, or if we
+simply surrender.</p>
 
             </div>
 
@@ -309,8 +311,9 @@ case of paxos.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-14">&#182;</a>
               </div>
-              <p>TODO Try to recall what you need to do to grow correctly. Who is supposed to
-be in that quorum?</p>
+              <p>In the case of collapse when we switch to paxos, it seems that we’ll keep on
+trying and trying such that we could recover from a network outage in the
+case of paxos.</p>
 
             </div>
 
@@ -323,8 +326,8 @@ be in that quorum?</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-15">&#182;</a>
               </div>
-              <p>TODO Work into the words above that filling seats is urgent, but not
-expanding the government to the desired government size.</p>
+              <p>TODO Try to recall what you need to do to grow correctly. Who is supposed to
+be in that quorum?</p>
 
             </div>
 
@@ -337,7 +340,8 @@ expanding the government to the desired government size.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-16">&#182;</a>
               </div>
-              <p>TODO Stop saying “quorum” when you mean “seats filled.”</p>
+              <p>TODO Work into the words above that filling seats is urgent, but not
+expanding the government to the desired government size.</p>
 
             </div>
 
@@ -350,24 +354,9 @@ expanding the government to the desired government size.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-17">&#182;</a>
               </div>
+              <p>TODO Stop saying “quorum” when you mean “seats filled.”</p>
 
             </div>
-
-            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Shape</span> (<span class="hljs-params">parlimentSize, government</span>) </span>{
-    <span class="hljs-keyword">this</span>._parliamentSize = government.majority.length * <span class="hljs-number">2</span> - <span class="hljs-number">1</span>
-    <span class="hljs-keyword">this</span>._shouldExpand = parlimentSize != <span class="hljs-keyword">this</span>._parliamentSize
-    <span class="hljs-keyword">this</span>._government = government
-    <span class="hljs-keyword">this</span>._unreachable = <span class="hljs-number">0</span>
-    <span class="hljs-keyword">this</span>._population = government.majority.length + government.minority.length + government.constituents.length
-    <span class="hljs-keyword">this</span>._seatsAreEmpty = government.majority.length + government.minority.length != <span class="hljs-keyword">this</span>._parliamentSize
-    <span class="hljs-keyword">this</span>._seen = {}
-    <span class="hljs-keyword">this</span>._minority = []
-    <span class="hljs-keyword">this</span>._exiles = []
-    <span class="hljs-keyword">this</span>._expandable = []
-}
-
-
-</pre></div></div>
 
         </li>
 
@@ -378,10 +367,25 @@ expanding the government to the desired government size.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-18">&#182;</a>
               </div>
-              <p><code>Shape.update</code> determines if a new government should be created that has a
-new shape. Note that immigration takes place is elsewhere.</p>
 
             </div>
+
+            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Shaper</span> (<span class="hljs-params">parliamentSize, government</span>) </span>{
+    <span class="hljs-keyword">this</span>._parliamentSize = government.majority.length * <span class="hljs-number">2</span> - <span class="hljs-number">1</span>
+    <span class="hljs-keyword">this</span>._shouldExpand = parliamentSize != <span class="hljs-keyword">this</span>._parliamentSize
+    <span class="hljs-keyword">this</span>._government = government
+    <span class="hljs-keyword">this</span>._unreachable = <span class="hljs-number">0</span>
+    <span class="hljs-keyword">this</span>._population = government.majority.length + government.minority.length + government.constituents.length
+    <span class="hljs-keyword">this</span>._seatsAreEmpty = government.majority.length + government.minority.length != <span class="hljs-keyword">this</span>._parliamentSize
+    <span class="hljs-keyword">this</span>._seen = {}
+    <span class="hljs-keyword">this</span>._minority = []
+    <span class="hljs-keyword">this</span>._exiles = []
+    <span class="hljs-keyword">this</span>._expandable = []
+    <span class="hljs-keyword">this</span>._immigrating = []
+    <span class="hljs-keyword">this</span>.collapsed = <span class="hljs-literal">false</span>
+}
+
+</pre></div></div>
 
         </li>
 
@@ -392,11 +396,10 @@ new shape. Note that immigration takes place is elsewhere.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-19">&#182;</a>
               </div>
+              <p><code>Shaper.update</code> determines if a new government should be created that has a
+new shape. Note that immigration takes place is elsewhere.</p>
 
             </div>
-
-            <div class="content"><div class='highlight'><pre>Shape.prototype.update = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">id, reachable</span>) </span>{
-</pre></div></div>
 
         </li>
 
@@ -406,6 +409,21 @@ new shape. Note that immigration takes place is elsewhere.</p>
 
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-20">&#182;</a>
+              </div>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>Shaper.prototype.update = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">id, reachable</span>) </span>{
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-21">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-21">&#182;</a>
               </div>
               <p>We are interested in denizens when they are first reachable or when they
 become unreachable. We ignore denizens that continue to be reachable.</p>
@@ -417,6 +435,10 @@ become unreachable. We ignore denizens that continue to be reachable.</p>
     }
     <span class="hljs-keyword">this</span>._seen[id] = <span class="hljs-literal">true</span>
 
+    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.decided) {
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>
+    }
+
     <span class="hljs-keyword">var</span> seen = <span class="hljs-built_in">Object</span>.keys(<span class="hljs-keyword">this</span>._seen).length
 
 </pre></div></div>
@@ -424,11 +446,11 @@ become unreachable. We ignore denizens that continue to be reachable.</p>
         </li>
 
 
-        <li id="section-21">
+        <li id="section-22">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-21">&#182;</a>
+                <a class="pilcrow" href="#section-22">&#182;</a>
               </div>
               <p>Majority members are not our resposibility. They trigger their own
 collapse.</p>
@@ -444,11 +466,11 @@ collapse.</p>
         </li>
 
 
-        <li id="section-22">
+        <li id="section-23">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-22">&#182;</a>
+                <a class="pilcrow" href="#section-23">&#182;</a>
               </div>
               <p>If the citizen is a minority member we look for impeachments. Also, we
 want to take certain actions only after we have ensured that the the
@@ -459,11 +481,11 @@ government is as healthy as it can be.</p>
         </li>
 
 
-        <li id="section-23">
+        <li id="section-24">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-23">&#182;</a>
+                <a class="pilcrow" href="#section-24">&#182;</a>
               </div>
 
             </div>
@@ -478,11 +500,11 @@ government is as healthy as it can be.</p>
         </li>
 
 
-        <li id="section-24">
+        <li id="section-25">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-24">&#182;</a>
+                <a class="pilcrow" href="#section-25">&#182;</a>
               </div>
               <p>If minority member is not reachable we impeach it &mdash; remove
 it from the government &mdash; immediately.</p>
@@ -504,11 +526,11 @@ it from the government &mdash; immediately.</p>
         </li>
 
 
-        <li id="section-25">
+        <li id="section-26">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-25">&#182;</a>
+                <a class="pilcrow" href="#section-26">&#182;</a>
               </div>
               <p>If our minority is present and correct we might release an exile if
 one detected one, but we’ll keep looking for a citizen to fill an
@@ -530,11 +552,11 @@ empty seat if a seat is empty.</p>
         </li>
 
 
-        <li id="section-26">
+        <li id="section-27">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-26">&#182;</a>
+                <a class="pilcrow" href="#section-27">&#182;</a>
               </div>
               <p>The citizen is not a minority member.</p>
 
@@ -543,11 +565,11 @@ empty seat if a seat is empty.</p>
         </li>
 
 
-        <li id="section-27">
+        <li id="section-28">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-27">&#182;</a>
+                <a class="pilcrow" href="#section-28">&#182;</a>
               </div>
 
             </div>
@@ -559,11 +581,11 @@ empty seat if a seat is empty.</p>
         </li>
 
 
-        <li id="section-28">
+        <li id="section-29">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-28">&#182;</a>
+                <a class="pilcrow" href="#section-29">&#182;</a>
               </div>
               <p>Our government has empty seats and we have found a citizen we can
 appoint to the minority. This appointment can take priority over
@@ -587,11 +609,11 @@ any impeachments so let’s go.</p>
         </li>
 
 
-        <li id="section-29">
+        <li id="section-30">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-29">&#182;</a>
+                <a class="pilcrow" href="#section-30">&#182;</a>
               </div>
               <p>Count as unreachable.</p>
 
@@ -604,11 +626,11 @@ any impeachments so let’s go.</p>
         </li>
 
 
-        <li id="section-30">
+        <li id="section-31">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-30">&#182;</a>
+                <a class="pilcrow" href="#section-31">&#182;</a>
               </div>
               <p>If the reachable population is less than the size of our current
 government we need to shrink the government size.</p>
@@ -643,11 +665,11 @@ members can survive one failure.</p>
         </li>
 
 
-        <li id="section-31">
+        <li id="section-32">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-31">&#182;</a>
+                <a class="pilcrow" href="#section-32">&#182;</a>
               </div>
               <p>Record the unreachable citizen as a potential exile.</p>
 
@@ -668,11 +690,11 @@ members can survive one failure.</p>
         </li>
 
 
-        <li id="section-32">
+        <li id="section-33">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-32">&#182;</a>
+                <a class="pilcrow" href="#section-33">&#182;</a>
               </div>
               <p>If as seat is empty we’re going to wait for a citizen to fill those seat.</p>
 
@@ -687,11 +709,11 @@ members can survive one failure.</p>
         </li>
 
 
-        <li id="section-33">
+        <li id="section-34">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-33">&#182;</a>
+                <a class="pilcrow" href="#section-34">&#182;</a>
               </div>
               <p>TODO Is the quorum the new majority or the old majority?
 TODO Think about growth commit race conditions again.</p>
@@ -701,11 +723,11 @@ TODO Think about growth commit race conditions again.</p>
         </li>
 
 
-        <li id="section-34">
+        <li id="section-35">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-34">&#182;</a>
+                <a class="pilcrow" href="#section-35">&#182;</a>
               </div>
 
             </div>
@@ -717,11 +739,11 @@ TODO Think about growth commit race conditions again.</p>
         </li>
 
 
-        <li id="section-35">
+        <li id="section-36">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-35">&#182;</a>
+                <a class="pilcrow" href="#section-36">&#182;</a>
               </div>
               <p>We should expand and we have citzens who can be appointed to the
 government so let’s grow the government.</p>
@@ -743,23 +765,120 @@ government so let’s grow the government.</p>
         </li>
 
 
-        <li id="section-36">
+        <li id="section-37">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-36">&#182;</a>
+                <a class="pilcrow" href="#section-37">&#182;</a>
               </div>
               <p>Otherwise let’s exile someone if we have someone to exile.</p>
 
             </div>
 
-            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>._exiles.shift() || <span class="hljs-literal">null</span>
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>._immigration() || <span class="hljs-keyword">this</span>._exiles.shift() || <span class="hljs-literal">null</span>
     }
 
     <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>
 }
 
-<span class="hljs-built_in">module</span>.exports = Shape
+Shaper.prototype.immigrated = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">id</span>) </span>{
+    assert(<span class="hljs-keyword">this</span>._immigrating.length &gt; <span class="hljs-number">0</span> &amp;&amp; id == <span class="hljs-keyword">this</span>._immigrating[<span class="hljs-number">0</span>].id)
+    <span class="hljs-keyword">this</span>._immigrating.shift()
+}
+
+Shaper.prototype.immigrate = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">immigration</span>) </span>{
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-38">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-38">&#182;</a>
+              </div>
+              <p>We do not going to reject a duplicate immigration for a particular id.</p>
+<p>Here is a race condition and how it will shake itself out.</p>
+<p>We could be in the middle of immigrating a partuclar id when the
+immigrant crash restarts and submits a new cookie. We will update the
+cookie here, but that’s not going to be the same as the cookie that got
+written into the log.</p>
+<p>We can make it a general case that if the cookies mismatch
+every one is very disappointed. Thus, we can catch this on sync.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>, I = <span class="hljs-keyword">this</span>._immigrating.length; i &lt; I; i++) {
+        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._immigrating[i].id == immigration.id) {
+            <span class="hljs-keyword">break</span>
+        }
+    }
+    <span class="hljs-keyword">if</span> (i == <span class="hljs-keyword">this</span>._immigrating.length) {
+        <span class="hljs-keyword">this</span>._immigrating.push(immigration)
+    } <span class="hljs-keyword">else</span> {
+        <span class="hljs-keyword">this</span>._immigrating[i].properties = properties
+        <span class="hljs-keyword">this</span>._immigrating[i].cookie = cookie
+    }
+
+    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.decided) {
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>
+    }
+
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-39">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-39">&#182;</a>
+              </div>
+              <p>If as seat is empty we’re going to wait for a citizen to fill that seat.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._seatsAreEmpty &amp;&amp; <span class="hljs-built_in">Object</span>.keys(<span class="hljs-keyword">this</span>._seen).length != <span class="hljs-keyword">this</span>._population) {
+        <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>
+    }
+
+    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._government.minority.length == <span class="hljs-keyword">this</span>._minority.length) {
+        <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>._immigration()
+    }
+
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>
+}
+
+Shaper.prototype._immigration = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._immigrating.length) {
+        <span class="hljs-keyword">var</span> immigration = <span class="hljs-keyword">this</span>._immigrating[<span class="hljs-number">0</span>]
+        <span class="hljs-keyword">return</span> {
+            <span class="hljs-attr">quorum</span>: <span class="hljs-keyword">this</span>._government.majority,
+            <span class="hljs-attr">government</span>: {
+                <span class="hljs-attr">majority</span>: <span class="hljs-keyword">this</span>._government.majority,
+                <span class="hljs-attr">minority</span>: <span class="hljs-keyword">this</span>._government.minority,
+                <span class="hljs-attr">immigrate</span>: {
+                    <span class="hljs-attr">id</span>: immigration.id,
+                    <span class="hljs-attr">properties</span>: immigration.properties,
+                    <span class="hljs-attr">cookie</span>: immigration.cookie
+                }
+            }
+        }
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>
+}
+
+Shaper.prototype.createShaper = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">paxos</span>) </span>{
+    <span class="hljs-keyword">var</span> shaper = <span class="hljs-keyword">new</span> Shaper(paxos.parliamentSize, paxos.government)
+    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>, immigration; (immigration = <span class="hljs-keyword">this</span>._immigrating[i]) != <span class="hljs-literal">null</span>; i++) {
+        shaper.immigrate(immigration)
+    }
+    <span class="hljs-keyword">return</span> shaper
+}
+
+<span class="hljs-built_in">module</span>.exports = Shaper
 
 </pre></div></div>
 

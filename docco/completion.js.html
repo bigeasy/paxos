@@ -2,7 +2,7 @@
 
 <html>
 <head>
-  <title>log.js</title>
+  <title>completion.js</title>
   <meta http-equiv="content-type" content="text/html; charset=UTF-8">
   <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
   <link rel="stylesheet" media="all" href="docco.css" />
@@ -103,7 +103,7 @@
 
           <li id="title">
               <div class="annotation">
-                  <h1>log.js</h1>
+                  <h1>completion.js</h1>
               </div>
           </li>
 
@@ -118,30 +118,27 @@
 
             </div>
 
-            <div class="content"><div class='highlight'><pre><span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Log</span> (<span class="hljs-params">enactor</span>) </span>{
-    <span class="hljs-keyword">this</span>.enactor = enactor
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">var</span> Writer = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./writer'</span>)
+
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Completion</span> (<span class="hljs-params">paxos, version, promise</span>) </span>{
+    <span class="hljs-keyword">this</span>.version = version
+    <span class="hljs-keyword">this</span>._paxos = paxos
+    <span class="hljs-keyword">this</span>._promise = promise
 }
 
-Log.prototype.write = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">value</span>) </span>{
-    <span class="hljs-keyword">this</span>.written = value
-}
-
-Log.prototype.commit = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
-    <span class="hljs-keyword">var</span> entry = <span class="hljs-keyword">this</span>.written
-    <span class="hljs-keyword">this</span>.written = <span class="hljs-literal">null</span>
-
-    <span class="hljs-keyword">var</span> entries = []
-    <span class="hljs-keyword">while</span> (entry) {
-        entries.push({
-            <span class="hljs-attr">body</span>: entry.body
-        })
-        entry = entry.previous
+Completion.prototype.response = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">now, request, response</span>) </span>{
+    <span class="hljs-keyword">switch</span> (request.method) {
+    <span class="hljs-keyword">case</span> <span class="hljs-string">'commit'</span>:
+        <span class="hljs-keyword">this</span>._paxos._writer = <span class="hljs-keyword">new</span> Writer(<span class="hljs-keyword">this</span>._paxos, <span class="hljs-keyword">this</span>._promise)
+        <span class="hljs-keyword">break</span>
     }
-
-    entries.forEach(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">entry</span>) </span>{ <span class="hljs-keyword">this</span>.enactor.enact(entry) }, <span class="hljs-keyword">this</span>)
 }
 
-<span class="hljs-built_in">module</span>.exports = Log
+Completion.prototype.createWriter = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">promise</span>) </span>{
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Writer(<span class="hljs-keyword">this</span>._paxos, promise)
+}
+
+<span class="hljs-built_in">module</span>.exports = Completion
 
 </pre></div></div>
 
