@@ -29,6 +29,7 @@
     "dependencies":
     {
                             "bintrees":                     "1.0.1",
+                            "departure":                    "0.0.x",
                             "extant":                       "1.0.x",
                             "happenstance":                 "5.0.x",
                             "monotonic":                    "3.0.x",

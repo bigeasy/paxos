@@ -32,6 +32,8 @@ var Recorder = require('./recorder')
 
 var Pinger = require('./pinger')
 
+var departure = require('departure')
+
 function Paxos (now, republic, id, options) {
     // Uniquely identify ourselves relative to the other participants.
     this.id = String(id)
@@ -645,12 +647,34 @@ Paxos.prototype._enact = function (now, message) {
     // We already have this entry. The value is invariant, so let's assert that
     // the given value matches the one we have.
     if (Monotonic.compare(max.promise, message.promise) >= 0) {
-        // TODO Difficult to see how we could get here and not have a copy of
-        // the message in our log. If we received a delayed sync message that
-        // has commits that precede our minimum, seems like it would have been
+        // Difficult to see how we could get here and not have a copy of the
+        // message in our log. If we received a delayed sync message that has
+        // commits that precede our minimum, seems like it would have been
         // rejected at entry, the committed versions would be off.
-        assert(Monotonic.compare(this.minimum, message.promise) <= 0)
-        // TODO Deep equal comparison of JSON value.
+        if (Monotonic.compare(this.minimum, message.promise) <= 0) {
+            var entry = this._findRound(message.promise)
+            departure.raise(entry.body.body, message.body)
+        } else {
+            // Getting this branch will require
+            //
+            // * isolating the minority member so that it is impeached.
+            // * collapsing the consensus so the unreachability is lost.
+            //      * note that only the leader is guarded by its writer.
+            //      * reset unreachability means timeout needs to pass again.
+            //      * if you preserve pings, then the same effect can be had by
+            //      killing the leader and majority member that represents the
+            //      minority member, since reacability is only present in a
+            //      path.
+            // * add new entries to the log so that the isolate former minority
+            // member is behind.
+            // * have the former minority member sync a constituent, the
+            // constituent will respond with a sync, delay the response.
+            // * bring the minority member up to speed.
+            // * let new minimum propigate.
+            // * send the delayed response.
+
+            //
+        }
         return
     }
 
