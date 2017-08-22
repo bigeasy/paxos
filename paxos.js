@@ -33,6 +33,7 @@ var Recorder = require('./recorder')
 var Pinger = require('./pinger')
 
 var departure = require('departure')
+var constituency = require('./constituency')
 
 function Paxos (now, republic, id, options) {
     // Uniquely identify ourselves relative to the other participants.
@@ -588,7 +589,7 @@ Paxos.prototype.response = function (now, request, responses) {
         var delay = this.log.head.body.promise == responses[request.to[0]].sync.committed
                   ? now + this.ping
                   : now
-        if (this.constituency.length == 0) {
+        if (this.government.majority[0] == this.id && this.government.majority.length > 1) {
             this.scheduler.schedule(delay, request.to[0], {
                 module: 'paxos',
                 method: 'keepAlive',
@@ -738,32 +739,6 @@ Paxos.prototype._enact = function (now, message) {
 // no minority, then the majority updates constituents.
 
 //
-Paxos.prototype._determineConstituency = function () {
-    this.constituency = []
-    var parliament = this.government.majority.concat(this.government.minority)
-    if (parliament.length == 1) {
-        if (this.id == this.government.majority[0]) {
-            this.constituency = this.government.constituents.slice()
-        }
-    } else {
-        var index = this.government.majority.slice(1).indexOf(this.id)
-        if (~index) {
-            var length = this.government.majority.length - 1
-            var population = this.government.minority.length
-                           ? this.government.minority
-                           : this.government.constituents
-            this.constituency = population.filter(function (id, i) {
-                return i % length == index
-            })
-        } else if (~(index = this.government.minority.indexOf(this.id))) {
-            var length = this.government.minority.length
-            this.constituency = this.government.constituents.filter(function (id, i) {
-                return i % length == index
-            })
-        }
-    }
-}
-
 Paxos.prototype._enactGovernment = function (now, round) {
     this.scheduler.clear()
 
@@ -789,7 +764,8 @@ Paxos.prototype._enactGovernment = function (now, round) {
 // TODO Decide on whether this is calculated here or as needed.
     this.parliament = this.government.majority.concat(this.government.minority)
 
-    this._determineConstituency()
+    constituency(this.government, this.id, this)
+
     assert(!this.constituency.length || this.constituency[0] != null)
     this.scheduler.clear()
     if (this.government.majority[0] == this.id && this.government.majority.length != 1) {

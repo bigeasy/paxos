@@ -6,7 +6,7 @@ function prove (okay) {
         majority: [ '0' ],
         minority: [],
         constituents: [ '1' ]
-    }, '0'), {
+    }, '0', {}), {
         constituency: [ '1' ],
         representative: null
     }, 'dictator self')
@@ -14,7 +14,7 @@ function prove (okay) {
         majority: [ '0' ],
         minority: [],
         constituents: [ '1' ]
-    }, '1'), {
+    }, '1', {}), {
         constituency: [],
         representative: '0'
     }, 'dictator follower')
@@ -23,28 +23,28 @@ function prove (okay) {
         minority: [ '3', '4' ],
         constituents: [ '5', '6' ]
     }
-    okay(constituency(government, '0'), {
-        constituency: [ '1', '2' ],
+    okay(constituency(government, '0', {}), {
+        constituency: [],
         representative: null
     }, 'leader constituents')
-    okay(constituency(government, '1'), {
+    okay(constituency(government, '1', {}), {
         constituency: [ '3' ],
         representative: '0'
     }, 'majority constituents')
-    okay(constituency(government, '3'), {
+    okay(constituency(government, '3', {}), {
         constituency: [ '5' ],
         representative: '1'
     }, 'minority constituents')
-    okay(constituency(government, '5'), {
+    okay(constituency(government, '5', {}), {
         constituency: [],
         representative: '3'
     }, 'constituent representative')
     government.minority = []
-    okay(constituency(government, '1'), {
+    okay(constituency(government, '1', {}), {
         constituency: [ '5' ],
         representative: '0'
     }, 'majority constituents no minority')
-    okay(constituency(government, '5'), {
+    okay(constituency(government, '5', {}), {
         constituency: [],
         representative: '1'
     }, 'constituent representative no minority')

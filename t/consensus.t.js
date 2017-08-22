@@ -245,6 +245,7 @@ function prove (okay) {
     tick()
 
     receive(denizens[1], consensus)
+    this._determineConstituency()
 
     // Test inability to create new government because of lack of majority.
     denizens[0].collapse(time)
