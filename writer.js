@@ -2,9 +2,9 @@ var assert = require('assert')
 
 var Monotonic = require('monotonic').asString
 
-function Writer (paxos, promise) {
+function Writer (paxos) {
     this._paxos = paxos
-    this.version = [ promise, this.collapsed = false ]
+    this.version = [ paxos.log.head.body.promise, this.collapsed = false ]
     this.proposals = []
     this._writing = []
 }
@@ -16,6 +16,7 @@ Writer.prototype.push = function (proposal) {
         body: proposal.body
     })
 }
+
 Writer.prototype.unshift = function (proposal) {
     this.proposals.unshift({
         quorum: proposal.quorum,
@@ -83,7 +84,7 @@ Writer.prototype.response = function (now, request, responses) {
     }
 }
 
-Writer.prototype.createWriter = function (promise) {
+Writer.prototype.createWriter = function () {
     return this
 }
 

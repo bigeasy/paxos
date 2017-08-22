@@ -27,18 +27,15 @@ Acceptor.prototype.request = function (now, message, sync) {
             }
             return { method: 'accepted', promise: this._paxos.promise, sync: sync }
         }
-    case 'commit':
-        if (Monotonic.compare(this._paxos.promise, message.promise) == 0) {
-            this._paxos._commit(now, this.register)
-            sync.committed = this.register.promise
-            return { method: 'committed', promise: this._paxos.promise, sync: sync }
-        }
     }
     return { method: 'reject', promise: this._paxos.promise, sync: sync }
 }
 
-Acceptor.prototype.createRecorder = function (promise) {
-    return new Recorder(this._paxos, promise)
+Acceptor.prototype.createRecorder = function () {
+    if (this._paxos.log.head.body.body.promise == this.promise) {
+        return new Recorder(this._paxos)
+    }
+    return this
 }
 
 module.exports = Acceptor

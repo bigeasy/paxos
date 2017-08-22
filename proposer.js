@@ -1,8 +1,9 @@
 var Monotonic = require('monotonic').asString
 
-var Completion = require('./completion')
+var Writer = require('./writer')
 
 // TODO Convert from a government structure.
+// TODO Really need to have the value for previous, which is the writer register.
 function Proposer (paxos, promise) {
     this._paxos = paxos
     this.version = [ promise, this.collapsed = true ]
@@ -57,21 +58,17 @@ Proposer.prototype.response = function (now, request, responses, promise) {
         })
         break
     case 'accept':
-        this._paxos._send({
-            method: 'commit',
-            version: this.version,
-            to: this.proposal.quorum,
-            sync: [],
-            promise: this.promise
+        this._paxos._commit(now, {
+            promise: this.promise,
+            body: this.proposal.body,
+            previous: this.previous
         })
-        break
-    case 'commit':
         break
     }
 }
 
-Proposer.prototype.createWriter = function (promise) {
-    return new Completion(this._paxos, this.version, promise)
+Proposer.prototype.createWriter = function () {
+    return new Writer(this._paxos)
 }
 
 module.exports = Proposer

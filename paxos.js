@@ -265,6 +265,7 @@ Paxos.prototype._prepare = function (now, request, sync) {
 Paxos.prototype._collapse = function (now) {
     this.scheduler.clear()
 
+    // TODO Really need to have the value for previous, which is the writer register.
     this._writer = new Proposer(this, this.promise)
     this._pinger = new Pinger(this, new Assembly(this.government, this.id))
     this._pinger.update(now, this.id, {

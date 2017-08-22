@@ -1,4 +1,4 @@
-require('proof')(5, prove)
+require('proof')(3, prove)
 
 function prove (okay) {
     var Proposer = require('../proposer')
@@ -6,7 +6,14 @@ function prove (okay) {
 
     var queue = []
     var paxos = {
-        _send: function (message) { queue.push(message) }
+        _send: function (message) { queue.push(message) },
+        _commit: function (now, chain) {
+            okay(chain, {
+                promise: '2/0',
+                body: { majority: [ '0', '1' ], minority: [ '2' ] },
+                previous: null
+            }, 'commit')
+        }
     }
     var government = { majority: [ '0', '1' ], minority: [ '2' ] }
     var proposer = new Proposer(paxos, '1/0')
@@ -15,17 +22,7 @@ function prove (okay) {
         body: government
     })
     var acceptors = government.majority.concat(government.minority).map(function (id) {
-        return new Acceptor({
-            promise: '1/0',
-            id: id,
-            _commit: function (now, entry) {
-                okay(entry, {
-                    promise: '2/0',
-                    body: { majority: [ '0', '1' ], minority: [ '2' ] },
-                    previous: null
-                }, 'entry ' + id)
-            }
-        })
+        return new Acceptor({ promise: '1/0', id: id, })
     })
 
     proposer.prepare(0)
@@ -61,18 +58,6 @@ function prove (okay) {
         body: { majority: [ '0', '1' ], minority: [ '2' ] },
         previous: null
     }, 'accept')
-
-    transmit(pulse)
-
-    pulse = queue.shift()
-
-    okay(pulse, {
-        method: 'commit',
-        version: [ '1/0', true ],
-        to: [ '0', '1' ],
-        sync: [],
-        promise: '2/0'
-    }, 'commit')
 
     transmit(pulse)
 }

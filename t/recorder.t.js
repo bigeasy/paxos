@@ -5,6 +5,7 @@ function prove (okay) {
     var Recorder = require('../recorder')
 
     var writer = new Writer({
+        log: { head: { body: { promise: '1/0' } } },
         _send: function (request) {
             var responses = {}
             request.to.forEach(function (id) {
