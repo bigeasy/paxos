@@ -12,8 +12,10 @@ function Recorder (paxos) {
 
 Recorder.prototype.request = function (now, request, sync) {
     // Anything else is going to get caught synchronization and rejected.
-    assert(/^prepare|write$/.test(request.method))
+    assert(/^synchronize|prepare|write$/.test(request.method))
     switch (request.method) {
+    case 'synchronize':
+        return { sync: sync }
     case 'prepare':
         return this._paxos._prepare(now, request, sync)
     case 'write':

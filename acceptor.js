@@ -8,6 +8,8 @@ function Acceptor (paxos) {
 
 Acceptor.prototype.request = function (now, message, sync) {
     switch (message.method) {
+    case 'synchronize':
+        return { sync: sync }
     case 'prepare':
         if (Monotonic.compare(this._paxos.promise, message.promise) < 0) {
             this._paxos.promise = message.promise

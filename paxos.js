@@ -564,11 +564,7 @@ Paxos.prototype.request = function (now, request) {
         }
     }
 
-    if (request.method == 'synchronize') {
-        return { sync: sync }
-    } else {
-        return this._recorder.request(now, request, sync)
-    }
+    return this._recorder.request(now, request, sync)
 }
 
 Paxos.prototype.response = function (now, request, responses) {
