@@ -235,8 +235,8 @@ Shaper.prototype.immigrate = function (immigration) {
     if (i == this._immigrating.length) {
         this._immigrating.push(immigration)
     } else {
-        this._immigrating[i].properties = properties
-        this._immigrating[i].cookie = cookie
+        this._immigrating[i].properties = immigration.properties
+        this._immigrating[i].cookie = immigration.cookie
     }
 
     if (this.decided) {

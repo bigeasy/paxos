@@ -1,4 +1,4 @@
-require('proof')(15, prove)
+require('proof')(17, prove)
 
 function prove (okay) {
     var Shaper = require('../shaper')
@@ -183,4 +183,57 @@ function prove (okay) {
         five: null,
         six: null
     }, 'no change')
+
+    shaper = new Shaper(5, {
+        majority: [ '0', '1' ],
+        minority: [ '2' ],
+        constituents: []
+    })
+
+    shaper.immigrate({
+        id: '3',
+        cookie: 0,
+        properties: { location: '3' }
+    })
+
+    shaper.immigrate({
+        id: '4',
+        cookie: 0,
+        properties: null
+    })
+
+    shaper.immigrate({
+        id: '4',
+        cookie: 1,
+        properties: { location: '4' }
+    })
+
+    okay(shaper.update('2', true), {
+        quorum: [ '0', '1' ],
+        government: {
+            majority: [ '0', '1' ],
+            minority: [ '2' ],
+            immigrate: { id: '3', properties: { location: '3' }, cookie: 0 }
+        }
+    }, 'immigrate wait for minority')
+
+    shaper.immigrated('3')
+
+    shaper = shaper.createShaper({
+        parliamentSize: 5,
+        government: {
+            majority: [ '0', '1' ],
+            minority: [ '2' ],
+            constituents: [ '3' ]
+        }
+    })
+
+    okay(shaper.update('2', true), {
+        quorum: [ '0', '1' ],
+        government: {
+            majority: [ '0', '1' ],
+            minority: [ '2' ],
+            immigrate: { id: '4', properties: { location: '4' }, cookie: 1 }
+        }
+    }, 'immigrate updated')
 }
