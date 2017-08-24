@@ -300,14 +300,14 @@ Paxos.prototype._whenAssembly = function (now) {
 
 //
 Paxos.prototype._minimize = function () {
-    var minimum = this.getPing(this.id).committed
+    var minimum = this.log.head.body.promise
     for (var i = 0, citizen; (citizen = this.citizens[i]) != null; i++) {
-        var ping = this.pings[citizen]
-        if (ping == null) {
+        var ping = this._pinger.pings[citizen]
+        if (ping == null || ping.committed == null) {
             return
         }
         if (Monotonic.compare(ping.committed, minimum) < 0) {
-            minimum = ping.comitted
+            minimum = ping.committed
         }
     }
     this.minimum = minimum
@@ -643,6 +643,8 @@ Paxos.prototype.response = function (now, request, responses) {
         }
         this._writer.response(now, request, responses, failed ? promise : null)
     }
+
+    this._minimize()
 }
 
 Paxos.prototype._commit = function (now, entry) {

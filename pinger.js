@@ -4,13 +4,13 @@ var noop = function () {}
 
 function Pinger (paxos, shaper) {
     this._paxos = paxos
-    this._pings = {}
+    this.pings = {}
     this._shaper = shaper
 }
 
 Pinger.prototype.ingest = function (now, pinger, constituency) {
     for (var i = 0, constituent; (constituent = constituency[i]) != null; i++) {
-        var ping = pinger._pings[constituent]
+        var ping = pinger.pings[constituent]
         if (ping != null) {
             if (ping.when == null) {
                 this.update(now, constituent, ping)
@@ -22,9 +22,9 @@ Pinger.prototype.ingest = function (now, pinger, constituency) {
 }
 
 Pinger.prototype.getPing = function (id) {
-    var ping = this._pings[id]
+    var ping = this.pings[id]
     if (ping == null) {
-        ping = this._pings[id] = { id: id, naturalized: false, when: null, committed: null }
+        ping = this.pings[id] = { id: id, naturalized: false, when: null, committed: null }
     }
     return ping
 }
