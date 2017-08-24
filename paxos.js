@@ -137,6 +137,8 @@ function Paxos (now, republic, id, options) {
     this._writer = new Writer(this, '1/0')
     this._recorder = new Recorder(this, '1/0')
     this._shaper = new Shaper(this.parliamentSize, this.government)
+
+    this._seed = 2147483647
 }
 
 // We are only ever supposed to call `newGovernment` when we are not in the
@@ -267,30 +269,23 @@ Paxos.prototype._collapse = function (now) {
 
     // TODO Really need to have the value for previous, which is the writer register.
     this._writer = new Proposer(this, this.promise)
-    this._pinger = new Pinger(this, new Assembly(this.government, this.id))
-    this._pinger.update(now, this.id, {
-        naturalized: this.naturalized,
-        committed: this.log.head.body.promise
-    })
+    this._scheduleAssembly(now, false)
+}
 
-    // TODO This is fine. Realize that immigration is a special type of
-    // somethign that is built on top of proposals. Ah, or maybe assembly is the
-    // shaper and a shaper creates the next shaper. Thus, shaper is the
-    // abstraction that is above writer/recorder. Also, Assembly could be called
-    // something else, gatherer or collector or roll call or sergent at arms.
+// Note that even if the PNRG where not determinsitic, it wouldn't matter during
+// replay because the delay is lost and the actual timer event is recorded.
 
-    this.immigrating.length = 0
+//
+Paxos.prototype._scheduleAssembly = function (now, retry) {
+    var delay = 0
+    if (retry && this.id != this.government.majority[0]) {
+        // PRNG: https://gist.github.com/blixt/f17b47c62508be59987b
+        delay = time.timeout * (((this._seed = this._seed * 16807 % 2147483647) - 1) / 2147483646)
+    }
+    this.scheduler.schedule(now + delay, this.id, { method: 'assembly', body: null })
+}
 
-    this.government.majority.concat(this.government.minority)
-        .filter(function (id) {
-            return id != this.id
-        }.bind(this)).forEach(function (id) {
-            this.scheduler.schedule(now, id, {
-                module: 'paxos',
-                method: 'ping',
-                body: { method: 'collpase' }
-            })
-        }, this)
+Paxos.prototype._whenAssembly = function (now) {
 }
 
 // Determine the minimum log entry promise.
@@ -338,6 +333,32 @@ Paxos.prototype.event = function (envelope) {
             to: this.government.majority,
             sync: null
         })
+        break
+    case 'assembly':
+        this._pinger = new Pinger(this, new Assembly(this.government, this.id))
+        this._pinger.update(now, this.id, {
+            naturalized: this.naturalized,
+            committed: this.log.head.body.promise
+        })
+
+        // TODO This is fine. Realize that immigration is a special type of
+        // somethign that is built on top of proposals. Ah, or maybe assembly is the
+        // shaper and a shaper creates the next shaper. Thus, shaper is the
+        // abstraction that is above writer/recorder. Also, Assembly could be called
+        // something else, gatherer or collector or roll call or sergent at arms.
+
+        this.immigrating.length = 0
+
+        this.government.majority.concat(this.government.minority)
+            .filter(function (id) {
+                return id != this.id
+            }.bind(this)).forEach(function (id) {
+                this.scheduler.schedule(now, id, {
+                    module: 'paxos',
+                    method: 'ping',
+                    body: { method: 'collpase' }
+                })
+            }, this)
         break
     case 'collapse':
         this._collapse(envelope.now)
@@ -591,11 +612,14 @@ Paxos.prototype.response = function (now, request, responses) {
                   ? now + this.ping
                   : now
         if (this.government.majority[0] == this.id && this.government.majority.length > 1) {
-            this.scheduler.schedule(delay, request.to[0], {
-                module: 'paxos',
-                method: 'keepAlive',
-                body: null
-            })
+            // TODO Uh, oh. Getting complicated.
+            if (!this._writer.collapsed) {
+                this.scheduler.schedule(delay, request.to[0], {
+                    module: 'paxos',
+                    method: 'keepAlive',
+                    body: null
+                })
+            }
         } else {
             this.scheduler.schedule(delay, request.to[0], {
                 module: 'paxos',

@@ -42,8 +42,10 @@ Writer.prototype.nudge = function () {
     }
 }
 
-Writer.prototype.response = function (now, request, responses) {
-    for (var i = 0, message; message = request.messages[i]; i++) {
+Writer.prototype.response = function (now, request, responses, promise) {
+    if (promise != null) {
+        this._paxos.collapse(now)
+    } else for (var i = 0, message; message = request.messages[i]; i++) {
         switch (message.method) {
         case 'write':
             var nextRequest = {
