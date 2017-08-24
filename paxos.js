@@ -518,7 +518,7 @@ Paxos.prototype.immigrate = function (now, republic, id, cookie, properties) {
         } else {
             response = { enqueued: true }
 
-            var shape = this._shaper.immigrate({ id, properties: properties, cookie: cookie })
+            var shape = this._shaper.immigrate({ id: id, properties: properties, cookie: cookie })
             if (shape != null) {
                 this.newGovernment(now, shape.quorum, shape.government)
             }
