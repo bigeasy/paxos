@@ -75,6 +75,11 @@ function Shaper (parliamentSize, government) {
     this.decided = false
 }
 
+Shaper.prototype._minorityPresentWithSeatsFilled = function () {
+    return this._government.minority.length == this._minority.length &&
+        (!this._seatsAreEmpty || this._population == Object.keys(this._seen).length)
+}
+
 // `Shaper.update` determines if a new government should be created that has a
 // new shape. Note that immigration takes place is elsewhere.
 
@@ -180,8 +185,9 @@ Shaper.prototype.update = function (id, reachable) {
         })
     }
 
-    // If as seat is empty we're going to wait for a citizen to fill those seat.
-    if (this._seatsAreEmpty && seen != this._population) {
+    // We wait for the minority to be present and attempt to fill any emtpy
+    // seats before expanding, immigrating or exiling.
+    if (!this._minorityPresentWithSeatsFilled()) {
         return null
     }
 
@@ -189,25 +195,21 @@ Shaper.prototype.update = function (id, reachable) {
     // TODO Think about growth commit race conditions again.
 
     //
-    if (this._government.minority.length == this._minority.length) {
-        if (this._shouldExpand && this._expandable.length >= 2) {
-            // We should expand and we have citzens who can be appointed to the
-            // government so let's grow the government.
-            var majority = this._government.majority.slice()
-            var minority = this._government.minority.slice()
-            minority.push(this._expandable.shift(), this._expandable.shift())
-            majority.push(minority.shift())
-            return {
-                quorum: majority,
-                government: { majority: majority, minority: minority }
-            }
+    if (this._shouldExpand && this._expandable.length >= 2) {
+        // We should expand and we have citzens who can be appointed to the
+        // government so let's grow the government.
+        var majority = this._government.majority.slice()
+        var minority = this._government.minority.slice()
+        minority.push(this._expandable.shift(), this._expandable.shift())
+        majority.push(minority.shift())
+        return {
+            quorum: majority,
+            government: { majority: majority, minority: minority }
         }
-
-        // Otherwise let's exile someone if we have someone to exile.
-        return this._immigration() || this._exiles.shift() || null
     }
 
-    return null
+    // Otherwise let's exile someone if we have someone to exile.
+    return this._immigration() || this._exiles.shift() || null
 }
 
 Shaper.prototype.immigrated = function (id) {
@@ -239,22 +241,24 @@ Shaper.prototype.immigrate = function (immigration) {
         this._immigrating[i].cookie = immigration.cookie
     }
 
+    // Do nothing if our container indicates that a decision has been reached.
     if (this.decided) {
         return null
     }
 
-    // If as seat is empty we're going to wait for a citizen to fill that seat.
-    if (this._seatsAreEmpty && Object.keys(this._seen).length != this._population) {
+    // We wait for the minority to be present and attempt to fill any emtpy
+    // seats before immigrating.
+    if (!this._minorityPresentWithSeatsFilled()) {
         return null
     }
 
-    if (this._government.minority.length == this._minority.length) {
-        return this._immigration()
-    }
-
-    return null
+    // Immigrate now.
+    return this._immigration()
 }
 
+// Geneate an immigration government if we have an immigration available.
+
+//
 Shaper.prototype._immigration = function () {
     if (this._immigrating.length) {
         var immigration = this._immigrating[0]
