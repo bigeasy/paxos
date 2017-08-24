@@ -1,4 +1,4 @@
-require('proof')(18, prove)
+require('proof')(19, prove)
 
 function prove (okay) {
     var Shaper = require('../shaper')
@@ -264,4 +264,30 @@ function prove (okay) {
             immigrate: { id: '5', properties: { location: '5' }, cookie: 0 }
         }
     }, 'immigrate already decided')
+
+    shaper = new Shaper(5, {
+        majority: [ '0', '1' ],
+        minority: [],
+        constituents: []
+    })
+
+    shaper.update('0', true)
+    shaper.update('1', true)
+
+    okay(shaper.immigrate({
+        id: '2',
+        cookie: 0,
+        properties: { location: '2' }
+    }), {
+        quorum: [ '0', '1' ],
+        government: {
+            majority: [ '0', '1' ],
+            minority: [],
+            immigrate: {
+                id: '2',
+                cookie: 0,
+                properties: { location: '2' }
+            }
+        }
+    }, 'immigrate immediate')
 }
