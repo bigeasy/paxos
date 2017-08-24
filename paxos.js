@@ -608,20 +608,18 @@ Paxos.prototype.response = function (now, request, responses) {
     }
     // TODO Probably run every time, probably always fails.
     if (request.method == 'synchronize') {
-        var delay = this.log.head.body.promise == responses[request.to[0]].sync.committed
-                  ? now + this.ping
-                  : now
+        var delay = this.log.head.body.promise == responses[request.to[0]].sync.committed ? this.ping : 0
         if (this.government.majority[0] == this.id && this.government.majority.length > 1) {
             // TODO Uh, oh. Getting complicated.
             if (!this._writer.collapsed) {
-                this.scheduler.schedule(delay, request.to[0], {
+                this.scheduler.schedule(now + delay, request.to[0], {
                     module: 'paxos',
                     method: 'keepAlive',
                     body: null
                 })
             }
         } else {
-            this.scheduler.schedule(delay, request.to[0], {
+            this.scheduler.schedule(now + delay, request.to[0], {
                 module: 'paxos',
                 method: 'ping',
                 body: null
