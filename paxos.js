@@ -96,7 +96,6 @@ function Paxos (now, republic, id, options) {
     // a new government is formed to immigrate or exile a citizen.
     //
     this.proposals = []
-    this.immigrating = []
 
     this.government = {
         promise: '0/0',
@@ -347,8 +346,6 @@ Paxos.prototype.event = function (envelope) {
         // abstraction that is above writer/recorder. Also, Assembly could be called
         // something else, gatherer or collector or roll call or sergent at arms.
 
-        this.immigrating.length = 0
-
         this.government.majority.concat(this.government.minority)
             .filter(function (id) {
                 return id != this.id
@@ -396,8 +393,6 @@ Paxos.prototype.bootstrap = function (now, properties) {
         properties: {},
         immigrated: { promise: {}, id: {} }
     }
-
-    this.immigrating.push({ id: this.id })
 
     government.properties[this.id] = properties
     government.immigrated.promise[this.id] = '1/0'
