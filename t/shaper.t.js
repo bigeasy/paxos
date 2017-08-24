@@ -1,4 +1,4 @@
-require('proof')(11, prove)
+require('proof')(12, prove)
 
 function prove (okay) {
     var Shaper = require('../shaper')
@@ -11,6 +11,8 @@ function prove (okay) {
     })
 
     var reshape
+
+    okay(shaper.update('0', true), null, 'ignore majority')
 
     reshape = shaper.update('5', true)
 
