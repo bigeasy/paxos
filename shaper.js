@@ -121,22 +121,10 @@ Shaper.prototype.update = function (id, reachable) {
                 }
             }
         }
-        // If our minority is present and correct we might release an exile if
-        // one detected one, but we'll keep looking for a citizen to fill an
-        // empty seat if a seat is empty.
-        if (
-            this._minority.length == this._government.minority.length &&
-            (this._seatsAreEmpty || seen == this._population)
-        ) {
-            return this._exiles.shift() || null
-        }
-        return null
-    }
+    } else if (reachable) {
+        // The citizen is not a minority member and reachable.
 
-    // The citizen is not a minority member.
-
-    //
-    if (reachable) {
+        //
         if (this._seatsAreEmpty) {
             // Our government has empty seats and we have found a citizen we can
             // appoint to the minority. This appointment can take priority over
