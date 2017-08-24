@@ -1,4 +1,4 @@
-require('proof')(13, prove)
+require('proof')(14, prove)
 
 function prove (okay) {
     var Shaper = require('../shaper')
@@ -145,4 +145,18 @@ function prove (okay) {
             }
         }
     }, 'expand')
+
+    shaper = new Shaper(5, {
+        majority: [ '0', '1' ],
+        minority: [],
+        constituents: [ '3', '4', '5' ]
+    })
+
+    okay(shaper.update('3', true), {
+        quorum: [ '0', '1' ],
+        government: {
+            majority: [ '0', '1' ],
+            minority: [ '3' ]
+        }
+    }, 'fill seat')
 }

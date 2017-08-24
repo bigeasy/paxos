@@ -130,10 +130,10 @@ Shaper.prototype.update = function (id, reachable) {
             // appoint to the minority. This appointment can take priority over
             // any impeachments so let's go.
             return {
-                quorum: this.government.majority,
+                quorum: this._government.majority,
                 government: {
-                    majority: this.government.majority,
-                    minority: this.government.minority.concat(id)
+                    majority: this._government.majority,
+                    minority: this._government.minority.concat(id)
                 }
             }
         } else if (this._shouldExpand) {
