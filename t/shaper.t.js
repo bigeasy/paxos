@@ -1,4 +1,4 @@
-require('proof')(10, prove)
+require('proof')(11, prove)
 
 function prove (okay) {
     var Shaper = require('../shaper')
@@ -117,4 +117,8 @@ function prove (okay) {
             exile: '4'
         }
     }, 'exile')
+
+    shaper.decided = true
+
+    okay(shaper.update('5', true), null, 'decided')
 }

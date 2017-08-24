@@ -72,6 +72,7 @@ function Shaper (parliamentSize, government) {
     this._expandable = []
     this._immigrating = []
     this.collapsed = false
+    this.decided = false
 }
 
 // `Shaper.update` determines if a new government should be created that has a
