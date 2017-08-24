@@ -9,6 +9,8 @@
 // Node.js API.
 var assert = require('assert')
 
+var Shaper = require('./shaper')
+
 // Create an assembly with the given government.
 
 //

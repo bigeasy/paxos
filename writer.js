@@ -2,9 +2,9 @@ var assert = require('assert')
 
 var Monotonic = require('monotonic').asString
 
-function Writer (paxos) {
+function Writer (paxos, promise) {
     this._paxos = paxos
-    this.version = [ paxos.log.head.body.promise, this.collapsed = false ]
+    this.version = [ promise, this.collapsed = false ]
     this.proposals = []
     this._writing = []
 }

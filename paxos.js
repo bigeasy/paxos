@@ -334,7 +334,7 @@ Paxos.prototype.event = function (envelope) {
         })
         break
     case 'assembly':
-        this._pinger = new Pinger(this, new Assembly(this.government, this.id))
+        this._pinger = new Pinger(this, this._shaper = new Assembly(this.government, this.id))
         this._pinger.update(now, this.id, {
             naturalized: this.naturalized,
             committed: this.log.head.body.promise
@@ -726,19 +726,18 @@ Paxos.prototype._enact = function (now, message) {
     max.next = message
     message.previous = max.promise
 // Forever bombing out our latest promise.
+// TODO NOW BROKEN!!! Will befuddle our acceptor, cause it to delete itself
+// whiel still in process.
     this.promise = message.promise
 
     if (isGovernment) {
         this._enactGovernment(now, message)
-    }
 
     var pinger = new Pinger(this, this._shaper = this._shaper.createShaper(this))
-
     pinger.ingest(now, this._pinger, this.constituency)
-
     this._pinger = pinger
-
     this._pinger.update(now, this.id, { naturalized: this.naturalized, committed: message.promise })
+    }
 
     this.log.push({
         module: 'paxos',
@@ -765,7 +764,7 @@ Paxos.prototype._enactGovernment = function (now, round) {
     this.government = JSON.parse(JSON.stringify(round.body))
 
     this._writer = this._writer.createWriter(round.promise)
-    this._recorder = this._recorder.createRecorder()
+    this._recorder = this._recorder.createRecorder(round.promise)
     this._shaper = this._shaper.createShaper(this)
 
     if (this.government.exile) {

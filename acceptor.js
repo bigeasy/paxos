@@ -31,11 +31,12 @@ Acceptor.prototype.request = function (now, message, sync) {
     return { method: 'reject', promise: this._paxos.promise, sync: sync }
 }
 
-Acceptor.prototype.createRecorder = function () {
-    if (this._paxos.log.head.body.body.promise == this.promise) {
+// TODO Why are we using the `this._paxos.promise`?
+Acceptor.prototype.createRecorder = function (promise) {
+    if (promise == this._paxos.promise) {
         return new Recorder(this._paxos)
     }
-    return this
+    return null
 }
 
 module.exports = Acceptor

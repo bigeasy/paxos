@@ -102,8 +102,8 @@ function prove (okay) {
         majority: [ '0', '2' ],
         minority: [ '1' ],
         constituents: [],
-        promise: '5/0',
-        map: null,
+        promise: '6/0',
+        map: {},
         immigrated: {
             id: { '1/0': '0', '2/0': '1', '3/0': '2' },
             promise: { '0': '1/0', '1': '2/0', '2': '3/0' }
@@ -121,7 +121,6 @@ function prove (okay) {
     assert(denizens[2].log.trailer.node.next.next.body.promise, '3/0', 'synchronized least')
     assert(denizens[2].log.head.body.body.promise, '4/0', 'synchronized')
 
-    assert(denizens[1].enqueue(time, 1, {}).leader, '0', 'post not leader')
 
     denizens[0]._whenCollapse(time)
     denizens[1]._whenCollapse(time)

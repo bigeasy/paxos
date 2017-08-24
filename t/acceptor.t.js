@@ -1,4 +1,4 @@
-require('proof')(3, prove)
+require('proof')(4, prove)
 
 function prove (okay) {
     var Proposer = require('../proposer')
@@ -13,6 +13,20 @@ function prove (okay) {
                 body: { majority: [ '0', '1' ], minority: [ '2' ] },
                 previous: null
             }, 'commit')
+        },
+        newGovernment: function (now, quorum, government) {
+            okay({
+                now: now,
+                quorum: quorum,
+                government: government
+            }, {
+                now: 0,
+                quorum: [ '0', '1' ],
+                government: {
+                    majority: [ '0', '1' ],
+                    minority: [ '2' ]
+                }
+            }, 'flush government')
         }
     }
     var government = { majority: [ '0', '1' ], minority: [ '2' ] }

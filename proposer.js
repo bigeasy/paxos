@@ -63,17 +63,16 @@ Proposer.prototype.response = function (now, request, responses, promise) {
             body: this.proposal.body,
             previous: this.previous
         })
-/*        console.log(this.proposal.body)
         this._paxos.newGovernment(now, this.proposal.body.majority, {
             majority: this.proposal.body.majority,
             minority: this.proposal.body.minority
-        })*/
+        })
         break
     }
 }
 
-Proposer.prototype.createWriter = function () {
-    return new Writer(this._paxos)
+Proposer.prototype.createWriter = function (promise) {
+    return new Writer(this._paxos, promise)
 }
 
 module.exports = Proposer
