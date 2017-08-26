@@ -63,8 +63,6 @@ function Shaper (parliamentSize, government) {
     this._parliamentSize = government.majority.length * 2 - 1
     this._shouldExpand = parliamentSize != this._parliamentSize
     this._government = government
-    this._unreachable = 0
-    this._population = government.majority.length + government.minority.length + government.constituents.length
     this._seen = {}
     this._expandable = []
     this._immigrating = []
@@ -74,13 +72,14 @@ function Shaper (parliamentSize, government) {
 }
 
 Shaper.prototype._shouldContract = function () {
-    if (this._government.majority.length + this._government.minority.length != this._parliamentSize) {
+    if (
+        this._government.promise != '0/0' &&
+        this._government.majority.length + this._government.minority.length != this._parliamentSize
+    ) {
         var majority = this._government.majority.slice()
         var minority = this._government.minority.slice()
         minority.unshift(majority.pop())
-        if (minority.length == majority.length) {
-            minority.pop()
-        }
+        minority.pop()
         this._governments.push({
             quorum: this._government.majority,
             government: {
