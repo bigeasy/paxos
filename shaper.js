@@ -70,10 +70,10 @@ function Shaper (parliamentSize, government) {
     this._immigrating = []
     this.decided = false
     this._governments = []
-    this._shouldContact()
+    this._shouldContract()
 }
 
-Shaper.prototype._shouldContact = function () {
+Shaper.prototype._shouldContract = function () {
     if (this._government.majority.length + this._government.minority.length != this._parliamentSize) {
         var majority = this._government.majority.slice()
         var minority = this._government.minority.slice()
