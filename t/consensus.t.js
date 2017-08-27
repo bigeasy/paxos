@@ -115,6 +115,41 @@ function prove (okay) {
         }
     }, 'recover from collapse')
 
+    var shifter = network.denizens[0].log.shifter()
+
+    network.denizens[0].enqueue(network.time, 1, 1)
+    network.denizens[0].enqueue(network.time, 1, 2)
+    network.denizens[0].enqueue(network.time, 1, 3)
+
+    network.send()
+
+    console.log(shifter.peek())
+
+    return
+
+    network.populate(1)
+
+    console.log('here')
+
+    okay(network.denizens[0].government, {
+        majority: [ '0', '2' ],
+        minority: [ '1' ],
+        constituents: [],
+        promise: '6/0',
+        map: {},
+        immigrated: {
+            id: { '1/0': '0', '2/0': '1', '3/0': '2' },
+            promise: { '0': '1/0', '1': '2/0', '2': '3/0' }
+        },
+        properties: {
+            '0': { location: '0' },
+            '1': { location: '1' },
+            '2': { location: '2' }
+        }
+    }, 'recover from collapse')
+
+    network.send()
+
     return
 
 
@@ -237,7 +272,6 @@ function prove (okay) {
             '4': { location: '4' }
         }
     }, 'recover from isolation')
-    return
 
     time++
     denizens[2].scheduler.check(time)

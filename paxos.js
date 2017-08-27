@@ -441,10 +441,9 @@ Paxos.prototype._enqueuable = function (republic) {
 // Note that a client will have to treat a network failure on submission as a
 // failure requiring boundary detection.
 Paxos.prototype.enqueue = function (now, republic, message) {
-
     var response = this._enqueuable(republic)
     if (response == null) {
-// TODO Bombs out the current working promise.
+// TODO Bombs out the current working promise. TODO YEAH BAD LOOK THINK.
         // TODO Note that we used to snapshot the majority here as the route but
         // that can change. Note that the last issued promise is not driven by
         // government enactment, it is incremented as we greate new promises and
@@ -452,11 +451,10 @@ Paxos.prototype.enqueue = function (now, republic, message) {
         var promise = this._promised = Monotonic.increment(this._promised, 1)
         this._writer.push({
             promise: promise,
-            route: null,
-            //route: this.government.majority,
+            quorum: this.government.majority,
             body: message
         })
-        this._nudge(now)
+        this._writer.nudge()
 
         response = {
             enqueued: true,
@@ -464,7 +462,6 @@ Paxos.prototype.enqueue = function (now, republic, message) {
             promise: promise
         }
     }
-
     return response
 }
 
@@ -588,11 +585,14 @@ Paxos.prototype.request = function (now, request) {
 }
 
 Paxos.prototype.response = function (now, request, responses) {
+    // TODO So much error handling, can we please reused rejected a lot?
     // If anyone we tried to update is ahead of us, we learn from them.
+    var failed = false
     for (var i = 0, I = request.to.length; i < I; i++) {
         var response = responses[request.to[i]]
         if (response == null) {
-            responses[request.to[i]] = { sync: { committed: '0/0' } }
+            failed = true
+            responses[request.to[i]] = { method: 'reject', promise: '0/0', sync: { committed: null } }
             this._pinger.update(now, request.to[i], null)
         } else {
             this._pinger.update(now, request.to[i], response.sync)
@@ -603,7 +603,12 @@ Paxos.prototype.response = function (now, request, responses) {
     }
     // TODO Probably run every time, probably always fails.
     if (request.method == 'synchronize') {
-        var delay = this.log.head.body.promise == responses[request.to[0]].sync.committed ? this.ping : 0
+        var delay = 0
+        if (
+            ~([ null, this.log.head.body.promise ]).indexOf(responses[request.to[0]].sync.committed)
+        ) {
+            delay = this.ping
+        }
         if (this.government.majority[0] == this.id && this.government.majority.length > 1) {
             // TODO Uh, oh. Getting complicated.
             if (!this._writer.collapsed) {

@@ -11,8 +11,8 @@ function Writer (paxos, promise) {
 
 Writer.prototype.push = function (proposal) {
     this.proposals.push({
-        quorum: this._paxos.majority,
-        promise: this._paxos._promised = Monotonic.increment(this._paxos._promised, 1),
+        quorum: proposal.quorum,
+        promise: proposal.promise,
         body: proposal.body
     })
 }
