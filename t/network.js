@@ -29,6 +29,32 @@ Network.prototype._send = function (denizen) {
     return sent
 }
 
+Network.prototype.request = function (envelope) {
+    envelope.responses[envelope.to] = this.denizens[envelope.to].request(this.time, envelope.request)
+}
+
+Network.prototype.response = function (envelope) {
+    if (Object.keys(envelope.responses).length == envelope.to.length) {
+        this.denizens[envelope.from].response(this.time, envelope.request, envelope.responses)
+    }
+}
+
+Network.prototype.send2 = function () {
+    var sent = true
+    while (sent) {
+        var requests = this.getRequests()
+        sent = false
+        for (var id in requests) {
+            while (requests[id].length) {
+                sent = true
+                var request = requests[id].shift()
+                this.request(request)
+                this.response(request)
+            }
+        }
+    }
+}
+
 Network.prototype.send = function () {
     var vargs = Array.prototype.slice.call(arguments)
     var count = typeof vargs[0] == 'number' ? vargs.shift() : Infinity
@@ -47,6 +73,42 @@ Network.prototype.send = function () {
             }
         }
     }
+}
+
+Network.prototype.getRequests = function () {
+    var vargs = Array.prototype.slice(arguments)
+    if (vargs.filter(function (id) { return /^\d+$/.test(id) }).length == 0) {
+        vargs.push.apply(vargs, Object.keys(this.denizens))
+    }
+    if (vargs.filter(function (id) { return ! /^\d+$/.test(id) }).length == 0) {
+        vargs.push('events', 'outbox')
+    }
+    var requests = {}
+    vargs.filter(function (id) {
+        return this.denizens[id]
+    }.bind(this)).map(function (id) {
+        return this.denizens[id]
+    }.bind(this)).forEach(function (denizen) {
+        if (~vargs.indexOf('events')) {
+            denizen.scheduler.check(this.time)
+        }
+        var request
+        requests[denizen.id] = []
+        if (~vargs.indexOf('outbox')) {
+            while ((request = denizen.shifter.shift()) != null) {
+                var responses = {}
+                request.to.forEach(function (to) {
+                    requests[denizen.id].push({
+                        request: request,
+                        to: to,
+                        from: denizen.id,
+                        responses: responses
+                    })
+                })
+            }
+        }
+    }.bind(this))
+    return requests
 }
 
 Network.prototype.timeAndTick = function (count) {

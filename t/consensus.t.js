@@ -39,7 +39,7 @@ function prove (okay) {
 
     okay(network.denizens[0].immigrate(network.time, 1, '1', network.denizens[1].cookie, { location: '1' }).enqueued, 'immigrate')
 
-    network.send()
+    network.send2()
 
     okay(network.denizens[1].government, {
         majority: [ '0' ],
