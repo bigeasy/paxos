@@ -10,7 +10,7 @@ Network.prototype.receive = function (denizen, request) {
     var responses = {}
     request.to.forEach(function (id) {
         var denizen = this.denizens[id]
-        if (this.failures[id] != 'request' && this.failures[id] != 'isolate') {
+        if (this.failures[id] != 'isolate') {
             responses[id] = this.denizens[id].request(this.time, request)
         }
         if (this.failures[id] == 'response' || this.failures[denizen.id] == 'isolate') {
@@ -34,22 +34,47 @@ Network.prototype.request = function (envelope) {
 }
 
 Network.prototype.response = function (envelope) {
-    if (Object.keys(envelope.responses).length == envelope.to.length) {
+    if (Object.keys(envelope.responses).length == envelope.request.to.length) {
         this.denizens[envelope.from].response(this.time, envelope.request, envelope.responses)
     }
 }
 
+function getFailure (failure, request) {
+    switch (typeof failure) {
+    case 'string':
+        return failure
+    case 'function':
+        return failure(request)
+    default:
+        return 'none'
+    }
+}
+
 Network.prototype.send2 = function () {
+    var vargs = Array.prototype.slice.call(arguments)
+    var count = typeof vargs[0] == 'number' ? vargs.shift() : Infinity
     var sent = true
-    while (sent) {
-        var requests = this.getRequests()
+    while (sent && count--) {
+        var requests = this.getRequests.apply(this, vargs)
         sent = false
         for (var id in requests) {
             while (requests[id].length) {
                 sent = true
                 var request = requests[id].shift()
-                this.request(request)
-                this.response(request)
+                switch (getFailure(this.failures[request.to])) {
+                case 'skip':
+                    break
+                case 'response':
+                    this.request(request)
+                case 'isolate':
+                    request.responses[request.to] = null
+                    this.response(request)
+                    break
+                case 'none':
+                    this.request(request)
+                    this.response(request)
+                    break
+                }
             }
         }
     }
@@ -76,7 +101,7 @@ Network.prototype.send = function () {
 }
 
 Network.prototype.getRequests = function () {
-    var vargs = Array.prototype.slice(arguments)
+    var vargs = Array.prototype.slice.call(arguments)
     if (vargs.filter(function (id) { return /^\d+$/.test(id) }).length == 0) {
         vargs.push.apply(vargs, Object.keys(this.denizens))
     }

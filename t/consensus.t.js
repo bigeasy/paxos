@@ -60,7 +60,7 @@ function prove (okay) {
 
     network.populate(1)
 
-    network.send()
+    network.send2()
 
     okay(network.denizens[2].government, {
         majority: [ '0', '1' ],
@@ -88,15 +88,15 @@ function prove (okay) {
 
     network.time++
 
-    network.send([ '0' ])
+    network.send2('0')
 
     network.time += 3
 
-    network.send(1, [ '0' ])
+    network.send2(1, '0')
 
     okay(!network.denizens[0].enqueue(network.time, 1, {}).enqueued, 'post collapsed')
 
-    network.send([ '0' ])
+    network.send2('0')
 
     okay(network.denizens[0].government, {
         majority: [ '0', '2' ],
