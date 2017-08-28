@@ -31,7 +31,6 @@ Acceptor.prototype.request = function (now, message, sync) {
     return { method: 'reject', promise: this._paxos.promise, sync: sync }
 }
 
-// TODO Why are we using the `this._paxos.promise`?
 Acceptor.prototype.createRecorder = function (promise) {
     if (promise == this._paxos.promise) {
         return new Recorder(this._paxos)
