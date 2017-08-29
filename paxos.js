@@ -739,11 +739,10 @@ Paxos.prototype._enact = function (now, message) {
 
     if (isGovernment) {
         this._enactGovernment(now, message)
-
-    var pinger = new Pinger(this, this._shaper = this._shaper.createShaper(this))
-    pinger.ingest(now, this._pinger, this.constituency)
-    this._pinger = pinger
-    this._pinger.update(now, this.id, { naturalized: this.naturalized, committed: message.promise })
+        var pinger = new Pinger(this, this._shaper)
+        pinger.ingest(now, this._pinger, this.constituency)
+        this._pinger = pinger
+        this._pinger.update(now, this.id, { naturalized: this.naturalized, committed: message.promise })
     }
 
     this.log.push({
