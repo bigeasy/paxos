@@ -664,22 +664,21 @@ Paxos.prototype._commit = function (now, entry) {
     }
 }
 
-Paxos.prototype._enact = function (now, message) {
-    message = JSON.parse(JSON.stringify(message))
-    logger.info('_receiveEnact', { now: now, $message: message })
+Paxos.prototype._enact = function (now, entry) {
+    entry = JSON.parse(JSON.stringify(entry))
+    logger.info('_receiveEnact', { now: now, $entry: entry })
 
     var max = this.log.head.body
 
     // We already have this entry. The value is invariant, so let's assert that
     // the given value matches the one we have.
-    if (Monotonic.compare(max.promise, message.promise) >= 0) {
+    if (Monotonic.compare(max.promise, entry.promise) >= 0) {
         // Difficult to see how we could get here and not have a copy of the
         // message in our log. If we received a delayed sync message that has
         // commits that precede our minimum, seems like it would have been
         // rejected at entry, the committed versions would be off.
-        if (Monotonic.compare(this.minimum, message.promise) <= 0) {
-            var entry = this._findRound(message.promise)
-            departure.raise(entry.body.body, message.body)
+        if (Monotonic.compare(this.minimum, entry.promise) <= 0) {
+            departure.raise(this._findRound(entry.promise).body.body, entry.body)
         } else {
             // Getting this branch will require
             //
@@ -708,11 +707,11 @@ Paxos.prototype._enact = function (now, message) {
 
     if (!valid) {
         // assert(this.log.size == 1)
-        valid = Monotonic.isBoundary(message.promise, 0)
+        valid = Monotonic.isBoundary(entry.promise, 0)
         valid = valid && this.log.trailer.peek().promise == '0/0'
-        valid = valid && message.body.immigrate
-        valid = valid && message.body.immigrate.id == this.id
-        valid = valid && message.body.immigrate.cookie == this.cookie
+        valid = valid && entry.body.immigrate
+        valid = valid && entry.body.immigrate.id == this.id
+        valid = valid && entry.body.immigrate.cookie == this.cookie
     }
 
     if (!valid) {
@@ -721,110 +720,112 @@ Paxos.prototype._enact = function (now, message) {
         return
     }
 
-    var isGovernment = Monotonic.isBoundary(message.promise, 0)
+    var isGovernment = Monotonic.isBoundary(entry.promise, 0)
     logger.info('enact', {
-        outOfOrder: !(isGovernment || Monotonic.increment(max.promise, 1) == message.promise),
+        outOfOrder: !(isGovernment || Monotonic.increment(max.promise, 1) == entry.promise),
         isGovernment: isGovernment,
         previous: max.promise,
-        next: message.promise
+        next: entry.promise
     })
 
 // TODO How crufy are these log entries? What else is lying around in them?
-    max.next = message
-    message.previous = max.promise
+    max.next = entry
+    entry.previous = max.promise
 // Forever bombing out our latest promise.
 // TODO NOW BROKEN!!! Will befuddle our acceptor, cause it to delete itself
 // whiel still in process.
-    this.promise = message.promise
+    this.promise = entry.promise
 
     if (isGovernment) {
-        this._enactGovernment(now, message)
+        this.scheduler.clear()
+
+        assert(Monotonic.compare(this.government.promise, entry.promise) < 0, 'governments out of order')
+
+        this.government = entry.body
+
+        this._writer = this._writer.createWriter(entry.promise)
+        this._recorder = this._recorder.createRecorder(entry.promise)
+        this._shaper = this._shaper.createShaper(this)
+
+        if (this.government.exile) {
+            // TODO Remove! Fall back to a peek at exile.
+            delete this.pings[this.government.exile.id]
+        } else if (this.government.immigrate && this.government.majority[0] == this.id) {
+            this._shaper.immigrated(this.government.immigrate.id)
+        }
+
+        if (this.id != this.government.majority[0]) {
+            this.proposals.length = 0
+        }
+
+    // TODO Decide on whether this is calculated here or as needed.
+        this.parliament = this.government.majority.concat(this.government.minority)
+
+        constituency(this.government, this.id, this)
+
+        assert(!this.constituency.length || this.constituency[0] != null)
+        this.scheduler.clear()
+        if (this.government.majority[0] == this.id && this.government.majority.length != 1) {
+            this.scheduler.schedule(now + this.ping, this.id, {
+                module: 'paxos',
+                method: 'keepAlive',
+                body: null
+            })
+        } else if (~this.government.majority.slice(1).indexOf(this.id)) {
+            this.scheduler.schedule(now + this.timeout, this.id, {
+                module: 'paxos',
+                method: 'collapse',
+                body: null
+            })
+        }
+
+        // Reset ping tracking information. Leader behavior is different from other
+        // members. We clear out all ping information for ping who are not our
+        // immediate constituents. This will keep us from hoarding stale ping
+        // records. When everyone performs this cleaning, we can then trust
+        // ourselves to return all ping information we've gathered to anyone that
+        // pings us, knowing that it is all flowing from minority members to the
+        // leader. We do not have to version the records, timestamp them, etc.
+        //
+        // If we didn't clear them out, then a stale record for a citizen can be
+        // held onto by a majority member. If the minority member that pings the
+        // citizen is no longer downstream from the majority member, that stale
+        // record will not get updated, but it will be reported to the leader.
+        //
+        // We keep ping information if we are the leader, since it all flows back to
+        // the leader. All leader information will soon be updated. Not resetting
+        // the leader during normal operation makes adjustments to citizenship go
+        // faster.
+        this.citizens = this.government.majority
+                            .concat(this.government.minority)
+                            .concat(this.government.constituents)
         var pinger = new Pinger(this, this._shaper)
         pinger.ingest(now, this._pinger, this.constituency)
         this._pinger = pinger
-        this._pinger.update(now, this.id, { naturalized: this.naturalized, committed: message.promise })
+        this._pinger.update(now, this.id, { naturalized: this.naturalized, committed: entry.promise })
     }
 
     this.log.push({
         module: 'paxos',
         method: isGovernment ? 'government' : 'entry',
-        promise: message.promise,
-        previous: max.promise,
-        body: message.body
+        promise: entry.promise,
+        body: entry.body,
+        previous: max.promise
     })
 
-    for (var i = 0, id; (id = this.constituency[i]) != null; i++) {
-        this.scheduler.schedule(now, id, { module: 'paxos', method: 'ping', body: null })
+    // Notify our constituents of a new update.
+
+    // TODO This is my we give the leader a zero constituency. Why did we change
+    // it to point to the remainder of the majority?
+
+    // TODO Recall that we're not going to continue to ping our constituents
+    // when it comes time to conduct an assembly, so we'll ping, but not update
+    // the constituency.
+    if (this.id != this.government.majority[0] || this.government.majority.length == 1) {
+        for (var i = 0, id; (id = this.constituency[i]) != null; i++) {
+            this.scheduler.schedule(now, id, { module: 'paxos', method: 'ping', body: null })
+        }
     }
-}
-
-// Majority updates minority. Minority updates constituents. If there is
-// no minority, then the majority updates constituents.
-
-//
-Paxos.prototype._enactGovernment = function (now, round) {
-    this.scheduler.clear()
-
-    assert(Monotonic.compare(this.government.promise, round.promise) < 0, 'governments out of order')
-
-    this.government = JSON.parse(JSON.stringify(round.body))
-
-    this._writer = this._writer.createWriter(round.promise)
-    this._recorder = this._recorder.createRecorder(round.promise)
-    this._shaper = this._shaper.createShaper(this)
-
-    if (this.government.exile) {
-        // TODO Remove! Fall back to a peek at exile.
-        delete this.pings[this.government.exile.id]
-    } else if (this.government.immigrate && this.government.majority[0] == this.id) {
-        this._shaper.immigrated(this.government.immigrate.id)
-    }
-
-    if (this.id != this.government.majority[0]) {
-        this.proposals.length = 0
-    }
-
-// TODO Decide on whether this is calculated here or as needed.
-    this.parliament = this.government.majority.concat(this.government.minority)
-
-    constituency(this.government, this.id, this)
-
-    assert(!this.constituency.length || this.constituency[0] != null)
-    this.scheduler.clear()
-    if (this.government.majority[0] == this.id && this.government.majority.length != 1) {
-        this.scheduler.schedule(now + this.ping, this.id, {
-            module: 'paxos',
-            method: 'keepAlive',
-            body: null
-        })
-    } else if (~this.government.majority.slice(1).indexOf(this.id)) {
-        this.scheduler.schedule(now + this.timeout, this.id, {
-            module: 'paxos',
-            method: 'collapse',
-            body: null
-        })
-    }
-
-    // Reset ping tracking information. Leader behavior is different from other
-    // members. We clear out all ping information for ping who are not our
-    // immediate constituents. This will keep us from hoarding stale ping
-    // records. When everyone performs this cleaning, we can then trust
-    // ourselves to return all ping information we've gathered to anyone that
-    // pings us, knowing that it is all flowing from minority members to the
-    // leader. We do not have to version the records, timestamp them, etc.
-    //
-    // If we didn't clear them out, then a stale record for a citizen can be
-    // held onto by a majority member. If the minority member that pings the
-    // citizen is no longer downstream from the majority member, that stale
-    // record will not get updated, but it will be reported to the leader.
-    //
-    // We keep ping information if we are the leader, since it all flows back to
-    // the leader. All leader information will soon be updated. Not resetting
-    // the leader during normal operation makes adjustments to citizenship go
-    // faster.
-    this.citizens = this.government.majority
-                        .concat(this.government.minority)
-                        .concat(this.government.constituents)
 }
 
 module.exports = Paxos
