@@ -102,13 +102,17 @@ Network.prototype.send = function () {
 
 Network.prototype.getRequests = function () {
     var vargs = Array.prototype.slice.call(arguments)
+    if ((typeof (vargs[0] || '')) != 'object') {
+        vargs.unshift({})
+    }
+    var response = vargs.shift()
     if (vargs.filter(function (id) { return /^\d+$/.test(id) }).length == 0) {
         vargs.push.apply(vargs, Object.keys(this.denizens))
     }
     if (vargs.filter(function (id) { return ! /^\d+$/.test(id) }).length == 0) {
         vargs.push('events', 'outbox')
     }
-    var requests = {}
+    var requests = Array.isArray(response) ? {} : response
     vargs.filter(function (id) {
         return this.denizens[id]
     }.bind(this)).map(function (id) {
@@ -118,7 +122,7 @@ Network.prototype.getRequests = function () {
             denizen.scheduler.check(this.time)
         }
         var request
-        requests[denizen.id] = []
+        requests[denizen.id] = Array.isArray(response) ? response : []
         if (~vargs.indexOf('outbox')) {
             while ((request = denizen.shifter.shift()) != null) {
                 var responses = {}
@@ -133,7 +137,7 @@ Network.prototype.getRequests = function () {
             }
         }
     }.bind(this))
-    return requests
+    return response
 }
 
 Network.prototype.timeAndTick = function (count) {
