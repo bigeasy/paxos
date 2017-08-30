@@ -9,7 +9,7 @@ module.exports = function (government, id, paxos) {
             paxos.representative = government.majority[0]
         }
     } else if (government.majority[0] == id) {
-        paxos.constituency = government.majority.slice(1)
+        paxos.constituency = []
         paxos.representative = null
     } else {
         var majority = government.majority.slice(1)

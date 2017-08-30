@@ -284,9 +284,6 @@ Paxos.prototype._scheduleAssembly = function (now, retry) {
     this.scheduler.schedule(now + delay, this.id, { method: 'assembly', body: null })
 }
 
-Paxos.prototype._whenAssembly = function (now) {
-}
-
 // Determine the minimum log entry promise.
 //
 // You might feel a need to guard this so that only the leader runs it, but it
@@ -353,7 +350,7 @@ Paxos.prototype.event = function (envelope) {
                 this.scheduler.schedule(now, id, {
                     module: 'paxos',
                     method: 'ping',
-                    body: { method: 'collpase' }
+                    body: null
                 })
             }, this)
         break
@@ -742,6 +739,7 @@ Paxos.prototype._enact = function (now, entry) {
         assert(Monotonic.compare(this.government.promise, entry.promise) < 0, 'governments out of order')
 
         this.government = entry.body
+        console.log(this.government)
 
         this._writer = this._writer.createWriter(entry.promise)
         this._recorder = this._recorder.createRecorder(entry.promise)
@@ -763,7 +761,6 @@ Paxos.prototype._enact = function (now, entry) {
 
         constituency(this.government, this.id, this)
 
-        assert(!this.constituency.length || this.constituency[0] != null)
         this.scheduler.clear()
         if (this.government.majority[0] == this.id && this.government.majority.length != 1) {
             this.scheduler.schedule(now + this.ping, this.id, {
@@ -799,10 +796,7 @@ Paxos.prototype._enact = function (now, entry) {
         this.citizens = this.government.majority
                             .concat(this.government.minority)
                             .concat(this.government.constituents)
-        var pinger = new Pinger(this, this._shaper)
-        pinger.ingest(now, this._pinger, this.constituency)
-        this._pinger = pinger
-        this._pinger.update(now, this.id, { naturalized: this.naturalized, committed: entry.promise })
+        this._pinger = this._pinger.createPinger(now, this, this._shaper)
     }
 
     this.log.push({
@@ -821,7 +815,12 @@ Paxos.prototype._enact = function (now, entry) {
     // TODO Recall that we're not going to continue to ping our constituents
     // when it comes time to conduct an assembly, so we'll ping, but not update
     // the constituency.
-    if (this.id != this.government.majority[0] || this.government.majority.length == 1) {
+    if (
+        this.id == this.government.majority[0] &&
+        this.government.majority.length != 1 &&
+        true /* if there is no proposal that will cause a sync */
+    ) {
+    } else {
         for (var i = 0, id; (id = this.constituency[i]) != null; i++) {
             this.scheduler.schedule(now, id, { module: 'paxos', method: 'ping', body: null })
         }

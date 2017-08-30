@@ -66,4 +66,23 @@ Pinger.prototype.update = function (now, id, sync) {
     }
 }
 
+Pinger.prototype.createPinger = function (now, paxos, shaper) {
+    var pinger = new Pinger(paxos, shaper)
+    var constituency = paxos.government.majority[0] == paxos.id && paxos.constituency.length != 1
+                     ? paxos.government.majority.slice(1)
+                     : paxos.constituency
+    pinger.update(now, paxos.id, { naturalized: paxos.naturalized, committed: paxos.government.promise })
+    for (var i = 0, constituent; (constituent = constituency[i]) != null; i++) {
+        var ping = this.pings[constituent]
+        if (ping != null) {
+            if (ping.when == null) {
+                pinger.update(now, constituent, ping)
+            } else {
+                pinger.update(ping.when, constituent, null)
+            }
+        }
+    }
+    return pinger
+}
+
 module.exports = Pinger

@@ -24,7 +24,7 @@ function prove (okay) {
         constituents: [ '5', '6' ]
     }
     okay(constituency(government, '0', {}), {
-        constituency: [ '1', '2' ],
+        constituency: [],
         representative: null
     }, 'leader constituents')
     okay(constituency(government, '1', {}), {
