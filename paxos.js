@@ -669,11 +669,15 @@ Paxos.prototype._enact = function (now, entry) {
 
     // We already have this entry. The value is invariant, so let's assert that
     // the given value matches the one we have.
+
+    //
     if (Monotonic.compare(max.promise, entry.promise) >= 0) {
         // Difficult to see how we could get here and not have a copy of the
         // message in our log. If we received a delayed sync message that has
         // commits that precede our minimum, seems like it would have been
         // rejected at entry, the committed versions would be off.
+
+        //
         if (Monotonic.compare(this.minimum, entry.promise) <= 0) {
             departure.raise(this._findRound(entry.promise).body.body, entry.body)
         } else {
@@ -700,21 +704,22 @@ Paxos.prototype._enact = function (now, entry) {
         return
     }
 
-    var valid = max.promise != '0/0'
+    if (max.promise == '0/0') {
+        // If we are immigrating or bootstrapping we ensure that we're starting
+        // with the the entry that announces our immigration. Otherwise we may
+        // have lost an immigration race condition.
+        if (
+            !Monotonic.isBoundary(entry.promise, 0) ||
+            entry.body.immigrate == null ||
+            entry.body.immigrate.id != this.id ||
+            entry.body.immigrate.cookie != this.cookie
+        ) {
+            return
+        }
+    } else {
+        // Otherwise, we assert that entry has a correct previous promise.
 
-    if (!valid) {
-        // assert(this.log.size == 1)
-        valid = Monotonic.isBoundary(entry.promise, 0)
-        valid = valid && this.log.trailer.peek().promise == '0/0'
-        valid = valid && entry.body.immigrate
-        valid = valid && entry.body.immigrate.id == this.id
-        valid = valid && entry.body.immigrate.cookie == this.cookie
-    }
-
-    if (!valid) {
-        // TODO We can see failure when the returned max is still 0/0.
-        pulse.failed = true
-        return
+        //
     }
 
     var isGovernment = Monotonic.isBoundary(entry.promise, 0)
