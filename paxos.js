@@ -220,13 +220,7 @@ Paxos.prototype._stuffSynchronize = function (pings, sync, count) {
     } else if (ping.committed == '0/0') {
         iterator = this.log.trailer.node.next
         for (;;) {
-// TODO This will abend if the naturalization falls off the end end of the log.
-// You need to check for gaps and missing naturalizations and then timeout the
-// constituents that will never be connected.
-            if (iterator == null) {
-                return false
-            }
-            // assert(round, 'cannot find immigration')
+            assert(iterator != null, 'immigration missing')
             if (Monotonic.isBoundary(iterator.body.promise, 0)) {
                 var immigrate = iterator.body.body.immigrate
                 if (immigrate && immigrate.id == ping.id) {
@@ -236,14 +230,7 @@ Paxos.prototype._stuffSynchronize = function (pings, sync, count) {
             iterator = iterator.next
         }
     } else {
-        // If our minimum promise is greater than the most decided promise for
-        // the contituent then our ping record for the constituent is out of
-        // date.
-        if (Monotonic.compare(ping.committed, this.minimum) < 0) {
-            return false
-        }
-
-// TODO Got a read property of null here.
+        assert(Monotonic.compare(ping.committed, this.minimum) >= 0, 'minimum breached')
         iterator = this._findRound(ping.committed).next
     }
 
