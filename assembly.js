@@ -18,6 +18,8 @@ function Assembly (government) {
     this._government = government
     this._reachable = []
     this.collapsed = true
+    this._immigrating = []
+    this._representative = null
 }
 
 // We assume that update will be called first with the id of this citzen and

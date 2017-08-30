@@ -31,6 +31,7 @@ var Writer = require('./writer')
 var Recorder = require('./recorder')
 
 var Pinger = require('./pinger')
+var Relay = require('./relay')
 
 var departure = require('departure')
 var constituency = require('./constituency')
@@ -743,11 +744,28 @@ Paxos.prototype._enact = function (now, entry) {
         assert(Monotonic.compare(this.government.promise, entry.promise) < 0, 'governments out of order')
 
         this.government = entry.body
-        console.log(this.government)
+
+        constituency(this.government, this.id, this)
 
         this._writer = this._writer.createWriter(entry.promise)
         this._recorder = this._recorder.createRecorder(entry.promise)
-        this._shaper = this._shaper.createShaper(this)
+
+        var shaper
+        if (this.id == this.government.majority[0]) {
+            shaper = new Shaper(this.parliamentSize, this.government)
+            for (var i = 0, immigration; (immigration = this._shaper._immigrating[i]) != null; i++) {
+                shaper.immigrate(immigration)
+            }
+        } else {
+            var representative = this.government.promise[this.representative]
+            if (representative != this._shaper._representative) {
+                shaper = new Relay(representative)
+            } else {
+                shaper = this._shaper
+            }
+        }
+
+        this._shaper = shaper
 
         if (this.government.exile) {
             // TODO Remove! Fall back to a peek at exile.
@@ -762,8 +780,6 @@ Paxos.prototype._enact = function (now, entry) {
 
     // TODO Decide on whether this is calculated here or as needed.
         this.parliament = this.government.majority.concat(this.government.minority)
-
-        constituency(this.government, this.id, this)
 
         this.scheduler.clear()
         if (this.government.majority[0] == this.id && this.government.majority.length != 1) {

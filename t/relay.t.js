@@ -3,7 +3,6 @@ require('proof')(3, prove)
 function prove (okay) {
     var Relay = require('../relay')
     var relay = new Relay('0/0')
-    relay = relay.createRelay('1/0').createRelay('1/0')
 
     relay.update('1', true, '1/0')
     relay.update('2', true, '1/0')

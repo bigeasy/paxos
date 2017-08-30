@@ -69,17 +69,4 @@ Relay.prototype.update = function (name, reachable, committed) {
     }
 }
 
-// As noted above in the constructor, we use the representative's immigration
-// promise instead of it's name to uniquely identify it. If we have a new
-// representative we will replace ourselves with a new `Relay` to reset our sent
-// state.
-
-//
-Relay.prototype.createRelay = function (representative) {
-    if (representative == this._representative) {
-        return this
-    }
-    return new Relay(representative)
-}
-
 module.exports = Relay
