@@ -274,6 +274,9 @@ Paxos.prototype._collapse = function (now) {
 // Note that even if the PNRG where not determinsitic, it wouldn't matter during
 // replay because the delay is lost and the actual timer event is recorded.
 
+// TODO Convince yourself that the above is true and the come back and replace
+// this PRNG with `Math.rand()`.
+
 //
 Paxos.prototype._scheduleAssembly = function (now, retry) {
     var delay = 0
