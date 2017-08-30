@@ -287,32 +287,6 @@ Paxos.prototype._scheduleAssembly = function (now, retry) {
     this.scheduler.schedule(now + delay, this.id, { method: 'assembly', body: null })
 }
 
-// Determine the minimum log entry promise.
-//
-// You might feel a need to guard this so that only the leader runs it, but it
-// works of anyone runs it. If they have a ping for every citizen, they'll
-// calculate a minimum less than or equal to the minimum calculated by the
-// actual leader. If not they do not have a ping record for every citizen,
-// they'll continue to use their current minimum.
-//
-// Would rather this was on object that was updated only when we got ping
-// information back.
-
-//
-Paxos.prototype._minimize = function () {
-    var minimum = this.log.head.body.promise
-    for (var i = 0, citizen; (citizen = this.citizens[i]) != null; i++) {
-        var ping = this._pinger.pings[citizen]
-        if (ping == null || ping.committed == null) {
-            return
-        }
-        if (Monotonic.compare(ping.committed, minimum) < 0) {
-            minimum = ping.committed
-        }
-    }
-    this.minimum = minimum
-}
-
 Paxos.prototype.event = function (envelope) {
     if (envelope.module != 'happenstance' || envelope.method != 'event') {
         return
@@ -649,7 +623,29 @@ Paxos.prototype.response = function (now, request, responses) {
         this._writer.response(now, request, responses, failed ? promise : null)
     }
 
-    this._minimize()
+    // Determine the minimum log entry promise.
+    //
+    // You might feel a need to guard this so that only the leader runs it, but
+    // it works of anyone runs it. If they have a ping for every citizen,
+    // they'll calculate a minimum less than or equal to the minimum calculated
+    // by the actual leader. If not they do not have a ping record for every
+    // citizen, they'll continue to use their current minimum.
+    //
+    // Would rather this was on object that was updated only when we got ping
+    // information back.
+
+    //
+    var minimum = this.log.head.body.promise
+    for (var i = 0, citizen; (citizen = this.citizens[i]) != null; i++) {
+        var ping = this._pinger.pings[citizen]
+        if (ping == null || ping.committed == null) {
+            return
+        }
+        if (Monotonic.compare(ping.committed, minimum) < 0) {
+            minimum = ping.committed
+        }
+    }
+    this.minimum = minimum
 }
 
 Paxos.prototype._commit = function (now, entry) {
