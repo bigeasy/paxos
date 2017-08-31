@@ -28,6 +28,10 @@ function Assembly (government) {
 
 //
 Assembly.prototype.update = function (id, reachable) {
+    if (!~this._government.majority.concat(this._government.minority).indexOf(id)) {
+        return
+    }
+
     if (reachable) {
         // If we are reachable add the id if it hasn't already been added.
         if (!~this._reachable.indexOf(id)) {

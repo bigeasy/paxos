@@ -8,7 +8,14 @@ function Proposer (paxos, promise) {
     this._paxos = paxos
     this.version = [ promise, this.collapsed = true ]
     this.promise = Monotonic.increment(promise, 0)
-    this.previous = null
+    this.register = {
+        body: {
+            promise: paxos.log.head.body.promise,
+            body: paxos.log.head.body.body,
+            previous: paxos.log.head.body.previous
+        },
+        previous: null
+    }
     this.proposal = null
 }
 
@@ -25,13 +32,12 @@ Proposer.prototype.prepare = function (now) {
         method: 'prepare',
         version: this.version,
         to: this.proposal.quorum,
-        sync: [],
         promise: this.promise
     })
 }
 
 function getPromise (object) {
-    return object == null ? '0/0' : object.promise
+    return object == null ? '0/0' : object.body.promise
 }
 
 // TODO Allow assembly to update promise?
@@ -43,26 +49,25 @@ Proposer.prototype.response = function (now, request, responses, promise) {
         break
     case 'prepare':
         for (var id in responses) {
-            if (Monotonic.compare(getPromise(this.previous), getPromise(responses[id].register)) < 0) {
-                this.previous = responses[id].register
+            if (Monotonic.compare(getPromise(this.register), getPromise(responses[id].register)) < 0) {
+                this.register = responses[id].register
             }
         }
+        this.proposal.body.promise = request.promise
         this._paxos._send({
             method: 'accept',
             version: this.version,
             to: this.proposal.quorum,
-            sync: [],
-            promise: this.promise,
-            body: this.proposal.body,
-            previous: this.previous
+            body: {
+                promise: request.promise,
+                body: this.proposal.body,
+                previous: this.register.body.promise
+            },
+            previous: this.register
         })
         break
     case 'accept':
-        this._paxos._commit(now, {
-            promise: this.promise,
-            body: this.proposal.body,
-            previous: this.previous
-        })
+        this._paxos._commit(now, request)
         this._paxos.newGovernment(now, this.proposal.body.majority, {
             majority: this.proposal.body.majority,
             minority: this.proposal.body.minority

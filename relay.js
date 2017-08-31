@@ -11,7 +11,7 @@
 function Relay (representative) {
     this._representative = representative
     this.outbox = {}
-    this._sent = {}
+    this._seen = {}
 }
 
 // Our outbox is sent on the ride back from a request. We are the constituent,
@@ -39,7 +39,6 @@ Relay.prototype.received = function (receipt) {
             this.outbox[name].reachable == receipt[name].reachable &&
             this.outbox[name].committed == receipt[name].committed
         ) {
-            this._sent[name] = this.outbox[name]
             delete this.outbox[name]
         }
     }
@@ -54,19 +53,19 @@ Relay.prototype.update = function (name, reachable, committed) {
     if (
         // We always update our outbox if we nothing going on at all.
         (
-            this._sent[name] == null && this.outbox[name] == null
+            this._seen[name] == null
         ) ||
-        // Otherwise if the denizen is currently reachable reachable, then we
-        // update our state if the denizen is now unreachable or if its
-        // maximum committed promise has changed.
+        // Otherwise if the denizen is currently reachable, then we update our
+        // state if the denizen is now unreachable or if its maximum committed
+        // promise has changed.
         (
-            (this.outbox[name] || this._sent[name]).reachable
-            &&
-            (!reachable || this._sent[name].committed != committed)
+            this._seen[name].reachable &&
+            (!reachable || this._seen[name].committed != committed)
         )
     ) {
-        this.outbox[name] = { reachable: reachable, committed: committed }
+        this._seen[name] = this.outbox[name] = { reachable: reachable, committed: committed }
     }
+    return null
 }
 
 module.exports = Relay

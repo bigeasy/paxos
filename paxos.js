@@ -108,7 +108,6 @@ function Paxos (now, republic, id, options) {
     }
 
     this._promised = null
-    this.promise = '0/0'
 
 // TODO Randomly adjust election retry by a percentage. Randomly half or
 // randomly half as much again.
@@ -130,12 +129,14 @@ function Paxos (now, republic, id, options) {
     // TODO So, does it matter if the user nevers sees `0/0`?
     this.log.push({
         module: 'paxos',
+        method: 'government',
         promise: '0/0',
-        body: this.government
+        body: this.government,
+        previous: null
     })
 
     this._writer = new Writer(this, '1/0')
-    this._recorder = new Recorder(this, '1/0')
+    this._recorder = new Recorder(this, this.log.head.body)
     this._shaper = new Shaper(this.parliamentSize, this.government)
 
     this._seed = 2147483647
@@ -150,10 +151,10 @@ function Paxos (now, republic, id, options) {
 // government we hope to have someday, which offends my pragmatic sensibilities.
 
 //
-Paxos.prototype.newGovernment = function (now, quorum, government, promise) {
+Paxos.prototype.newGovernment = function (now, quorum, government) {
     this._shaper.decided = true
     assert(!government.constituents)
-    promise = Monotonic.increment(this.promise, 0)
+    var promise = Monotonic.increment(this.government.promise, 0)
     government.constituents = Object.keys(this.government.properties).sort().filter(function (citizen) {
         return !~government.majority.indexOf(citizen)
             && !~government.minority.indexOf(citizen)
@@ -231,6 +232,7 @@ Paxos.prototype._stuffSynchronize = function (pings, sync, count) {
         }
     } else {
         assert(Monotonic.compare(ping.committed, this.minimum) >= 0, 'minimum breached')
+        assert(Monotonic.compare(ping.committed, this.log.head.body.promise) <= 0, 'maximum breached')
         iterator = this._findRound(ping.committed).next
     }
 
@@ -238,7 +240,7 @@ Paxos.prototype._stuffSynchronize = function (pings, sync, count) {
         sync.commits.push({
             promise: iterator.body.promise,
             body: iterator.body.body,
-            previous: null
+            previous: iterator.body.previous
         })
         iterator = iterator.next
     }
@@ -255,7 +257,7 @@ Paxos.prototype._collapse = function (now) {
     this.scheduler.clear()
 
     // TODO Really need to have the value for previous, which is the writer register.
-    this._writer = new Proposer(this, this.promise)
+    this._writer = new Proposer(this, this.government.promise)
     this._scheduleAssembly(now, false)
 }
 
@@ -281,18 +283,12 @@ Paxos.prototype.event = function (envelope) {
     }
     var now = envelope.now
     switch (envelope.body.method) {
-    case 'ping':
+    case 'synchronize':
         this._send({
             method: 'synchronize',
-            to: [ envelope.key ],
-            sync: null
-        })
-        break
-    case 'keepAlive':
-        this._send({
-            method: 'synchronize',
-            to: this.government.majority,
-            sync: null
+            version: this.government.promise,
+            to: envelope.body.to,
+            key: envelope.key
         })
         break
     case 'assembly':
@@ -312,11 +308,7 @@ Paxos.prototype.event = function (envelope) {
             .filter(function (id) {
                 return id != this.id
             }.bind(this)).forEach(function (id) {
-                this.scheduler.schedule(now, id, {
-                    module: 'paxos',
-                    method: 'ping',
-                    body: null
-                })
+                this.scheduler.schedule(now, id, { method: 'synchronize', to: [ id ] })
             }, this)
         break
     case 'collapse':
@@ -325,8 +317,8 @@ Paxos.prototype.event = function (envelope) {
     }
 }
 
-Paxos.prototype._send = function (request) {
-    request.sync = {
+Paxos.prototype._send = function (message) {
+    var sync = {
         from: this.id,
         minimum: this.minimum,
         committed: this.log.head.body.promise,
@@ -334,11 +326,13 @@ Paxos.prototype._send = function (request) {
         commits: []
     }
     var pings = []
-    for (var i = 0, to; (to = request.to[i]) != null; i++) {
+    for (var i = 0, to; (to = message.to[i]) != null; i++) {
+        // TODO Any event races? Make synchronize benign and probably not.
+        this.scheduler.unschedule(to)
         pings.push(this._pinger.getPing(to))
     }
-    this._stuffSynchronize(pings, request.sync, 20)
-    this.outbox.push(request)
+    this._stuffSynchronize(pings, sync, 20)
+    this.outbox.push({ message: message, sync: sync })
 }
 
 Paxos.prototype.bootstrap = function (now, properties) {
@@ -364,7 +358,7 @@ Paxos.prototype.bootstrap = function (now, properties) {
 
     this._shaper.immigrate({ id: this.id, cookie: 0 })
 
-    this._enact(now, { promise: '1/0', body: government })
+    this._enact(now, { promise: '1/0', body: government, previous: '0/0' })
 }
 
 Paxos.prototype.naturalize = function () {
@@ -510,6 +504,7 @@ Paxos.prototype.request = function (now, request) {
     // TODO Reject if it is the wrong republic.
     // TODO Reject if it a message from an exile, wrong id and cookie.
     var sync = {
+        method: 'respond',
         from: this.id,
         naturalized: this.naturalized,
         minimum: this.minimum,
@@ -520,17 +515,17 @@ Paxos.prototype.request = function (now, request) {
 
     if (Monotonic.compare(request.sync.committed, sync.committed) < 0) {
         // We are ahead of the bozo trying to update us, so update him back.
-        this._stuffSynchronize(now, sync, sync, 20)
-        return { method: 'reject', promise: sync.committed, sync: sync }
+        this._stuffSynchronize([ request.sync ], sync, 20)
+        return { message: { method: 'reject', promise: sync.committed }, sync: sync }
     }
 
     // Sync.
     for (var i = 0, commit; (commit = request.sync.commits[i]) != null; i++) {
-        this._commit(now, commit)
+        this._enact(now, commit)
     }
 
     // We don't want to advance the minimum if we have no items yet.
-    if (this.log.head.body.body.promise != '0/0') {
+    if (this.log.head.body.promise != '0/0') {
         while (Monotonic.compare(this.log.trailer.peek().promise, request.sync.minimum) < 0) {
             this.log.trailer.shift()
         }
@@ -539,54 +534,99 @@ Paxos.prototype.request = function (now, request) {
         }
     }
 
-    if (request.method == 'synchronize') {
-        return { sync: sync }
+    if (~this.government.majority.slice(1).indexOf(this.id)) {
+        this.scheduler.schedule(now + this.timeout, this.id, {
+            module: 'paxos',
+            method: 'collapse',
+            body: null
+        })
     }
 
-    return this._recorder.request(now, request, sync)
+    if (request.message.method == 'synchronize') {
+        return { message: { method: 'respond', promise: sync.committed }, sync: sync }
+    }
+
+    return { message: this._recorder.request(now, request.message), sync: sync }
 }
 
 Paxos.prototype.response = function (now, request, responses) {
-    // TODO So much error handling, can we please reused rejected a lot?
-    // If anyone we tried to update is ahead of us, we learn from them.
-    var failed = false
-    for (var i = 0, I = request.to.length; i < I; i++) {
-        var response = responses[request.to[i]]
+    var failed = false, promise = '0/0'
+
+    // Go through responses converting network errors to reject messaages and
+    // syncing any commits that where pushed back to us.
+
+    //
+    for (var i = 0, I = request.message.to.length; i < I; i++) {
+        var response = responses[request.message.to[i]]
         if (response == null) {
             failed = true
-            responses[request.to[i]] = { method: 'reject', promise: '0/0', sync: { committed: null } }
-            this._pinger.update(now, request.to[i], null)
+            responses[request.message.to[i]] = response = {
+                message: { method: 'reject', promise: '0/0' },
+                sync: { committed: null }
+            }
+            this._pinger.update(now, request.message.to[i], null)
         } else {
-            this._pinger.update(now, request.to[i], response.sync)
-            for (var j = 0, commit; (commit = response.sync.commits[j]) != null; i++) {
-                this._commit(commit)
+            this._pinger.update(now, request.message.to[i], response.sync)
+            for (var j = 0, commit; (commit = response.sync.commits[j]) != null; j++) {
+                this._enact(now, commit)
             }
         }
+        if (Monotonic.compare(promise, response.message.promise) < 0) {
+            promise = response.message.promise
+        }
     }
-    // TODO Probably run every time, probably always fails.
-    if (request.method == 'synchronize') {
+
+    // Here's were I'm using messages to drive the algorithm even when the
+    // information is available for recalcuation.
+    //
+    // There are two types of explicit synchronize. The leader will sync its log
+    // with its majority, other members of the government will sync with their
+    // constituents. With a majority sync, the leader will sync with all of the
+    // majority members at once, any one of them failing triggers a collapse.
+    //
+    // Consistuent synchronize messages are sent to each constituent
+    // individually.
+    //
+    // TODO This is new. Pings keep on going. When you start one it will
+    // perpetuate until the government is superceeded. If you want to
+    // synchronize before a ping, simply schedule the ping immediately. If there
+    // is an outstanding ping when you jump the gun, that's fine. Pings are
+    // pretty much always valid. Won't this duplicate mean you now have two ping
+    // intervals? No. The duplicate messaging will be reduced when the next ping
+    // gets scheduled because you can only have one scheduled per key.
+
+    //
+    if (request.message.method == 'synchronize') {
+        // Skip if this synchronization was submitted by an earlier government.
+        if (request.message.version != this.government.promise) {
+            return
+        }
+        // Immediately continue sync if our constituent is not completely
+        // synced. Note that majority members are never behind by more than one,
+        // so they always successfully sync. This is why we only check the first
+        // response, because only a constituent sync can fail to successfully
+        // sync. TODO How do we detect a failed immigration race again?
+        //
+        // Node that a `null` value for `committed` indicates a network timeout
+        // which is set above in the response refactoring.
         var delay = 0
         if (
-            ~([ null, this.log.head.body.promise ]).indexOf(responses[request.to[0]].sync.committed)
+            ~([ null, this.log.head.body.promise ]).indexOf(responses[request.message.to[0]].sync.committed)
         ) {
             delay = this.ping
         }
-        if (this.government.majority[0] == this.id && this.government.majority.length > 1) {
-            // TODO Uh, oh. Getting complicated.
-            if (!this._writer.collapsed) {
-                this.scheduler.schedule(now + delay, request.to[0], {
-                    module: 'paxos',
-                    method: 'keepAlive',
-                    body: null
-                })
-            }
-        } else {
-            this.scheduler.schedule(now + delay, request.to[0], {
-                module: 'paxos',
-                method: 'ping',
-                body: null
+
+        // Schedule the next synchronization.
+        if (
+            request.message.key != this.id ||
+            ! this._writer.collapsed
+        ) {
+            this.scheduler.schedule(now + delay, request.message.key, {
+                method: 'synchronize',
+                to: request.message.to
             })
         }
+
         return
     }
     // TODO If the recepient is at '0/0' and we attempted to synchronize it,
@@ -594,21 +634,11 @@ Paxos.prototype.response = function (now, request, responses) {
     // for exile.
 
     // Only handle a response if it was issued by our current writer/proposer.
-    if (request.version[0] == this._writer.version[0] && request.version[1] == this._writer.version[1]) {
-        var promise = '0/0', failed = false
-        for (var id in responses) {
-            if (responses[id] == null) {
-                failed = true
-            } else {
-                if (Monotonic.compare(promise, responses[id].promise) < 0) {
-                    promise = responses[id].promise
-                }
-                if (responses[id].method == 'reject') {
-                    failed = true
-                }
-            }
-        }
-        this._writer.response(now, request, responses, failed ? promise : null)
+    if (
+        request.message.version[0] == this._writer.version[0] &&
+        request.message.version[1] == this._writer.version[1]
+    ) {
+        this._writer.response(now, request.message, responses, failed ? promise : null)
     }
 
     // Determine the minimum log entry promise.
@@ -636,12 +666,14 @@ Paxos.prototype.response = function (now, request, responses) {
     this.minimum = minimum
 }
 
-Paxos.prototype._commit = function (now, entry) {
+Paxos.prototype._commit = function (now, register) {
     var entries = []
-    while (entry) {
-        entries.push({ promise: entry.promise, body: entry.body })
-        entry = entry.previous
+    while (register) {
+        entries.push(register.body)
+        register = register.previous
     }
+
+    entries.reverse()
 
     for (var i = 0, entry; (entry = entries[i]) != null; i++) {
         this._enact(now, entry)
@@ -705,8 +737,7 @@ Paxos.prototype._enact = function (now, entry) {
         }
     } else {
         // Otherwise, we assert that entry has a correct previous promise.
-
-        //
+        assert(max.promise == entry.previous, 'incorrect previous')
     }
 
     var isGovernment = Monotonic.isBoundary(entry.promise, 0)
@@ -716,14 +747,6 @@ Paxos.prototype._enact = function (now, entry) {
         previous: max.promise,
         next: entry.promise
     })
-
-// TODO How crufy are these log entries? What else is lying around in them?
-    max.next = entry
-    entry.previous = max.promise
-// Forever bombing out our latest promise.
-// TODO NOW BROKEN!!! Will befuddle our acceptor, cause it to delete itself
-// whiel still in process.
-    this.promise = entry.promise
 
     if (isGovernment) {
         this.scheduler.clear()
@@ -737,13 +760,18 @@ Paxos.prototype._enact = function (now, entry) {
         this._writer = this._writer.createWriter(entry.promise)
         this._recorder = this._recorder.createRecorder(entry.promise)
 
+        // Chose a strategy for handling pings.
         var shaper
         if (this.id == this.government.majority[0]) {
+            // If we are the leader, we are going to want to look for
+            // opportunities to change the shape of the government.
             shaper = new Shaper(this.parliamentSize, this.government)
             for (var i = 0, immigration; (immigration = this._shaper._immigrating[i]) != null; i++) {
                 shaper.immigrate(immigration)
             }
         } else {
+            // If we are a represenative we want to propagate our pings to the
+            // leader through our representative (which may be the leader.)
             var representative = this.government.promise[this.representative]
             if (representative != this._shaper._representative) {
                 shaper = new Relay(representative)
@@ -751,7 +779,6 @@ Paxos.prototype._enact = function (now, entry) {
                 shaper = this._shaper
             }
         }
-
         this._shaper = shaper
 
         if (this.government.exile) {
@@ -765,18 +792,8 @@ Paxos.prototype._enact = function (now, entry) {
             this.proposals.length = 0
         }
 
-    // TODO Decide on whether this is calculated here or as needed.
-        this.parliament = this.government.majority.concat(this.government.minority)
-
-        this.scheduler.clear()
-        if (this.government.majority[0] == this.id && this.government.majority.length != 1) {
+        if (~this.government.majority.indexOf(this.id)) {
             this.scheduler.schedule(now + this.ping, this.id, {
-                module: 'paxos',
-                method: 'keepAlive',
-                body: null
-            })
-        } else if (~this.government.majority.slice(1).indexOf(this.id)) {
-            this.scheduler.schedule(now + this.timeout, this.id, {
                 module: 'paxos',
                 method: 'collapse',
                 body: null
@@ -806,12 +823,13 @@ Paxos.prototype._enact = function (now, entry) {
         this._pinger = this._pinger.createPinger(now, this, this._shaper)
     }
 
+    assert(entry.previous, 'null previous')
     this.log.push({
         module: 'paxos',
         method: isGovernment ? 'government' : 'entry',
         promise: entry.promise,
         body: entry.body,
-        previous: max.promise
+        previous: entry.previous
     })
 
     // Notify our constituents of a new update.
@@ -822,14 +840,15 @@ Paxos.prototype._enact = function (now, entry) {
     // TODO Recall that we're not going to continue to ping our constituents
     // when it comes time to conduct an assembly, so we'll ping, but not update
     // the constituency.
+
+    // We count on our writer to set the final synchronize when we are the
+    // leader of a government that is not a dictatorship.
     if (
-        this.id == this.government.majority[0] &&
-        this.government.majority.length != 1 &&
-        true /* if there is no proposal that will cause a sync */
+        this.id != this.government.majority[0] ||
+        this.government.majority.length == 1
     ) {
-    } else {
         for (var i = 0, id; (id = this.constituency[i]) != null; i++) {
-            this.scheduler.schedule(now, id, { module: 'paxos', method: 'ping', body: null })
+            this.scheduler.schedule(now, id, { method: 'synchronize', to: [ id ] })
         }
     }
 }

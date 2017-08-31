@@ -6,7 +6,7 @@ function Writer (paxos, promise) {
     this._paxos = paxos
     this.version = [ promise, this.collapsed = false ]
     this.proposals = []
-    this._writing = []
+    this._writing = false
 }
 
 Writer.prototype.push = function (proposal) {
@@ -25,63 +25,43 @@ Writer.prototype.unshift = function (proposal) {
     })
 }
 
+Writer.prototype._send = function () {
+    var proposal = this.proposals.shift()
+    this._writing = true
+    this._paxos._send({
+        method: 'register',
+        version: this.version,
+        to: proposal.quorum,
+        register: {
+            body: {
+                promise: proposal.promise,
+                body: proposal.body,
+                previous: this._paxos.log.head.body.promise
+            },
+            previous: null
+        }
+    })
+}
+
 Writer.prototype.nudge = function () {
-    if (this._writing.length == 0 && this.proposals.length != 0) {
-        this._writing.push(this.proposals.shift())
-        this._unshifted = false
-        this._paxos._send({
-            method: 'write',
-            version: this.version,
-            to: this._writing[0].quorum,
-            messages: [{
-                method: 'write',
-                promise: this._writing[0].promise,
-                body: this._writing[0].body
-            }]
-        })
+    if (!this._writing && this.proposals.length != 0) {
+        this._send()
     }
 }
 
 Writer.prototype.response = function (now, request, responses, promise) {
     if (promise != null) {
         this._paxos.collapse(now)
-    } else for (var i = 0, message; message = request.messages[i]; i++) {
-        switch (message.method) {
-        case 'write':
-            var nextRequest = {
-                method: 'write',
-                version: this.version,
-                to: this._writing[0].quorum,
-                messages: [{ method: 'commit', promise: this._writing[0].promise }]
-            }
-            // The quorum might change.
-            //
-            // Also, we want to make sure we're working through thorugh
-            // government changes as quickly as possible without ordinary
-            // business in between. Imagine an impeachment, followed by exile,
-            // followed by shape change.
-            //
-            // Also, we want to complete immigration, clearing out the
-            // immigration record from the list of immigrants.
-            if (
-                this.proposals.length != 0 &&
-                !Monotonic.isBoundary(this._writing[0].promise, 0) &&
-                !Monotonic.isBoundary(this.proposals[0].promise, 0)
-            ) {
-                this._writing.push(this.proposals.shift())
-                this._unshifted = false
-                nextRequest.messages.push({
-                    method: 'write',
-                    promise: this._writing[1].promise,
-                    body: this._writing[1].body
-                })
-            }
-            this._paxos._send(nextRequest)
-            break
-        case 'commit':
-            this._writing.shift()
-            this.nudge()
-            break
+    } else if (request.method == 'register') {
+        this._paxos._commit(now, request.register)
+        this._writing = false
+        if (this.proposals.length == 0) {
+            this._paxos.scheduler.schedule(now, this._paxos.id, {
+                method: 'synchronize',
+                to: this._paxos.government.majority
+            })
+        } else {
+            this._send()
         }
     }
 }

@@ -1,4 +1,4 @@
-require('proof')(11, prove)
+require('proof')(12, prove)
 
 function prove (okay) {
     var Paxos = require('..'), denizen
@@ -121,11 +121,17 @@ function prove (okay) {
     network.denizens[0].enqueue(network.time, 1, 2)
     network.denizens[0].enqueue(network.time, 1, 3)
 
-    network.send()
+    network.failures[1] = null
 
-    console.log(shifter.peek())
+    network.send2('1')
+
+    network.send2()
+
+    okay(network.denizens[1].log.head.body.body, 3, 'enqueued')
 
     return
+
+    console.log(shifter.peek())
 
     network.populate(1)
 

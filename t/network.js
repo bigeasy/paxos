@@ -34,7 +34,7 @@ Network.prototype.request = function (envelope) {
 }
 
 Network.prototype.response = function (envelope) {
-    if (Object.keys(envelope.responses).length == envelope.request.to.length) {
+    if (Object.keys(envelope.responses).length == envelope.request.message.to.length) {
         this.denizens[envelope.from].response(this.time, envelope.request, envelope.responses)
     }
 }
@@ -126,7 +126,7 @@ Network.prototype.getRequests = function () {
         if (~vargs.indexOf('outbox')) {
             while ((request = denizen.shifter.shift()) != null) {
                 var responses = {}
-                request.to.forEach(function (to) {
+                request.message.to.forEach(function (to) {
                     requests[denizen.id].push({
                         request: request,
                         to: to,
