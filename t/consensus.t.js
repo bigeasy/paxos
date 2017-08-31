@@ -39,7 +39,7 @@ function prove (okay) {
 
     okay(network.denizens[0].immigrate(network.time, 1, '1', network.denizens[1].cookie, { location: '1' }).enqueued, 'immigrate')
 
-    network.send2()
+    network.intercept()
 
     okay(network.denizens[1].government, {
         majority: [ '0' ],
@@ -60,7 +60,7 @@ function prove (okay) {
 
     network.populate(1)
 
-    network.send2()
+    network.intercept()
 
     okay(network.denizens[2].government, {
         majority: [ '0', '1' ],
@@ -88,15 +88,15 @@ function prove (okay) {
 
     network.time++
 
-    network.send2('0')
+    network.fail(network.intercept({ one: [{ to: '1' }, { from: '1' }] }))
 
     network.time += 3
 
-    network.send2(1, '0')
+    network.fail(network.intercept(1, '0', { one: [{ to: '1' }, { from: '1' }] }))
 
     okay(!network.denizens[0].enqueue(network.time, 1, {}).enqueued, 'post collapsed')
 
-    network.send2('0')
+    network.fail(network.intercept('0', { one: [{ to: '1' }, { from: '1' }] }))
 
     okay(network.denizens[0].government, {
         majority: [ '0', '2' ],
@@ -123,9 +123,9 @@ function prove (okay) {
 
     network.failures[1] = null
 
-    network.send2('1')
+    network.intercept('1')
 
-    network.send2()
+    network.intercept()
 
     okay(network.denizens[1].log.head.body.body, 3, 'enqueued')
 
@@ -134,8 +134,6 @@ function prove (okay) {
     console.log(shifter.peek())
 
     network.populate(1)
-
-    console.log('here')
 
     okay(network.denizens[0].government, {
         majority: [ '0', '2' ],

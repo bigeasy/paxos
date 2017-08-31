@@ -1,5 +1,36 @@
 var Paxos = require('..')
 
+function subSubset (container, contained) {
+    if (typeof conatined != 'object') {
+        return container === contained
+    } else if (Array.isArray(contained)) {
+        if (!Array.isArray(container)) {
+            return false
+        }
+        if (contained.length > container.length) {
+            return false
+        }
+        for (var i = 0, j = 0, I = container.length, J = contained.length; i < I && j < J; i++) {
+            if (subSubset(container[i], contained[j])) {
+                j++
+            }
+        }
+        return j == contained.length
+    } else if (typeof container == 'object' && !Array.isArray(container)) {
+        return subset(container, contained)
+    }
+    return false
+}
+
+function subset (container, contained) {
+    for (var key in contained) {
+        if (!(key in container) || !subSubset(container[key], contained[key])) {
+            return false
+        }
+    }
+    return true
+}
+
 function Network () {
     this.denizens = []
     this.failures = []
@@ -48,6 +79,74 @@ function getFailure (failure, request) {
     default:
         return 'none'
     }
+}
+
+Network.prototype.fail = function (intercepted) {
+    for (var name in intercepted) {
+        while (intercepted[name].length != 0) {
+            var envelope = intercepted[name].shift()
+            envelope.responses[envelope.to] = null
+            this.response(envelope)
+        }
+    }
+}
+
+Network.prototype.intercept = function () {
+    var vargs = Array.prototype.slice.call(arguments)
+    var count = typeof vargs[0] == 'number' ? vargs.shift() : Infinity
+    var denizens = []
+    while (typeof vargs[0] == 'string') {
+        denizens.push(vargs.shift())
+    }
+    var messages = vargs.shift()
+    var matches = [], intercepted = {}
+    for (var name in messages) {
+        intercepted[name] = []
+        var interception = Array.isArray(messages[name]) ? messages[name].slice() : [ messages[name] ]
+        matches.push({
+            count: interception[0] == 'number' ? interception.shift() : 1,
+            subsets: interception
+        })
+    }
+    var sent = true
+    while (sent && count--) {
+        sent = false
+        for (var i = 0, denizen; (denizen = this.denizens[i]) != null; i++) {
+            if (denizens.length != 0 && !~denizens.indexOf(denizen.id)) {
+                continue
+            }
+            denizen.scheduler.check(this.time)
+            var request
+            while ((request = denizen.shifter.shift()) != null) {
+                sent = true
+                var responses = {}
+                for (var j = 0, to; (to = request.message.to[j]) != null; j++) {
+                    var envelope = {
+                        to: to,
+                        from: denizen.id,
+                        request: request,
+                        responses: responses
+                    }
+                    MATCH: for (var k = 0, match; (match = matches[k]) != null; k++) {
+                        for (var l = 0, L = match.subsets.length; l < L; l++) {
+                            if (subset(envelope, match.subsets[l])) {
+                                match.count = Math.max(0, match.count - 1)
+                                if (match.count == 0) {
+                                    intercepted[name].push(envelope)
+                                    break MATCH
+                                }
+                            }
+                        }
+                    }
+                    if (k == matches.length) {
+                        this.request(envelope)
+                    }
+                }
+                this.response(envelope)
+            }
+        }
+    }
+    return intercepted
 }
 
 Network.prototype.send2 = function () {
