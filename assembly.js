@@ -76,8 +76,4 @@ Assembly.prototype.update = function (id, reachable) {
     return null
 }
 
-Assembly.prototype.createShaper = function (paxos) {
-    return new Shaper(paxos.parliamentSize, paxos.government)
-}
-
 module.exports = Assembly
