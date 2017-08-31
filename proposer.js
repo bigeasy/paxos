@@ -8,6 +8,7 @@ function Proposer (paxos, promise) {
     this._paxos = paxos
     this.version = [ promise, this.collapsed = true ]
     this.promise = Monotonic.increment(promise, 0)
+    this.proposals = []
     this.register = {
         body: {
             promise: paxos.log.head.body.promise,

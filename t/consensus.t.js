@@ -1,4 +1,4 @@
-require('proof')(12, prove)
+require('proof')(14, prove)
 
 function prove (okay) {
     var Paxos = require('..'), denizen
@@ -84,8 +84,6 @@ function prove (okay) {
 
     okay(!network.denizens[1].immigrate(network.time, 1, '4', 0, { location: '4' }).enqueued, 'immigrate not leader')
 
-    network.failures[1] = 'isolate'
-
     network.time++
 
     network.intercept([ '1' ])
@@ -121,19 +119,31 @@ function prove (okay) {
     network.denizens[0].enqueue(network.time, 1, 2)
     network.denizens[0].enqueue(network.time, 1, 3)
 
-    network.failures[1] = null
-
     network.intercept('1')
+
+    network.populate(1)
+
+    shifter.join(function (envelope) {
+        return envelope.method == 'government'
+    }, function (error, envelope) {
+        if (error) throw error
+        okay({
+            promise: envelope.body.promise,
+            map: envelope.body.map
+        }, {
+            promise: '7/0',
+            map: { '6/2': '7/1', '6/3': '7/2' }
+        }, 'remap')
+    })
 
     network.intercept()
 
     okay(network.denizens[1].log.head.body.body, 3, 'enqueued')
+    okay(network.denizens[1].log.head.body.promise, '7/2', 'remapped')
 
     return
 
     console.log(shifter.peek())
-
-    network.populate(1)
 
     okay(network.denizens[0].government, {
         majority: [ '0', '2' ],
