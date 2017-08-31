@@ -110,6 +110,8 @@ function Paxos (now, republic, id, options) {
     this._shaper = new Shaper(this.parliamentSize, this.government)
 
     this._seed = 2147483647
+
+    this._receipts = {}
 }
 
 // We are only ever supposed to call `newGovernment` when we are not in the
@@ -512,11 +514,10 @@ Paxos.prototype.request = function (now, request) {
         })
     }
 
-    if (request.message.method == 'synchronize') {
-        return { message: { method: 'respond', promise: sync.committed }, sync: sync }
-    }
-
-    return { message: this._recorder.request(now, request.message), sync: sync }
+    var message = request.message.method == 'synchronize'
+                ? { method: 'respond', promise: sync.committed }
+                : this._recorder.request(now, request.message)
+    return { message: message, sync: sync, pings: this._pinger.outbox }
 }
 
 Paxos.prototype.response = function (now, request, responses) {
