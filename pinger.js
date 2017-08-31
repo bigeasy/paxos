@@ -8,19 +8,6 @@ function Pinger (paxos, shaper) {
     this._shaper = shaper
 }
 
-Pinger.prototype.ingest = function (now, pinger, constituency) {
-    for (var i = 0, constituent; (constituent = constituency[i]) != null; i++) {
-        var ping = pinger.pings[constituent]
-        if (ping != null) {
-            if (ping.when == null) {
-                this.update(now, constituent, ping)
-            } else {
-                this.update(ping.when, constituent, null)
-            }
-        }
-    }
-}
-
 Pinger.prototype.getPing = function (id) {
     var ping = this.pings[id]
     if (ping == null) {
