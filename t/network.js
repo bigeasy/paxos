@@ -81,16 +81,6 @@ function getFailure (failure, request) {
     }
 }
 
-Network.prototype.fail = function (intercepted) {
-    for (var name in intercepted) {
-        while (intercepted[name].length != 0) {
-            var envelope = intercepted[name].shift()
-            envelope.responses[envelope.to] = null
-            this.response(envelope)
-        }
-    }
-}
-
 Network.prototype.intercept = function () {
     var vargs = Array.prototype.slice.call(arguments)
     var count = typeof vargs[0] == 'number' ? vargs.shift() : Infinity
@@ -98,14 +88,27 @@ Network.prototype.intercept = function () {
     while (typeof vargs[0] == 'string') {
         denizens.push(vargs.shift())
     }
-    var messages = vargs.shift()
     var matches = [], intercepted = {}
+    while (Array.isArray(vargs[0])) {
+        var failure = vargs.shift()
+        matches.push({
+            name: null,
+            count: failure[0] == 'number' ? failure.shift() : 1,
+            subsets: failure.length == 1 && typeof failure[0] == 'string'
+                   ? [{ to: failure[0] }, { from: failure[0] }]
+                   : failure
+        })
+    }
+    var messages = vargs.shift() || {}, intercepted = {}
     for (var name in messages) {
         intercepted[name] = []
         var interception = Array.isArray(messages[name]) ? messages[name].slice() : [ messages[name] ]
         matches.push({
+            name: name,
             count: interception[0] == 'number' ? interception.shift() : 1,
-            subsets: interception
+            subsets: interception.length == 1 && typeof interception[0] == 'string'
+                   ? [{ to: interception[0] }, { from: interception[0] }]
+                   : interception
         })
     }
     var sent = true
@@ -132,7 +135,11 @@ Network.prototype.intercept = function () {
                             if (subset(envelope, match.subsets[l])) {
                                 match.count = Math.max(0, match.count - 1)
                                 if (match.count == 0) {
-                                    intercepted[name].push(envelope)
+                                    if (match.name == null) {
+                                        responses[to] = null
+                                    } else {
+                                        intercepted[match.name].push(envelope)
+                                    }
                                     break MATCH
                                 }
                             }

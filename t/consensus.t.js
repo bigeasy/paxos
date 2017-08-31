@@ -88,15 +88,15 @@ function prove (okay) {
 
     network.time++
 
-    network.fail(network.intercept({ one: [{ to: '1' }, { from: '1' }] }))
+    network.intercept([ '1' ])
 
     network.time += 3
 
-    network.fail(network.intercept(1, '0', { one: [{ to: '1' }, { from: '1' }] }))
+    network.intercept(1, '0', [ '1' ])
 
     okay(!network.denizens[0].enqueue(network.time, 1, {}).enqueued, 'post collapsed')
 
-    network.fail(network.intercept('0', { one: [{ to: '1' }, { from: '1' }] }))
+    network.intercept('0', [ '1' ])
 
     okay(network.denizens[0].government, {
         majority: [ '0', '2' ],
