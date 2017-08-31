@@ -50,9 +50,10 @@ Writer.prototype.nudge = function () {
 }
 
 Writer.prototype.response = function (now, request, responses, promise) {
+    assert(request.method == 'register', 'unexpected request type')
     if (promise != null) {
         this._paxos.collapse(now)
-    } else if (request.method == 'register') {
+    } else {
         this._paxos._commit(now, request.register)
         this._writing = false
         if (this.proposals.length == 0) {
