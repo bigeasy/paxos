@@ -1,4 +1,4 @@
-require('proof')(14, prove)
+require('proof')(15, prove)
 
 function prove (okay) {
     var Paxos = require('..'), denizen
@@ -141,26 +141,26 @@ function prove (okay) {
     okay(network.denizens[1].log.head.body.body, 3, 'enqueued')
     okay(network.denizens[1].log.head.body.promise, '7/2', 'remapped')
 
-    return
-
-    console.log(shifter.peek())
-
     okay(network.denizens[0].government, {
         majority: [ '0', '2' ],
         minority: [ '1' ],
-        constituents: [],
-        promise: '6/0',
-        map: {},
+        constituents: [ '3' ],
+        promise: '7/0',
+        map: { '6/2': '7/1', '6/3': '7/2' },
+        immigrate: { id: '3', cookie: 4, properties: { location: '3' } },
         immigrated: {
-            id: { '1/0': '0', '2/0': '1', '3/0': '2' },
-            promise: { '0': '1/0', '1': '2/0', '2': '3/0' }
+            id: { '1/0': '0', '2/0': '1', '3/0': '2', '7/0': '3' },
+            promise: { '0': '1/0', '1': '2/0', '2': '3/0', '3': '7/0' }
         },
         properties: {
             '0': { location: '0' },
             '1': { location: '1' },
-            '2': { location: '2' }
+            '2': { location: '2' },
+            '3': { location: '3' }
         }
-    }, 'recover from collapse')
+    }, 'add fourth')
+
+    return
 
     network.send()
 
