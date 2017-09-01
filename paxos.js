@@ -289,36 +289,6 @@ Paxos.prototype.event = function (envelope) {
     }
 }
 
-Paxos.prototype._send = function (message) {
-    var sync = {
-        from: this.id,
-        minimum: this.minimum,
-        committed: this.log.head.body.promise,
-        cookie: this.cookie,
-        commits: []
-    }
-    var pings = []
-    for (var i = 0, to; (to = message.to[i]) != null; i++) {
-        // TODO Any event races? Make synchronize benign and probably not.
-        this.scheduler.unschedule(to)
-        pings.push(this._pinger.getPing(to))
-    }
-    this._stuffSynchronize(pings, sync, 20)
-    var envelopes = [], responses = {}
-    for (var j = 0, to; (to = message.to[j]) != null; j++) {
-        var envelope = {
-            to: to,
-            from: this.id,
-            request: {
-                message: message, sync: sync
-            },
-            responses: responses
-        }
-        envelopes.push(envelope)
-    }
-    this.outbox.push({ from: this.id, message: message, responses: responses, envelopes: envelopes })
-}
-
 Paxos.prototype.bootstrap = function (now, properties) {
     // Update current state as if we're already leader.
     this.naturalize()
@@ -478,6 +448,36 @@ Paxos.prototype.immigrate = function (now, republic, id, cookie, properties) {
         }
     }
     return response
+}
+
+Paxos.prototype._send = function (message) {
+    var sync = {
+        from: this.id,
+        minimum: this.minimum,
+        committed: this.log.head.body.promise,
+        cookie: this.cookie,
+        commits: []
+    }
+    var pings = []
+    for (var i = 0, to; (to = message.to[i]) != null; i++) {
+        // TODO Any event races? Make synchronize benign and probably not.
+        this.scheduler.unschedule(to)
+        pings.push(this._pinger.getPing(to))
+    }
+    this._stuffSynchronize(pings, sync, 20)
+    var envelopes = [], responses = {}
+    for (var j = 0, to; (to = message.to[j]) != null; j++) {
+        var envelope = {
+            to: to,
+            from: this.id,
+            request: {
+                message: message, sync: sync
+            },
+            responses: responses
+        }
+        envelopes.push(envelope)
+    }
+    this.outbox.push({ from: this.id, message: message, responses: responses, envelopes: envelopes })
 }
 
 // TODO Note that minimum only ever goes up so a delayed minimum is not going to
