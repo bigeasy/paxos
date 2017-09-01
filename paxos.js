@@ -35,7 +35,7 @@ var Relay = require('./relay')
 
 var departure = require('departure')
 var constituency = require('./constituency')
-
+// ### Constructor
 function Paxos (now, republic, id, options) {
     // Uniquely identify ourselves relative to the other participants.
     this.id = String(id)
@@ -49,14 +49,14 @@ function Paxos (now, republic, id, options) {
     // Maybe start out naturalized if no futher updates necessary.
     this.naturalized = !! options.naturalized
 
+    // Maximum size of a parliament. The government will grow to this size.
     this.parliamentSize = coalesce(options.parliamentSize, 5)
 
     // The atomic log is a linked list. When head of the list is advanced the
-    // entries in the list go out of scope and can be collected by the garbage
-    // collector. We advance the head of the list when we are certain that all
-    // participants have received a copy of the entry and added it to their
-    // logs. Note that outstanding user iterators prevent this garbage
-    // collection, but when we advance the head the entries are dead to us.
+    // entries in the list become unreachable and can be collected by the
+    // garbage collector. We advance the head of the list when we are certain
+    // that all participants have received a copy of the entry and added it to
+    // their logs. Outstanding user iterators prevent garbage collection.
     this.log = new Window
     this.log.addListener(this.indexer = new Indexer(function (left, right) {
         assert(left && right)
@@ -68,6 +68,7 @@ function Paxos (now, republic, id, options) {
     // ignore during debugging playback.
     this.scheduler = new Scheduler
 
+    // Initial government. A null government.
     this.government = {
         promise: '0/0',
         minority: [],
@@ -77,26 +78,31 @@ function Paxos (now, republic, id, options) {
         immigrated: { id: {}, promise: {} }
     }
 
+    // Last promise issued.
     this._promised = null
 
-// TODO Randomly adjust election retry by a percentage. Randomly half or
-// randomly half as much again.
-
+    // Ping is the freqency of keep alive pings.
     this.ping = coalesce(options.ping, 1000)
+
+    // Timeout when that reached marks a citizen for exile.
     this.timeout = coalesce(options.timeout, 5000)
 
+    // The citizens that this citizen updates with new log entries.
     this.constituency = []
+
+    // Entire population.
     this.citizens = []
 
+    // The least committed value across the entire island.
     this.minimum = '0/0'
 
+    // Network message queue.
     this.outbox = new Procession
 
+    // Collection accounting information. See [Pinger](./pinger.js.html).
     this._pinger = new Pinger(null, this.timeout)
 
-//    this.least = this.log.shifter()
-
-    // TODO So, does it matter if the user nevers sees `0/0`?
+    // Push the null government onto the atomic log.
     this.log.push({
         module: 'paxos',
         method: 'government',
@@ -109,40 +115,72 @@ function Paxos (now, republic, id, options) {
     this._recorder = new Recorder(this, this.log.head.body)
     this._shaper = new Shaper(this.parliamentSize, this.government)
 
+    // Used for our pseudo-random number generator to vary retry times.
     this._seed = 2147483647
 
+    // Track ping information that has propigated back.
     this._receipts = {}
 }
 
-// We are only ever supposed to call `newGovernment` when we are not in the
-// process of forming a new government. There is only ever supposed to be one in
-// process or in the queue. You'll notice that we call `newGovernment` during
-// bootstrap, during consensus selection and during collapse. Many decisions
-// about the new goverment are based on the current government, so we can't have
-// them queued up, unless we want to also maintain the latest version of the
-// government we hope to have someday, which offends my pragmatic sensibilities.
+// ### Government
+
+// Constructs a new government and unshifts it onto the head of the proposal
+// queue. During two-phase commit, new governments jump to the line. All the
+// user messages are given new promises whose values are greater than the value
+// of the government's promise.
+//
+// During a collapse when we are running Paxos, the new government is the only
+// message and all user messages are dropped.
+//
+// There is only ever supposed to be one new government in process or in the
+// list of proposals. Many decisions about the new goverment are based on the
+// current government and the current health of the island, so queuing up a
+// bunch of governments would at the very least require that we double check
+// that they are still valid.
+//
+// Basically, we have new governments queued elsewhere. Actually, we have
+// network status queued elsewhere and new governments are proposed after the
+// current new government is established based on that reachabilit data.
 
 //
 Paxos.prototype.newGovernment = function (now, quorum, government) {
+    // Mark the shaper as complete. We won't get a new government proposal until
+    // we get a new shaper.
     this._shaper.decided = true
-    assert(!government.constituents)
+
+    // Increment the government part of the promise.
     var promise = Monotonic.increment(this.government.promise, 0)
-    government.constituents = Object.keys(this.government.properties).sort().filter(function (citizen) {
-        return !~government.majority.indexOf(citizen)
-            && !~government.minority.indexOf(citizen)
-    })
-    var remapped = government.promise = promise, map = {}
-    this._writer.proposals = this._writer.proposals.splice(0, this._writer.proposals.length).map(function (proposal) {
-        proposal.was = proposal.promise
-        proposal.route = government.majority
-        proposal.promise = remapped = Monotonic.increment(remapped, 1)
-        map[proposal.was] = proposal.promise
-        return proposal
-    })
+
+    // The government's constituents are our current population less the members
+    // of the government itself.
+    government.constituents = Object.keys(this.government.properties)
+        .sort()
+        .filter(function (citizen) {
+            return !~government.majority.indexOf(citizen)
+                && !~government.minority.indexOf(citizen)
+        })
+
+    // If we are doing a two-phase commit, gemap the proposals so that they have
+    // a promise value in the new government.
+    var remapped = government.promise = promise, map = null
+    if (!this._writer.collapsed) {
+        map = {}
+        this._writer.proposals = this._writer.proposals.splice(0, this._writer.proposals.length).map(function (proposal) {
+            proposal.was = proposal.promise
+            proposal.route = government.majority
+            proposal.promise = remapped = Monotonic.increment(remapped, 1)
+            map[proposal.was] = proposal.promise
+            return proposal
+        })
+    }
     this._promised = remapped
+
+    // Copy the properties and immigration id to promise map.
     var properties = JSON.parse(JSON.stringify(this.government.properties))
     var immigrated = JSON.parse(JSON.stringify(this.government.immigrated))
-// TODO I'd rather have a more intelligent structure.
+
+    // Add the new denizen to the governments structures during immigraiton.
+    // Remove the denizen from the governments structures during exile.
     if (government.immigrate) {
         var immigrate = government.immigrate
         properties[immigrate.id] = JSON.parse(JSON.stringify(government.immigrate.properties))
@@ -158,136 +196,18 @@ Paxos.prototype.newGovernment = function (now, quorum, government) {
         delete properties[exile.id]
         government.constituents.splice(government.constituents.indexOf(exile.id), 1)
     }
-// TODO Null map to indicate collapse or change in leadership. Wait, change in
-// leader is only ever collapse? Ergo...
-    government.map = this._writer.collapsed ? null : map
+
+    government.map = map
     government.immigrated = immigrated
     government.properties = properties
+
     assert(this._writer.proposals.length == 0 || !Monotonic.isBoundary(this._writer.proposals[0].promise, 0))
+
     this._writer.unshift({ promise: promise, quorum: quorum, body: government })
     this._writer.nudge()
 }
 
-// Find a round of paxos in the log based on the given promise.
-//
-// Not loving how deeply nested these conditions and keys are, but I understand
-// why it is that way, and it would be a full wrapper of `bintrees` to fix it.
-
-//
-Paxos.prototype._findRound = function (sought) {
-    return this.indexer.tree.find({ body: { promise: sought } })
-}
-
-Paxos.prototype._stuffSynchronize = function (pings, sync, count) {
-    var ping = pings[0]
-    for (var i = 1, I = pings.length; i < I; i++) {
-        assert(ping.committed != null && pings[i].committed != null)
-        if (Monotonic.compare(pings[i].committed, ping.committed) < 0) {
-            ping = pings[i]
-        }
-        assert(ping.committed != '0/0')
-    }
-    var iterator
-    if (ping.committed == null) {
-        return true
-    } else if (ping.committed == '0/0') {
-        iterator = this.log.trailer.node.next
-        for (;;) {
-            assert(iterator != null, 'immigration missing')
-            if (Monotonic.isBoundary(iterator.body.promise, 0)) {
-                var immigrate = iterator.body.body.immigrate
-                if (immigrate && immigrate.id == ping.id) {
-                    break
-                }
-            }
-            iterator = iterator.next
-        }
-    } else {
-        assert(Monotonic.compare(ping.committed, this.minimum) >= 0, 'minimum breached')
-        assert(Monotonic.compare(ping.committed, this.log.head.body.promise) <= 0, 'maximum breached')
-        iterator = this._findRound(ping.committed).next
-    }
-
-    while (--count && iterator != null) {
-        sync.commits.push({
-            promise: iterator.body.promise,
-            body: iterator.body.body,
-            previous: iterator.body.previous
-        })
-        iterator = iterator.next
-    }
-
-    return true
-}
-
-Paxos.prototype._prepare = function (now, request, sync) {
-    this._recorder = new Acceptor(this)
-    return this._recorder.request(now, request, sync)
-}
-
-Paxos.prototype._collapse = function (now) {
-    this.scheduler.clear()
-
-    // TODO Really need to have the value for previous, which is the writer register.
-    this._writer = new Proposer(this, this.government.promise)
-    this._scheduleAssembly(now, false)
-}
-
-// Note that even if the PNRG where not determinsitic, it wouldn't matter during
-// replay because the delay is lost and the actual timer event is recorded.
-
-// TODO Convince yourself that the above is true and the come back and replace
-// this PRNG with `Math.rand()`.
-
-//
-Paxos.prototype._scheduleAssembly = function (now, retry) {
-    var delay = 0
-    if (retry && this.id != this.government.majority[0]) {
-        // PRNG: https://gist.github.com/blixt/f17b47c62508be59987b
-        delay = time.timeout * (((this._seed = this._seed * 16807 % 2147483647) - 1) / 2147483646)
-    }
-    this.scheduler.schedule(now + delay, this.id, { method: 'assembly', body: null })
-}
-
-Paxos.prototype.event = function (envelope) {
-    if (envelope.module != 'happenstance' || envelope.method != 'event') {
-        return
-    }
-    var now = envelope.now
-    switch (envelope.body.method) {
-    case 'synchronize':
-        this._send({
-            method: 'synchronize',
-            version: this.government.promise,
-            to: envelope.body.to,
-            key: envelope.key
-        })
-        break
-    case 'assembly':
-        this._pinger = new Pinger(this, this._shaper = new Assembly(this.government, this.id))
-        this._pinger.update(now, this.id, {
-            naturalized: this.naturalized,
-            committed: this.log.head.body.promise
-        })
-
-        // TODO This is fine. Realize that immigration is a special type of
-        // somethign that is built on top of proposals. Ah, or maybe assembly is the
-        // shaper and a shaper creates the next shaper. Thus, shaper is the
-        // abstraction that is above writer/recorder. Also, Assembly could be called
-        // something else, gatherer or collector or roll call or sergent at arms.
-
-        this.government.majority.concat(this.government.minority)
-            .filter(function (id) {
-                return id != this.id
-            }.bind(this)).forEach(function (id) {
-                this.scheduler.schedule(now, id, { method: 'synchronize', to: [ id ] })
-            }, this)
-        break
-    case 'collapse':
-        this._collapse(envelope.now)
-        break
-    }
-}
+// ### Bootstrap
 
 Paxos.prototype.bootstrap = function (now, properties) {
     // Update current state as if we're already leader.
@@ -315,9 +235,7 @@ Paxos.prototype.bootstrap = function (now, properties) {
     this._enact(now, { promise: '1/0', body: government, previous: '0/0' })
 }
 
-Paxos.prototype.naturalize = function () {
-    this.naturalized = true
-}
+// ### Enqueue and Immigrate
 
 // TODO Is all this checking necessary? Is it necessary to return the island id
 // and leader? This imagines that the client is going to do the retry, but in
@@ -448,6 +366,159 @@ Paxos.prototype.immigrate = function (now, republic, id, cookie, properties) {
         }
     }
     return response
+}
+
+Paxos.prototype.naturalize = function () {
+    this.naturalized = true
+}
+
+// ### Scheduled Events
+
+// Timer-driven events are managed using [Happenstance](http://github.com/bigeasy/happenstance).
+// Events are scheduled by calling the `schedule` method of a Happenstance
+// the `Schedule` object for this citizen. Each event has a key and scheduling
+// an event will replace an scheduled event with the same key, making it easy to
+// reset timeouts, to basically reset countdowns or replace the countdown action
+// as the role of the citizen changes.
+
+//
+Paxos.prototype.event = function (envelope) {
+    // Other envelope times are related to timer maintenance.
+    if (envelope.module != 'happenstance' || envelope.method != 'event') {
+        return
+    }
+    var now = envelope.now
+    switch (envelope.body.method) {
+    // Send a synchronization message to one or more fellow citizens. Note that
+    // the to field is an array.
+    case 'synchronize':
+        this._send({
+            method: 'synchronize',
+            version: this.government.promise,
+            to: envelope.body.to,
+            key: envelope.key
+        })
+        break
+    // Call an assembly; try to reach other members of the government when the
+    // current government has collapsed.
+    case 'assembly':
+        this._pinger = new Pinger(this, this._shaper = new Assembly(this.government, this.id))
+        this._pinger.update(now, this.id, {
+            naturalized: this.naturalized,
+            committed: this.log.head.body.promise
+        })
+
+        // TODO This is fine. Realize that immigration is a special type of
+        // somethign that is built on top of proposals. Ah, or maybe assembly is the
+        // shaper and a shaper creates the next shaper. Thus, shaper is the
+        // abstraction that is above writer/recorder. Also, Assembly could be called
+        // something else, gatherer or collector or roll call or sergent at arms.
+
+        this.government.majority.concat(this.government.minority)
+            .filter(function (id) {
+                return id != this.id
+            }.bind(this)).forEach(function (id) {
+                this.scheduler.schedule(now, id, { method: 'synchronize', to: [ id ] })
+            }, this)
+        break
+    // We are a majority member that has not heard from the leader for longer
+    // than the timeout so collapse the current government.
+    case 'collapse':
+        this._collapse(now)
+        break
+    }
+}
+
+// ### Collapse
+
+// Called by a recorder when a prepare method is received to transition from a
+// two-phase commit recorder to a Paxos acceptor.
+
+//
+Paxos.prototype._prepare = function (now, request, sync) {
+    this._recorder = new Acceptor(this)
+    return this._recorder.request(now, request, sync)
+}
+
+// Collapse means we schedule and assembly.
+
+//
+Paxos.prototype._collapse = function (now) {
+    this.scheduler.clear()
+
+    // TODO Really need to have the value for previous, which is the writer register.
+    this._writer = new Proposer(this, this.government.promise)
+    this._scheduleAssembly(now, false)
+}
+
+// Note that even if the PNRG where not determinsitic, it wouldn't matter during
+// replay because the delay is lost and the actual timer event is recorded.
+
+// TODO Convince yourself that the above is true and the come back and replace
+// this PRNG with `Math.rand()`.
+
+//
+Paxos.prototype._scheduleAssembly = function (now, retry) {
+    var delay = 0
+    if (retry && this.id != this.government.majority[0]) {
+        // PRNG: https://gist.github.com/blixt/f17b47c62508be59987b
+        delay = time.timeout * (((this._seed = this._seed * 16807 % 2147483647) - 1) / 2147483646)
+    }
+    this.scheduler.schedule(now + delay, this.id, { method: 'assembly', body: null })
+}
+
+// ### Requests and Responses
+
+// Find a round of paxos in the log based on the given promise.
+//
+// Not loving how deeply nested these conditions and keys are, but I understand
+// why it is that way, and it would be a full wrapper of `bintrees` to fix it.
+
+//
+Paxos.prototype._findRound = function (sought) {
+    return this.indexer.tree.find({ body: { promise: sought } })
+}
+
+Paxos.prototype._stuffSynchronize = function (pings, sync, count) {
+    var ping = pings[0]
+    for (var i = 1, I = pings.length; i < I; i++) {
+        assert(ping.committed != null && pings[i].committed != null)
+        if (Monotonic.compare(pings[i].committed, ping.committed) < 0) {
+            ping = pings[i]
+        }
+        assert(ping.committed != '0/0')
+    }
+    var iterator
+    if (ping.committed == null) {
+        return true
+    } else if (ping.committed == '0/0') {
+        iterator = this.log.trailer.node.next
+        for (;;) {
+            assert(iterator != null, 'immigration missing')
+            if (Monotonic.isBoundary(iterator.body.promise, 0)) {
+                var immigrate = iterator.body.body.immigrate
+                if (immigrate && immigrate.id == ping.id) {
+                    break
+                }
+            }
+            iterator = iterator.next
+        }
+    } else {
+        assert(Monotonic.compare(ping.committed, this.minimum) >= 0, 'minimum breached')
+        assert(Monotonic.compare(ping.committed, this.log.head.body.promise) <= 0, 'maximum breached')
+        iterator = this._findRound(ping.committed).next
+    }
+
+    while (--count && iterator != null) {
+        sync.commits.push({
+            promise: iterator.body.promise,
+            body: iterator.body.body,
+            previous: iterator.body.previous
+        })
+        iterator = iterator.next
+    }
+
+    return true
 }
 
 Paxos.prototype._send = function (message) {
@@ -646,6 +717,8 @@ Paxos.prototype.response = function (now, message, responses) {
     this.minimum = minimum
 }
 
+// ### Commit
+
 Paxos.prototype._commit = function (now, register) {
     var entries = []
     while (register) {
@@ -776,23 +849,24 @@ Paxos.prototype._enact = function (now, entry) {
             })
         }
 
-        // Reset ping tracking information. Leader behavior is different from other
-        // members. We clear out all ping information for ping who are not our
-        // immediate constituents. This will keep us from hoarding stale ping
-        // records. When everyone performs this cleaning, we can then trust
-        // ourselves to return all ping information we've gathered to anyone that
-        // pings us, knowing that it is all flowing from minority members to the
-        // leader. We do not have to version the records, timestamp them, etc.
+        // Reset ping tracking information. Leader behavior is different from
+        // other members. We clear out all ping information for ping who are not
+        // our immediate constituents. This will keep us from hoarding stale
+        // ping records. When everyone performs this cleaning, we can then trust
+        // ourselves to return all ping information we've gathered to anyone
+        // that pings us, knowing that it is all flowing from minority members
+        // to the leader. We do not have to version the records, timestamp them,
+        // etc.
         //
         // If we didn't clear them out, then a stale record for a citizen can be
         // held onto by a majority member. If the minority member that pings the
         // citizen is no longer downstream from the majority member, that stale
         // record will not get updated, but it will be reported to the leader.
         //
-        // We keep ping information if we are the leader, since it all flows back to
-        // the leader. All leader information will soon be updated. Not resetting
-        // the leader during normal operation makes adjustments to citizenship go
-        // faster.
+        // We keep ping information if we are the leader, since it all flows
+        // back to the leader. All leader information will soon be updated. Not
+        // resetting the leader during normal operation makes adjustments to
+        // citizenship go faster.
         this.citizens = this.government.majority
                             .concat(this.government.minority)
                             .concat(this.government.constituents)
