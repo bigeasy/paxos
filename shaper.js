@@ -202,12 +202,4 @@ Shaper.prototype._immigration = function () {
     return null
 }
 
-Shaper.prototype.createShaper = function (paxos) {
-    var shaper = new Shaper(paxos.parliamentSize, paxos.government)
-    for (var i = 0, immigration; (immigration = this._immigrating[i]) != null; i++) {
-        shaper.immigrate(immigration)
-    }
-    return shaper
-}
-
 module.exports = Shaper

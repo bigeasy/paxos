@@ -44,7 +44,15 @@ function prove (okay) {
     shaper.immigrate({ id: '6', cookie: 0, properties: { location: null } })
     shaper.immigrate({ id: '6', cookie: 1, properties: { location: '6' } })
 
-    shaper = shaper.createShaper({
+    function createShaper (shaper, paxos) {
+        var newShaper = new Shaper(paxos.parliamentSize, paxos.government)
+        for (var i = 0, immigration; (immigration = shaper._immigrating[i]) != null; i++) {
+            newShaper.immigrate(immigration)
+        }
+        return newShaper
+    }
+
+    shaper = createShaper(shaper, {
         parliamentSize: 5,
         government: {
             majority: [ '0', '1', '2' ],
@@ -63,7 +71,7 @@ function prove (okay) {
         }
     }, 'shrink to three')
 
-    shaper = shaper.createShaper({
+    shaper = createShaper(shaper, {
         parliamentSize: 5,
         government: {
             majority: [ '0', '1' ],
@@ -83,7 +91,7 @@ function prove (okay) {
         }
     }, 'second exile')
 
-    shaper = shaper.createShaper({
+    shaper = createShaper(shaper, {
         parliamentSize: 5,
         government: {
             majority: [ '0', '1' ],
@@ -102,7 +110,7 @@ function prove (okay) {
         }
     }, 'shrink to one')
 
-    shaper = shaper.createShaper({
+    shaper = createShaper(shaper, {
         parliamentSize: 5,
         government: {
             majority: [ '0' ],
@@ -122,7 +130,7 @@ function prove (okay) {
         }
     }, 'immigration ')
 
-    shaper = shaper.createShaper({
+    shaper = createShaper(shaper, {
         parliamentSize: 5,
         government: {
             majority: [ '0' ],
@@ -144,7 +152,7 @@ function prove (okay) {
         }
     }, 'updated immigration')
 
-    shaper = shaper.createShaper({
+    shaper = createShaper(shaper, {
         parliamentSize: 5,
         government: {
             majority: [ '0' ],
