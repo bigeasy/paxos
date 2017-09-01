@@ -523,6 +523,8 @@ Paxos.prototype._stuffSynchronize = function (pings, sync, count) {
 
 Paxos.prototype._send = function (message) {
     var sync = {
+        republic: this.republic,
+        promise: this.government.immigrated.promise[this.id],
         from: this.id,
         minimum: this.minimum,
         committed: this.log.head.body.promise,
@@ -542,10 +544,13 @@ Paxos.prototype._send = function (message) {
             to: to,
             from: this.id,
             request: {
-                message: message, sync: sync
+                message: message,
+                receipts: coalesce(this._receipts[to], {}),
+                sync: sync
             },
             responses: responses
         }
+        delete this._receipts[to]
         envelopes.push(envelope)
     }
     this.outbox.push({ from: this.id, message: message, responses: responses, envelopes: envelopes })
@@ -559,48 +564,54 @@ Paxos.prototype.request = function (now, request) {
     // TODO Reject if it is the wrong republic.
     // TODO Reject if it a message from an exile, wrong id and cookie.
     var sync = {
-        method: 'respond',
+        republic: this.republic,
+        promise: this.government.immigrated.promise[this.id],
         from: this.id,
         naturalized: this.naturalized,
         minimum: this.minimum,
         committed: this.log.head.body.promise,
-        cookie: this.cookie,
         commits: []
     }
-
-    if (Monotonic.compare(request.sync.committed, sync.committed) < 0) {
-        // We are ahead of the bozo trying to update us, so update him back.
+    this._shaper.received(request.receipts)
+    var message
+    if (
+        Monotonic.compare(request.sync.committed, sync.committed) < 0
+    ) {
         this._stuffSynchronize([ request.sync ], sync, 20)
-        return { message: { method: 'reject', promise: sync.committed }, sync: sync }
-    }
-
-    // Sync.
-    for (var i = 0, commit; (commit = request.sync.commits[i]) != null; i++) {
-        this._enact(now, commit)
-    }
-
-    // We don't want to advance the minimum if we have no items yet.
-    if (this.log.head.body.promise != '0/0') {
-        while (Monotonic.compare(this.log.trailer.peek().promise, request.sync.minimum) < 0) {
-            this.log.trailer.shift()
+        // We are ahead of the bozo trying to update us, so update him back.
+        message = { method: 'reject', promise: sync.committed }
+    } else {
+        // Sync.
+        for (var i = 0, commit; (commit = request.sync.commits[i]) != null; i++) {
+            this._enact(now, commit)
         }
-        if (Monotonic.compare(this.minimum, request.sync.minimum) < 0) {
-            this.minimum = request.sync.minimum
+
+        // We don't want to advance the minimum if we have no items yet.
+        if (this.log.head.body.promise != '0/0') {
+            while (Monotonic.compare(this.log.trailer.peek().promise, request.sync.minimum) < 0) {
+                this.log.trailer.shift()
+            }
+            if (Monotonic.compare(this.minimum, request.sync.minimum) < 0) {
+                this.minimum = request.sync.minimum
+            }
         }
-    }
 
-    if (~this.government.majority.slice(1).indexOf(this.id)) {
-        this.scheduler.schedule(now + this.timeout, this.id, {
-            module: 'paxos',
-            method: 'collapse',
-            body: null
-        })
+        if (~this.government.majority.slice(1).indexOf(this.id)) {
+            this.scheduler.schedule(now + this.timeout, this.id, {
+                module: 'paxos',
+                method: 'collapse',
+                body: null
+            })
+        }
+        var message = request.message.method == 'synchronize'
+                    ? { method: 'respond', promise: sync.committed }
+                    : this._recorder.request(now, request.message)
     }
-
-    var message = request.message.method == 'synchronize'
-                ? { method: 'respond', promise: sync.committed }
-                : this._recorder.request(now, request.message)
-    return { message: message, sync: sync, pings: this._pinger.outbox }
+    return {
+        message: message,
+        sync: sync,
+        pings: this._shaper.outbox
+    }
 }
 
 Paxos.prototype.response = function (now, message, responses) {
@@ -616,7 +627,8 @@ Paxos.prototype.response = function (now, message, responses) {
             failed = true
             responses[message.to[i]] = response = {
                 message: { method: 'reject', promise: '0/0' },
-                sync: { committed: null }
+                sync: { committed: null },
+                pings: {}
             }
             this._pinger.update(now, message.to[i], null)
         } else {
@@ -628,6 +640,16 @@ Paxos.prototype.response = function (now, message, responses) {
         if (Monotonic.compare(promise, response.message.promise) < 0) {
             promise = response.message.promise
         }
+        // TODO Don't be so direct?
+        // TODO Who is eliminating duplicates?
+        for (var id in response.pings) {
+            if (response.pings[id].reachable) {
+                this._pinger.update(now, id, response.pings[id])
+            } else {
+                this._shaper.update(id, false)
+            }
+        }
+        this._receipts[response.sync.from] = response.pings
     }
 
     // Here's were I'm using messages to drive the algorithm even when the

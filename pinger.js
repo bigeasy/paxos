@@ -16,7 +16,7 @@ Pinger.prototype.getPing = function (id) {
     return ping
 }
 
-Pinger.prototype._updateShape = function (now, id, reacahble, committed) {
+Pinger.prototype._updateShape = function (now, id, reacahble, committed, naturalized) {
     if (
         !reacahble &&
         !this._shaper.collapsed &&
@@ -25,7 +25,7 @@ Pinger.prototype._updateShape = function (now, id, reacahble, committed) {
         this._shaper = { update: noop }
         this._paxos._collapse(now)
     }
-    var shape = this._shaper.update(id, reacahble, committed)
+    var shape = this._shaper.update(id, reacahble, committed, naturalized)
     if (shape != null) {
         this._shaper = { update: noop }
         this._paxos.newGovernment(now, shape.quorum, shape.government)
@@ -39,17 +39,19 @@ Pinger.prototype.update = function (now, id, sync) {
         if (ping.when == null) {
             ping.when = now
         } else if (now - ping.when >= this._paxos.timeout) {
-            this._updateShape(now, id, false, ping.committed)
+            this._updateShape(now, id, false, ping.committed, ping.naturalized)
         }
     } else {
+        // TODO I believe shaper eliminates duplicates, not us.
         ping.when = null
-        ping.committed = sync.committed
-        if (ping.naturalized != sync.naturalized) {
-            assert(sync.naturalized)
-            ping.naturalized = true
-            this._updateShape(now, id, true, ping.committed)
+        if (
+            ping.naturalized != sync.naturalized ||
+            ping.committed != sync.committed
+        ) {
+            ping.committed = sync.committed
+            ping.naturalized = ping.naturalized
+            this._updateShape(now, id, true, ping.committed, ping.naturalized)
         }
-        // TODO Schedule next ping.
     }
 }
 

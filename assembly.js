@@ -76,4 +76,7 @@ Assembly.prototype.update = function (id, reachable) {
     return null
 }
 
+Assembly.prototype.received = function () {
+}
+
 module.exports = Assembly

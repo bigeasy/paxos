@@ -69,6 +69,7 @@ function Shaper (parliamentSize, government) {
     this.decided = false
     this._governments = []
     this._shouldContract()
+    this.outbox = {}
 }
 
 Shaper.prototype._shouldContract = function () {
@@ -141,6 +142,9 @@ Shaper.prototype.update = function (id, reachable) {
 
     // Otherwise let's exile someone if we have someone to exile.
     return this._governments.shift() || this._immigration() || null
+}
+
+Shaper.prototype.received = function () {
 }
 
 Shaper.prototype.immigrated = function (id) {

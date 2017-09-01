@@ -37,7 +37,8 @@ Relay.prototype.received = function (receipt) {
         if (
             this.outbox[name] != null &&
             this.outbox[name].reachable == receipt[name].reachable &&
-            this.outbox[name].committed == receipt[name].committed
+            this.outbox[name].committed == receipt[name].committed &&
+            this.outbox[name].naturalized == receipt[name].naturalized
         ) {
             delete this.outbox[name]
         }
@@ -49,7 +50,7 @@ Relay.prototype.received = function (receipt) {
 // denizens, accepting feedback about others.
 
 //
-Relay.prototype.update = function (name, reachable, committed) {
+Relay.prototype.update = function (name, reachable, committed, naturalized) {
     if (
         // We always update our outbox if we nothing going on at all.
         (
@@ -60,10 +61,18 @@ Relay.prototype.update = function (name, reachable, committed) {
         // promise has changed.
         (
             this._seen[name].reachable &&
-            (!reachable || this._seen[name].committed != committed)
+            (
+                !reachable ||
+                this._seen[name].committed != committed ||
+                this._seen[name].naturalized != naturalized
+            )
         )
     ) {
-        this._seen[name] = this.outbox[name] = { reachable: reachable, committed: committed }
+        this._seen[name] = this.outbox[name] = {
+            reachable: reachable,
+            committed: committed,
+            naturalized: naturalized
+        }
     }
     return null
 }
