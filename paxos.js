@@ -304,7 +304,19 @@ Paxos.prototype._send = function (message) {
         pings.push(this._pinger.getPing(to))
     }
     this._stuffSynchronize(pings, sync, 20)
-    this.outbox.push({ message: message, sync: sync })
+    var envelopes = [], responses = {}
+    for (var j = 0, to; (to = message.to[j]) != null; j++) {
+        var envelope = {
+            to: to,
+            from: this.id,
+            request: {
+                message: message, sync: sync
+            },
+            responses: responses
+        }
+        envelopes.push(envelope)
+    }
+    this.outbox.push({ from: this.id, message: message, responses: responses, envelopes: envelopes })
 }
 
 Paxos.prototype.bootstrap = function (now, properties) {
@@ -520,24 +532,24 @@ Paxos.prototype.request = function (now, request) {
     return { message: message, sync: sync, pings: this._pinger.outbox }
 }
 
-Paxos.prototype.response = function (now, request, responses) {
+Paxos.prototype.response = function (now, message, responses) {
     var failed = false, promise = '0/0'
 
     // Go through responses converting network errors to reject messaages and
     // syncing any commits that where pushed back to us.
 
     //
-    for (var i = 0, I = request.message.to.length; i < I; i++) {
-        var response = responses[request.message.to[i]]
+    for (var i = 0, I = message.to.length; i < I; i++) {
+        var response = responses[message.to[i]]
         if (response == null) {
             failed = true
-            responses[request.message.to[i]] = response = {
+            responses[message.to[i]] = response = {
                 message: { method: 'reject', promise: '0/0' },
                 sync: { committed: null }
             }
-            this._pinger.update(now, request.message.to[i], null)
+            this._pinger.update(now, message.to[i], null)
         } else {
-            this._pinger.update(now, request.message.to[i], response.sync)
+            this._pinger.update(now, message.to[i], response.sync)
             for (var j = 0, commit; (commit = response.sync.commits[j]) != null; j++) {
                 this._enact(now, commit)
             }
@@ -567,9 +579,9 @@ Paxos.prototype.response = function (now, request, responses) {
     // gets scheduled because you can only have one scheduled per key.
 
     //
-    if (request.message.method == 'synchronize') {
+    if (message.method == 'synchronize') {
         // Skip if this synchronization was submitted by an earlier government.
-        if (request.message.version != this.government.promise) {
+        if (message.version != this.government.promise) {
             return
         }
         // Immediately continue sync if our constituent is not completely
@@ -582,20 +594,17 @@ Paxos.prototype.response = function (now, request, responses) {
         // which is set above in the response refactoring.
         var delay = 0
         if (
-            ~([ null, this.log.head.body.promise ]).indexOf(responses[request.message.to[0]].sync.committed)
+            ~([ null, this.log.head.body.promise ]).indexOf(responses[message.to[0]].sync.committed)
         ) {
             delay = this.ping
         }
 
         // Schedule the next synchronization.
         if (
-            request.message.key != this.id ||
+            message.key != this.id ||
             ! this._writer.collapsed
         ) {
-            this.scheduler.schedule(now + delay, request.message.key, {
-                method: 'synchronize',
-                to: request.message.to
-            })
+            this.scheduler.schedule(now + delay, message.key, { method: 'synchronize', to: message.to })
         }
 
         return
@@ -606,10 +615,10 @@ Paxos.prototype.response = function (now, request, responses) {
 
     // Only handle a response if it was issued by our current writer/proposer.
     if (
-        request.message.version[0] == this._writer.version[0] &&
-        request.message.version[1] == this._writer.version[1]
+        message.version[0] == this._writer.version[0] &&
+        message.version[1] == this._writer.version[1]
     ) {
-        this._writer.response(now, request.message, responses, failed ? promise : null)
+        this._writer.response(now, message, responses, failed ? promise : null)
     }
 
     // Determine the minimum log entry promise.

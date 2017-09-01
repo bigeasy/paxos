@@ -41,9 +41,9 @@ Network.prototype.request = function (envelope) {
     envelope.responses[envelope.to] = this.denizens[envelope.to].request(this.time, envelope.request)
 }
 
-Network.prototype.response = function (envelope) {
-    if (Object.keys(envelope.responses).length == envelope.request.message.to.length) {
-        this.denizens[envelope.from].response(this.time, envelope.request, envelope.responses)
+Network.prototype.response = function (request) {
+    if (Object.keys(request.responses).length == request.message.to.length) {
+        this.denizens[request.from].response(this.time, request.message, request.responses)
     }
 }
 
@@ -88,21 +88,15 @@ Network.prototype.intercept = function () {
             var request
             while ((request = denizen.shifter.shift()) != null) {
                 sent = true
-                var responses = {}
-                for (var j = 0, to; (to = request.message.to[j]) != null; j++) {
-                    var envelope = {
-                        to: to,
-                        from: denizen.id,
-                        request: request,
-                        responses: responses
-                    }
+                var envelope
+                for (var j = 0, to; (envelope = request.envelopes[j]) != null; j++) {
                     MATCH: for (var k = 0, match; (match = matches[k]) != null; k++) {
                         for (var l = 0, L = match.subsets.length; l < L; l++) {
                             if (subset(envelope, match.subsets[l])) {
                                 match.count = Math.max(0, match.count - 1)
                                 if (match.count == 0) {
                                     if (match.name == null) {
-                                        responses[to] = null
+                                        request.responses[to] = null
                                     } else {
                                         intercepted[match.name].push(envelope)
                                     }
@@ -115,7 +109,7 @@ Network.prototype.intercept = function () {
                         this.request(envelope)
                     }
                 }
-                this.response(envelope)
+                this.response(request)
             }
         }
     }
