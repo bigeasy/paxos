@@ -16,16 +16,16 @@ Pinger.prototype.getPing = function (id) {
     return ping
 }
 
-Pinger.prototype._updateShape = function (now, id, reacahble, committed, naturalized) {
+Pinger.prototype._notify = function (now, id, reachable, ping) {
     if (
-        !reacahble &&
+        !reachable &&
         !this._shaper.collapsed &&
         ~this._paxos.government.majority.indexOf(id)
     ) {
         this._shaper = { update: noop }
         this._paxos._collapse(now)
     }
-    var shape = this._shaper.update(id, reacahble, committed, naturalized)
+    var shape = this._shaper.update(id, reachable, ping.committed, ping.naturalized)
     if (shape != null) {
         this._shaper = { update: noop }
         this._paxos.newGovernment(now, shape.quorum, shape.government)
@@ -39,31 +39,32 @@ Pinger.prototype.update = function (now, id, sync) {
         if (ping.when == null) {
             ping.when = now
         } else if (now - ping.when >= this._paxos.timeout) {
-            this._updateShape(now, id, false, ping.committed, ping.naturalized)
+            this._notify(now, id, false, ping)
         }
     } else {
-        // TODO I believe shaper eliminates duplicates, not us.
         ping.when = null
-        if (
-            ping.naturalized != sync.naturalized ||
-            ping.committed != sync.committed
-        ) {
-            ping.committed = sync.committed
-            ping.naturalized = ping.naturalized
-            this._updateShape(now, id, true, ping.committed, ping.naturalized)
-        }
+        ping.committed = sync.committed
+        ping.naturalized = sync.naturalized
+        this._notify(now, id, true, ping)
     }
+}
+
+Pinger.prototype._setPing = function (ping) {
+    var myPing = this.getPing(ping.id)
+    myPing.naturalized = ping.naturalized
+    myPing.committed = ping.committed
 }
 
 Pinger.prototype.createPinger = function (now, paxos, shaper) {
     var pinger = new Pinger(paxos, shaper)
-    var constituency = paxos.government.majority[0] == paxos.id && paxos.constituency.length != 1
+    var constituency = paxos.government.majority[0] == paxos.id && paxos.government.majority.length != 1
                      ? paxos.government.majority.slice(1)
                      : paxos.constituency
     pinger.update(now, paxos.id, { naturalized: paxos.naturalized, committed: paxos.government.promise })
     for (var i = 0, constituent; (constituent = constituency[i]) != null; i++) {
         var ping = this.pings[constituent]
         if (ping != null) {
+            pinger._setPing(ping)
             if (ping.when == null) {
                 pinger.update(now, constituent, ping)
             } else {
