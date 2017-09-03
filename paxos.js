@@ -35,6 +35,7 @@ var Relay = require('./relay')
 
 var departure = require('departure')
 var constituency = require('./constituency')
+
 // ### Constructor
 function Paxos (now, republic, id, options) {
     // Uniquely identify ourselves relative to the other participants.
@@ -209,6 +210,9 @@ Paxos.prototype.newGovernment = function (now, quorum, government) {
 
 // ### Bootstrap
 
+// Initialize the citizen with a government where it is the dictator.
+
+//
 Paxos.prototype.bootstrap = function (now, properties) {
     // Update current state as if we're already leader.
     this.naturalize()
@@ -521,6 +525,16 @@ Paxos.prototype._stuffSynchronize = function (pings, sync, count) {
     return true
 }
 
+// Package a message with log synchronization messages and put it in our outbox
+// for delivery to the intended fellow citizens.
+//
+// Note that messages can take however long they're going to take. They requests
+// can always be received and the responses can always be handled. If they are
+// made invalid by their time in transit they will be rejected. Our dear user
+// needs only to send the messages to our fellow citiens by any means and
+// return the responses to us all at once.
+
+//
 Paxos.prototype._send = function (message) {
     var sync = {
         republic: this.republic,
