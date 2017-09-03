@@ -236,7 +236,7 @@ Paxos.prototype.bootstrap = function (now, properties) {
 
     this._shaper.immigrate({ id: this.id, cookie: 0 })
 
-    this._commit(now, { promise: '1/0', body: government, previous: '0/0' })
+    this._commit(now, { promise: '1/0', body: government, previous: '0/0' }, '0/0')
 }
 
 // ### Enqueue and Immigrate
@@ -596,9 +596,7 @@ Paxos.prototype.request = function (now, request) {
         message = { method: 'reject', promise: sync.committed }
     } else {
         // Sync.
-        for (var i = 0, commit; (commit = request.sync.commits[i]) != null; i++) {
-            this._commit(now, commit)
-        }
+        this._synchronize(now, request.sync.commits)
 
         // We don't want to advance the minimum if we have no items yet.
         if (this.log.head.body.promise != '0/0') {
@@ -647,9 +645,7 @@ Paxos.prototype.response = function (now, message, responses) {
             this._pinger.update(now, message.to[i], null)
         } else {
             this._pinger.update(now, message.to[i], response.sync)
-            for (var j = 0, commit; (commit = response.sync.commits[j]) != null; j++) {
-                this._commit(now, commit)
-            }
+            this._synchronize(now, response.sync.commits)
         }
         if (Monotonic.compare(promise, response.message.promise) < 0) {
             promise = response.message.promise
@@ -765,76 +761,86 @@ Paxos.prototype._register = function (now, register) {
     entries.reverse()
 
     for (var i = 0, entry; (entry = entries[i]) != null; i++) {
-        this._commit(now, entry)
+        this._commit(now, entry, this.log.head.body.promise)
     }
 }
 
-Paxos.prototype._commit = function (now, entry) {
+Paxos.prototype._synchronize = function (now, entries) {
+    if (entries.length != 0) {
+        var top = this.log.head.body.promise
+        if (top == '0/0') {
+            // If we are immigrating or bootstrapping we ensure that we're
+            // starting with the the entry that announces our immigration.
+            // Otherwise we may have lost an immigration race condition.
+            if (
+                !Monotonic.isBoundary(entries[0].promise, 0) ||
+                entries[0].body.immigrate == null ||
+                entries[0].body.immigrate.id != this.id ||
+                entries[0].body.immigrate.cookie != this.cookie
+            ) {
+                return false
+            }
+            top = entries[0].previous
+        }
+        for (var i = 0, entry; (entry = entries[i]) != null; i++) {
+            this._commit(now, entry, top)
+            top = this.log.head.body.promise
+        }
+    }
+    return true
+}
+
+Paxos.prototype._commit = function (now, entry, top) {
     entry = JSON.parse(JSON.stringify(entry))
+
     logger.info('_receiveEnact', { now: now, $entry: entry })
 
-    var max = this.log.head.body
+    // We already have this entry. The value is invariant, so let's assert
+    // that the given value matches the one we have.
 
-    if (max.promise == '0/0') {
-        // If we are immigrating or bootstrapping we ensure that we're starting
-        // with the the entry that announces our immigration. Otherwise we may
-        // have lost an immigration race condition.
-        if (
-            !Monotonic.isBoundary(entry.promise, 0) ||
-            entry.body.immigrate == null ||
-            entry.body.immigrate.id != this.id ||
-            entry.body.immigrate.cookie != this.cookie
-        ) {
-            return
-        }
-    } else {
-        // We already have this entry. The value is invariant, so let's assert
-        // that the given value matches the one we have.
+    //
+    if (Monotonic.compare(entry.promise, top) <= 0) {
+        // Difficult to see how we could get here and not have a copy of the
+        // message in our log. If we received a delayed sync message that
+        // has commits that precede our minimum, seems like it would have
+        // been rejected at entry, the committed versions would be off.
 
         //
-        if (Monotonic.compare(max.promise, entry.promise) >= 0) {
-            // Difficult to see how we could get here and not have a copy of the
-            // message in our log. If we received a delayed sync message that
-            // has commits that precede our minimum, seems like it would have
-            // been rejected at entry, the committed versions would be off.
+        if (Monotonic.compare(this.minimum, entry.promise) <= 0) {
+            departure.raise(this._findRound(entry.promise).body.body, entry.body)
+        } else {
+            // Getting this branch will require
+            //
+            // * isolating the minority member so that it is impeached.
+            // * collapsing the consensus so the unreachability is lost.
+            //      * note that only the leader is guarded by its writer.
+            //      * reset unreachability means timeout needs to pass
+            //      again.
+            //      * if you preserve pings, then the same effect can be had
+            //      by killing the leader and majority member that
+            //      represents the minority member, since reacability is
+            //      only present in a path.
+            // * add new entries to the log so that the isolate former
+            // minority member is behind.
+            // * have the former minority member sync a constituent, the
+            // constituent will respond with a sync, delay the response.
+            // * bring the minority member up to speed.
+            // * let new minimum propigate.
+            // * send the delayed response.
 
             //
-            if (Monotonic.compare(this.minimum, entry.promise) <= 0) {
-                departure.raise(this._findRound(entry.promise).body.body, entry.body)
-            } else {
-                // Getting this branch will require
-                //
-                // * isolating the minority member so that it is impeached.
-                // * collapsing the consensus so the unreachability is lost.
-                //      * note that only the leader is guarded by its writer.
-                //      * reset unreachability means timeout needs to pass
-                //      again.
-                //      * if you preserve pings, then the same effect can be had
-                //      by killing the leader and majority member that
-                //      represents the minority member, since reacability is
-                //      only present in a path.
-                // * add new entries to the log so that the isolate former
-                // minority member is behind.
-                // * have the former minority member sync a constituent, the
-                // constituent will respond with a sync, delay the response.
-                // * bring the minority member up to speed.
-                // * let new minimum propigate.
-                // * send the delayed response.
-
-                //
-            }
-            return
         }
-        // Otherwise, we assert that entry has a correct previous promise.
-        assert(max.promise == entry.previous, 'incorrect previous')
+        return
     }
+
+    // Otherwise, we assert that entry has a correct previous promise.
+    assert(top == entry.previous, 'incorrect previous')
 
     var isGovernment = Monotonic.isBoundary(entry.promise, 0)
     logger.info('enact', {
-        outOfOrder: !(isGovernment || Monotonic.increment(max.promise, 1) == entry.promise),
+        outOfOrder: !(isGovernment || Monotonic.increment(top, 1) == entry.promise),
         isGovernment: isGovernment,
-        previous: max.promise,
-        next: entry.promise
+        $entry: entry
     })
 
     if (isGovernment) {
