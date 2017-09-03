@@ -755,7 +755,7 @@ Paxos.prototype.response = function (now, message, responses) {
 
 // ### Commit
 
-Paxos.prototype._commit = function (now, register) {
+Paxos.prototype._register = function (now, register) {
     var entries = []
     while (register) {
         entries.push(register.body)

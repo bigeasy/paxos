@@ -82,7 +82,7 @@ Writer.prototype.response = function (now, request, responses, promise) {
     if (promise != null) {
         this._paxos.collapse(now)
     } else {
-        this._paxos._commit(now, request.register)
+        this._paxos._register(now, request.register)
         this._writing = false
         if (this.proposals.length == 0) {
             this._paxos.scheduler.schedule(now, this._paxos.id, {
