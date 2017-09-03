@@ -236,7 +236,7 @@ Paxos.prototype.bootstrap = function (now, properties) {
 
     this._shaper.immigrate({ id: this.id, cookie: 0 })
 
-    this._enact(now, { promise: '1/0', body: government, previous: '0/0' })
+    this._commit(now, { promise: '1/0', body: government, previous: '0/0' })
 }
 
 // ### Enqueue and Immigrate
@@ -597,7 +597,7 @@ Paxos.prototype.request = function (now, request) {
     } else {
         // Sync.
         for (var i = 0, commit; (commit = request.sync.commits[i]) != null; i++) {
-            this._enact(now, commit)
+            this._commit(now, commit)
         }
 
         // We don't want to advance the minimum if we have no items yet.
@@ -648,7 +648,7 @@ Paxos.prototype.response = function (now, message, responses) {
         } else {
             this._pinger.update(now, message.to[i], response.sync)
             for (var j = 0, commit; (commit = response.sync.commits[j]) != null; j++) {
-                this._enact(now, commit)
+                this._commit(now, commit)
             }
         }
         if (Monotonic.compare(promise, response.message.promise) < 0) {
@@ -765,11 +765,11 @@ Paxos.prototype._register = function (now, register) {
     entries.reverse()
 
     for (var i = 0, entry; (entry = entries[i]) != null; i++) {
-        this._enact(now, entry)
+        this._commit(now, entry)
     }
 }
 
-Paxos.prototype._enact = function (now, entry) {
+Paxos.prototype._commit = function (now, entry) {
     entry = JSON.parse(JSON.stringify(entry))
     logger.info('_receiveEnact', { now: now, $entry: entry })
 
