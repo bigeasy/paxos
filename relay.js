@@ -51,28 +51,34 @@ Relay.prototype.received = function (receipt) {
 
 //
 Relay.prototype.update = function (name, reachable, committed, naturalized) {
-    if (
-        // We always update our outbox if we nothing going on at all.
-        (
-            this._seen[name] == null
-        ) ||
+    if (name == '4') {
+        var i = 0
+    }
+    if (this._seen[name] == null) {
+         this.outbox[name] = this._seen[name] = {
+            reachable: reachable,
+            committed: null,
+            naturalized: false
+         }
+    }
+    if (!reachable) {
+        var record = this.outbox[name] = this._seen[name]
+        record.reachable = false
+    } else if (
         // Otherwise if the denizen is currently reachable, then we update our
         // state if the denizen is now unreachable or if its maximum committed
         // promise has changed.
         (
             this._seen[name].reachable &&
             (
-                !reachable ||
                 this._seen[name].committed != committed ||
                 this._seen[name].naturalized != naturalized
             )
         )
     ) {
-        this._seen[name] = this.outbox[name] = {
-            reachable: reachable,
-            committed: committed,
-            naturalized: naturalized
-        }
+        var record = this.outbox[name] = this._seen[name]
+        record.committed = committed
+        record.naturalized = naturalized
     }
     return null
 }

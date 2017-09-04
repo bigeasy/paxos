@@ -70,6 +70,7 @@ function Shaper (parliamentSize, government) {
     this._governments = []
     this._shouldContract()
     this.outbox = {}
+    this._representative = null
 }
 
 Shaper.prototype._shouldContract = function () {
@@ -95,6 +96,8 @@ Shaper.prototype._shouldContract = function () {
 // new shape. Note that immigration takes place is elsewhere.
 
 //
+
+// TODO Missing naturalized!!!!!
 Shaper.prototype.update = function (id, reachable) {
     // We are interested in denizens when they are first reachable or when they
     // become unreachable. We ignore denizens that continue to be reachable.
@@ -186,6 +189,9 @@ Shaper.prototype.immigrate = function (immigration) {
 Shaper.prototype._immigration = function () {
     if (this._immigrating.length) {
         var immigration = this._immigrating[0]
+        if (immigration.id == '5') {
+            var x = 1
+        }
         return {
             quorum: this._government.majority,
             government: {

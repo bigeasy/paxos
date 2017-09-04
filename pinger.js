@@ -32,6 +32,16 @@ Pinger.prototype._notify = function (now, id, reachable, ping) {
     }
 }
 
+Pinger.prototype.exile = function (id) {
+    delete this.pings[id]
+}
+
+Pinger.prototype.unreachable = function (now, id, sync) {
+    var ping = this.getPing(id)
+    ping.committed = sync.committed
+    ping.naturalized = sync.naturalized
+    this._notify(now, id, false, ping)
+}
 
 Pinger.prototype.update = function (now, id, sync) {
     var ping = this.getPing(id)
@@ -45,7 +55,9 @@ Pinger.prototype.update = function (now, id, sync) {
         ping.when = null
         ping.committed = sync.committed
         ping.naturalized = sync.naturalized
-        this._notify(now, id, true, ping)
+        if (ping.committed != '0/0') {
+            this._notify(now, id, true, ping)
+        }
     }
 }
 

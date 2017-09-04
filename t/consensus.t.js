@@ -1,4 +1,4 @@
-require('proof')(15, prove)
+require('proof')(13, prove)
 
 function prove (okay) {
     var Paxos = require('..'), denizen
@@ -6,23 +6,11 @@ function prove (okay) {
     var Network = require('./network')
     var network = new Network
 
-    network.push()
-
     function dump (denizen) {
         denizen.log.each(function (entry) { console.log(entry) })
     }
 
-    var shifter = network.denizens[0].log.shifter()
-
-    shifter.join(function (envelope) {
-        return envelope.method == 'government'
-    }, function (error, envelope) {
-        if (error) throw error
-        okay(envelope.promise, '1/0', 'government message')
-        okay(network.denizens[0].government.promise, '1/0', 'government enacted')
-    })
-
-    network.denizens[0].bootstrap(network.time, { location: '0' })
+    network.bootstrap()
 
     okay(network.denizens[0].government, {
         majority: [ '0' ],
@@ -159,4 +147,28 @@ function prove (okay) {
             '3': { location: '3' }
         }
     }, 'add fourth')
+
+    network.populate(2)
+
+    // Move our clock forward to get a differnt cookie.
+    network.time++
+
+    // This one will never join because it is already proposed and the cookie is
+    // wrong.
+    network.reboot(4)
+
+    // This one will join, but with the new cookie.
+    network.reboot(5)
+
+    network.intercept()
+
+    network.time += 3
+
+    network.intercept()
+
+    network.time += 1
+
+    network.intercept()
+
+    console.log(network.denizens[1].government)
 }

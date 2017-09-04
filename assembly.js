@@ -20,6 +20,7 @@ function Assembly (government) {
     this.collapsed = true
     this._immigrating = []
     this._representative = null
+    this.outbox = {}
 }
 
 // We assume that update will be called first with the id of this citzen and

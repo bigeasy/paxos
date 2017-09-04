@@ -129,15 +129,34 @@ Network.prototype.push = function () {
     this.denizens.push(denizen)
 }
 
+Network.prototype.reboot = function (i) {
+    var id = String(i)
+    var denizen = new Paxos(this.time, 1, id, {
+        parliamentSize: 5,
+        ping: 1,
+        timeout: 3,
+        naturalized: true
+    })
+    denizen.scheduler.events.shifter().pump(denizen.event.bind(denizen))
+    denizen.shifter = denizen.outbox.shifter()
+    this.denizens[i] = denizen
+}
+
+Network.prototype.bootstrap = function () {
+    this.reboot(0)
+    this.denizens[0].bootstrap(this.time, { location: '0' })
+}
+
+Network.prototype.immigrate = function (i) {
+    var denizen = this.denizens[i]
+    this.denizens[0].immigrate(this.time, 1, denizen.id, denizen.cookie, { location: denizen.id })
+}
+
 Network.prototype.populate = function (count) {
     while (count-- != 0) {
-        this.push()
-        if (this.denizens.length == 1) {
-            this.denizens[0].bootstrap(this.time, { location: '0' })
-        } else {
-            var denizen = this.denizens[this.denizens.length - 1]
-            this.denizens[0].immigrate(this.time, 1, denizen.id, denizen.cookie, { location: denizen.id })
-        }
+        var i = this.denizens.length
+        this.reboot(i)
+        this.immigrate(i)
     }
 }
 

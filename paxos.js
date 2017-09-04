@@ -190,12 +190,15 @@ Paxos.prototype.newGovernment = function (now, quorum, government) {
         immigrated.id[promise] = immigrate.id
     } else if (government.exile) {
         var exile = government.exile
-        exile.promise = immigrated.promise[exile.id]
-        exile.properties = properties[exile.id]
-        delete immigrated.promise[exile.id]
-        delete immigrated.id[exile.promise]
-        delete properties[exile.id]
-        government.constituents.splice(government.constituents.indexOf(exile.id), 1)
+        government.exile = {
+            id: exile,
+            promise: immigrated.promise[exile],
+            properties: properties[exile]
+        }
+        delete immigrated.id[immigrated.promise[exile]]
+        delete immigrated.promise[exile]
+        delete properties[exile]
+        government.constituents.splice(government.constituents.indexOf(exile), 1)
     }
 
     government.map = map
@@ -536,6 +539,9 @@ Paxos.prototype._stuffSynchronize = function (pings, sync, count) {
 
 //
 Paxos.prototype._send = function (message) {
+    if (message.to[0] == '4' && this.id == '1') {
+        var i = 1
+    }
     var sync = {
         republic: this.republic,
         promise: this.government.immigrated.promise[this.id],
@@ -575,6 +581,9 @@ Paxos.prototype._send = function (message) {
 
 //
 Paxos.prototype.request = function (now, request) {
+    if (this.id == '4') {
+        var i = 1
+    }
     // TODO Reject if it is the wrong republic.
     // TODO Reject if it a message from an exile, wrong id and cookie.
     var sync = {
@@ -594,9 +603,10 @@ Paxos.prototype.request = function (now, request) {
         this._stuffSynchronize([ request.sync ], sync, 20)
         // We are ahead of the bozo trying to update us, so update him back.
         message = { method: 'reject', promise: sync.committed }
+    } else if (!this._synchronize(now, request.sync.commits)) {
+        message = { method: 'failure' }
     } else {
-        // Sync.
-        this._synchronize(now, request.sync.commits)
+        sync.committed = this.log.head.body.promise
 
         // We don't want to advance the minimum if we have no items yet.
         if (this.log.head.body.promise != '0/0') {
@@ -615,27 +625,39 @@ Paxos.prototype.request = function (now, request) {
                 body: null
             })
         }
-        var message = request.message.method == 'synchronize'
-                    ? { method: 'respond', promise: sync.committed }
-                    : this._recorder.request(now, request.message)
+
+        message = request.message.method == 'synchronize'
+                ? { method: 'respond', promise: sync.committed }
+                : this._recorder.request(now, request.message)
     }
     return {
         message: message,
         sync: sync,
-        pings: this._shaper.outbox
+        pings: JSON.parse(JSON.stringify(this._shaper.outbox))
     }
 }
 
 Paxos.prototype.response = function (now, message, responses) {
+    if (message.to[0] == '4' && message.method == 'synchronize') {
+        var i = 1
+    }
+    if (message.to[0] == '1' && this.id == '2' && message.method == 'synchronize') {
+        var i = 1
+    }
     var failed = false, promise = '0/0'
 
     // Go through responses converting network errors to reject messaages and
     // syncing any commits that where pushed back to us.
+    //
+    // Note that the immigration race may be falsely reported initially if we
+    // had no ping information when we sent this message, but we have it now and
+    // if we have the right cookie then it will become reachable on the next
+    // ping.
 
     //
     for (var i = 0, I = message.to.length; i < I; i++) {
         var response = responses[message.to[i]]
-        if (response == null) {
+        if (response == null || response.message.method == 'failure') {
             failed = true
             responses[message.to[i]] = response = {
                 message: { method: 'reject', promise: '0/0' },
@@ -652,15 +674,22 @@ Paxos.prototype.response = function (now, message, responses) {
         }
         // TODO Don't be so direct?
         // TODO Who is eliminating duplicates?
+        if (response.sync.from == '1' && this.id == '2') {
+            var x = 0
+        }
         for (var id in response.pings) {
+            if (id == '4') {
+                var x = 0
+            }
             if (response.pings[id].reachable) {
                 this._pinger.update(now, id, response.pings[id])
             } else {
-                this._shaper.update(id, false)
+                this._pinger.unreachable(now, id, response.pings[id])
             }
         }
-        this._receipts[response.sync.from] = response.pings
+        this._receipts[message.to[i]] = response.pings
     }
+
 
     // Here's were I'm using messages to drive the algorithm even when the
     // information is available for recalcuation.
@@ -867,7 +896,7 @@ Paxos.prototype._commit = function (now, entry, top) {
         } else {
             // If we are a represenative we want to propagate our pings to the
             // leader through our representative (which may be the leader.)
-            var representative = this.government.promise[this.representative]
+            var representative = this.government.immigrated.promise[this.id]
             if (representative != this._shaper._representative) {
                 shaper = new Relay(representative)
             } else {
@@ -877,8 +906,7 @@ Paxos.prototype._commit = function (now, entry, top) {
         this._shaper = shaper
 
         if (this.government.exile) {
-            // TODO Remove! Fall back to a peek at exile.
-            delete this.pings[this.government.exile.id]
+            this._pinger.exile(this.government.exile.id)
         } else if (this.government.immigrate && this.government.majority[0] == this.id) {
             this._shaper.immigrated(this.government.immigrate.id)
         }
