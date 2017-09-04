@@ -152,6 +152,7 @@ Paxos.prototype.newGovernment = function (now, quorum, government) {
     this._shaper.decided = true
 
     // Increment the government part of the promise.
+    // TODO Will fail on multiple rounds of Paxos.
     var promise = Monotonic.increment(this.government.promise, 0)
 
     // The government's constituents are our current population less the members
