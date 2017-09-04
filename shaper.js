@@ -120,7 +120,7 @@ Shaper.prototype.update = function (id, reachable) {
                 exile: id
             }
         })
-    } else if (this._shouldExpand) {
+    } else if (this._shouldExpand && !~this._government.minority.indexOf(id)) {
         this._expandable.push(id)
         // TODO Is the quorum the new majority or the old majority?
         // TODO Think about growth commit race conditions again.

@@ -1,4 +1,4 @@
-require('proof')(12, prove)
+require('proof')(14, prove)
 
 function prove (okay) {
     var Shaper = require('../shaper')
@@ -10,10 +10,12 @@ function prove (okay) {
         minority: []
     })
 
+    shaper.received()
+
     shaper = new Shaper(5, {
-        majority: [ '0', '1', '2' ],
-        minority: [ '3', '4' ],
-        constituents: []
+        majority: [ '0', '1' ],
+        minority: [ '2' ],
+        constituents: [ '3', '4' ]
     })
 
     var reshape
@@ -21,6 +23,25 @@ function prove (okay) {
     okay(shaper.update('0', true), null, 'ignore majority')
 
     okay(shaper.update('0', true), null, 'seen')
+
+    okay(shaper.update('3', true), null, 'not enough to expand')
+    okay(shaper.update('2', true), null, 'ignore minority to expand')
+    okay(shaper.update('4', true), {
+        quorum: [ '0', '1', '2' ],
+        government: {
+            majority: [ '0', '1', '2' ],
+            minority: [ '3', '4' ]
+        }
+    }, 'expand to parliament size')
+
+    shaper = createShaper(shaper, {
+        parliamentSize: 5,
+        government: {
+            majority: [ '0', '1', '2' ],
+            minority: [ '3', '4' ],
+            constituents: []
+        }
+    })
 
     okay(shaper.update('4', true), null, 'copacetic')
 
@@ -151,31 +172,4 @@ function prove (okay) {
             immigrate: { id: '6', cookie: 1, properties: { location: '6' } }
         }
     }, 'updated immigration')
-
-    shaper = createShaper(shaper, {
-        parliamentSize: 5,
-        government: {
-            majority: [ '0' ],
-            minority: [],
-            constituents: [ '1', '4', '5' ]
-        }
-    })
-
-    shaper.immigrated('6')
-
-    okay({
-        zero: shaper.update('0', true),
-        one: shaper.update('1', true),
-        four: shaper.update('4', true)
-    }, {
-        zero: null,
-        one: null,
-        four: {
-            quorum: [ '0', '1' ],
-            government: {
-                majority: [ '0', '1' ],
-                minority: [ '4' ]
-            }
-        }
-    }, 'expand')
 }
