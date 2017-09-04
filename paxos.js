@@ -96,6 +96,8 @@ function Paxos (now, republic, id, options) {
 
     // The least committed value across the entire island.
     this.minimum = '0/0'
+    this._minimum = { propagated: '0/0', version: '0/0', reduced: '0/0' }
+    this._minimums = {}
 
     // Network message queue.
     this.outbox = new Procession
@@ -119,7 +121,7 @@ function Paxos (now, republic, id, options) {
     // Used for our pseudo-random number generator to vary retry times.
     this._seed = 2147483647
 
-    // Track ping information that has propigated back.
+    // Track ping information that has propagated back.
     this._receipts = {}
 }
 
@@ -547,6 +549,7 @@ Paxos.prototype._send = function (message) {
         promise: this.government.immigrated.promise[this.id],
         from: this.id,
         minimum: this.minimum,
+        minimum_: this._minimum,
         committed: this.log.head.body.promise,
         cookie: this.cookie,
         commits: []
@@ -595,6 +598,7 @@ Paxos.prototype.request = function (now, request) {
         committed: this.log.head.body.promise,
         commits: []
     }
+    this._minimum.propagated = request.sync.minimum_.propagated
     this._shaper.received(request.receipts)
     var message
     if (
@@ -633,7 +637,8 @@ Paxos.prototype.request = function (now, request) {
     return {
         message: message,
         sync: sync,
-        pings: JSON.parse(JSON.stringify(this._shaper.outbox))
+        pings: JSON.parse(JSON.stringify(this._shaper.outbox)),
+        minimum: this._minimum
     }
 }
 
@@ -688,6 +693,36 @@ Paxos.prototype.response = function (now, message, responses) {
             }
         }
         this._receipts[message.to[i]] = response.pings
+        var minimum = response.minimum
+        if (
+            minimum &&
+            minimum.version == this.government.promise &&
+            (
+                this._minimums[id] == null ||
+                this._minimums[id].committed != minimum.committed
+            )
+        ) {
+            this._minimums[id] = minimum
+            var reduced = this.log.head.body.promise
+            // Really want to stop doing this everywhere.
+            var _constituency = this.id == this.government.majority[0] && this.government.majority.length != 1
+                              ? this.government.majority.slice(1)
+                              : this.constituency
+            for (var i = 0, constituent; (constituent = _constituency[id]) != null; i++) {
+                if (!this._mimimums[constituent]) {
+                    reduced = null
+                    break
+                }
+                if (Monotonic.compare(constituent.committed, reduced) < 0) {
+                    reduced = constituent.committed
+                }
+            }
+            this._minimum = {
+                propagated: this.id == this.government.majority[0] ? reduced : this._minimum.propagated,
+                version: this.government.promise,
+                reduced: reduced
+            }
+        }
     }
 
 
@@ -854,7 +889,7 @@ Paxos.prototype._commit = function (now, entry, top) {
             // * have the former minority member sync a constituent, the
             // constituent will respond with a sync, delay the response.
             // * bring the minority member up to speed.
-            // * let new minimum propigate.
+            // * let new minimum propagate.
             // * send the delayed response.
 
             //
@@ -917,6 +952,12 @@ Paxos.prototype._commit = function (now, entry, top) {
                 method: 'collapse',
                 body: null
             })
+        }
+
+        this._minimum = {
+            version: this.government.promise,
+            propagated: this._minimum.propagated,
+            reduced: entry.promise
         }
 
         // Reset ping tracking information. Leader behavior is different from
