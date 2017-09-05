@@ -21,7 +21,6 @@ var Indexer = require('procession/indexer')
 var logger = require('prolific.logger').createLogger('paxos')
 
 // The participants in the Paxos strategy.
-var Assembly = require('./assembly')
 var Proposer = require('./proposer')
 var Acceptor = require('./acceptor')
 
@@ -416,24 +415,29 @@ Paxos.prototype.event = function (envelope) {
     // Call an assembly; try to reach other members of the government when the
     // current government has collapsed.
     case 'assembly':
-        this._pinger = new Pinger(this, this._shaper = new Assembly(this.government, this.id))
-        this._pinger.update(now, this.id, {
-            naturalized: this.naturalized,
-            committed: this.log.head.body.promise
-        })
-
-        // TODO This is fine. Realize that immigration is a special type of
-        // somethign that is built on top of proposals. Ah, or maybe assembly is the
-        // shaper and a shaper creates the next shaper. Thus, shaper is the
-        // abstraction that is above writer/recorder. Also, Assembly could be called
-        // something else, gatherer or collector or roll call or sergent at arms.
-
-        this.government.majority.concat(this.government.minority)
-            .filter(function (id) {
-                return id != this.id
-            }.bind(this)).forEach(function (id) {
-                this.scheduler.schedule(now, id, { method: 'synchronize', to: [ id ] })
-            }, this)
+        for (;;) {
+            var majority = [ this.id ]
+            var minority = []
+            var parliament = this.government.majority.concat(this.government.minority)
+            while (parliament.length != 0 && majority.length != this.government.majority.length) {
+                var id = parliament.shift()
+                if (id != this.id) {
+                    if (this._disappeared[id] != null) {
+                        minority.push(id)
+                    } else {
+                        majority.push(id)
+                    }
+                }
+            }
+            if (majority.length == this.government.majority.length) {
+                minority.push.apply(minority, parliament)
+                this.newGovernment(now, majority, { majority: majority, minority: minority })
+                break
+            }
+            // If we don't have enough reachable participants for a majority,
+            // clear out our disappearance tracking in a desperate move.
+            this._disappeared = {}
+        }
         break
     // We are a majority member that has not heard from the leader for longer
     // than the timeout so collapse the current government.
@@ -654,12 +658,10 @@ Paxos.prototype.response = function (now, message, responses) {
                 minimum: null,
                 unreachable: {}
             }
-            if (!~this.government.majority.indexOf(message.to[i]) && !this._writer.collapsed) {
-                if (this._disappeared[message.to[i]] == null) {
-                    this._disappeared[message.to[i]] = now
-                } else if (now - this._disappeared[message.to[i]] >= this.timeout) {
-                    response.unreachable[this.government.immigrated.promise[message.to[i]]] = true
-                }
+            if (this._disappeared[message.to[i]] == null) {
+                this._disappeared[message.to[i]] = now
+            } else if (now - this._disappeared[message.to[i]] >= this.timeout) {
+                response.unreachable[this.government.immigrated.promise[message.to[i]]] = true
             }
         } else if (this._disappeared[message.to[i]] != null) {
             delete this._disappeared[message.to[i]]
@@ -924,6 +926,19 @@ Paxos.prototype._commit = function (now, entry, top) {
         assert(Monotonic.compare(this.government.promise, entry.promise) < 0, 'governments out of order')
 
         this.government = entry.body
+
+        // If we collapsed and ran Paxos we would have carried on regardless of
+        // unreachability until we made progress. During Paxos we ignore
+        // unreacability so we delete it here in case we happened to make
+        // progress in spite of it.
+        if (this.government.map == null) {
+            for (var i = 0, id; (id = this.government.majority[i]) != null; i++) {
+                delete this._unreachable[id]
+            }
+            for (var i = 0, id; (id = this.government.minority[i]) != null; i++) {
+                delete this._unreachable[id]
+            }
+        }
 
         constituency(this.government, this.id, this)
 
