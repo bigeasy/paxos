@@ -124,6 +124,9 @@ function Paxos (now, republic, id, options) {
 
     // Track ping information that has propagated back.
     this._receipts = {}
+
+    this._disappeared = {}
+    this._unreachable = {}
 }
 
 // ### Government
@@ -623,7 +626,8 @@ Paxos.prototype.request = function (now, request) {
         message: message,
         sync: sync,
         pings: JSON.parse(JSON.stringify(this._shaper.outbox)),
-        minimum: this._minimum
+        minimum: this._minimum,
+        unreachable: this._unreachable
     }
 }
 
@@ -647,13 +651,26 @@ Paxos.prototype.response = function (now, message, responses) {
                 message: { method: 'unreachable', promise: '0/0' },
                 sync: { committed: null, commits: [] },
                 pings: {},
-                minimum: null
+                minimum: null,
+                unreachable: {}
             }
+            if (!~this.government.majority.indexOf(message.to[i]) && !this._writer.collapsed) {
+                if (this._disappeared[message.to[i]] == null) {
+                    this._disappeared[message.to[i]] = now
+                } else if (now - this._disappeared[message.to[i]] >= this.timeout) {
+                    this._unreachable[this.government.immigrated.promise[message.to[i]]] = true
+                }
+            }
+        } else if (this._disappeared[message.to[i]] != null) {
+            delete this._disappeared[message.to[i]]
         }
     }
     for (var i = 0, I = message.to.length; i < I; i++) {
         var response = responses[message.to[i]]
         this._synchronize(now, response.sync.commits)
+        for (var unreachable in response.unreachable) {
+            this._unreachable[unreachable] = response.unreachable[unreachable]
+        }
         var minimum = response.minimum
         if (
             minimum &&
@@ -953,16 +970,19 @@ Paxos.prototype._commit = function (now, entry, top) {
             committed: null
         }
 
-        var constituency_ = this.id == this.government.majority[id] && this.government.majority.length != 1
+        var constituency_ = this.id == this.government.majority[0] && this.government.majority.length != 1
                           ? this.government.majority.slice(1)
                           : this.constituency
 
+        // TODO Tidy.
         var minimums = {}
-        minimums[this.id] = this._minimum[this.id]
+        minimums[this.id] = this._minimums[this.id]
         constituency_.forEach(function (id) {
-            minimums[id] = this._minimums[id]
+            if (this._minimums[id] != null) {
+                minimums[id] = this._minimums[id]
+            }
         }, this)
-//        this._minimums = minimums
+        this._minimums = minimums
 
         // Reset ping tracking information. Leader behavior is different from
         // other members. We clear out all ping information for ping who are not

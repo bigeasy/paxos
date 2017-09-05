@@ -170,5 +170,5 @@ function prove (okay) {
 
     network.intercept()
 
-    console.log(network.denizens[1].government)
+    console.log(network.denizens[0]._unreachable)
 }
