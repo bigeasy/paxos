@@ -96,7 +96,7 @@ function Paxos (now, republic, id, options) {
 
     // The least committed value across the entire island.
     this.minimum = '0/0'
-    this._minimum = { propagated: '0/0', version: '0/0', reduced: '0/0' }
+    this._minimum = { propagated: '0/0', version: '0/0', reduced: '0/0', committed: '0/0' }
     this._minimums = {}
 
     // Network message queue.
@@ -493,6 +493,11 @@ Paxos.prototype._stuffSynchronize = function (pings, sync, count) {
     var ping = pings[0]
     assert(pings.length == 1)
     var iterator
+    if (ping.committed != null && this._minimums[ping.id]) {
+        if (ping.committed != this._minimums[ping.id].committed) {
+            // console.log(ping, this._minimums[ping.id])
+        }
+    }
     if (ping.committed == null) {
         return true
     } else if (ping.committed == '0/0') {
@@ -595,6 +600,7 @@ Paxos.prototype.request = function (now, request) {
         message = { method: 'unreachable' }
     } else {
         sync.committed = this.log.head.body.promise
+        assert(sync.committed ==  this._minimum.committed)
 
         // We don't want to advance the minimum if we have no items yet.
         if (this.log.head.body.promise != '0/0') {
@@ -643,17 +649,58 @@ Paxos.prototype.response = function (now, message, responses) {
         if (response == null || response.message.method == 'unreachable') {
             failed = true
             responses[message.to[i]] = response = {
-                message: { method: 'reject', promise: '0/0' },
+                message: { method: 'unreachable', promise: '0/0' },
+                sync: { committed: null, commits: [] },
+                pings: {},
+                minimum: null
+            }
+        }
+    }
+    for (var i = 0, I = message.to.length; i < I; i++) {
+        var response = responses[message.to[i]]
+        this._synchronize(now, response.sync.commits)
+        var minimum = response.minimum
+        if (
+            minimum &&
+            minimum.version == this.government.promise &&
+            (
+                this._minimums[message.to[i]] == null ||
+                this._minimums[message.to[i]].reduced != minimum.reduced ||
+                this._minimums[message.to[i]].committed != minimum.committed
+            )
+        ) {
+            this._minimums[message.to[i]] = minimum
+            var reduced = this.log.head.body.promise
+            // Really want to stop doing this everywhere.
+            var _constituency = this.id == this.government.majority[0] && this.government.majority.length != 1
+                              ? this.government.majority.slice(1)
+                              : this.constituency
+            for (var j = 0, constituent; (constituent = _constituency[j]) != null; j++) {
+                if (!this._minimums[constituent]) {
+                    reduced = '0/0'
+                    break
+                }
+                if (Monotonic.compare(this._minimums[constituent].committed, reduced) < 0) {
+                    reduced = this._minimums[constituent].committed
+                }
+            }
+            this._minimum = {
+                propagated: this.id == this.government.majority[0] ? reduced : this._minimum.propagated,
+                version: this.government.promise,
+                reduced: reduced,
+                committed: this.log.head.body.promise
+            }
+        }
+        if (response == null || response.message.method == 'unreachable') {
+            failed = true
+            responses[message.to[i]] = response = {
+                message: { method: 'unreachable', promise: '0/0' },
                 sync: { committed: null },
                 pings: {}
             }
             this._pinger.update(now, message.to[i], null)
         } else {
-            this._synchronize(now, response.sync.commits)
             this._pinger.update(now, message.to[i], response.sync)
-        }
-        if (Monotonic.compare(promise, response.message.promise) < 0) {
-            promise = response.message.promise
         }
         // TODO Don't be so direct?
         // TODO Who is eliminating duplicates?
@@ -665,36 +712,6 @@ Paxos.prototype.response = function (now, message, responses) {
             }
         }
         this._receipts[message.to[i]] = response.pings
-        var minimum = response.minimum
-        if (
-            minimum &&
-            minimum.version == this.government.promise &&
-            (
-                this._minimums[id] == null ||
-                this._minimums[id].committed != minimum.committed
-            )
-        ) {
-            this._minimums[id] = minimum
-            var reduced = this.log.head.body.promise
-            // Really want to stop doing this everywhere.
-            var _constituency = this.id == this.government.majority[0] && this.government.majority.length != 1
-                              ? this.government.majority.slice(1)
-                              : this.constituency
-            for (var i = 0, constituent; (constituent = _constituency[id]) != null; i++) {
-                if (!this._mimimums[constituent]) {
-                    reduced = null
-                    break
-                }
-                if (Monotonic.compare(constituent.committed, reduced) < 0) {
-                    reduced = constituent.committed
-                }
-            }
-            this._minimum = {
-                propagated: this.id == this.government.majority[0] ? reduced : this._minimum.propagated,
-                version: this.government.promise,
-                reduced: reduced
-            }
-        }
     }
 
 
@@ -929,7 +946,8 @@ Paxos.prototype._commit = function (now, entry, top) {
         this._minimum = {
             version: this.government.promise,
             propagated: this._minimum.propagated,
-            reduced: entry.promise
+            reduced: entry.promise,
+            committed: null
         }
 
         // Reset ping tracking information. Leader behavior is different from
@@ -955,6 +973,8 @@ Paxos.prototype._commit = function (now, entry, top) {
                             .concat(this.government.constituents)
         this._pinger = this._pinger.createPinger(now, this, this._shaper)
     }
+
+    this._minimum.committed = entry.promise
 
     assert(entry.previous, 'null previous')
     this.log.push({
