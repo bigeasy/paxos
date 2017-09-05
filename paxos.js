@@ -658,7 +658,7 @@ Paxos.prototype.response = function (now, message, responses) {
                 if (this._disappeared[message.to[i]] == null) {
                     this._disappeared[message.to[i]] = now
                 } else if (now - this._disappeared[message.to[i]] >= this.timeout) {
-                    this._unreachable[this.government.immigrated.promise[message.to[i]]] = true
+                    response.unreachable[this.government.immigrated.promise[message.to[i]]] = true
                 }
             }
         } else if (this._disappeared[message.to[i]] != null) {
@@ -669,7 +669,9 @@ Paxos.prototype.response = function (now, message, responses) {
         var response = responses[message.to[i]]
         this._synchronize(now, response.sync.commits)
         for (var unreachable in response.unreachable) {
-            this._unreachable[unreachable] = response.unreachable[unreachable]
+            if (!this._unreachable[unreachable]) {
+                this._unreachable[unreachable] = response.unreachable[unreachable]
+            }
         }
         var minimum = response.minimum
         if (
