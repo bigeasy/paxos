@@ -542,9 +542,6 @@ Paxos.prototype._stuffSynchronize = function (pings, sync, count) {
 
 //
 Paxos.prototype._send = function (message) {
-    if (message.to[0] == '4' && this.id == '1') {
-        var i = 1
-    }
     var sync = {
         republic: this.republic,
         promise: this.government.immigrated.promise[this.id],
@@ -561,9 +558,19 @@ Paxos.prototype._send = function (message) {
         this.scheduler.unschedule(to)
         pings.push(this._pinger.getPing(to))
     }
-    this._stuffSynchronize(pings, sync, 20)
     var envelopes = [], responses = {}
     for (var j = 0, to; (to = message.to[j]) != null; j++) {
+        var sync = {
+            republic: this.republic,
+            promise: this.government.immigrated.promise[this.id],
+            from: this.id,
+            minimum: this.minimum,
+            minimum_: this._minimum,
+            committed: this.log.head.body.promise,
+            cookie: this.cookie,
+            commits: []
+        }
+        this._stuffSynchronize([ pings[j] ], sync, 20)
         var envelope = {
             to: to,
             from: this.id,
@@ -672,8 +679,11 @@ Paxos.prototype.response = function (now, message, responses) {
             }
             this._pinger.update(now, message.to[i], null)
         } else {
-            this._pinger.update(now, message.to[i], response.sync)
+            if (this.id == '1' && message.to[0] == '2') {
+                var x = 0
+            }
             this._synchronize(now, response.sync.commits)
+            this._pinger.update(now, message.to[i], response.sync)
         }
         if (Monotonic.compare(promise, response.message.promise) < 0) {
             promise = response.message.promise
