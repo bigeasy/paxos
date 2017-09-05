@@ -490,37 +490,35 @@ Paxos.prototype._findRound = function (sought) {
 }
 
 Paxos.prototype._stuffSynchronize = function (id, committed, sync, count) {
-    var iterator
-    if (committed == null) {
-        return true
-    } else if (committed == '0/0') {
-        iterator = this.log.trailer.node.next
-        for (;;) {
-            assert(iterator != null, 'immigration missing')
-            if (Monotonic.isBoundary(iterator.body.promise, 0)) {
-                var immigrate = iterator.body.body.immigrate
-                if (immigrate && immigrate.id == id) {
-                    break
+    if (committed != null) {
+        var iterator
+        if (committed == '0/0') {
+            iterator = this.log.trailer.node.next
+            for (;;) {
+                assert(iterator != null, 'immigration missing')
+                if (Monotonic.isBoundary(iterator.body.promise, 0)) {
+                    var immigrate = iterator.body.body.immigrate
+                    if (immigrate && immigrate.id == id) {
+                        break
+                    }
                 }
+                iterator = iterator.next
             }
+        } else {
+            assert(Monotonic.compare(committed, this.minimum) >= 0, 'minimum breached')
+            assert(Monotonic.compare(committed, this.log.head.body.promise) <= 0, 'maximum breached')
+            iterator = this._findRound(committed).next
+        }
+
+        while (--count && iterator != null) {
+            sync.commits.push({
+                promise: iterator.body.promise,
+                body: iterator.body.body,
+                previous: iterator.body.previous
+            })
             iterator = iterator.next
         }
-    } else {
-        assert(Monotonic.compare(committed, this.minimum) >= 0, 'minimum breached')
-        assert(Monotonic.compare(committed, this.log.head.body.promise) <= 0, 'maximum breached')
-        iterator = this._findRound(committed).next
     }
-
-    while (--count && iterator != null) {
-        sync.commits.push({
-            promise: iterator.body.promise,
-            body: iterator.body.body,
-            previous: iterator.body.previous
-        })
-        iterator = iterator.next
-    }
-
-    return true
 }
 
 // Package a message with log synchronization messages and put it in our outbox
