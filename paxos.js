@@ -422,7 +422,7 @@ Paxos.prototype.event = function (envelope) {
             while (parliament.length != 0 && majority.length != this.government.majority.length) {
                 var id = parliament.shift()
                 if (id != this.id) {
-                    if (this._disappeared[id] != null) {
+                    if (this._disappeared[this.government.immigrated.promise[id]] != null) {
                         minority.push(id)
                     } else {
                         majority.push(id)
@@ -649,6 +649,7 @@ Paxos.prototype.response = function (now, message, responses) {
     //
     for (var i = 0, I = message.to.length; i < I; i++) {
         var response = responses[message.to[i]]
+        var promise = this.government.immigrated.promise[message.to[i]]
         if (response == null || response.message.method == 'unreachable') {
             failed = true
             responses[message.to[i]] = response = {
@@ -658,13 +659,13 @@ Paxos.prototype.response = function (now, message, responses) {
                 minimum: null,
                 unreachable: {}
             }
-            if (this._disappeared[message.to[i]] == null) {
-                this._disappeared[message.to[i]] = now
-            } else if (now - this._disappeared[message.to[i]] >= this.timeout) {
-                response.unreachable[this.government.immigrated.promise[message.to[i]]] = true
+            if (this._disappeared[promise] == null) {
+                this._disappeared[promise] = now
+            } else if (now - this._disappeared[promise] >= this.timeout) {
+                response.unreachable[promise] = true
             }
-        } else if (this._disappeared[message.to[i]] != null) {
-            delete this._disappeared[message.to[i]]
+        } else {
+            delete this._disappeared[promise]
         }
     }
     for (var i = 0, I = message.to.length; i < I; i++) {
