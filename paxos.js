@@ -491,13 +491,7 @@ Paxos.prototype._findRound = function (sought) {
 
 Paxos.prototype._stuffSynchronize = function (pings, sync, count) {
     var ping = pings[0]
-    for (var i = 1, I = pings.length; i < I; i++) {
-        assert(ping.committed != null && pings[i].committed != null)
-        if (Monotonic.compare(pings[i].committed, ping.committed) < 0) {
-            ping = pings[i]
-        }
-        assert(ping.committed != '0/0')
-    }
+    assert(pings.length == 1)
     var iterator
     if (ping.committed == null) {
         return true
