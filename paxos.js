@@ -98,6 +98,7 @@ function Paxos (now, republic, id, options) {
     this.minimum = '0/0'
     this._minimum = { propagated: '0/0', version: '0/0', reduced: '0/0', committed: '0/0' }
     this._minimums = {}
+    this._minimums[this.id] = this._minimum
 
     // Network message queue.
     this.outbox = new Procession
@@ -546,7 +547,9 @@ Paxos.prototype._send = function (message) {
             commits: []
         }
         var ping = this._pinger.getPing(to)
-        this._stuffSynchronize(to, ping.committed, sync, 20)
+        var minimum = this._minimums[to]
+        var committed = minimum == null ? null : minimum.committed
+        this._stuffSynchronize(to, committed, sync, 20)
         var envelope = {
             to: to,
             from: this.id,
@@ -654,21 +657,27 @@ Paxos.prototype.response = function (now, message, responses) {
         var minimum = response.minimum
         if (
             minimum &&
-            minimum.version == this.government.promise &&
             (
                 this._minimums[message.to[i]] == null ||
+                this._minimums[message.to[i]].version != minimum.version ||
                 this._minimums[message.to[i]].reduced != minimum.reduced ||
                 this._minimums[message.to[i]].committed != minimum.committed
             )
         ) {
-            this._minimums[message.to[i]] = minimum
+            this._minimums[message.to[i]] = {
+                id: message.to[i],
+                version: minimum.version,
+                propagated: minimum.propagated,
+                reduced: minimum.reduced,
+                committed: minimum.committed
+            }
             var reduced = this.log.head.body.promise
             // Really want to stop doing this everywhere.
             var _constituency = this.id == this.government.majority[0] && this.government.majority.length != 1
                               ? this.government.majority.slice(1)
                               : this.constituency
             for (var j = 0, constituent; (constituent = _constituency[j]) != null; j++) {
-                if (!this._minimums[constituent]) {
+                if (!this._minimums[constituent] || this._minimums[constituent].version != this.government.promise) {
                     reduced = '0/0'
                     break
                 }
@@ -694,6 +703,8 @@ Paxos.prototype.response = function (now, message, responses) {
         } else {
             this._pinger.update(now, message.to[i], response.sync)
         }
+        var p = this._pinger.getPing(message.to[i])
+        var m = this._minimums[message.to[i]]
         // TODO Don't be so direct?
         // TODO Who is eliminating duplicates?
         for (var id in response.pings) {
@@ -941,6 +952,17 @@ Paxos.prototype._commit = function (now, entry, top) {
             reduced: entry.promise,
             committed: null
         }
+
+        var constituency_ = this.id == this.government.majority[id] && this.government.majority.length != 1
+                          ? this.government.majority.slice(1)
+                          : this.constituency
+
+        var minimums = {}
+        minimums[this.id] = this._minimum[this.id]
+        constituency_.forEach(function (id) {
+            minimums[id] = this._minimums[id]
+        }, this)
+//        this._minimums = minimums
 
         // Reset ping tracking information. Leader behavior is different from
         // other members. We clear out all ping information for ping who are not
