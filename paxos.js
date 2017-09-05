@@ -627,12 +627,6 @@ Paxos.prototype.request = function (now, request) {
 }
 
 Paxos.prototype.response = function (now, message, responses) {
-    if (message.to[0] == '4' && message.method == 'synchronize') {
-        var i = 1
-    }
-    if (message.to[0] == '1' && this.id == '2' && message.method == 'synchronize') {
-        var i = 1
-    }
     var failed = false, promise = '0/0'
 
     // Go through responses converting network errors to reject messaages and
@@ -655,9 +649,6 @@ Paxos.prototype.response = function (now, message, responses) {
             }
             this._pinger.update(now, message.to[i], null)
         } else {
-            if (this.id == '1' && message.to[0] == '2') {
-                var x = 0
-            }
             this._synchronize(now, response.sync.commits)
             this._pinger.update(now, message.to[i], response.sync)
         }
@@ -666,13 +657,7 @@ Paxos.prototype.response = function (now, message, responses) {
         }
         // TODO Don't be so direct?
         // TODO Who is eliminating duplicates?
-        if (response.sync.from == '1' && this.id == '2') {
-            var x = 0
-        }
         for (var id in response.pings) {
-            if (id == '4') {
-                var x = 0
-            }
             if (response.pings[id].reachable) {
                 this._pinger.update(now, id, response.pings[id])
             } else {
