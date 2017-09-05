@@ -542,24 +542,9 @@ Paxos.prototype._stuffSynchronize = function (pings, sync, count) {
 
 //
 Paxos.prototype._send = function (message) {
-    var sync = {
-        republic: this.republic,
-        promise: this.government.immigrated.promise[this.id],
-        from: this.id,
-        minimum: this.minimum,
-        minimum_: this._minimum,
-        committed: this.log.head.body.promise,
-        cookie: this.cookie,
-        commits: []
-    }
-    var pings = []
-    for (var i = 0, to; (to = message.to[i]) != null; i++) {
-        // TODO Any event races? Make synchronize benign and probably not.
-        this.scheduler.unschedule(to)
-        pings.push(this._pinger.getPing(to))
-    }
     var envelopes = [], responses = {}
     for (var j = 0, to; (to = message.to[j]) != null; j++) {
+        this.scheduler.unschedule(to)
         var sync = {
             republic: this.republic,
             promise: this.government.immigrated.promise[this.id],
@@ -570,7 +555,7 @@ Paxos.prototype._send = function (message) {
             cookie: this.cookie,
             commits: []
         }
-        this._stuffSynchronize([ pings[j] ], sync, 20)
+        this._stuffSynchronize([ this._pinger.getPing(to) ], sync, 20)
         var envelope = {
             to: to,
             from: this.id,
@@ -592,9 +577,6 @@ Paxos.prototype._send = function (message) {
 
 //
 Paxos.prototype.request = function (now, request) {
-    if (this.id == '4') {
-        var i = 1
-    }
     // TODO Reject if it is the wrong republic.
     // TODO Reject if it a message from an exile, wrong id and cookie.
     var sync = {
