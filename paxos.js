@@ -592,7 +592,7 @@ Paxos.prototype.request = function (now, request) {
         // We are ahead of the bozo trying to update us, so update him back.
         message = { method: 'reject', promise: sync.committed }
     } else if (!this._synchronize(now, request.sync.commits)) {
-        message = { method: 'failure' }
+        message = { method: 'unreachable' }
     } else {
         sync.committed = this.log.head.body.promise
 
@@ -646,7 +646,7 @@ Paxos.prototype.response = function (now, message, responses) {
     //
     for (var i = 0, I = message.to.length; i < I; i++) {
         var response = responses[message.to[i]]
-        if (response == null || response.message.method == 'failure') {
+        if (response == null || response.message.method == 'unreachable') {
             failed = true
             responses[message.to[i]] = response = {
                 message: { method: 'reject', promise: '0/0' },
