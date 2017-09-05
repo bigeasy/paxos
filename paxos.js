@@ -489,33 +489,26 @@ Paxos.prototype._findRound = function (sought) {
     return this.indexer.tree.find({ body: { promise: sought } })
 }
 
-Paxos.prototype._stuffSynchronize = function (pings, sync, count) {
-    var ping = pings[0]
-    assert(pings.length == 1)
+Paxos.prototype._stuffSynchronize = function (id, committed, sync, count) {
     var iterator
-    if (ping.committed != null && this._minimums[ping.id]) {
-        if (ping.committed != this._minimums[ping.id].committed) {
-            // console.log(ping, this._minimums[ping.id])
-        }
-    }
-    if (ping.committed == null) {
+    if (committed == null) {
         return true
-    } else if (ping.committed == '0/0') {
+    } else if (committed == '0/0') {
         iterator = this.log.trailer.node.next
         for (;;) {
             assert(iterator != null, 'immigration missing')
             if (Monotonic.isBoundary(iterator.body.promise, 0)) {
                 var immigrate = iterator.body.body.immigrate
-                if (immigrate && immigrate.id == ping.id) {
+                if (immigrate && immigrate.id == id) {
                     break
                 }
             }
             iterator = iterator.next
         }
     } else {
-        assert(Monotonic.compare(ping.committed, this.minimum) >= 0, 'minimum breached')
-        assert(Monotonic.compare(ping.committed, this.log.head.body.promise) <= 0, 'maximum breached')
-        iterator = this._findRound(ping.committed).next
+        assert(Monotonic.compare(committed, this.minimum) >= 0, 'minimum breached')
+        assert(Monotonic.compare(committed, this.log.head.body.promise) <= 0, 'maximum breached')
+        iterator = this._findRound(committed).next
     }
 
     while (--count && iterator != null) {
@@ -554,7 +547,8 @@ Paxos.prototype._send = function (message) {
             cookie: this.cookie,
             commits: []
         }
-        this._stuffSynchronize([ this._pinger.getPing(to) ], sync, 20)
+        var ping = this._pinger.getPing(to)
+        this._stuffSynchronize(to, ping.committed, sync, 20)
         var envelope = {
             to: to,
             from: this.id,
@@ -593,7 +587,7 @@ Paxos.prototype.request = function (now, request) {
     if (
         Monotonic.compare(request.sync.committed, sync.committed) < 0
     ) {
-        this._stuffSynchronize([ request.sync ], sync, 20)
+        this._stuffSynchronize(request.sync.from, request.sync.committed, sync, 20)
         // We are ahead of the bozo trying to update us, so update him back.
         message = { method: 'reject', promise: sync.committed }
     } else if (!this._synchronize(now, request.sync.commits)) {
