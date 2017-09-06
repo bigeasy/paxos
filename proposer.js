@@ -43,8 +43,18 @@ function getPromise (object) {
 
 // TODO Allow assembly to update promise?
 Proposer.prototype.response = function (now, request, responses, promise) {
-    switch (promise == null ? request.method : 'failed') {
-    case 'failed':
+    var promised = request.promise, failed = false
+    for (var i = 0, I = request.to.length; i < I; i++) {
+        var response = responses[request.to[i]]
+        if (Monotonic.compare(promised, response.sync.promise) < 0) {
+            promised = response.sync.promise
+        }
+        if (response.message.method == 'unreachable' || response.message.method == 'reject') {
+            failed = true
+        }
+    }
+    switch (failed || request.method) {
+    case true:
         this.promise = Monotonic.increment(promise, 0)
         this._paxos._scheduleAssembly(now, true)
         break
@@ -59,6 +69,7 @@ Proposer.prototype.response = function (now, request, responses, promise) {
             method: 'accept',
             version: this.version,
             to: this.proposal.quorum,
+            promise: request.promise,
             body: {
                 promise: request.promise,
                 body: this.proposal.body,

@@ -468,7 +468,13 @@ Paxos.prototype._collapse = function (now) {
 // replay because the delay is lost and the actual timer event is recorded.
 
 // TODO Convince yourself that the above is true and the come back and replace
-// this PRNG with `Math.rand()`.
+// this PRNG with `Math.rand()`. TODO Meh.
+
+// TODO Consider how to back off. If the leader is gone and two majority members
+// are competing, do we really want them backing off for approaching "timeout"
+// milliseconds? How fast does it take to complete a round of Paxos and how big
+// of a window do we want to give two or more citizens to launch their retries
+// such that they avoid collision?
 
 //
 Paxos.prototype._scheduleAssembly = function (now, retry) {
@@ -770,6 +776,17 @@ Paxos.prototype.response = function (now, message, responses) {
     // for exile.
 
     // Only handle a response if it was issued by our current writer/proposer.
+
+    // TODO I don't like how the `Recorder` gets skipped on collapse, but the
+    // `Acceptor` handles it's own failures. My fastidiousness tells my that
+    // this one bit of reject logic escaping to another function in another file
+    // is an indication of poor design and that a design pattern is required to
+    // make this architecturally sound. However, the bit that is escaping is the
+    // only bit that will be dealing with inspecting returned promises and
+    // deciding a specific next action, it is Paxos logic that does not
+    // otherwise exist, it might actually be an additional layer.
+
+    //
     if (
         message.version[0] == this._writer.version[0] &&
         message.version[1] == this._writer.version[1]
