@@ -42,7 +42,7 @@ function getPromise (object) {
 }
 
 // TODO Allow assembly to update promise?
-Proposer.prototype.response = function (now, request, responses, promise) {
+Proposer.prototype.response = function (now, request, responses) {
     var promised = request.promise, failed = false
     for (var i = 0, I = request.to.length; i < I; i++) {
         var response = responses[request.to[i]]

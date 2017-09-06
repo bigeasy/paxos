@@ -634,8 +634,6 @@ Paxos.prototype.request = function (now, request) {
 }
 
 Paxos.prototype.response = function (now, message, responses) {
-    var failed = false, promise = '0/0'
-
     // Go through responses converting network errors to reject messaages and
     // syncing any commits that where pushed back to us.
     //
@@ -650,7 +648,6 @@ Paxos.prototype.response = function (now, message, responses) {
         var response = responses[id]
         var promise = this.government.immigrated.promise[id]
         if (response == null || response.message.method == 'unreachable') {
-            failed = true
             responses[message.to[i]] = response = {
                 message: { method: 'unreachable', promise: '0/0' },
                 sync: { committed: null, commits: [] },
@@ -768,30 +765,29 @@ Paxos.prototype.response = function (now, message, responses) {
                 method: 'synchronize', to: message.to, collapsible: message.collapsible
             })
         }
-
-        return
-    }
-    // TODO If the recepient is at '0/0' and we attempted to synchronize it,
-    // then we must not have had the right cookie, let's mark it as unreachable
-    // for exile.
-
-    // Only handle a response if it was issued by our current writer/proposer.
-
-    // TODO I don't like how the `Recorder` gets skipped on collapse, but the
-    // `Acceptor` handles it's own failures. My fastidiousness tells my that
-    // this one bit of reject logic escaping to another function in another file
-    // is an indication of poor design and that a design pattern is required to
-    // make this architecturally sound. However, the bit that is escaping is the
-    // only bit that will be dealing with inspecting returned promises and
-    // deciding a specific next action, it is Paxos logic that does not
-    // otherwise exist, it might actually be an additional layer.
-
-    //
-    if (
+    } else if (
         message.version[0] == this._writer.version[0] &&
         message.version[1] == this._writer.version[1]
     ) {
-        this._writer.response(now, message, responses, failed ? promise : null)
+        // TODO If the recepient is at '0/0' and we attempted to synchronize it,
+        // then we must not have had the right cookie, let's mark it as
+        // unreachable for exile.
+
+        // Only handle a response if it was issued by our current
+        // writer/proposer.
+
+        // TODO I don't like how the `Recorder` gets skipped on collapse, but
+        // the `Acceptor` handles it's own failures. My fastidiousness tells my
+        // that this one bit of reject logic escaping to another function in
+        // another file is an indication of poor design and that a design
+        // pattern is required to make this architecturally sound. However, the
+        // bit that is escaping is the only bit that will be dealing with
+        // inspecting returned promises and deciding a specific next action, it
+        // is Paxos logic that does not otherwise exist, it might actually be an
+        // additional layer.
+
+        //
+        this._writer.response(now, message, responses)
     }
 }
 

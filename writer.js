@@ -79,23 +79,19 @@ Writer.prototype.nudge = function () {
     }
 }
 
-Writer.prototype.response = function (now, request, responses, promise) {
+Writer.prototype.response = function (now, request) {
     assert(request.method == 'register', 'unexpected request type')
-    if (promise != null) {
-        this._paxos._collapse(now)
+    this._previous = request.register.body.promise
+    this._paxos._register(now, request.register)
+    this._writing = false
+    if (this.proposals.length == 0) {
+        this._paxos.scheduler.schedule(now, this._paxos.id, {
+            method: 'synchronize',
+            to: this._paxos.government.majority,
+            collapsible: true
+        })
     } else {
-        this._previous = request.register.body.promise
-        this._paxos._register(now, request.register)
-        this._writing = false
-        if (this.proposals.length == 0) {
-            this._paxos.scheduler.schedule(now, this._paxos.id, {
-                method: 'synchronize',
-                to: this._paxos.government.majority,
-                collapsible: true
-            })
-        } else {
-            this._send()
-        }
+        this._send()
     }
 }
 
