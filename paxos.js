@@ -29,8 +29,6 @@ var Shaper = require('./shaper')
 var Writer = require('./writer')
 var Recorder = require('./recorder')
 
-var Relay = require('./relay')
-
 var departure = require('departure')
 var constituency = require('./constituency')
 
