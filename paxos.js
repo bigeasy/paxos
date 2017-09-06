@@ -29,7 +29,6 @@ var Shaper = require('./shaper')
 var Writer = require('./writer')
 var Recorder = require('./recorder')
 
-var Pinger = require('./pinger')
 var Relay = require('./relay')
 
 var departure = require('departure')
@@ -101,9 +100,6 @@ function Paxos (now, republic, id, options) {
 
     // Network message queue.
     this.outbox = new Procession
-
-    // Collection accounting information. See [Pinger](./pinger.js.html).
-    this._pinger = new Pinger(null, this.timeout)
 
     // Push the null government onto the atomic log.
     this.log.push({
@@ -409,6 +405,7 @@ Paxos.prototype.event = function (envelope) {
             method: 'synchronize',
             version: this.government.promise,
             to: envelope.body.to,
+            collapsible: !! envelope.body.collapsible,
             key: envelope.key
         })
         break
@@ -553,7 +550,6 @@ Paxos.prototype._send = function (message) {
             cookie: this.cookie,
             commits: []
         }
-        var ping = this._pinger.getPing(to)
         var minimum = this._minimums[to]
         var committed = minimum == null ? null : minimum.committed
         this._stuffSynchronize(to, committed, sync, 20)
@@ -590,7 +586,6 @@ Paxos.prototype.request = function (now, request) {
         commits: []
     }
     this._minimum.propagated = request.sync.minimum_.propagated
-    this._shaper.received(request.receipts)
     var message
     if (
         Monotonic.compare(request.sync.committed, sync.committed) < 0
@@ -629,7 +624,6 @@ Paxos.prototype.request = function (now, request) {
     return {
         message: message,
         sync: sync,
-        pings: JSON.parse(JSON.stringify(this._shaper.outbox)),
         minimum: this._minimum,
         unreachable: this._unreachable
     }
@@ -648,16 +642,19 @@ Paxos.prototype.response = function (now, message, responses) {
 
     //
     for (var i = 0, I = message.to.length; i < I; i++) {
-        var response = responses[message.to[i]]
-        var promise = this.government.immigrated.promise[message.to[i]]
+        var id = message.to[i]
+        var response = responses[id]
+        var promise = this.government.immigrated.promise[id]
         if (response == null || response.message.method == 'unreachable') {
             failed = true
             responses[message.to[i]] = response = {
                 message: { method: 'unreachable', promise: '0/0' },
                 sync: { committed: null, commits: [] },
-                pings: {},
                 minimum: null,
                 unreachable: {}
+            }
+            if (message.collapsible) {
+                this._collapse(now)
             }
             if (this._disappeared[promise] == null) {
                 this._disappeared[promise] = now
@@ -668,12 +665,14 @@ Paxos.prototype.response = function (now, message, responses) {
             delete this._disappeared[promise]
         }
     }
+
     for (var i = 0, I = message.to.length; i < I; i++) {
         var response = responses[message.to[i]]
         this._synchronize(now, response.sync.commits)
         for (var unreachable in response.unreachable) {
             if (!this._unreachable[unreachable]) {
                 this._unreachable[unreachable] = response.unreachable[unreachable]
+                this._reshape(now, this._shaper.unreachable(this.government.immigrated.id[unreachable]))
             }
         }
         var minimum = response.minimum
@@ -693,11 +692,13 @@ Paxos.prototype.response = function (now, message, responses) {
                 reduced: minimum.reduced,
                 committed: minimum.committed
             }
+
             var reduced = this.log.head.body.promise
             // Really want to stop doing this everywhere.
             var _constituency = this.id == this.government.majority[0] && this.government.majority.length != 1
                               ? this.government.majority.slice(1)
                               : this.constituency
+
             for (var j = 0, constituent; (constituent = _constituency[j]) != null; j++) {
                 if (!this._minimums[constituent] || this._minimums[constituent].version != this.government.promise) {
                     reduced = '0/0'
@@ -707,6 +708,7 @@ Paxos.prototype.response = function (now, message, responses) {
                     reduced = this._minimums[constituent].committed
                 }
             }
+
             this._minimum = {
                 propagated: this.id == this.government.majority[0] ? reduced : this._minimum.propagated,
                 version: this.government.promise,
@@ -714,29 +716,6 @@ Paxos.prototype.response = function (now, message, responses) {
                 committed: this.log.head.body.promise
             }
         }
-        if (response == null || response.message.method == 'unreachable') {
-            failed = true
-            responses[message.to[i]] = response = {
-                message: { method: 'unreachable', promise: '0/0' },
-                sync: { committed: null },
-                pings: {}
-            }
-            this._pinger.update(now, message.to[i], null)
-        } else {
-            this._pinger.update(now, message.to[i], response.sync)
-        }
-        var p = this._pinger.getPing(message.to[i])
-        var m = this._minimums[message.to[i]]
-        // TODO Don't be so direct?
-        // TODO Who is eliminating duplicates?
-        for (var id in response.pings) {
-            if (response.pings[id].reachable) {
-                this._pinger.update(now, id, response.pings[id])
-            } else {
-                this._pinger.unreachable(now, id, response.pings[id])
-            }
-        }
-        this._receipts[message.to[i]] = response.pings
     }
 
 
@@ -785,7 +764,9 @@ Paxos.prototype.response = function (now, message, responses) {
             message.key != this.id ||
             ! this._writer.collapsed
         ) {
-            this.scheduler.schedule(now + delay, message.key, { method: 'synchronize', to: message.to })
+            this.scheduler.schedule(now + delay, message.key, {
+                method: 'synchronize', to: message.to, collapsible: message.collapsible
+            })
         }
 
         return
@@ -801,30 +782,6 @@ Paxos.prototype.response = function (now, message, responses) {
     ) {
         this._writer.response(now, message, responses, failed ? promise : null)
     }
-
-    // Determine the minimum log entry promise.
-    //
-    // You might feel a need to guard this so that only the leader runs it, but
-    // it works of anyone runs it. If they have a ping for every citizen,
-    // they'll calculate a minimum less than or equal to the minimum calculated
-    // by the actual leader. If not they do not have a ping record for every
-    // citizen, they'll continue to use their current minimum.
-    //
-    // Would rather this was on object that was updated only when we got ping
-    // information back.
-
-    //
-    var minimum = this.log.head.body.promise
-    for (var i = 0, citizen; (citizen = this.citizens[i]) != null; i++) {
-        var ping = this._pinger.pings[citizen]
-        if (ping == null || ping.committed == null) {
-            return
-        }
-        if (Monotonic.compare(ping.committed, minimum) < 0) {
-            minimum = ping.committed
-        }
-    }
-    this.minimum = minimum
 }
 
 // ### Commit
@@ -866,6 +823,12 @@ Paxos.prototype._synchronize = function (now, entries) {
         }
     }
     return true
+}
+
+Paxos.prototype._reshape = function (now, shape) {
+    if (shape != null) {
+        this.newGovernment(now, shape.quorum, shape.government)
+    }
 }
 
 Paxos.prototype._commit = function (now, entry, top) {
@@ -915,11 +878,8 @@ Paxos.prototype._commit = function (now, entry, top) {
     assert(top == entry.previous, 'incorrect previous')
 
     var isGovernment = Monotonic.isBoundary(entry.promise, 0)
-    logger.info('enact', {
-        outOfOrder: !(isGovernment || Monotonic.increment(top, 1) == entry.promise),
-        isGovernment: isGovernment,
-        $entry: entry
-    })
+    assert(isGovernment || Monotonic.increment(top, 1) == entry.promise)
+    logger.info('enact', { isGovernment: isGovernment, $entry: entry })
 
     if (isGovernment) {
         this.scheduler.clear()
@@ -934,20 +894,27 @@ Paxos.prototype._commit = function (now, entry, top) {
         // progress in spite of it.
         if (this.government.map == null) {
             for (var i = 0, id; (id = this.government.majority[i]) != null; i++) {
-                delete this._unreachable[id]
+                // TODO Probably okay to track by id. The worst that you can do
+                // is delete reachable information that exists for a subsequent
+                // version, well, the wrost you can do is get rid of informaiton
+                // that will once again materialize.
+                delete this._unreachable[this.government.immigrated.promise[id]]
             }
             for (var i = 0, id; (id = this.government.minority[i]) != null; i++) {
-                delete this._unreachable[id]
+                delete this._unreachable[this.government.immigrated.promise[id]]
             }
         }
 
         constituency(this.government, this.id, this)
+        this.citizens = this.government.majority
+                            .concat(this.government.minority)
+                            .concat(this.government.constituents)
 
         this._writer = this._writer.createWriter(entry.promise)
         this._recorder = this._recorder.createRecorder(entry.promise)
 
         // Chose a strategy for handling pings.
-        var shaper
+        var shaper = this._shaper
         if (this.id == this.government.majority[0]) {
             // If we are the leader, we are going to want to look for
             // opportunities to change the shape of the government.
@@ -955,23 +922,20 @@ Paxos.prototype._commit = function (now, entry, top) {
             for (var i = 0, immigration; (immigration = this._shaper._immigrating[i]) != null; i++) {
                 shaper.immigrate(immigration)
             }
+            if (this.government.immigrate) {
+                shaper.immigrated(this.government.immigrate.id)
+            }
+            for (var promise in this._unreachable) {
+                this._reshape(now, shaper.unreachable(this.government.immigrated.id[promise]))
+            }
+            this.citizens.forEach(function (id) { this._reshape(now, shaper.naturalized(id)) }, this)
         } else {
-            // If we are a represenative we want to propagate our pings to the
-            // leader through our representative (which may be the leader.)
-            var representative = this.government.immigrated.promise[this.id]
-            if (representative != this._shaper._representative) {
-                shaper = new Relay(representative)
-            } else {
-                shaper = this._shaper
+            shaper = {
+                unreachable: function () {},
+                naturalized: function () {}
             }
         }
         this._shaper = shaper
-
-        if (this.government.exile) {
-            this._pinger.exile(this.government.exile.id)
-        } else if (this.government.immigrate && this.government.majority[0] == this.id) {
-            this._shaper.immigrated(this.government.immigrate.id)
-        }
 
         if (~this.government.majority.indexOf(this.id)) {
             this.scheduler.schedule(now + this.ping, this.id, {
@@ -1020,10 +984,6 @@ Paxos.prototype._commit = function (now, entry, top) {
         // back to the leader. All leader information will soon be updated. Not
         // resetting the leader during normal operation makes adjustments to
         // citizenship go faster.
-        this.citizens = this.government.majority
-                            .concat(this.government.minority)
-                            .concat(this.government.constituents)
-        this._pinger = this._pinger.createPinger(now, this, this._shaper)
     }
 
     this._minimum.committed = entry.promise

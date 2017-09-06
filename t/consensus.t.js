@@ -74,11 +74,11 @@ function prove (okay) {
 
     network.time++
 
-    network.intercept([ '1' ])
+    network.intercept(1, '0', [ '1' ])
 
     network.time += 3
 
-    network.intercept(1, '0', [ '1' ])
+// network.intercept(1, '0', [ '1' ])
 
     okay(!network.denizens[0].enqueue(network.time, 1, {}).enqueued, 'post collapsed')
 
@@ -159,6 +159,7 @@ function prove (okay) {
 
     // This one will join, but with the new cookie.
     network.reboot(5)
+    network.immigrate(5)
 
     network.intercept()
 
@@ -170,5 +171,9 @@ function prove (okay) {
 
     network.intercept()
 
-    console.log(network.denizens[0]._unreachable)
+    network.time += 3
+
+    network.intercept()
+
+    console.log(network.denizens[0].government)
 }

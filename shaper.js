@@ -92,37 +92,34 @@ Shaper.prototype._shouldContract = function () {
     }
 }
 
+Shaper.prototype.unreachable = function (id) {
+    if (this.decided || id == null) {
+        return null
+    }
+
+    // Exile any unreachable citizen.
+    return {
+        quorum: this._government.majority,
+        government: {
+            majority: this._government.majority,
+            minority: this._government.minority.filter(function ($id) { return $id != id }),
+            exile: id
+        }
+    }
+}
+
 // `Shaper.update` determines if a new government should be created that has a
 // new shape. Note that immigration takes place is elsewhere.
 
 //
-
-// TODO Missing naturalized!!!!!
-Shaper.prototype.update = function (id, reachable) {
-    // We are interested in denizens when they are first reachable or when they
-    // become unreachable. We ignore denizens that continue to be reachable.
-    if (reachable && this._seen[id]) {
-        return null
-    }
-    this._seen[id] = true
-
-    if (this.decided) {
-        return null
-    }
+Shaper.prototype.naturalized = function (id) {
+    // If we've decided then the next thing that happens is a new government
+    // which will reset the Shaper, no naturalizations between now and then.
+    assert(!this.decided, 'naturalized called when decided')
 
     if (~this._government.majority.indexOf(id)) {
         // Majority members are not our resposibility. They trigger their own
         // collapse.
-    } else if (!reachable) {
-        // Exile any unreachable citizen.
-        this._governments.push({
-            quorum: this._government.majority,
-            government: {
-                majority: this._government.majority,
-                minority: this._government.minority.filter(function ($id) { return $id != id }),
-                exile: id
-            }
-        })
     } else if (this._shouldExpand && !~this._government.minority.indexOf(id)) {
         this._expandable.push(id)
         // TODO Is the quorum the new majority or the old majority?
@@ -145,9 +142,6 @@ Shaper.prototype.update = function (id, reachable) {
 
     // Otherwise let's exile someone if we have someone to exile.
     return this._governments.shift() || this._immigration() || null
-}
-
-Shaper.prototype.received = function () {
 }
 
 Shaper.prototype.immigrated = function (id) {
@@ -189,9 +183,6 @@ Shaper.prototype.immigrate = function (immigration) {
 Shaper.prototype._immigration = function () {
     if (this._immigrating.length) {
         var immigration = this._immigrating[0]
-        if (immigration.id == '5') {
-            var x = 1
-        }
         return {
             quorum: this._government.majority,
             government: {
