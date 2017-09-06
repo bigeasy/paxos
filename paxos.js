@@ -30,7 +30,7 @@ var Writer = require('./writer')
 var Recorder = require('./recorder')
 
 var departure = require('departure')
-var constituency = require('./constituency')
+var Constituency = require('./constituency')
 
 // ### Constructor
 function Paxos (now, republic, id, options) {
@@ -692,12 +692,8 @@ Paxos.prototype.response = function (now, message, responses) {
             }
 
             var reduced = this.log.head.body.promise
-            // Really want to stop doing this everywhere.
-            var _constituency = this.id == this.government.majority[0] && this.government.majority.length != 1
-                              ? this.government.majority.slice(1)
-                              : this.constituency
 
-            for (var j = 0, constituent; (constituent = _constituency[j]) != null; j++) {
+            for (var j = 0, constituent; (constituent = this.constituency[j]) != null; j++) {
                 if (!this._minimums[constituent] || this._minimums[constituent].version != this.government.promise) {
                     reduced = '0/0'
                     break
@@ -903,7 +899,7 @@ Paxos.prototype._commit = function (now, entry, top) {
             }
         }
 
-        constituency(this.government, this.id, this)
+        Constituency(this.government, this.id, this)
         this.citizens = this.government.majority
                             .concat(this.government.minority)
                             .concat(this.government.constituents)
@@ -950,14 +946,10 @@ Paxos.prototype._commit = function (now, entry, top) {
             committed: null
         }
 
-        var constituency_ = this.id == this.government.majority[0] && this.government.majority.length != 1
-                          ? this.government.majority.slice(1)
-                          : this.constituency
-
         // TODO Tidy.
         var minimums = {}
         minimums[this.id] = this._minimums[this.id]
-        constituency_.forEach(function (id) {
+        this.constituency.forEach(function (id) {
             if (this._minimums[id] != null) {
                 minimums[id] = this._minimums[id]
             }
@@ -1006,10 +998,7 @@ Paxos.prototype._commit = function (now, entry, top) {
 
     // We count on our writer to set the final synchronize when we are the
     // leader of a government that is not a dictatorship.
-    if (
-        this.id != this.government.majority[0] ||
-        this.government.majority.length == 1
-    ) {
+    if (this.id != this.government.majority[0] || this.government.majority.length == 1) {
         for (var i = 0, id; (id = this.constituency[i]) != null; i++) {
             this.scheduler.schedule(now, id, { method: 'synchronize', to: [ id ] })
         }
