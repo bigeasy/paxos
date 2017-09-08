@@ -113,9 +113,6 @@ function Paxos (now, republic, id, options) {
     // Used for our pseudo-random number generator to vary retry times.
     this._seed = 2147483647
 
-    // Track ping information that has propagated back.
-    this._receipts = {}
-
     this._disappeared = {}
     this._unreachable = {}
 }
@@ -560,12 +557,10 @@ Paxos.prototype._send = function (message) {
             from: this.id,
             request: {
                 message: message,
-                receipts: coalesce(this._receipts[to], {}),
                 sync: sync
             },
             responses: responses
         }
-        delete this._receipts[to]
         envelopes.push(envelope)
     }
     this.outbox.push({ from: this.id, message: message, responses: responses, envelopes: envelopes })
