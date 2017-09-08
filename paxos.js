@@ -106,13 +106,19 @@ function Paxos (now, republic, id, options) {
         previous: null
     })
 
+    // Write strategy is polymorphic, changes based on whether we're recovering
+    // from collapse uing Paxos or writing values using two-phase commit.
     this._writer = new Writer(this, '1/0')
     this._recorder = new Recorder(this, this.log.head.body)
+
+    // Shaper a new government by fiat based on whose availble to grow to the
+    // desired government size and who is unreachable.
     this._shaper = new Shaper(this.parliamentSize, this.government)
 
     // Used for our pseudo-random number generator to vary retry times.
     this._seed = 2147483647
 
+    // Track unreachable citizens.
     this._disappeared = {}
     this._unreachable = {}
 }
