@@ -90,8 +90,6 @@ function Paxos (now, republic, id, options) {
     // Entire population.
     this.citizens = []
 
-    // The least committed value across the entire island.
-    this.minimum = '0/0'
     this._minimum = { propagated: '0/0', version: '0/0', reduced: '0/0', committed: '0/0' }
     this._minimums = {}
     this._minimums[this.id] = this._minimum
@@ -514,7 +512,7 @@ Paxos.prototype._stuffSynchronize = function (id, committed, sync, count) {
                 iterator = iterator.next
             }
         } else {
-            assert(Monotonic.compare(committed, this.minimum) >= 0, 'minimum breached')
+            assert(Monotonic.compare(committed, this._minimum.propagated) >= 0, 'minimum breached')
             assert(Monotonic.compare(committed, this.log.head.body.promise) <= 0, 'maximum breached')
             iterator = this._findRound(committed).next
         }
@@ -548,12 +546,12 @@ Paxos.prototype._send = function (message) {
             republic: this.republic,
             promise: this.government.immigrated.promise[this.id],
             from: this.id,
-            minimum: this.minimum,
-            minimum_: this._minimum,
+            minimum: this._minimum,
             committed: this.log.head.body.promise,
             cookie: this.cookie,
             commits: []
         }
+        // TODO Tidy.
         var minimum = this._minimums[to]
         var committed = minimum == null ? null : minimum.committed
         this._stuffSynchronize(to, committed, sync, 20)
@@ -585,11 +583,14 @@ Paxos.prototype.request = function (now, request) {
         promise: this.government.immigrated.promise[this.id],
         from: this.id,
         naturalized: this.naturalized,
-        minimum: this.minimum,
+        minimum: this._minimum,
         committed: this.log.head.body.promise,
         commits: []
     }
-    this._minimum.propagated = request.sync.minimum_.propagated
+    if (Monotonic.compare(this._minimum.propagated, request.sync.minimum.propagated) < 0) {
+        this._minimum.propagated = request.sync.minimum.propagated
+    }
+
     var message
     if (
         Monotonic.compare(request.sync.committed, sync.committed) < 0
@@ -605,11 +606,8 @@ Paxos.prototype.request = function (now, request) {
 
         // We don't want to advance the minimum if we have no items yet.
         if (this.log.head.body.promise != '0/0') {
-            while (Monotonic.compare(this.log.trailer.peek().promise, request.sync.minimum) < 0) {
+            while (Monotonic.compare(this.log.trailer.peek().promise, this._minimum.propagated) < 0) {
                 this.log.trailer.shift()
-            }
-            if (Monotonic.compare(this.minimum, request.sync.minimum) < 0) {
-                this.minimum = request.sync.minimum
             }
         }
 
@@ -634,19 +632,17 @@ Paxos.prototype.request = function (now, request) {
 }
 
 Paxos.prototype.response = function (now, message, responses) {
-    // Go through responses converting network errors to reject messaages and
-    // syncing any commits that where pushed back to us.
-    //
-    // Note that the immigration race may be falsely reported initially if we
-    // had no ping information when we sent this message, but we have it now and
-    // if we have the right cookie then it will become reachable on the next
-    // ping.
+    // Perform housekeeping for each receipent of the message.
 
     //
     for (var i = 0, I = message.to.length; i < I; i++) {
+        // Deduce receipent properties.
         var id = message.to[i]
         var response = responses[id]
         var promise = this.government.immigrated.promise[id]
+
+        // Go through responses converting network errors to "unreachable"
+        // messages with appropriate defaults.
         if (response == null || response.message.method == 'unreachable') {
             responses[message.to[i]] = response = {
                 message: { method: 'unreachable', promise: '0/0' },
@@ -665,17 +661,21 @@ Paxos.prototype.response = function (now, message, responses) {
         } else {
             delete this._disappeared[promise]
         }
-    }
 
-    for (var i = 0, I = message.to.length; i < I; i++) {
-        var response = responses[message.to[i]]
+        // Synchronize commits.
         this._synchronize(now, response.sync.commits)
+
+        // Update set of unreachable citizens.
         for (var unreachable in response.unreachable) {
             if (!this._unreachable[unreachable]) {
                 this._unreachable[unreachable] = response.unreachable[unreachable]
                 this._reshape(now, this._shaper.unreachable(this.government.immigrated.id[unreachable]))
             }
         }
+
+        // Reduce our least committed promise. Would switch to using promises as
+        // the key in the minimum map, but out of date minimum records are never
+        // able to do any damage. They will get updated eventually.
         var minimum = response.minimum
         if (
             minimum &&
@@ -697,12 +697,15 @@ Paxos.prototype.response = function (now, message, responses) {
             var reduced = this.log.head.body.promise
 
             for (var j = 0, constituent; (constituent = this.constituency[j]) != null; j++) {
-                if (!this._minimums[constituent] || this._minimums[constituent].version != this.government.promise) {
+                if (
+                    this._minimums[constituent] == null ||
+                    this._minimums[constituent].version != this.government.promise
+                ) {
                     reduced = '0/0'
                     break
                 }
-                if (Monotonic.compare(this._minimums[constituent].committed, reduced) < 0) {
-                    reduced = this._minimums[constituent].committed
+                if (Monotonic.compare(this._minimums[constituent].reduced, reduced) < 0) {
+                    reduced = this._minimums[constituent].reduced
                 }
             }
 
@@ -854,7 +857,7 @@ Paxos.prototype._commit = function (now, entry, top) {
         // been rejected at entry, the committed versions would be off.
 
         //
-        if (Monotonic.compare(this.minimum, entry.promise) <= 0) {
+        if (Monotonic.compare(this._minimum.propagated, entry.promise) <= 0) {
             departure.raise(this._findRound(entry.promise).body.body, entry.body)
         } else {
             // Getting this branch will require
@@ -955,8 +958,8 @@ Paxos.prototype._commit = function (now, entry, top) {
         this._minimum = {
             version: this.government.promise,
             propagated: this._minimum.propagated,
-            reduced: entry.promise,
-            committed: null
+            reduced: this.constituency.length == 0 ? '0/0' : '0/0',
+            committed: entry.promise
         }
 
         // TODO Tidy.
