@@ -41,7 +41,6 @@ function getPromise (object) {
     return object == null ? '0/0' : object.body.promise
 }
 
-// TODO Allow assembly to update promise?
 Proposer.prototype.response = function (now, request, responses) {
     var promised = request.promise, failed = false
     for (var i = 0, I = request.to.length; i < I; i++) {
@@ -56,7 +55,7 @@ Proposer.prototype.response = function (now, request, responses) {
     switch (failed || request.method) {
     case true:
         this.promise = Monotonic.increment(promise, 0)
-        this._paxos._scheduleAssembly(now, true)
+        this._paxos._schedulePrepare(now, true)
         break
     case 'prepare':
         for (var id in responses) {

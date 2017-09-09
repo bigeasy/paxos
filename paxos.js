@@ -397,8 +397,11 @@ Paxos.prototype.event = function (envelope) {
     }
     var now = envelope.now
     switch (envelope.body.method) {
+
     // Send a synchronization message to one or more fellow citizens. Note that
     // the to field is an array.
+
+    //
     case 'synchronize':
         this._send({
             method: 'synchronize',
@@ -408,12 +411,31 @@ Paxos.prototype.event = function (envelope) {
             key: envelope.key
         })
         break
-    // Call an assembly; try to reach other members of the government when the
-    // current government has collapsed.
-    case 'assembly':
+
+    // We are a majority member that has not heard from the leader for longer
+    // than the timeout so collapse the current government. This turns our
+    // `Writer` into a `Proposer` and starts running Paxos.
+
+    //
+    case 'collapse':
+        this._collapse(now)
+        break
+
+    // Prepare a round of Paxos. We pick from the legislators that have not
+    // disappeared. If a majority of legislators have disappeared, we reset our
+    // disappeared map and try anyway because what else are we going to do? Note
+    // that we ignore the unreachable map during a collapse.
+    //
+    // TODO Collapse means Paxos. Put that in the documentation somewhere.
+
+    //
+    case 'prepare':
         for (;;) {
+            // If we win, we are the leader.
             var majority = [ this.id ]
             var minority = []
+
+            // Try to find a majority of legislators.
             var parliament = this.government.majority.concat(this.government.minority)
             while (parliament.length != 0 && majority.length != this.government.majority.length) {
                 var id = parliament.shift()
@@ -425,20 +447,19 @@ Paxos.prototype.event = function (envelope) {
                     }
                 }
             }
+
+            // If we have a majority of legislators, we have have run a
+            // forming this government with ourselves as leader.
             if (majority.length == this.government.majority.length) {
                 minority.push.apply(minority, parliament)
                 this.newGovernment(now, majority, { majority: majority, minority: minority })
                 break
             }
+
             // If we don't have enough reachable participants for a majority,
             // clear out our disappearance tracking in a desperate move.
             this._disappeared = {}
         }
-        break
-    // We are a majority member that has not heard from the leader for longer
-    // than the timeout so collapse the current government.
-    case 'collapse':
-        this._collapse(now)
         break
     }
 }
@@ -454,7 +475,7 @@ Paxos.prototype._prepare = function (now, request, sync) {
     return this._recorder.request(now, request, sync)
 }
 
-// Collapse means we schedule and assembly.
+// Collapse means we schedule a round of Paxos.
 
 //
 Paxos.prototype._collapse = function (now) {
@@ -462,7 +483,7 @@ Paxos.prototype._collapse = function (now) {
 
     // TODO Really need to have the value for previous, which is the writer register.
     this._writer = new Proposer(this, this.government.promise)
-    this._scheduleAssembly(now, false)
+    this._schedulePrepare(now, false)
 }
 
 // Note that even if the PNRG where not determinsitic, it wouldn't matter during
@@ -478,13 +499,13 @@ Paxos.prototype._collapse = function (now) {
 // such that they avoid collision?
 
 //
-Paxos.prototype._scheduleAssembly = function (now, retry) {
+Paxos.prototype._schedulePrepare = function (now, retry) {
     var delay = 0
     if (retry && this.id != this.government.majority[0]) {
         // PRNG: https://gist.github.com/blixt/f17b47c62508be59987b
         delay = time.timeout * (((this._seed = this._seed * 16807 % 2147483647) - 1) / 2147483646)
     }
-    this.scheduler.schedule(now + delay, this.id, { method: 'assembly', body: null })
+    this.scheduler.schedule(now + delay, this.id, { method: 'prepare', body: null })
 }
 
 // ### Requests and Responses
@@ -1010,8 +1031,8 @@ Paxos.prototype._commit = function (now, entry, top) {
     // it to point to the remainder of the majority?
 
     // TODO Recall that we're not going to continue to ping our constituents
-    // when it comes time to conduct an assembly, so we'll ping, but not update
-    // the constituency.
+    // when it comes time to noodle a Paxos waffle, so we'll ping, but not
+    // update the constituency. TODO This is old and getting goofy.
 
     // We count on our writer to set the final synchronize when we are the
     // leader of a government that is not a dictatorship.
