@@ -193,4 +193,20 @@ function prove (okay) {
             '5': { location: '5' }
         }
     }, 'reboot, exile and double immigrate')
+
+    // Here we are going to disappear for a moment, but come back before we're
+    // unreachable. For the rest of the tests 5 should be present. This covers
+    // the disappearance branches, specifically already disappeared but not yet
+    // unreachable.
+    network.time += 1
+
+    network.intercept('1', [ '5' ])
+
+    network.time += 1
+
+    network.intercept('1', [ '5' ])
+
+    network.time += 1
+
+    network.intercept()
 }
