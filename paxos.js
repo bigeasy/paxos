@@ -87,7 +87,11 @@ function Paxos (now, republic, id, options) {
     // Entire population.
     this.citizens = []
 
-    this._minimum = { propagated: '0/0', version: '0/0', reduced: '0/0', committed: '0/0' }
+    // Upper bound of the atomic log.
+    this._committed = {}
+
+    // Propagated lower bound of the atomic log.
+    this._minimum = { propagated: '0/0', version: '0/0', reduced: '0/0' }
     this._minimums = {}
     this._minimums[this.id] = this._minimum
 
@@ -566,8 +570,7 @@ Paxos.prototype._send = function (message) {
             commits: []
         }
         // TODO Tidy.
-        var minimum = this._minimums[to]
-        var committed = minimum == null ? null : minimum.committed
+        var committed = this._committed[this.government.immigrated.promise[to]]
         this._stuffSynchronize(to, committed, sync, 20)
         var envelope = {
             to: to,
@@ -613,7 +616,6 @@ Paxos.prototype.request = function (now, request) {
         message = { method: 'unreachable' }
     } else {
         sync.committed = this.log.head.body.promise
-        assert(sync.committed ==  this._minimum.committed)
 
         // We don't want to advance the minimum if we have no items yet.
         if (this.log.head.body.promise != '0/0') {
@@ -673,6 +675,10 @@ Paxos.prototype.response = function (now, message, responses) {
             delete this._disappeared[promise]
         }
 
+        if (response.sync.committed != null) {
+            this._committed[promise] = response.sync.committed
+        }
+
         // Synchronize commits.
         this._synchronize(now, response.sync.commits)
 
@@ -693,16 +699,14 @@ Paxos.prototype.response = function (now, message, responses) {
             (
                 this._minimums[message.to[i]] == null ||
                 this._minimums[message.to[i]].version != minimum.version ||
-                this._minimums[message.to[i]].reduced != minimum.reduced ||
-                this._minimums[message.to[i]].committed != minimum.committed
+                this._minimums[message.to[i]].reduced != minimum.reduced
             )
         ) {
             this._minimums[message.to[i]] = {
                 id: message.to[i],
                 version: minimum.version,
                 propagated: minimum.propagated,
-                reduced: minimum.reduced,
-                committed: minimum.committed
+                reduced: minimum.reduced
             }
 
             var reduced = this.log.head.body.promise
@@ -723,12 +727,10 @@ Paxos.prototype.response = function (now, message, responses) {
             this._minimum = {
                 propagated: this.id == this.government.majority[0] ? reduced : this._minimum.propagated,
                 version: this.government.promise,
-                reduced: reduced,
-                committed: this.log.head.body.promise
+                reduced: reduced
             }
         }
     }
-
 
     // Here's were I'm using messages to drive the algorithm even when the
     // information is available for recalcuation.
@@ -969,19 +971,17 @@ Paxos.prototype._commit = function (now, entry, top) {
         this._minimum = {
             version: this.government.promise,
             propagated: this._minimum.propagated,
-            reduced: this.constituency.length == 0 ? '0/0' : '0/0',
-            committed: entry.promise
+            reduced: this.constituency.length == 0 ? '0/0' : '0/0'
         }
 
-        // TODO Tidy.
-        var minimums = {}
-        minimums[this.id] = this._minimums[this.id]
-        this.constituency.forEach(function (id) {
-            if (this._minimums[id] != null) {
-                minimums[id] = this._minimums[id]
-            }
-        }, this)
+        var minimums = {}, committed = {}
+        for (var i = 0, id; (id = this.constituency[i]) != null; i++) {
+            minimums[id] = this._minimums[id]
+            var promise = this.government.immigrated.promise[id]
+            committed[promise] = this._committed[promise]
+        }
         this._minimums = minimums
+        this._committed = committed
 
         // Reset ping tracking information. Leader behavior is different from
         // other members. We clear out all ping information for ping who are not
@@ -1002,8 +1002,6 @@ Paxos.prototype._commit = function (now, entry, top) {
         // resetting the leader during normal operation makes adjustments to
         // citizenship go faster.
     }
-
-    this._minimum.committed = entry.promise
 
     assert(entry.previous, 'null previous')
     this.log.push({
