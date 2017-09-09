@@ -1,4 +1,4 @@
-require('proof')(14, prove)
+require('proof')(15, prove)
 
 function prove (okay) {
     var Paxos = require('..'), denizen
@@ -209,4 +209,27 @@ function prove (okay) {
     network.time += 1
 
     network.intercept()
+
+    network.time += 4
+
+    network.intercept('1')
+
+    okay(network.denizens[0].government, {
+        promise: 'f/0',
+        majority: [ '1', '0', '2' ],
+        minority: [ '3', '5' ],
+        constituents: [],
+        map: {},
+        immigrated: {
+            id: { '1/0': '0', '2/0': '1', '3/0': '2', '7/0': '3', 'a/0': '5' },
+            promise: { '0': '1/0', '1': '2/0', '2': '3/0', '3': '7/0', '5': 'a/0' }
+        },
+        properties: {
+            '0': { location: '0' },
+            '1': { location: '1' },
+            '2': { location: '2' },
+            '3': { location: '3' },
+            '5': { location: '5' }
+        }
+    }, 'usurper')
 }

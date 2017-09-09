@@ -62,6 +62,7 @@ Writer.prototype._send = function () {
         version: this.version,
         to: proposal.quorum,
         collapsible: true,
+        constituent: true,
         register: {
             body: {
                 promise: proposal.promise,

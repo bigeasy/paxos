@@ -54,7 +54,7 @@ Proposer.prototype.response = function (now, request, responses) {
     }
     switch (failed || request.method) {
     case true:
-        this.promise = Monotonic.increment(promise, 0)
+        this.promise = Monotonic.increment(promised, 0)
         this._paxos._schedulePrepare(now, true)
         break
     case 'prepare':

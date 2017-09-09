@@ -402,6 +402,7 @@ Paxos.prototype.event = function (envelope) {
             version: this.government.promise,
             to: envelope.body.to,
             collapsible: !! envelope.body.collapsible,
+            constituent: true,
             key: envelope.key
         })
         break
@@ -431,10 +432,13 @@ Paxos.prototype.event = function (envelope) {
 
             // Try to find a majority of legislators.
             var parliament = this.government.majority.concat(this.government.minority)
-            while (parliament.length != 0 && majority.length != this.government.majority.length) {
+            while (parliament.length != 0) {
                 var id = parliament.shift()
                 if (id != this.id) {
-                    if (this._disappeared[this.government.immigrated.promise[id]] != null) {
+                    if (
+                        majority.length == this.government.majority.length ||
+                        this._disappeared[this.government.immigrated.promise[id]] != null
+                    ) {
                         minority.push(id)
                     } else {
                         majority.push(id)
@@ -445,7 +449,6 @@ Paxos.prototype.event = function (envelope) {
             // If we have a majority of legislators, we have have run a
             // forming this government with ourselves as leader.
             if (majority.length == this.government.majority.length) {
-                minority.push.apply(minority, parliament)
                 this.newGovernment(now, majority, { majority: majority, minority: minority })
                 break
             }
@@ -695,6 +698,7 @@ Paxos.prototype.response = function (now, message, responses) {
         // able to do any damage. They will get updated eventually.
         var minimum = response.minimum
         if (
+            message.constituent &&
             minimum &&
             (
                 this._minimums[message.to[i]] == null ||
@@ -714,7 +718,8 @@ Paxos.prototype.response = function (now, message, responses) {
             for (var j = 0, constituent; (constituent = this.constituency[j]) != null; j++) {
                 if (
                     this._minimums[constituent] == null ||
-                    this._minimums[constituent].version != this.government.promise
+                    this._minimums[constituent].version != this.government.promise ||
+                    this._minimums[constituent].reduced == '0/0'
                 ) {
                     reduced = '0/0'
                     break
@@ -955,7 +960,8 @@ Paxos.prototype._commit = function (now, entry, top) {
         } else {
             shaper = {
                 unreachable: function () {},
-                naturalized: function () {}
+                naturalized: function () {},
+                _immigrating: []
             }
         }
         this._shaper = shaper

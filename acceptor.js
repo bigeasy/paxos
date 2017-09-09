@@ -1,5 +1,5 @@
 var Recorder = require('./recorder')
-var Monotonic = require('monotonic')
+var Monotonic = require('monotonic').asString
 
 function Acceptor (paxos) {
     this.register = null
