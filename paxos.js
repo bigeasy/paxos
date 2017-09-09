@@ -43,9 +43,6 @@ function Paxos (now, republic, id, options) {
     // A republic identifies a paritcular instance of the Paxos algorithm.
     this.republic = republic
 
-    // Maybe start out naturalized if no futher updates necessary.
-    this.naturalized = !! options.naturalized
-
     // Maximum size of a parliament. The government will grow to this size.
     this.parliamentSize = coalesce(options.parliamentSize, 5)
 
@@ -218,9 +215,6 @@ Paxos.prototype.newGovernment = function (now, quorum, government) {
 
 //
 Paxos.prototype.bootstrap = function (now, properties) {
-    // Update current state as if we're already leader.
-    this.naturalize()
-
     var government = {
         promise: '1/0',
         majority: [ this.id ],
@@ -374,10 +368,6 @@ Paxos.prototype.immigrate = function (now, republic, id, cookie, properties) {
         }
     }
     return response
-}
-
-Paxos.prototype.naturalize = function () {
-    this.naturalized = true
 }
 
 // ### Scheduled Events
@@ -604,7 +594,6 @@ Paxos.prototype.request = function (now, request) {
         republic: this.republic,
         promise: this.government.immigrated.promise[this.id],
         from: this.id,
-        naturalized: this.naturalized,
         minimum: this._minimum,
         committed: this.log.head.body.promise,
         commits: []
