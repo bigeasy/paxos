@@ -88,15 +88,14 @@ Network.prototype.intercept = function () {
             var request
             while ((request = denizen.shifter.shift()) != null) {
                 sent = true
-                var envelope
-                for (var j = 0, to; (envelope = request.envelopes[j]) != null; j++) {
+                for (var j = 0, envelope; (envelope = request.envelopes[j]) != null; j++) {
                     MATCH: for (var k = 0, match; (match = matches[k]) != null; k++) {
                         for (var l = 0, L = match.subsets.length; l < L; l++) {
                             if (subset(envelope, match.subsets[l])) {
                                 match.count = Math.max(0, match.count - 1)
                                 if (match.count == 0) {
                                     if (match.name == null) {
-                                        request.responses[to] = null
+                                        request.responses[envelope.to] = null
                                     } else {
                                         intercepted[match.name].push(envelope)
                                     }

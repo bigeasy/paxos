@@ -45,7 +45,7 @@ Proposer.prototype.response = function (now, request, responses) {
     var promised = request.promise, failed = false
     for (var i = 0, I = request.to.length; i < I; i++) {
         var response = responses[request.to[i]]
-        if (Monotonic.compare(promised, response.sync.promise) < 0) {
+        if (response.sync.promise != null && Monotonic.compare(promised, response.sync.promise) < 0) {
             promised = response.sync.promise
         }
         if (response.message.method == 'unreachable' || response.message.method == 'reject') {
@@ -55,7 +55,7 @@ Proposer.prototype.response = function (now, request, responses) {
     switch (failed || request.method) {
     case true:
         this.promise = Monotonic.increment(promised, 0)
-        this._paxos._schedulePrepare(now, true)
+        this._paxos._propose(now, true)
         break
     case 'prepare':
         for (var id in responses) {

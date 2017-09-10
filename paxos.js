@@ -117,7 +117,7 @@ function Paxos (now, republic, id, options) {
     this._shaper = new Shaper(this.parliamentSize, this.government)
 
     // Used for our pseudo-random number generator to vary retry times.
-    this._seed = 2147483647
+    this._seed = 1
 
     // Track unreachable citizens.
     this._disappeared = {}
@@ -500,7 +500,7 @@ Paxos.prototype._propose = function (now, retry) {
     var delay = 0
     if (retry && this.id != this.government.majority[0]) {
         // PRNG: https://gist.github.com/blixt/f17b47c62508be59987b
-        delay = time.timeout * (((this._seed = this._seed * 16807 % 2147483647) - 1) / 2147483646)
+        delay = (this._seed = this._seed * 16807 % 2147483647) % this.timeout
     }
     this.scheduler.schedule(now + delay, this.id, { method: 'propose', body: null })
 }

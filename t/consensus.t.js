@@ -212,10 +212,18 @@ function prove (okay) {
 
     network.time += 4
 
+    network.intercept('1', [ '0' ], [ '2' ], [ '3' ])
+
+    network.time += 4
+
+    network.intercept('1', [ '0' ], [ '2' ], [ '3' ])
+
+    network.time += 4
+
     network.intercept('1')
 
-    okay(network.denizens[0].government, {
-        promise: 'f/0',
+    okay(network.denizens[1].government, {
+        promise: '11/0',
         majority: [ '1', '0', '2' ],
         minority: [ '3', '5' ],
         constituents: [],
