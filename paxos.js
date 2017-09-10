@@ -424,7 +424,7 @@ Paxos.prototype.event = function (envelope) {
     // TODO Collapse means Paxos. Put that in the documentation somewhere.
 
     //
-    case 'prepare':
+    case 'propose':
         for (;;) {
             // If we win, we are the leader.
             var majority = [ this.id ]
@@ -480,7 +480,7 @@ Paxos.prototype._collapse = function (now) {
 
     // TODO Really need to have the value for previous, which is the writer register.
     this._writer = new Proposer(this, this.government.promise)
-    this._schedulePrepare(now, false)
+    this._propose(now, false)
 }
 
 // Note that even if the PNRG where not determinsitic, it wouldn't matter during
@@ -496,13 +496,13 @@ Paxos.prototype._collapse = function (now) {
 // such that they avoid collision?
 
 //
-Paxos.prototype._schedulePrepare = function (now, retry) {
+Paxos.prototype._propose = function (now, retry) {
     var delay = 0
     if (retry && this.id != this.government.majority[0]) {
         // PRNG: https://gist.github.com/blixt/f17b47c62508be59987b
         delay = time.timeout * (((this._seed = this._seed * 16807 % 2147483647) - 1) / 2147483646)
     }
-    this.scheduler.schedule(now + delay, this.id, { method: 'prepare', body: null })
+    this.scheduler.schedule(now + delay, this.id, { method: 'propose', body: null })
 }
 
 // ### Requests and Responses
