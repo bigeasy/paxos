@@ -1,4 +1,4 @@
-require('proof')(15, prove)
+require('proof')(16, prove)
 
 function prove (okay) {
     var Paxos = require('..'), denizen
@@ -240,4 +240,20 @@ function prove (okay) {
             '5': { location: '5' }
         }
     }, 'usurper')
+
+    // Test that a representative chooses the least minimum entry of its
+    // constituents when it calculates is minimum entry.
+    network.denizens[1].enqueue(network.time, 1, 4)
+
+    network.intercept([ '5' ])
+
+    network.denizens[1].enqueue(network.time, 1, 5)
+
+    network.intercept([ '5' ])
+
+    okay(network.denizens[1]._minimums, {
+        '0': { version: '11/0', propagated: 'd/0', reduced: '11/1' },
+        '1': { version: '11/0', propagated: 'd/0', reduced: 'd/0' },
+        '2': { version: '11/0', propagated: 'd/0', reduced: 'd/0' },
+    }, 'minimum unreduced')
 }

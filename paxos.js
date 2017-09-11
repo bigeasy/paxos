@@ -982,12 +982,12 @@ Paxos.prototype._commit = function (now, entry, top) {
         this._minimum = {
             version: this.government.promise,
             propagated: this._minimum.propagated,
-            reduced: '0/0'
+            reduced: this._minimum.reduced,
         }
 
         var minimums = {}, committed = {}
         for (var i = 0, id; (id = this.constituency[i]) != null; i++) {
-            minimums[id] = this._minimums[id]
+            minimums[id] = coalesce(this._minimums[id])
             var promise = this.government.immigrated.promise[id]
             committed[promise] = this._committed[promise]
         }
