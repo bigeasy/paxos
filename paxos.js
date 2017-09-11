@@ -569,7 +569,6 @@ Paxos.prototype._send = function (message) {
             from: this.id,
             minimum: this._minimum,
             committed: this.log.head.body.promise,
-            cookie: this.cookie,
             commits: []
         }
         // TODO Tidy.
