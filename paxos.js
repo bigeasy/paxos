@@ -607,11 +607,11 @@ Paxos.prototype.request = function (now, request) {
         this._minimum.propagated = request.sync.minimum.propagated
     }
 
-    var message
+    var message, syncFrom = null
     if (
         Monotonic.compare(request.sync.committed, sync.committed) < 0
     ) {
-        this._sync(request.sync.from, request.sync.committed, sync, 20)
+        syncFrom = request.sync.committed
         // We are ahead of the bozo trying to update us, so update him back.
         message = { method: 'reject', promise: sync.committed }
     } else if (!this._synchronize(now, request.sync.commits)) {
@@ -638,6 +638,7 @@ Paxos.prototype.request = function (now, request) {
                 ? { method: 'respond', promise: sync.committed }
                 : this._recorder.request(now, request.message)
     }
+    this._sync(request.sync.from, syncFrom, sync, 20)
     return {
         message: message,
         sync: sync,
