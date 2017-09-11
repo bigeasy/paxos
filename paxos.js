@@ -707,7 +707,6 @@ Paxos.prototype.response = function (now, message, responses) {
             )
         ) {
             this._minimums[message.to[i]] = {
-                id: message.to[i],
                 version: minimum.version,
                 propagated: minimum.propagated,
                 reduced: minimum.reduced
@@ -977,7 +976,7 @@ Paxos.prototype._commit = function (now, entry, top) {
         this._minimum = {
             version: this.government.promise,
             propagated: this._minimum.propagated,
-            reduced: this.constituency.length == 0 ? '0/0' : '0/0'
+            reduced: '0/0'
         }
 
         var minimums = {}, committed = {}
@@ -1007,6 +1006,10 @@ Paxos.prototype._commit = function (now, entry, top) {
         // back to the leader. All leader information will soon be updated. Not
         // resetting the leader during normal operation makes adjustments to
         // citizenship go faster.
+    }
+
+    if (this.constituency.length == 0) {
+        this._minimum.reduced = entry.promise
     }
 
     assert(entry.previous, 'null previous')
