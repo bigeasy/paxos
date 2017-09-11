@@ -517,7 +517,15 @@ Paxos.prototype._findRound = function (sought) {
     return this.indexer.tree.find({ body: { promise: sought } })
 }
 
-Paxos.prototype._sync = function (id, committed, sync, count) {
+Paxos.prototype._sync = function (id, committed, count) {
+    var sync = {
+        republic: this.republic,
+        promise: this.government.immigrated.promise[this.id],
+        from: this.id,
+        minimum: this._minimum,
+        committed: this.log.head.body.promise,
+        commits: []
+    }
     if (committed != null) {
         var iterator
         if (committed == '0/0') {
@@ -547,6 +555,7 @@ Paxos.prototype._sync = function (id, committed, sync, count) {
             iterator = iterator.next
         }
     }
+    return sync
 }
 
 // Package a message with log synchronization messages and put it in our outbox
@@ -572,14 +581,12 @@ Paxos.prototype._send = function (message) {
             commits: []
         }
         // TODO Tidy.
-        var committed = this._committed[this.government.immigrated.promise[to]]
-        this._sync(to, committed, sync, 20)
         var envelope = {
             to: to,
             from: this.id,
             request: {
                 message: message,
-                sync: sync
+                sync: this._sync(to, this._committed[this.government.immigrated.promise[to]], 24)
             },
             responses: responses
         }
@@ -638,10 +645,9 @@ Paxos.prototype.request = function (now, request) {
                 ? { method: 'respond', promise: sync.committed }
                 : this._recorder.request(now, request.message)
     }
-    this._sync(request.sync.from, syncFrom, sync, 20)
     return {
         message: message,
-        sync: sync,
+        sync: this._sync(request.sync.from, syncFrom, 24),
         minimum: this._minimum,
         unreachable: this._unreachable
     }
