@@ -517,7 +517,7 @@ Paxos.prototype._findRound = function (sought) {
     return this.indexer.tree.find({ body: { promise: sought } })
 }
 
-Paxos.prototype._stuffSynchronize = function (id, committed, sync, count) {
+Paxos.prototype._sync = function (id, committed, sync, count) {
     if (committed != null) {
         var iterator
         if (committed == '0/0') {
@@ -573,7 +573,7 @@ Paxos.prototype._send = function (message) {
         }
         // TODO Tidy.
         var committed = this._committed[this.government.immigrated.promise[to]]
-        this._stuffSynchronize(to, committed, sync, 20)
+        this._sync(to, committed, sync, 20)
         var envelope = {
             to: to,
             from: this.id,
@@ -611,7 +611,7 @@ Paxos.prototype.request = function (now, request) {
     if (
         Monotonic.compare(request.sync.committed, sync.committed) < 0
     ) {
-        this._stuffSynchronize(request.sync.from, request.sync.committed, sync, 20)
+        this._sync(request.sync.from, request.sync.committed, sync, 20)
         // We are ahead of the bozo trying to update us, so update him back.
         message = { method: 'reject', promise: sync.committed }
     } else if (!this._synchronize(now, request.sync.commits)) {
