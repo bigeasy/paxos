@@ -113,9 +113,9 @@ Shaper.prototype.unreachable = function (id) {
 
 //
 Shaper.prototype.naturalized = function (id) {
-    // If we've decided then the next thing that happens is a new government
-    // which will reset the Shaper, no naturalizations between now and then.
-    assert(!this.decided, 'naturalized called when decided')
+    if (this.decided) {
+        return null
+    }
 
     if (~this._government.majority.indexOf(id)) {
         // Majority members are not our resposibility. They trigger their own

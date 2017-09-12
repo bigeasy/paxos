@@ -947,29 +947,30 @@ Paxos.prototype._commit = function (now, entry, top) {
         this._recorder = this._recorder.createRecorder(entry.promise)
 
         // Chose a strategy for handling pings.
-        var shaper = this._shaper
         if (this.id == this.government.majority[0]) {
             // If we are the leader, we are going to want to look for
             // opportunities to change the shape of the government.
-            shaper = new Shaper(this.parliamentSize, this.government)
+            var shaper = new Shaper(this.parliamentSize, this.government)
             for (var i = 0, immigration; (immigration = this._shaper._immigrating[i]) != null; i++) {
                 shaper.immigrate(immigration)
             }
+            this._shaper = shaper
             if (this.government.immigrate) {
                 shaper.immigrated(this.government.immigrate.id)
             }
             for (var promise in this._unreachable) {
                 this._reshape(now, shaper.unreachable(this.government.immigrated.id[promise]))
             }
-            this.citizens.forEach(function (id) { this._reshape(now, shaper.naturalized(id)) }, this)
+            this.citizens.forEach(function (id) {
+                this._reshape(now, shaper.naturalized(id))
+            }, this)
         } else {
-            shaper = {
+            this._shaper = {
                 unreachable: function () {},
                 naturalized: function () {},
                 _immigrating: []
             }
         }
-        this._shaper = shaper
 
         if (~this.government.majority.indexOf(this.id)) {
             this.scheduler.schedule(now + this.ping, this.id, {
