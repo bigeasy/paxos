@@ -79,10 +79,6 @@ Proposer.prototype.response = function (now, request, responses) {
         break
     case 'accept':
         this._paxos._register(now, request)
-        this._paxos.newGovernment(now, this.proposal.body.majority, {
-            majority: this.proposal.body.majority,
-            minority: this.proposal.body.minority
-        })
         break
     }
 }

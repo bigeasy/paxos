@@ -2,7 +2,7 @@ var Recorder = require('./recorder')
 var Monotonic = require('monotonic').asString
 
 function Acceptor (paxos) {
-    this.register = null
+    this.register = paxos._writer.register || paxos.log.head.body
     this.promise = paxos.log.head.body.promise
     this._paxos = paxos
 }

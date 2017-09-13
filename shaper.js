@@ -68,9 +68,21 @@ function Shaper (parliamentSize, government) {
     this._immigrating = []
     this.decided = false
     this._governments = []
-    this._shouldContract()
     this.outbox = {}
     this._representative = null
+    this._shouldRecover() || this._shouldContract()
+}
+
+Shaper.prototype._shouldRecover = function () {
+    if (this._government.map == null) {
+        this._governments.push({
+            quorum: this._government.majority,
+            government: {
+                majority: this._government.majority,
+                minority: this._government.minority
+            }
+        })
+    }
 }
 
 Shaper.prototype._shouldContract = function () {

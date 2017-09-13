@@ -1,4 +1,4 @@
-require('proof')(16, prove)
+require('proof')(10, prove)
 
 function prove (okay) {
     var Paxos = require('..'), denizen
@@ -72,6 +72,10 @@ function prove (okay) {
 
     okay(!network.denizens[1].immigrate(network.time, 1, '4', 0, { location: '4' }).enqueued, 'immigrate not leader')
 
+    network.populate(1)
+
+    network.intercept()
+
     network.time++
 
     network.intercept(1, '0', [ '1' ])
@@ -87,19 +91,55 @@ function prove (okay) {
     okay(network.denizens[0].government, {
         majority: [ '0', '2' ],
         minority: [ '1' ],
-        constituents: [],
-        promise: '6/0',
+        constituents: [ '3' ],
+        promise: '7/0',
         map: {},
         immigrated: {
-            id: { '1/0': '0', '2/0': '1', '3/0': '2' },
-            promise: { '0': '1/0', '1': '2/0', '2': '3/0' }
+            id: { '1/0': '0', '2/0': '1', '3/0': '2', '5/0': '3' },
+            promise: { '0': '1/0', '1': '2/0', '2': '3/0', '3': '5/0' }
         },
         properties: {
             '0': { location: '0' },
             '1': { location: '1' },
-            '2': { location: '2' }
+            '2': { location: '2' },
+            '3': { location: '3' }
         }
     }, 'recover from collapse')
+
+    network.time++
+
+    network.intercept('0', '2', [ '1' ])
+
+    network.time += 3
+
+    network.intercept('0', '2', [ '1' ])
+
+    network.time++
+
+    network.intercept('0', '2', [ '1' ])
+
+    network.time += 3
+
+    network.intercept('0', '2', [ '1' ])
+
+    okay(network.denizens[0].government, {
+        majority: [ '0', '2' ],
+        minority: [ '3' ],
+        constituents: [],
+        promise: 'a/0',
+        map: {},
+        immigrated: {
+            id: { '1/0': '0', '3/0': '2', '5/0': '3' },
+            promise: { '0': '1/0', '2': '3/0', '3': '5/0' }
+        },
+        properties: {
+            '0': { location: '0' },
+            '2': { location: '2' },
+            '3': { location: '3' }
+        }
+    }, 'recover from collapse')
+
+    return
 
     var shifter = network.denizens[0].log.shifter()
 
