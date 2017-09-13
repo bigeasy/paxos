@@ -1,4 +1,4 @@
-require('proof')(14, prove)
+require('proof')(15, prove)
 
 function prove (okay) {
     var Paxos = require('..'), denizen
@@ -186,20 +186,22 @@ function prove (okay) {
         }
     }, 'add fourth')
 
-    return
-
     network.populate(2)
 
     // Move our clock forward to get a differnt cookie.
     network.time++
 
-    // This one will never join because it is already proposed and the cookie is
-    // wrong.
+    // This one is now unreachable because we rebooted and its history has been
+    // propagated off.
     network.reboot(4)
 
-    // This one will join, but with the new cookie.
+    // This one will never join because it is already proposed and the cookie is
+    // wrong.
     network.reboot(5)
-    network.immigrate(5)
+
+    // This one will join, but with the new cookie.
+    network.reboot(6)
+    network.immigrate(6)
 
     network.intercept()
 
@@ -216,23 +218,24 @@ function prove (okay) {
     network.intercept()
 
     okay(network.denizens[0].government, {
-        promise: 'd/0',
-        majority: [ '0', '2', '1' ],
-        minority: [ '3', '5' ],
-        constituents: [],
+        promise: '13/0',
+        majority: [ '0', '2' ],
+        minority: [ '3' ],
+        constituents: [ '6' ],
         map: {},
         immigrated: {
-            id: { '1/0': '0', '2/0': '1', '3/0': '2', '7/0': '3', '9/0': '5' },
-            promise: { '0': '1/0', '1': '2/0', '2': '3/0', '3': '7/0', '5': '9/0' }
+            id: { '1/0': '0', '3/0': '2', '5/0': '3', 'd/0': '6' },
+            promise: { '0': '1/0', '2': '3/0', '3': '5/0', '6': 'd/0' }
         },
         properties: {
             '0': { location: '0' },
-            '1': { location: '1' },
             '2': { location: '2' },
             '3': { location: '3' },
-            '5': { location: '5' }
+            '6': { location: '6' }
         }
     }, 'reboot, exile and double immigrate')
+
+    return
 
     // Here we are going to disappear for a moment, but come back before we're
     // unreachable. For the rest of the tests 5 should be present. This covers

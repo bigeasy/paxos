@@ -527,7 +527,10 @@ Paxos.prototype._sync = function (id, committed, count) {
         if (committed == '0/0') {
             iterator = this.log.trailer.node.next
             for (;;) {
-                assert(iterator != null, 'immigration missing')
+                if (iterator == null) {
+                    iterator = { promise: '0/0', body: { promise: '0/0', body: {} } }
+                    break
+                }
                 if (Monotonic.isBoundary(iterator.body.promise, 0)) {
                     var immigrate = iterator.body.body.immigrate
                     if (immigrate && immigrate.id == id) {
