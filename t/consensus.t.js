@@ -1,4 +1,4 @@
-require('proof')(10, prove)
+require('proof')(14, prove)
 
 function prove (okay) {
     var Paxos = require('..'), denizen
@@ -139,8 +139,6 @@ function prove (okay) {
         }
     }, 'recover from collapse')
 
-    return
-
     var shifter = network.denizens[0].log.shifter()
 
     network.denizens[0].enqueue(network.time, 1, 1)
@@ -159,34 +157,36 @@ function prove (okay) {
             promise: envelope.body.promise,
             map: envelope.body.map
         }, {
-            promise: '7/0',
-            map: { '6/2': '7/1', '6/3': '7/2' }
+            promise: 'b/0',
+            map: { 'a/2': 'b/1', 'a/3': 'b/2' }
         }, 'remap')
     })
 
     network.intercept()
 
-    okay(network.denizens[1].log.head.body.body, 3, 'enqueued')
-    okay(network.denizens[1].log.head.body.promise, '7/2', 'remapped')
+    okay(network.denizens[2].log.head.body.body, 3, 'enqueued')
+    okay(network.denizens[2].log.head.body.promise, 'b/2', 'remapped')
 
     okay(network.denizens[0].government, {
         majority: [ '0', '2' ],
-        minority: [ '1' ],
-        constituents: [ '3' ],
-        promise: '7/0',
-        map: { '6/2': '7/1', '6/3': '7/2' },
-        immigrate: { id: '3', cookie: 4, properties: { location: '3' } },
+        minority: [ '3' ],
+        constituents: [ '4' ],
+        promise: 'b/0',
+        map: { 'a/2': 'b/1', 'a/3': 'b/2' },
+        immigrate: { id: '4', cookie: 12, properties: { location: '4' } },
         immigrated: {
-            id: { '1/0': '0', '2/0': '1', '3/0': '2', '7/0': '3' },
-            promise: { '0': '1/0', '1': '2/0', '2': '3/0', '3': '7/0' }
+            id: { '1/0': '0', '3/0': '2', '5/0': '3', 'b/0': '4' },
+            promise: { '0': '1/0', '2': '3/0', '3': '5/0', '4': 'b/0' }
         },
         properties: {
             '0': { location: '0' },
-            '1': { location: '1' },
             '2': { location: '2' },
-            '3': { location: '3' }
+            '3': { location: '3' },
+            '4': { location: '4' }
         }
     }, 'add fourth')
+
+    return
 
     network.populate(2)
 

@@ -537,6 +537,9 @@ Paxos.prototype._sync = function (id, committed, count) {
                 iterator = iterator.next
             }
         } else {
+            if (!(Monotonic.compare(committed, this._minimum.propagated) >= 0)) {
+                var x = 0
+            }
             assert(Monotonic.compare(committed, this._minimum.propagated) >= 0, 'minimum breached')
             assert(Monotonic.compare(committed, this.log.head.body.promise) <= 0, 'maximum breached')
             iterator = this._findRound(committed).next
@@ -597,7 +600,29 @@ Paxos.prototype._send = function (message) {
 //
 Paxos.prototype.request = function (now, request) {
     // TODO Reject if it is the wrong republic.
-    // TODO Reject if it a message from an exile, wrong id and cookie.
+    if (
+        this.government.immigrated.promise[request.sync.from] != request.sync.promise
+    ) {
+        if (this.government.promise == '0/0') {
+            if (request.sync.commits.length == 0) {
+                return {
+                    message: { method: 'respond', promise: '0/0' },
+                    sync: this._sync(request.sync.from, syncFrom, 24)
+                }
+            }
+            if (
+                !Monotonic.isBoundary(request.sync.commits[0].promise, 0) ||
+                request.sync.commits[0].body.immigrate == null ||
+                request.sync.commits[0].body.immigrate.id != this.id ||
+                request.sync.commits[0].body.immigrate.cookie != this.cookie
+            ) {
+                return { message: { method: 'unreachable' } }
+            }
+            this._commit(now, request.sync.commits[0], request.sync.commits[0].previous)
+        } else {
+            return { message: { method: 'unreachable' } }
+        }
+    }
     var sync = {
         republic: this.republic,
         promise: this.government.immigrated.promise[this.id],
