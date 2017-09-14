@@ -540,9 +540,6 @@ Paxos.prototype._sync = function (id, committed, count) {
                 iterator = iterator.next
             }
         } else {
-            if (!(Monotonic.compare(committed, this._minimum.propagated) >= 0)) {
-                var x = 0
-            }
             assert(Monotonic.compare(committed, this._minimum.propagated) >= 0, 'minimum breached')
             assert(Monotonic.compare(committed, this.log.head.body.promise) <= 0, 'maximum breached')
             iterator = this._findRound(committed).next
@@ -1004,19 +1001,21 @@ Paxos.prototype._commit = function (now, entry, top) {
             })
         }
 
+        // You cannot keep a cached value for a constituent because new
+        // governments will change that constituents constituents. The reduced
+        // value must be recalcuated.
         this._minimum = {
             version: this.government.promise,
             propagated: this._minimum.propagated,
-            reduced: this._minimum.reduced,
+            reduced: '0/0'
         }
+        this._minimums = {}
 
-        var minimums = {}, committed = {}
+        var committed = {}
         for (var i = 0, id; (id = this.constituency[i]) != null; i++) {
-            minimums[id] = coalesce(this._minimums[id])
             var promise = this.government.immigrated.promise[id]
             committed[promise] = this._committed[promise]
         }
-        this._minimums = minimums
         this._committed = committed
 
         // Reset ping tracking information. Leader behavior is different from

@@ -186,7 +186,7 @@ function prove (okay) {
         }
     }, 'add fourth')
 
-    network.populate(2)
+    network.populate(3)
 
     // Move our clock forward to get a differnt cookie.
     network.time++
@@ -218,20 +218,21 @@ function prove (okay) {
     network.intercept()
 
     okay(network.denizens[0].government, {
-        promise: '13/0',
-        majority: [ '0', '2' ],
-        minority: [ '3' ],
-        constituents: [ '6' ],
+        promise: '15/0',
+        majority: [ '0', '2', '3' ],
+        minority: [ '6', '7' ],
+        constituents: [],
         map: {},
         immigrated: {
-            id: { '1/0': '0', '3/0': '2', '5/0': '3', 'd/0': '6' },
-            promise: { '0': '1/0', '2': '3/0', '3': '5/0', '6': 'd/0' }
+            id: { '1/0': '0', '3/0': '2', '5/0': '3', 'd/0': '6', 'e/0': '7' },
+            promise: { '0': '1/0', '2': '3/0', '3': '5/0', '6': 'd/0', '7': 'e/0' }
         },
         properties: {
             '0': { location: '0' },
             '2': { location: '2' },
             '3': { location: '3' },
-            '6': { location: '6' }
+            '6': { location: '6' },
+            '7': { location: '7' }
         }
     }, 'reboot, exile and double immigrate')
 
