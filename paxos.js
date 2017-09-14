@@ -524,26 +524,10 @@ Paxos.prototype._sync = function (id, committed, count) {
     }
     if (committed != null) {
         var iterator
-        if (committed == '0/0') {
-            iterator = this.log.trailer.node.next
-            for (;;) {
-                if (iterator == null) {
-                    iterator = { promise: '0/0', body: { promise: '0/0', body: {} } }
-                    break
-                }
-                if (Monotonic.isBoundary(iterator.body.promise, 0)) {
-                    var immigrate = iterator.body.body.immigrate
-                    if (immigrate && immigrate.id == id) {
-                        break
-                    }
-                }
-                iterator = iterator.next
-            }
-        } else {
-            assert(Monotonic.compare(committed, this._minimum.propagated) >= 0, 'minimum breached')
-            assert(Monotonic.compare(committed, this.log.head.body.promise) <= 0, 'maximum breached')
-            iterator = this._findRound(committed).next
-        }
+
+        assert(Monotonic.compare(committed, this._minimum.propagated) >= 0, 'minimum breached')
+        assert(Monotonic.compare(committed, this.log.head.body.promise) <= 0, 'maximum breached')
+        iterator = this._findRound(committed).next
 
         while (--count && iterator != null) {
             sync.commits.push({
@@ -569,20 +553,44 @@ Paxos.prototype._sync = function (id, committed, count) {
 //
 Paxos.prototype._send = function (message) {
     var envelopes = [], responses = {}
-    for (var j = 0, to; (to = message.to[j]) != null; j++) {
+    TO: for (var j = 0, to; (to = message.to[j]) != null; j++) {
         this.scheduler.unschedule(to)
+
+        var promise = this.government.immigrated.promise[to]
+        var committed = this._committed[promise]
+        if (committed == '0/0') {
+            var iterator = this.log.trailer.node.next, previous
+            for (;;) {
+                if (iterator == null) {
+                    responses[to] = null
+                    continue TO
+                }
+                if (Monotonic.isBoundary(iterator.body.promise, 0)) {
+                    var immigrate = iterator.body.body.immigrate
+                    if (immigrate && immigrate.id == to) {
+                        committed = previous.body.promise
+                        break
+                    }
+                }
+                previous = iterator
+                iterator = iterator.next
+            }
+        }
+
         // TODO Tidy.
         var envelope = {
             to: to,
             from: this.id,
             request: {
                 message: message,
-                sync: this._sync(to, this._committed[this.government.immigrated.promise[to]], 24)
+                sync: this._sync(to, committed, 24)
             },
             responses: responses
         }
+
         envelopes.push(envelope)
     }
+
     this.outbox.push({ from: this.id, message: message, responses: responses, envelopes: envelopes })
 }
 
