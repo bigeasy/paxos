@@ -571,14 +571,6 @@ Paxos.prototype._send = function (message) {
     var envelopes = [], responses = {}
     for (var j = 0, to; (to = message.to[j]) != null; j++) {
         this.scheduler.unschedule(to)
-        var sync = {
-            republic: this.republic,
-            promise: this.government.immigrated.promise[this.id],
-            from: this.id,
-            minimum: this._minimum,
-            committed: this.log.head.body.promise,
-            commits: []
-        }
         // TODO Tidy.
         var envelope = {
             to: to,
@@ -623,30 +615,21 @@ Paxos.prototype.request = function (now, request) {
             return { message: { method: 'unreachable' } }
         }
     }
-    var sync = {
-        republic: this.republic,
-        promise: this.government.immigrated.promise[this.id],
-        from: this.id,
-        minimum: this._minimum,
-        committed: this.log.head.body.promise,
-        commits: []
-    }
+
     if (Monotonic.compare(this._minimum.propagated, request.sync.minimum.propagated) < 0) {
         this._minimum.propagated = request.sync.minimum.propagated
     }
 
     var message, syncFrom = null
     if (
-        Monotonic.compare(request.sync.committed, sync.committed) < 0
+        Monotonic.compare(request.sync.committed, this.log.head.body.promise) < 0
     ) {
         syncFrom = request.sync.committed
         // We are ahead of the bozo trying to update us, so update him back.
-        message = { method: 'reject', promise: sync.committed }
+        message = { method: 'reject', promise: this.log.head.body.promise }
     } else if (!this._synchronize(now, request.sync.commits)) {
         message = { method: 'unreachable' }
     } else {
-        sync.committed = this.log.head.body.promise
-
         // We don't want to advance the minimum if we have no items yet.
         if (this.log.head.body.promise != '0/0') {
             while (Monotonic.compare(this.log.trailer.peek().promise, this._minimum.propagated) < 0) {
@@ -663,7 +646,7 @@ Paxos.prototype.request = function (now, request) {
         }
 
         message = request.message.method == 'synchronize'
-                ? { method: 'respond', promise: sync.committed }
+                ? { method: 'respond', promise: this.log.head.body.promise }
                 : this._recorder.request(now, request.message)
     }
     return {
