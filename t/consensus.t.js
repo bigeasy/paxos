@@ -27,7 +27,7 @@ function prove (okay) {
 
     okay(network.denizens[0].immigrate(network.time, 1, '1', network.denizens[1].cookie, { location: '1' }).enqueued, 'immigrate')
 
-    network.intercept()
+    network.send()
 
     okay(network.denizens[1].government, {
         majority: [ '0' ],
@@ -48,7 +48,7 @@ function prove (okay) {
 
     network.populate(1)
 
-    network.intercept()
+    network.send()
 
     okay(network.denizens[2].government, {
         majority: [ '0', '1' ],
@@ -74,19 +74,19 @@ function prove (okay) {
 
     network.populate(1)
 
-    network.intercept()
+    network.send()
 
     network.time++
 
-    network.intercept(1, '0', [ '1' ])
+    network.send(1, '0', [ '1' ])
 
     network.time += 3
 
-// network.intercept(1, '0', [ '1' ])
+// network.send(1, '0', [ '1' ])
 
     okay(!network.denizens[0].enqueue(network.time, 1, {}).enqueued, 'post collapsed')
 
-    network.intercept('0', [ '1' ])
+    network.send('0', [ '1' ])
 
     okay(network.denizens[0].government, {
         majority: [ '0', '2' ],
@@ -108,19 +108,19 @@ function prove (okay) {
 
     network.time++
 
-    network.intercept('0', '2', [ '1' ])
+    network.send('0', '2', [ '1' ])
 
     network.time += 3
 
-    network.intercept('0', '2', [ '1' ])
+    network.send('0', '2', [ '1' ])
 
     network.time++
 
-    network.intercept('0', '2', [ '1' ])
+    network.send('0', '2', [ '1' ])
 
     network.time += 3
 
-    network.intercept('0', '2', [ '1' ])
+    network.send('0', '2', [ '1' ])
 
     okay(network.denizens[0].government, {
         majority: [ '0', '2' ],
@@ -145,7 +145,7 @@ function prove (okay) {
     network.denizens[0].enqueue(network.time, 1, 2)
     network.denizens[0].enqueue(network.time, 1, 3)
 
-    network.intercept('1')
+    network.send('1')
 
     network.populate(1)
 
@@ -162,7 +162,7 @@ function prove (okay) {
         }, 'remap')
     })
 
-    network.intercept()
+    network.send()
 
     okay(network.denizens[2].log.head.body.body, 3, 'enqueued')
     okay(network.denizens[2].log.head.body.promise, 'b/2', 'remapped')
@@ -207,19 +207,19 @@ function prove (okay) {
     network.reboot(6)
     network.immigrate(6)
 
-    network.intercept()
+    network.send()
 
     network.time += 3
 
-    network.intercept()
+    network.send()
 
     network.time += 1
 
-    network.intercept()
+    network.send()
 
     network.time += 3
 
-    network.intercept()
+    network.send()
 
     okay(network.denizens[0].government, {
         promise: '15/0',
@@ -246,27 +246,27 @@ function prove (okay) {
     // unreachable.
     network.time += 1
 
-    network.intercept('3', [ '7' ])
+    network.send('3', [ '7' ])
 
     network.time += 1
 
-    network.intercept('3', [ '7' ])
+    network.send('3', [ '7' ])
 
     network.time += 1
 
-    network.intercept()
+    network.send()
 
     network.time += 4
 
-    network.intercept('3', [ '2' ], [ '3' ], [ '6' ])
+    network.send('3', [ '2' ], [ '3' ], [ '6' ])
 
     network.time += 4
 
-    network.intercept('3', [ '2' ], [ '3' ], [ '6' ])
+    network.send('3', [ '2' ], [ '3' ], [ '6' ])
 
     network.time += 4
 
-    network.intercept('3')
+    network.send('3')
 
     okay(network.denizens[3].government, {
         promise: '19/0',
@@ -291,11 +291,11 @@ function prove (okay) {
     // constituents when it calculates is minimum entry.
     network.denizens[3].enqueue(network.time, 1, 4)
 
-    network.intercept([ '7' ])
+    network.send([ '7' ])
 
     network.denizens[3].enqueue(network.time, 1, 5)
 
-    network.intercept([ '7' ])
+    network.send([ '7' ])
 
     okay(network.denizens[3]._minimums, {
         '0': { version: '19/0', propagated: '15/0', reduced: '19/1' },

@@ -47,7 +47,7 @@ Network.prototype.response = function (request) {
     }
 }
 
-Network.prototype.intercept = function () {
+Network.prototype.send = function () {
     var vargs = Array.prototype.slice.call(arguments)
     var count = typeof vargs[0] == 'number' ? vargs.shift() : Infinity
     var denizens = []
@@ -162,7 +162,7 @@ Network.prototype.populate = function (count) {
 Network.prototype.tick = function (count) {
     while (count-- != 0) {
         this.time++
-        this.intercept()
+        this.send()
     }
 }
 
