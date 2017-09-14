@@ -186,6 +186,10 @@ function prove (okay) {
         }
     }, 'add fourth')
 
+    // Propagate minimums to clear out the immigration entry for 4.
+    network.tick(2)
+
+    // Add some new citizens.
     network.populate(3)
 
     // Move our clock forward to get a differnt cookie.

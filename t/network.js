@@ -159,4 +159,11 @@ Network.prototype.populate = function (count) {
     }
 }
 
+Network.prototype.tick = function (count) {
+    while (count-- != 0) {
+        this.time++
+        this.intercept()
+    }
+}
+
 module.exports = Network
