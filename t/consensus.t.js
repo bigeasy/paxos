@@ -1,4 +1,4 @@
-require('proof')(15, prove)
+require('proof')(16, prove)
 
 function prove (okay) {
     var Paxos = require('..'), denizen
@@ -236,19 +236,17 @@ function prove (okay) {
         }
     }, 'reboot, exile and double immigrate')
 
-    return
-
     // Here we are going to disappear for a moment, but come back before we're
     // unreachable. For the rest of the tests 5 should be present. This covers
     // the disappearance branches, specifically already disappeared but not yet
     // unreachable.
     network.time += 1
 
-    network.intercept('1', [ '5' ])
+    network.intercept('3', [ '7' ])
 
     network.time += 1
 
-    network.intercept('1', [ '5' ])
+    network.intercept('3', [ '7' ])
 
     network.time += 1
 
@@ -256,34 +254,36 @@ function prove (okay) {
 
     network.time += 4
 
-    network.intercept('1', [ '0' ], [ '2' ], [ '3' ])
+    network.intercept('3', [ '2' ], [ '3' ], [ '6' ])
 
     network.time += 4
 
-    network.intercept('1', [ '0' ], [ '2' ], [ '3' ])
+    network.intercept('3', [ '2' ], [ '3' ], [ '6' ])
 
     network.time += 4
 
-    network.intercept('1')
+    network.intercept('3')
 
-    okay(network.denizens[1].government, {
-        promise: '11/0',
-        majority: [ '1', '0', '2' ],
-        minority: [ '3', '5' ],
+    okay(network.denizens[3].government, {
+        promise: '19/0',
+        majority: [ '3', '0', '2' ],
+        minority: [ '6', '7' ],
         constituents: [],
         map: {},
         immigrated: {
-            id: { '1/0': '0', '2/0': '1', '3/0': '2', '7/0': '3', '9/0': '5' },
-            promise: { '0': '1/0', '1': '2/0', '2': '3/0', '3': '7/0', '5': '9/0' }
+            id: { '1/0': '0', '3/0': '2', '5/0': '3', 'd/0': '6', 'e/0': '7' },
+            promise: { '0': '1/0', '2': '3/0', '3': '5/0', '6': 'd/0', '7': 'e/0' }
         },
         properties: {
             '0': { location: '0' },
-            '1': { location: '1' },
             '2': { location: '2' },
             '3': { location: '3' },
-            '5': { location: '5' }
+            '6': { location: '6' },
+            '7': { location: '7' }
         }
     }, 'usurper')
+
+    return
 
     // Test that a representative chooses the least minimum entry of its
     // constituents when it calculates is minimum entry.
