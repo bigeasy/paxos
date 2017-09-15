@@ -1,7 +1,7 @@
 var Paxos = require('..')
 
 function subSubset (container, contained) {
-    if (typeof conatined != 'object') {
+    if (typeof contained != 'object') {
         return container === contained
     } else if (Array.isArray(contained)) {
         if (!Array.isArray(container)) {
