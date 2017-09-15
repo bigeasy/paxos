@@ -302,4 +302,22 @@ function prove (okay) {
         '2': { version: '19/0', propagated: '15/0', reduced: '0/0' },
         '3': { version: '19/0', propagated: '0/0', reduced: '0/0' },
     }, 'minimum unreduced')
+
+    network.time += 4
+
+    var intercept = network.send('0', '2', { prepare: { request: { message: { method: 'prepare' } } } })
+
+    for (var i = 0, request; (request = intercept.prepare[i]) != null; i++) {
+        if (request.from == '0') {
+            network.request(request)
+            network.response(request)
+        }
+    }
+
+    for (var i = 0, request; (request = intercept.prepare[i]) != null; i++) {
+        if (request.from == '2') {
+            network.request(request)
+            network.response(request)
+        }
+    }
 }
