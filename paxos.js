@@ -151,7 +151,11 @@ Paxos.prototype.newGovernment = function (now, quorum, government) {
     this._shaper.decided = true
 
     // Increment the government part of the promise.
-    // TODO Will fail on multiple rounds of Paxos.
+    // TODO Will fail on multiple rounds of Paxos. UPDATE No it is kind of a
+    // special case. For a fiat government, we know we are going to increment
+    // and we need to remap, but for a an elected government we will not remap
+    // so no promise needed here and the promise is determined after the
+    // election.
     var promise = Monotonic.increment(this.government.promise, 0)
 
     // The government's constituents are our current population less the members
@@ -245,8 +249,8 @@ Paxos.prototype.bootstrap = function (now, properties) {
 
 // TODO Is all this checking necessary? Is it necessary to return the island id
 // and leader? This imagines that the client is going to do the retry, but in
-// reality we often have the cluster performt the retry. The client needs to
-// talk to a server that can be discovered, it can't use the Paxos algorithm for
+// reality we often have the cluster perform the retry. The client needs to talk
+// to a server that can be discovered, it can't use the Paxos algorithm for
 // address resolution. From the suggested logic, it will only have a single
 // address, and maybe be told of an actual leader. What happens when that
 // address is lost? Don't see where returning `republic` and leader helps at
@@ -277,11 +281,6 @@ Paxos.prototype._enqueuable = function (republic) {
 Paxos.prototype.enqueue = function (now, republic, message) {
     var response = this._enqueuable(republic)
     if (response == null) {
-// TODO Bombs out the current working promise. TODO YEAH BAD LOOK THINK.
-        // TODO Note that we used to snapshot the majority here as the route but
-        // that can change. Note that the last issued promise is not driven by
-        // government enactment, it is incremented as we greate new promises and
-        // governments.
         var promise = this._promised = Monotonic.increment(this._promised, 1)
         this._writer.push({
             promise: promise,
@@ -809,7 +808,7 @@ Paxos.prototype.response = function (now, message, responses) {
     ) {
         // TODO If the recepient is at '0/0' and we attempted to synchronize it,
         // then we must not have had the right cookie, let's mark it as
-        // unreachable for exile.
+        // unreachable for exile. UPDATE: Dubious.
 
         // Only handle a response if it was issued by our current
         // writer/proposer.
