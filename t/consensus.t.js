@@ -305,19 +305,29 @@ function prove (okay) {
 
     network.time += 4
 
-    var intercept = network.send('0', '2', { prepare: { request: { message: { method: 'prepare' } } } })
+    var intercept = network.send('0', '2', { prepare: { message: { method: 'prepare' } } })
 
-    for (var i = 0, request; (request = intercept.prepare[i]) != null; i++) {
-        if (request.from == '0') {
-            network.request(request)
-            network.response(request)
+    for (var i = 0, envelope; (envelope = intercept.prepare[i]) != null; i++) {
+        if (envelope.request.from == '0') {
+            network.request(envelope)
+            network.response(envelope)
         }
     }
 
-    for (var i = 0, request; (request = intercept.prepare[i]) != null; i++) {
-        if (request.from == '2') {
-            network.request(request)
-            network.response(request)
+    for (var i = 0, envelope; (envelope = intercept.prepare[i]) != null; i++) {
+        if (envelope.request.from == '2') {
+            network.request(envelope)
+            network.response(envelope)
         }
     }
+
+    network.time += 4
+
+    var intercept = network.send('0', '2', {
+        prepare: [{ message: { method: 'prepare' } }, { message: { method: 'accept' } }]
+    })
+    intercept.prepare.forEach(function (item) {
+        console.log(item)
+    })
+//    console.log(network.pluck(intercept.prepare, { message: { to: '3' } }))
 }
