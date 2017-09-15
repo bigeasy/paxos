@@ -578,9 +578,9 @@ Paxos.prototype._send = function (message) {
 
         // TODO Tidy.
         var envelope = {
-            to: to,
-            from: this.id,
             request: {
+                to: to,
+                from: this.id,
                 message: message,
                 sync: this._sync(to, committed, 24)
             },
@@ -590,7 +590,13 @@ Paxos.prototype._send = function (message) {
         envelopes.push(envelope)
     }
 
-    this.outbox.push({ from: this.id, message: message, responses: responses, envelopes: envelopes })
+    // Structured so that you can invoke `_response` using either an individual
+    // envelope or the entire send structure.
+    this.outbox.push({
+        request: { from: this.id, message: message },
+        responses: responses,
+        envelopes: envelopes
+    })
 }
 
 // TODO Note that minimum only ever goes up so a delayed minimum is not going to

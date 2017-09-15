@@ -38,12 +38,12 @@ function Network () {
 }
 
 Network.prototype.request = function (envelope) {
-    envelope.responses[envelope.to] = this.denizens[envelope.to].request(this.time, envelope.request)
+    envelope.responses[envelope.request.to] = this.denizens[envelope.request.to].request(this.time, envelope.request)
 }
 
-Network.prototype.response = function (request) {
-    if (Object.keys(request.responses).length == request.message.to.length) {
-        this.denizens[request.from].response(this.time, request.message, request.responses)
+Network.prototype.response = function (envelope) {
+    if (Object.keys(envelope.responses).length == envelope.request.message.to.length) {
+        this.denizens[envelope.request.from].response(this.time, envelope.request.message, envelope.responses)
     }
 }
 
@@ -85,17 +85,17 @@ Network.prototype.send = function () {
                 continue
             }
             denizen.scheduler.check(this.time)
-            var request
-            while ((request = denizen.shifter.shift()) != null) {
+            var communique
+            while ((communique = denizen.shifter.shift()) != null) {
                 sent = true
-                for (var j = 0, envelope; (envelope = request.envelopes[j]) != null; j++) {
+                for (var j = 0, envelope; (envelope = communique.envelopes[j]) != null; j++) {
                     MATCH: for (var k = 0, match; (match = matches[k]) != null; k++) {
                         for (var l = 0, L = match.subsets.length; l < L; l++) {
-                            if (subset(envelope, match.subsets[l])) {
+                            if (subset(envelope.request, match.subsets[l])) {
                                 match.count = Math.max(0, match.count - 1)
                                 if (match.count == 0) {
                                     if (match.name == null) {
-                                        request.responses[envelope.to] = null
+                                        envelope.responses[envelope.request.to] = null
                                     } else {
                                         intercepted[match.name].push(envelope)
                                     }
@@ -108,7 +108,7 @@ Network.prototype.send = function () {
                         this.request(envelope)
                     }
                 }
-                this.response(request)
+                this.response(communique)
             }
         }
     }
