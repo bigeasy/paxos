@@ -324,10 +324,14 @@ function prove (okay) {
     network.time += 4
 
     var intercept = network.send('0', '2', {
-        prepare: [{ message: { method: 'prepare' } }, { message: { method: 'accept' } }]
+        collision: [{ to: '3' }]
     })
-    intercept.prepare.forEach(function (item) {
-        console.log(item)
-    })
-//    console.log(network.pluck(intercept.prepare, { message: { to: '3' } }))
+
+    var prepare = network.pluck(intercept.collision, { from: '2' }).shift()
+    network.request(prepare)
+    network.response(prepare)
+
+    var accept = intercept.collision.shift()
+    network.request(accept)
+    network.response(accept)
 }

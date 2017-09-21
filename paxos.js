@@ -650,7 +650,10 @@ Paxos.prototype.request = function (now, request) {
             }
         }
 
-        if (~this.government.majority.slice(1).indexOf(this.id)) {
+        if (
+            ~this.government.majority.slice(1).indexOf(this.id) &&
+            ! this._writer.collapsed
+        ) {
             this.scheduler.schedule(now + this.timeout, this.id, {
                 module: 'paxos',
                 method: 'collapse',
