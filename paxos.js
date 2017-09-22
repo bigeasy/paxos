@@ -493,9 +493,16 @@ Paxos.prototype._collapse = function (now) {
 //
 Paxos.prototype._propose = function (now, retry) {
     var delay = 0
-    if (retry && this.id != this.government.majority[0]) {
+    if (retry) {
+        delay += 1
+        if (this.id != this.government.majority[0]) {
+            delay += this.ping
+        }
         // PRNG: https://gist.github.com/blixt/f17b47c62508be59987b
-        delay = (this._seed = this._seed * 16807 % 2147483647) % this.timeout
+        delay += (this._seed = this._seed * 16807 % 2147483647) % this.ping
+    }
+    if (now == 41 && this.id == '3') {
+        var x = 1
     }
     this.scheduler.schedule(now + delay, this.id, { method: 'propose', body: null })
 }

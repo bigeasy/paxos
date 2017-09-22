@@ -305,10 +305,25 @@ function prove (okay) {
 
     network.send()
 
+    console.log('-', network.denizens[3].government)
+    network.time += 4
+
+    // Set it up so that the proposers do not make proposals to one another
+    // since that's how I've always sketched it out on paper.
+    network.send('0', [ '2' ], [ '3' ])
+    network.send('2', [ '0' ], [ '3' ])
+    network.send('3', [ '0' ], [ '2' ])
+    console.log('-', network.denizens[0]._unreachable)
+    console.log('-', network.denizens[3].government)
+    return
+
     network.time += 4
 
     var intercept = network.send('0', '2', { prepare: { message: { method: 'prepare' } } })
 
+    console.log('---', intercept)
+    console.log(network.denizens[3].government)
+    return
     for (var i = 0, envelope; (envelope = intercept.prepare[i]) != null; i++) {
         if (envelope.request.from == '0') {
             network.request(envelope)
