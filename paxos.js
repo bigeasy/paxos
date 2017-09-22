@@ -610,6 +610,7 @@ Paxos.prototype.request = function (now, request) {
     ) {
         if (this.government.promise == '0/0') {
             if (request.sync.commits.length == 0) {
+                // TODO `syncFrom` is `undefined`.
                 return {
                     message: { method: 'respond', promise: '0/0' },
                     sync: this._sync(request.sync.from, syncFrom, 24)
