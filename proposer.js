@@ -87,4 +87,13 @@ Proposer.prototype.createWriter = function (promise) {
     return new Writer(this._paxos, promise)
 }
 
+Proposer.prototype.inspect = function () {
+    return {
+        type: 'Proposer',
+        promise: this.promise,
+        register: this.register,
+        proposal: this.proposal
+    }
+}
+
 module.exports = Proposer

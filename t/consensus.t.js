@@ -6,8 +6,8 @@ function prove (okay) {
     var Network = require('./network')
     var network = new Network
 
-    function dump (denizen) {
-        denizen.log.each(function (entry) { console.log(entry) })
+    function dump (value) {
+        console.log(require('util').inspect(value, { depth: null }))
     }
 
     network.bootstrap()
@@ -303,6 +303,8 @@ function prove (okay) {
         '3': { version: '19/0', propagated: '0/0', reduced: '0/0' },
     }, 'minimum unreduced')
 
+    network.send()
+
     network.time += 4
 
     var intercept = network.send('0', '2', { prepare: { message: { method: 'prepare' } } })
@@ -334,4 +336,10 @@ function prove (okay) {
     var accept = intercept.collision.shift()
     network.request(accept)
     network.response(accept)
+
+    dump(network.denizens[0].inspect())
+    dump(network.denizens[2].inspect())
+    dump(network.denizens[3].inspect())
+    dump(network.denizens[1].inspect())
+    dump(network.denizens[7].inspect())
 }

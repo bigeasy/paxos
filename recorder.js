@@ -39,4 +39,8 @@ Recorder.prototype.createRecorder = function () {
     return this
 }
 
+Recorder.prototype.inspect = function () {
+    return { type: 'Recorder' }
+}
+
 module.exports = Recorder

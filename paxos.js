@@ -1069,4 +1069,8 @@ Paxos.prototype._commit = function (now, entry, top) {
     }
 }
 
+Paxos.prototype.inspect = function () {
+    return { id: this.id, writer: this._writer.inspect(), recorder: this._recorder.inspect() }
+}
+
 module.exports = Paxos

@@ -100,4 +100,8 @@ Writer.prototype.createWriter = function () {
     return this
 }
 
+Writer.prototype.inspect = function () {
+    return { type: 'Writer', proposals: this.proposals }
+}
+
 module.exports = Writer
