@@ -700,7 +700,7 @@ Paxos.prototype.response = function (now, message, responses) {
                 minimum: null,
                 unreachable: {}
             }
-            if (message.collapsible) {
+            if (message.collapsible && !this._writer.collapsed) {
                 this._collapse(now)
             }
             if (this._disappeared[promise] == null) {
