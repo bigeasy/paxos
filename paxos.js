@@ -648,14 +648,10 @@ Paxos.prototype.request = function (now, request) {
         syncFrom = request.sync.committed
         // We are ahead of the bozo trying to update us, so update him back.
         message = { method: 'reject', promise: this.log.head.body.promise }
-    } else if (!this._synchronize(now, request.sync.commits)) {
-        message = { method: 'unreachable' }
     } else {
-        // We don't want to advance the minimum if we have no items yet.
-        if (this.log.head.body.promise != '0/0') {
-            while (Monotonic.compare(this.log.trailer.peek().promise, this._minimum.propagated) < 0) {
-                this.log.trailer.shift()
-            }
+        this._synchronize(now, request.sync.commits)
+        while (Monotonic.compare(this.log.trailer.peek().promise, this._minimum.propagated) < 0) {
+            this.log.trailer.shift()
         }
 
         if (
@@ -862,26 +858,8 @@ Paxos.prototype._register = function (now, register) {
 }
 
 Paxos.prototype._synchronize = function (now, entries) {
-    if (entries.length != 0) {
-        var top = this.log.head.body.promise
-        if (top == '0/0') {
-            // If we are immigrating or bootstrapping we ensure that we're
-            // starting with the the entry that announces our immigration.
-            // Otherwise we may have lost an immigration race condition.
-            if (
-                !Monotonic.isBoundary(entries[0].promise, 0) ||
-                entries[0].body.immigrate == null ||
-                entries[0].body.immigrate.id != this.id ||
-                entries[0].body.immigrate.cookie != this.cookie
-            ) {
-                return false
-            }
-            top = entries[0].previous
-        }
-        for (var i = 0, entry; (entry = entries[i]) != null; i++) {
-            this._commit(now, entry, top)
-            top = this.log.head.body.promise
-        }
+    for (var i = 0, entry; (entry = entries[i]) != null; i++) {
+        this._commit(now, entry, this.log.head.body.promise)
     }
     return true
 }
