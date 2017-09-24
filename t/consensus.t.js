@@ -305,6 +305,8 @@ function prove (okay) {
 
     network.send()
 
+    network.denizens[7].inspect()
+
     network.time += 4
 
     // Set it up so that the proposers do not make proposals to one another
@@ -333,7 +335,32 @@ function prove (okay) {
 
     network.time += 4
 
-    var intercept = network.send('0', '2', { collision: [{ to: '7' }] })
+    function receive (envelope) {
+        network.request(envelope)
+        network.response(envelope)
+    }
+
+    var intercept = network.send('0', '2', { six: [{ to: '6' }], seven: [{ to: '7' }] })
+
+    network.pluck(intercept.six, { from: '0' }).forEach(receive)
+    network.pluck(intercept.seven, { from: '2' }).forEach(receive)
+    intercept.seven.forEach(receive)
+    intercept.six.forEach(receive)
+
+    network.send('3', { prepare: { message: { method: 'prepare' } } }).prepare.forEach(receive)
+
+    network.time += 4
+
+    var intercept = network.send('3', { prepare: { message: { method: 'prepare' } } })
+
+    dump(intercept)
+    dump(network.denizens[3].inspect())
+    return
+
+    intercept.prepare.forEach(receive)
+
+    dump(network.denizens[3].inspect())
+    return
 
     network.pluck(intercept.collision, { from: '2' }).forEach(function (envelope) {
         network.request(envelope)
@@ -344,6 +371,8 @@ function prove (okay) {
         network.request(envelope)
         network.response(envelope)
     })
+
+    return
 
     dump(network.denizens[0].inspect())
     dump(network.denizens[2].inspect())

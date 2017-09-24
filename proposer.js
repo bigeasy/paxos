@@ -45,8 +45,8 @@ Proposer.prototype.response = function (now, request, responses) {
     var promised = request.promise, failed = false
     for (var i = 0, I = request.to.length; i < I; i++) {
         var response = responses[request.to[i]]
-        if (response.sync.promise != null && Monotonic.compare(promised, response.sync.promise) < 0) {
-            promised = response.sync.promise
+        if (Monotonic.compare(promised, response.message.promise) < 0) {
+            promised = response.message.promise
         }
         if (response.message.method == 'unreachable' || response.message.method == 'reject') {
             failed = true

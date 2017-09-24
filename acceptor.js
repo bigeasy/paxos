@@ -31,7 +31,7 @@ Acceptor.prototype.request = function (now, message) {
         }
         break
     }
-    return { method: 'reject', promise: this._paxos.promise }
+    return { method: 'reject', promise: this.promise }
 }
 
 Acceptor.prototype.createRecorder = function (promise) {
