@@ -59,8 +59,8 @@ Proposer.prototype.response = function (now, request, responses) {
         break
     case 'prepare':
         for (var id in responses) {
-            if (Monotonic.compare(getPromise(this.register), getPromise(responses[id].register)) < 0) {
-                this.register = responses[id].register
+            if (Monotonic.compare(getPromise(this.register), getPromise(responses[id].message.register)) < 0) {
+                this.register = responses[id].message.register
             }
         }
         this.proposal.body.promise = request.promise

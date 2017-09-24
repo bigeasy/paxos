@@ -2,7 +2,10 @@ var Recorder = require('./recorder')
 var Monotonic = require('monotonic').asString
 
 function Acceptor (paxos) {
-    this.register = paxos._writer.register || paxos.log.head.body
+    this.register = paxos._writer.register || {
+        body: paxos.log.head.body,
+        previous: null
+    }
     this.promise = paxos.log.head.body.promise
     this._paxos = paxos
 }
@@ -15,7 +18,7 @@ Acceptor.prototype.request = function (now, message) {
             return {
                 method: 'promise',
                 promise: this.promise,
-                previous: this.register
+                register: this.register
             }
         }
         break

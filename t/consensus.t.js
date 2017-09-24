@@ -353,12 +353,8 @@ function prove (okay) {
 
     var intercept = network.send('3', { prepare: { message: { method: 'prepare' } } })
 
-    dump(intercept)
-    dump(network.denizens[3].inspect())
-    return
-
+    dump(network.denizens[6].inspect())
     intercept.prepare.forEach(receive)
-
     dump(network.denizens[3].inspect())
     return
 
