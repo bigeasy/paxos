@@ -611,8 +611,9 @@ Paxos.prototype._send = function (message) {
 
 //
 Paxos.prototype.request = function (now, request) {
-    // TODO Reject if it is the wrong republic.
-    if (
+    if (request.republic != this._republic) {
+        return { message: { method: 'unreachable' } }
+    } else if (
         this.government.immigrated.promise[request.sync.from] != request.sync.promise
     ) {
         if (this.government.promise == '0/0') {
@@ -687,9 +688,21 @@ Paxos.prototype.response = function (now, message, responses) {
         var response = responses[id]
         var promise = this.government.immigrated.promise[id]
 
+        if (response && response.sync == null) {
+            console.log(response)
+        }
+        console.log(promise, response)
         // Go through responses converting network errors to "unreachable"
         // messages with appropriate defaults.
-        if (response == null || response.message.method == 'unreachable') {
+        if (
+            response == null ||
+            response.message.method == 'unreachable' ||
+            !
+            (
+                promise == response.sync.promise ||
+                '0/0' == response.sync.committed
+            )
+        ) {
             responses[message.to[i]] = response = {
                 message: { method: 'unreachable', promise: '0/0' },
                 sync: { committed: null, commits: [] },
