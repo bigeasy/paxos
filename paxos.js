@@ -501,9 +501,6 @@ Paxos.prototype._propose = function (now, retry) {
         // PRNG: https://gist.github.com/blixt/f17b47c62508be59987b
         delay += (this._seed = this._seed * 16807 % 2147483647) % this.ping
     }
-    if (now == 41 && this.id == '3') {
-        var x = 1
-    }
     this.scheduler.schedule(now + delay, this.id, { method: 'propose', body: null })
 }
 
@@ -688,10 +685,6 @@ Paxos.prototype.response = function (now, message, responses) {
         var response = responses[id]
         var promise = this.government.immigrated.promise[id]
 
-        if (response && response.sync == null) {
-            console.log(response)
-        }
-        console.log(promise, response)
         // Go through responses converting network errors to "unreachable"
         // messages with appropriate defaults.
         if (
