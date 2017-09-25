@@ -351,9 +351,14 @@ function prove (okay) {
 
     network.time += 4
 
-    var accept = network.send('3', { prepare: { message: { method: 'accept' } } })
+    var accept = network.send('3', { accept: { to: '6', message: { method: 'accept' } } })
 
-    dump(network.denizens[3].inspect())
+    dump(accept)
+    network.send('0')
+
+    network.time += 4
+    network.send('0')
+    dump(network.denizens[6].inspect())
     return
 
     network.pluck(intercept.collision, { from: '2' }).forEach(function (envelope) {

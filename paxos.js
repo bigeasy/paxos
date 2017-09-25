@@ -888,6 +888,7 @@ Paxos.prototype._commit = function (now, entry, top) {
 
         //
         if (Monotonic.compare(this._minimum.propagated, entry.promise) <= 0) {
+            console.log(this.id, entry)
             departure.raise(this._findRound(entry.promise).body.body, entry.body)
         } else {
             // Getting this branch will require

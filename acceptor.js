@@ -62,7 +62,7 @@ Acceptor.prototype.createRecorder = function (promise) {
 }
 
 Acceptor.prototype.inspect = function () {
-    return { type: 'Acceptor', register: this.register }
+    return { type: 'Acceptor', promise: this.promise, register: this.register }
 }
 
 module.exports = Acceptor
