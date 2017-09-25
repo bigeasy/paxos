@@ -59,7 +59,6 @@ Proposer.prototype.response = function (now, request, responses) {
                 this.register = responses[id].message.register
             }
         }
-        this.proposal.body.promise = request.promise
         this._paxos._send({
             method: 'accept',
             version: this.version,

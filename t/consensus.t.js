@@ -351,10 +351,8 @@ function prove (okay) {
 
     network.time += 4
 
-    var intercept = network.send('3', { prepare: { message: { method: 'prepare' } } })
+    var accept = network.send('3', { prepare: { message: { method: 'accept' } } })
 
-    dump(network.denizens[6].inspect())
-    intercept.prepare.forEach(receive)
     dump(network.denizens[3].inspect())
     return
 

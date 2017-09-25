@@ -145,18 +145,11 @@ function Paxos (now, republic, id, options) {
 // current new government is established based on that reachabilit data.
 
 //
-Paxos.prototype.newGovernment = function (now, quorum, government) {
+Paxos.prototype.newGovernment = function (now, promise, quorum, government) {
+    assert(arguments.length == 4)
     // Mark the shaper as complete. We won't get a new government proposal until
     // we get a new shaper.
     this._shaper.decided = true
-
-    // Increment the government part of the promise.
-    // TODO Will fail on multiple rounds of Paxos. UPDATE No it is kind of a
-    // special case. For a fiat government, we know we are going to increment
-    // and we need to remap, but for a an elected government we will not remap
-    // so no promise needed here and the promise is determined after the
-    // election.
-    var promise = Monotonic.increment(this.government.promise, 0)
 
     // The government's constituents are our current population less the members
     // of the government itself.
@@ -444,7 +437,7 @@ Paxos.prototype.event = function (envelope) {
             // If we have a majority of legislators, we have have run a
             // forming this government with ourselves as leader.
             if (majority.length == this.government.majority.length) {
-                this.newGovernment(now, majority, { majority: majority, minority: minority })
+                this.newGovernment(now, this._writer.promise, majority, { majority: majority, minority: minority })
                 break
             }
 
@@ -872,7 +865,9 @@ Paxos.prototype._synchronize = function (now, entries) {
 
 Paxos.prototype._reshape = function (now, shape) {
     if (shape != null) {
-        this.newGovernment(now, shape.quorum, shape.government)
+        // Increment the government part of the promise.
+        var promise = Monotonic.increment(this.government.promise, 0)
+        this.newGovernment(now, promise, shape.quorum, shape.government)
     }
 }
 
