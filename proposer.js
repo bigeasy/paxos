@@ -37,10 +37,6 @@ Proposer.prototype.prepare = function (now) {
     })
 }
 
-function getPromise (object) {
-    return object == null ? '0/0' : object.body.promise
-}
-
 Proposer.prototype.response = function (now, request, responses) {
     var promised = request.promise, failed = false
     for (var i = 0, I = request.to.length; i < I; i++) {
@@ -59,7 +55,7 @@ Proposer.prototype.response = function (now, request, responses) {
         break
     case 'prepare':
         for (var id in responses) {
-            if (Monotonic.compare(getPromise(this.register), getPromise(responses[id].message.register)) < 0) {
+            if (Monotonic.compare(this.register.body.promise, responses[id].message.register.body.promise) < 0) {
                 this.register = responses[id].message.register
             }
         }
