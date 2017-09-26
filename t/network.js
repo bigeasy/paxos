@@ -1,4 +1,5 @@
 var Paxos = require('..')
+var coalesce = require('extant')
 
 function subSubset (container, contained) {
     if (typeof contained != 'object') {
@@ -128,9 +129,9 @@ Network.prototype.push = function () {
     this.denizens.push(denizen)
 }
 
-Network.prototype.reboot = function (i) {
+Network.prototype.reboot = function (i, republic) {
     var id = String(i)
-    var denizen = new Paxos(this.time, 1, id, {
+    var denizen = new Paxos(this.time, coalesce(republic, 1), id, {
         parliamentSize: 5,
         ping: 1,
         timeout: 3,

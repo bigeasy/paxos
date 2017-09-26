@@ -240,6 +240,25 @@ function prove (okay) {
         }
     }, 'reboot, exile and double immigrate')
 
+
+    // Reject messages from a different republic.
+    network.populate(1)
+
+    network.send()
+
+    network.reboot(8, 2)
+    network.denizens[8].bootstrap(network.time, { location: '8' })
+
+    network.send()
+
+    network.time += 1
+
+    network.send()
+
+    network.time += 4
+
+    network.send()
+
     // Here we are going to disappear for a moment, but come back before we're
     // unreachable. For the rest of the tests 5 should be present. This covers
     // the disappearance branches, specifically already disappeared but not yet
@@ -269,11 +288,12 @@ function prove (okay) {
     network.send('3')
 
     okay(network.denizens[3].government, {
-        promise: '19/0',
+        promise: '1a/0',
         majority: [ '3', '0', '2' ],
         minority: [ '6', '7' ],
         constituents: [],
         map: {},
+        exile: { id: '8', promise: '16/0', properties: { location: '8' } },
         immigrated: {
             id: { '1/0': '0', '3/0': '2', '5/0': '3', 'd/0': '6', 'e/0': '7' },
             promise: { '0': '1/0', '2': '3/0', '3': '5/0', '6': 'd/0', '7': 'e/0' }
@@ -298,9 +318,9 @@ function prove (okay) {
     network.send([ '7' ])
 
     okay(network.denizens[3]._minimums, {
-        '0': { version: '19/0', propagated: '15/0', reduced: '19/1' },
-        '2': { version: '19/0', propagated: '15/0', reduced: '0/0' },
-        '3': { version: '19/0', propagated: '0/0', reduced: '0/0' },
+        '0': { version: '1a/0', propagated: '16/0', reduced: '1a/1' },
+        '2': { version: '1a/0', propagated: '16/0', reduced: '0/0' },
+        '3': { version: '1a/0', propagated: '0/0', reduced: '0/0' },
     }, 'minimum unreduced')
 
     network.send()

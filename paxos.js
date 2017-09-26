@@ -222,7 +222,7 @@ Paxos.prototype.bootstrap = function (now, properties) {
         minority: [],
         constituents: [],
         map: {},
-        immigrate: { id: '0', properties: properties, cookie: 0 },
+        immigrate: { id: this.id, properties: properties, cookie: 0 },
         properties: {},
         immigrated: { promise: {}, id: {} }
     }
@@ -601,7 +601,7 @@ Paxos.prototype._send = function (message) {
 
 //
 Paxos.prototype.request = function (now, request) {
-    if (request.republic != this._republic) {
+    if (request.sync.republic != this.republic) {
         return { message: { method: 'unreachable' } }
     } else if (
         this.government.immigrated.promise[request.sync.from] != request.sync.promise
