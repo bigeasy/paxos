@@ -509,7 +509,7 @@ Paxos.prototype._findRound = function (sought) {
     return this.indexer.tree.find({ body: { promise: sought } })
 }
 
-Paxos.prototype._sync = function (id, committed, count) {
+Paxos.prototype._sync = function (committed, count) {
     var sync = {
         republic: this.republic,
         promise: this.government.immigrated.promise[this.id],
@@ -579,7 +579,7 @@ Paxos.prototype._send = function (message) {
                 to: to,
                 from: this.id,
                 message: message,
-                sync: this._sync(to, committed, 24)
+                sync: this._sync(committed, 24)
             },
             responses: responses
         }
@@ -611,7 +611,7 @@ Paxos.prototype.request = function (now, request) {
                 // TODO `syncFrom` is `undefined`.
                 return {
                     message: { method: 'respond', promise: '0/0' },
-                    sync: this._sync(request.sync.from, syncFrom, 24)
+                    sync: this._sync(syncFrom, 24)
                 }
             }
             if (
@@ -662,7 +662,7 @@ Paxos.prototype.request = function (now, request) {
     }
     return {
         message: message,
-        sync: this._sync(request.sync.from, syncFrom, 24),
+        sync: this._sync(syncFrom, 24),
         minimum: this._minimum,
         unreachable: this._unreachable
     }
