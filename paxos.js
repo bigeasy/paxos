@@ -800,17 +800,6 @@ Paxos.prototype.response = function (now, message, responses) {
 
     //
     if (message.method == 'synchronize') {
-        // Skip if this synchronization was submitted by an earlier government.
-        if (
-            message._government != this.government.promise &&
-            message._collapsed != this._writer.collapsed
-    /*        !(
-                message.version[0] == this._writer.version[0] &&
-                message.version[1] == this._writer.version[1]
-            ) */
-        ) {
-            return
-        }
         // Immediately continue sync if our constituent is not completely
         // synced. Note that majority members are never behind by more than one,
         // so they always successfully sync. This is why we only check the first
@@ -835,10 +824,7 @@ Paxos.prototype.response = function (now, message, responses) {
                 method: 'synchronize', to: message.to, collapsible: message.collapsible
             })
         }
-    } else if (
-        message._government == this.government.promise &&
-        message._collapsed == this._writer.collapsed
-    ) {
+    } else {
         // TODO If the recepient is at '0/0' and we attempted to synchronize it,
         // then we must not have had the right cookie, let's mark it as
         // unreachable for exile. UPDATE: Dubious.
