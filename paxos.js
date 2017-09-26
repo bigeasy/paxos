@@ -609,10 +609,9 @@ Paxos.prototype.request = function (now, request) {
     ) {
         if (this.government.promise == '0/0') {
             if (request.sync.commits.length == 0) {
-                // TODO `syncFrom` is `undefined`.
                 return {
                     message: { method: 'respond', promise: '0/0' },
-                    sync: this._sync(syncFrom)
+                    sync: this._sync(null)
                 }
             }
             if (
@@ -633,12 +632,12 @@ Paxos.prototype.request = function (now, request) {
         this._minimum.propagated = request.sync.minimum.propagated
     }
 
-    var message, syncFrom = null
+    var message, committed = null
     if (
         Monotonic.compare(request.sync.committed, this.log.head.body.promise) < 0
     ) {
-        syncFrom = request.sync.committed
         // We are ahead of the bozo trying to update us, so update him back.
+        committed = request.sync.committed
         message = { method: 'reject', promise: this.log.head.body.promise }
     } else {
         this._synchronize(now, request.sync.commits)
@@ -663,7 +662,7 @@ Paxos.prototype.request = function (now, request) {
     }
     return {
         message: message,
-        sync: this._sync(syncFrom),
+        sync: this._sync(committed),
         minimum: this._minimum,
         unreachable: this._unreachable
     }
