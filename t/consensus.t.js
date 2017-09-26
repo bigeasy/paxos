@@ -366,7 +366,6 @@ function prove (okay) {
     }
 
     // TODO Do not restrict to get incorrect previous, then restart test.
-    return
     var intercept = network.send('0', '2', { six: [{ to: '6' }], seven: [{ to: '7' }] })
 
     network.pluck(intercept.six, { from: '0' }).forEach(receive)
@@ -380,8 +379,8 @@ function prove (okay) {
 
     var accept = network.send('3', { prepare: { message: { method: 'accept' } } })
 
-    return
     dump(network.denizens[3].inspect())
+    return
 
     network.pluck(intercept.collision, { from: '2' }).forEach(function (envelope) {
         network.request(envelope)

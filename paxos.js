@@ -673,23 +673,11 @@ Paxos.prototype.request = function (now, request) {
 }
 
 Paxos.prototype.response = function (now, message, responses) {
-    if (
-        message._government != this.government.promise ||
-        message._collapsed != this._writer.collapsed
-    ) {
-        return
-    }
-    // Perform housekeeping for each receipent of the message.
-
-    //
     for (var i = 0, I = message.to.length; i < I; i++) {
         // Deduce receipent properties.
         var id = message.to[i]
         var response = responses[id]
         var promise = this.government.immigrated.promise[id]
-
-        // Go through responses converting network errors to "unreachable"
-        // messages with appropriate defaults.
         if (
             response == null ||
             response.message.method == 'unreachable' ||
@@ -705,6 +693,31 @@ Paxos.prototype.response = function (now, message, responses) {
                 minimum: null,
                 unreachable: {}
             }
+        } else {
+            delete this._disappeared[promise]
+        }
+    }
+
+
+    if (
+        message._government != this.government.promise ||
+        message._collapsed != this._writer.collapsed
+    ) {
+        return
+    }
+
+    // Perform housekeeping for each receipent of the message.
+
+    //
+    for (var i = 0, I = message.to.length; i < I; i++) {
+        // Deduce receipent properties.
+        var id = message.to[i]
+        var response = responses[id]
+        var promise = this.government.immigrated.promise[id]
+
+        // Go through responses converting network errors to "unreachable"
+        // messages with appropriate defaults.
+        if (response.message.method == 'unreachable') {
             if (message.collapsible && !this._writer.collapsed) {
                 this._collapse(now)
             }
@@ -713,8 +726,6 @@ Paxos.prototype.response = function (now, message, responses) {
             } else if (now - this._disappeared[promise] >= this.timeout) {
                 response.unreachable[promise] = true
             }
-        } else {
-            delete this._disappeared[promise]
         }
 
         if (response.sync.committed != null) {
