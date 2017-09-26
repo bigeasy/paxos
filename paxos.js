@@ -673,16 +673,12 @@ Paxos.prototype.request = function (now, request) {
 }
 
 Paxos.prototype.response = function (now, message, responses) {
-        if (
-            message._government != this.government.promise ||
-            message._collapsed != this._writer.collapsed
-    /*        !(
-                message.version[0] == this._writer.version[0] &&
-                message.version[1] == this._writer.version[1]
-            ) */
-        ) {
-            return
-        }
+    if (
+        message._government != this.government.promise ||
+        message._collapsed != this._writer.collapsed
+    ) {
+        return
+    }
     // Perform housekeeping for each receipent of the message.
 
     //
