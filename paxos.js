@@ -509,7 +509,7 @@ Paxos.prototype._findRound = function (sought) {
     return this.indexer.tree.find({ body: { promise: sought } })
 }
 
-Paxos.prototype._sync = function (committed, count) {
+Paxos.prototype._sync = function (committed) {
     var sync = {
         republic: this.republic,
         promise: this.government.immigrated.promise[this.id],
@@ -525,6 +525,7 @@ Paxos.prototype._sync = function (committed, count) {
         assert(Monotonic.compare(committed, this.log.head.body.promise) <= 0, 'maximum breached')
         iterator = this._findRound(committed).next
 
+        var count = 24
         while (--count && iterator != null) {
             sync.commits.push({
                 promise: iterator.body.promise,
@@ -579,7 +580,7 @@ Paxos.prototype._send = function (message) {
                 to: to,
                 from: this.id,
                 message: message,
-                sync: this._sync(committed, 24)
+                sync: this._sync(committed)
             },
             responses: responses
         }
@@ -611,7 +612,7 @@ Paxos.prototype.request = function (now, request) {
                 // TODO `syncFrom` is `undefined`.
                 return {
                     message: { method: 'respond', promise: '0/0' },
-                    sync: this._sync(syncFrom, 24)
+                    sync: this._sync(syncFrom)
                 }
             }
             if (
@@ -662,7 +663,7 @@ Paxos.prototype.request = function (now, request) {
     }
     return {
         message: message,
-        sync: this._sync(syncFrom, 24),
+        sync: this._sync(syncFrom),
         minimum: this._minimum,
         unreachable: this._unreachable
     }
