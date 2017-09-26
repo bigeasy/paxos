@@ -812,10 +812,7 @@ Paxos.prototype.response = function (now, message, responses) {
         }
 
         // Schedule the next synchronization.
-        if (
-            message.key != this.id ||
-            ! this._writer.collapsed
-        ) {
+        if (message.key != this.id || ! this._writer.collapsed) {
             this.scheduler.schedule(now + delay, message.key, {
                 method: 'synchronize', to: message.to, collapsible: message.collapsible
             })
