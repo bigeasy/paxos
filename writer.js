@@ -61,6 +61,8 @@ Writer.prototype._send = function () {
         method: 'register',
         version: this.version,
         to: proposal.quorum,
+        _government: this._paxos.government.promise,
+        _collapsed: this.collapsed,
         collapsible: true,
         constituent: true,
         register: {

@@ -387,7 +387,9 @@ Paxos.prototype.event = function (envelope) {
     case 'synchronize':
         this._send({
             method: 'synchronize',
-            version: this.government.promise,
+            version: this._writer.version,
+            _government: this.government.promise,
+            _collapsed: this._writer.collapsed,
             to: envelope.body.to,
             collapsible: !! envelope.body.collapsible,
             constituent: true,
@@ -515,6 +517,8 @@ Paxos.prototype._sync = function (committed) {
         promise: this.government.immigrated.promise[this.id],
         from: this.id,
         minimum: this._minimum,
+        government: this.government.promise,
+        collapsed: this._writer.collapsed,
         committed: this.log.head.body.promise,
         commits: []
     }
@@ -669,6 +673,16 @@ Paxos.prototype.request = function (now, request) {
 }
 
 Paxos.prototype.response = function (now, message, responses) {
+        if (
+            message._government != this.government.promise ||
+            message._collapsed != this._writer.collapsed
+    /*        !(
+                message.version[0] == this._writer.version[0] &&
+                message.version[1] == this._writer.version[1]
+            ) */
+        ) {
+            return
+        }
     // Perform housekeeping for each receipent of the message.
 
     //
@@ -787,7 +801,14 @@ Paxos.prototype.response = function (now, message, responses) {
     //
     if (message.method == 'synchronize') {
         // Skip if this synchronization was submitted by an earlier government.
-        if (message.version != this.government.promise) {
+        if (
+            message._government != this.government.promise &&
+            message._collapsed != this._writer.collapsed
+    /*        !(
+                message.version[0] == this._writer.version[0] &&
+                message.version[1] == this._writer.version[1]
+            ) */
+        ) {
             return
         }
         // Immediately continue sync if our constituent is not completely
@@ -815,8 +836,8 @@ Paxos.prototype.response = function (now, message, responses) {
             })
         }
     } else if (
-        message.version[0] == this._writer.version[0] &&
-        message.version[1] == this._writer.version[1]
+        message._government == this.government.promise &&
+        message._collapsed == this._writer.collapsed
     ) {
         // TODO If the recepient is at '0/0' and we attempted to synchronize it,
         // then we must not have had the right cookie, let's mark it as
