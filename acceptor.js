@@ -46,17 +46,14 @@ Acceptor.prototype.createRecorder = function (promise) {
 
     entries.reverse()
 
-    var found = false
-    for (var i = 1, I = entries.length - 1; !found && i < I; i++) {
-        found = entries[i].promise == promise
+    for (var i = 1, I = entries.length - 1; i < I; i++) {
+        if (entries[i].promise == promise) {
+            return this
+        }
     }
 
     // TODO Does it matter if the promise is off? Or only register contents?
-    if (!found) {
-        return new Recorder(this._paxos)
-    }
-
-    return this
+    return new Recorder(this._paxos)
 }
 
 Acceptor.prototype.inspect = function () {
