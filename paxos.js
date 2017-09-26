@@ -974,7 +974,6 @@ Paxos.prototype._commit = function (now, entry, top) {
         } else {
             this._shaper = {
                 unreachable: function () {},
-                naturalized: function () {},
                 _immigrating: []
             }
         }
