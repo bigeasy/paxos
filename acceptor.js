@@ -47,10 +47,8 @@ Acceptor.prototype.createRecorder = function (promise) {
     entries.reverse()
 
     var found = false
-    if (Monotonic.compare(entries[0].promise, promise) < 0) {
-        for (var i = 1, I = entries.length - 1; !found && i < I; i++) {
-            found = entries[i].promise == promise
-        }
+    for (var i = 1, I = entries.length - 1; !found && i < I; i++) {
+        found = entries[i].promise == promise
     }
 
     // TODO Does it matter if the promise is off? Or only register contents?
