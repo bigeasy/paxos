@@ -360,6 +360,7 @@ function prove (okay) {
         network.response(envelope)
     }
 
+    // TODO Do not restrict to get incorrect previous, then restart test.
     var intercept = network.send('0', '2', { six: [{ to: '6' }], seven: [{ to: '7' }] })
 
     network.pluck(intercept.six, { from: '0' }).forEach(receive)
