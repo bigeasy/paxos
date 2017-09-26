@@ -373,8 +373,8 @@ function prove (okay) {
 
     var accept = network.send('3', { prepare: { message: { method: 'accept' } } })
 
-    dump(network.denizens[3].inspect())
     return
+    dump(network.denizens[3].inspect())
 
     network.pluck(intercept.collision, { from: '2' }).forEach(function (envelope) {
         network.request(envelope)

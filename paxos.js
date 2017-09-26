@@ -509,13 +509,13 @@ Paxos.prototype._findRound = function (sought) {
     return this.indexer.tree.find({ body: { promise: sought } })
 }
 
-Paxos.prototype._sync = function (x, committed) {
+Paxos.prototype._sync = function (committed) {
     var sync = {
         republic: this.republic,
         promise: this.government.immigrated.promise[this.id],
         from: this.id,
         minimum: this._minimum,
-        committed: x,
+        committed: this.log.head.body.promise,
         commits: []
     }
     if (committed != null) {
@@ -580,7 +580,7 @@ Paxos.prototype._send = function (message) {
                 to: to,
                 from: this.id,
                 message: message,
-                sync: this._sync(this.log.head.body.promise, committed)
+                sync: this._sync(committed)
             },
             responses: responses
         }
@@ -612,7 +612,7 @@ Paxos.prototype.request = function (now, request) {
                 // TODO `syncFrom` is `undefined`.
                 return {
                     message: { method: 'respond', promise: '0/0' },
-                    sync: this._sync(this.log.head.body.promise, syncFrom)
+                    sync: this._sync(syncFrom)
                 }
             }
             if (
@@ -663,7 +663,7 @@ Paxos.prototype.request = function (now, request) {
     }
     return {
         message: message,
-        sync: this._sync(this.log.head.body.promise, syncFrom),
+        sync: this._sync(syncFrom),
         minimum: this._minimum,
         unreachable: this._unreachable
     }
@@ -678,6 +678,13 @@ Paxos.prototype.response = function (now, message, responses) {
         var id = message.to[i]
         var response = responses[id]
         var promise = this.government.immigrated.promise[id]
+
+        if (response) {
+            if (response.sync && response.sync.commits.length != 0) {
+                console.log(this.log.head.body.promise, response.sync.committed)
+                console.log(response)
+            }
+        }
 
         // Go through responses converting network errors to "unreachable"
         // messages with appropriate defaults.
