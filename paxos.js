@@ -679,13 +679,6 @@ Paxos.prototype.response = function (now, message, responses) {
         var response = responses[id]
         var promise = this.government.immigrated.promise[id]
 
-        if (response) {
-            if (response.sync && response.sync.commits.length != 0) {
-                console.log(this.log.head.body.promise, response.sync.committed)
-                console.log(response)
-            }
-        }
-
         // Go through responses converting network errors to "unreachable"
         // messages with appropriate defaults.
         if (
@@ -752,6 +745,7 @@ Paxos.prototype.response = function (now, message, responses) {
             var reduced = this.log.head.body.promise
 
             for (var j = 0, constituent; (constituent = this.constituency[j]) != null; j++) {
+        console.log(j, minimum, reduced, constituent, this._minimums)
                 if (
                     this._minimums[constituent] == null ||
                     this._minimums[constituent].version != this.government.promise ||
@@ -894,31 +888,31 @@ Paxos.prototype._commit = function (now, entry, top) {
         // has commits that precede our minimum, seems like it would have
         // been rejected at entry, the committed versions would be off.
 
-        //
-        if (Monotonic.compare(this._minimum.propagated, entry.promise) <= 0) {
-            departure.raise(this._findRound(entry.promise).body.body, entry.body)
-        } else {
-            // Getting this branch will require
-            //
-            // * isolating the minority member so that it is impeached.
-            // * collapsing the consensus so the unreachability is lost.
-            //      * note that only the leader is guarded by its writer.
-            //      * reset unreachability means timeout needs to pass
-            //      again.
-            //      * if you preserve pings, then the same effect can be had
-            //      by killing the leader and majority member that
-            //      represents the minority member, since reacability is
-            //      only present in a path.
-            // * add new entries to the log so that the isolate former
-            // minority member is behind.
-            // * have the former minority member sync a constituent, the
-            // constituent will respond with a sync, delay the response.
-            // * bring the minority member up to speed.
-            // * let new minimum propagate.
-            // * send the delayed response.
+        // Can't see it. A delayed sync from a previous government will be
+        // rejected because it's most committed value will be less than the
+        // constituent's most committed value. Minimums are not caluclated until
+        // everyone agrees on a government.
 
-            //
-        }
+        // As far as going backwards goes, you're only going to be able to
+        // calculate the reduced value once you have reduced values back through
+        // the tree constructed for a single government. We restart the
+        // tabulation every time the government changes, so we're not going to
+        // be able to push forward a minimum until we've heard from everyone.
+        //
+        // We could still have a delayed ping, but we only ever send out one
+        // synchronize at at time for a particular government. One could timeout
+        // and return null to the represenative, but still somehow be on the
+        // wire when the represenative sends a second one, but this is going to
+        // be exceedingly unlikely with the current network implementation. So
+        // much so that I'd rather crash in that case so that I might be able to
+        // catch any other cases that I'm not currently able to imagine.
+
+        //
+        assert(Monotonic.compare(this._minimum.propagated, entry.promise) <= 0, 'minimum promise less than commit promise')
+        var found = this._findRound(entry.promise)
+        assert(found != null, 'missing entry')
+        departure.raise(found.body.body, entry.body)
+        return
         return
     }
 
