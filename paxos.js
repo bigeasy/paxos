@@ -881,36 +881,7 @@ Paxos.prototype._commit = function (now, entry, top) {
 
     //
     if (Monotonic.compare(entry.promise, top) <= 0) {
-        // Difficult to see how we could get here and not have a copy of the
-        // message in our log. If we received a delayed sync message that
-        // has commits that precede our minimum, seems like it would have
-        // been rejected at entry, the committed versions would be off.
-
-        //
-        if (Monotonic.compare(this._minimum.propagated, entry.promise) <= 0) {
-            departure.raise(this._findRound(entry.promise).body.body, entry.body)
-        } else {
-            // Getting this branch will require
-            //
-            // * isolating the minority member so that it is impeached.
-            // * collapsing the consensus so the unreachability is lost.
-            //      * note that only the leader is guarded by its writer.
-            //      * reset unreachability means timeout needs to pass
-            //      again.
-            //      * if you preserve pings, then the same effect can be had
-            //      by killing the leader and majority member that
-            //      represents the minority member, since reacability is
-            //      only present in a path.
-            // * add new entries to the log so that the isolate former
-            // minority member is behind.
-            // * have the former minority member sync a constituent, the
-            // constituent will respond with a sync, delay the response.
-            // * bring the minority member up to speed.
-            // * let new minimum propagate.
-            // * send the delayed response.
-
-            //
-        }
+        departure.raise(this._findRound(entry.promise).body.body, entry.body)
         return
     }
 
