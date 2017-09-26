@@ -678,13 +678,6 @@ Paxos.prototype.response = function (now, message, responses) {
         var response = responses[id]
         var promise = this.government.immigrated.promise[id]
 
-        if (response) {
-            if (response.sync && response.sync.commits.length != 0) {
-                console.log(this.log.head.body.promise, response.sync.committed)
-                console.log(response)
-            }
-        }
-
         // Go through responses converting network errors to "unreachable"
         // messages with appropriate defaults.
         if (
