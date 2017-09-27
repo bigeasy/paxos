@@ -43,7 +43,11 @@ exports.advance = function (government, entry) {
     government.majority = entry.body.majority
     government.minority = entry.body.minority
     if (entry.body.immigrate != null) {
-        government.constituents.push(entry.body.immigrate.id)
+        if (entry.promise == '1/0') {
+            government.majority.push(entry.body.immigrate.id)
+        } else {
+            government.constituents.push(entry.body.immigrate.id)
+        }
         register(government, entry.body.immigrate, entry.promise)
     } else if (entry.body.exile != null) {
         unregister(government, entry.body.exile.id)
@@ -58,7 +62,7 @@ exports.advance = function (government, entry) {
             government.constituents.splice(promotion.index, 1)
         }
     } else if (entry.body.demote != null) {
-        government.constituents.push(entry.body.demote)
+        government.constituents.unshift(entry.body.demote)
     }
     if (entry.body.naturalize != null) {
         government.naturalized.push(entry.body.naturalize)
@@ -82,11 +86,12 @@ exports.retreat = function (government, entry, previous) {
         }
         register(government, entry.body.exile, entry.body.exile.promise)
     } else if (entry.body.promote != null) {
-        for (var i = 0, promotion; (promotion = entry.body.promote[i]) != null; i++) {
+        var promote = entry.body.promote.slice().reverse()
+        for (var i = 0, promotion; (promotion = promote[i]) != null; i++) {
             government.constituents.splice(promotion.index, 0, promotion.id)
         }
     } else if (entry.body.demote != null) {
-        assert(government.constituents.pop() == entry.body.demote, 'exile wrong demotion')
+        assert(government.constituents.shift() == entry.body.demote, 'exile wrong demotion')
     }
     if (entry.body.naturalize != null) {
         assert(government.naturalized.pop() == entry.body.naturalize, 'exile wrong naturalize')

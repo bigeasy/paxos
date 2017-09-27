@@ -15,10 +15,9 @@ function prove (okay) {
     okay(network.denizens[0].government, {
         majority: [ '0' ],
         minority: [],
+        naturalized: [ '0' ],
         constituents: [],
         promise: '1/0',
-        immigrate: { id: '0', properties: { location: '0' }, cookie: 0 },
-        map: {},
         immigrated: { id: { '1/0': '0' }, promise: { '0': '1/0' } },
         properties: { '0': { location: '0' } }
     }, 'bootstrap')
@@ -32,10 +31,9 @@ function prove (okay) {
     okay(network.denizens[1].government, {
         majority: [ '0' ],
         minority: [],
-        immigrate: { id: '1', properties: { location: '1' }, cookie: 0 },
+        naturalized: [ '0', '1' ],
         constituents: [ '1' ],
         promise: '2/0',
-        map: {},
         immigrated: {
             id: { '1/0': '0', '2/0': '1' },
             promise: { '0': '1/0', '1': '2/0' }
@@ -53,9 +51,9 @@ function prove (okay) {
     okay(network.denizens[2].government, {
         majority: [ '0', '1' ],
         minority: [ '2' ],
+        naturalized: [ '0', '1', '2' ],
         constituents: [],
         promise: '4/0',
-        map: {},
         immigrated: {
             id: { '1/0': '0', '2/0': '1', '3/0': '2' },
             promise: { '0': '1/0', '1': '2/0', '2': '3/0' }
@@ -96,9 +94,9 @@ function prove (okay) {
     okay(network.denizens[0].government, {
         majority: [ '0', '2' ],
         minority: [ '1' ],
+        naturalized: [ '0', '1', '2', '3' ],
         constituents: [ '3' ],
         promise: '7/0',
-        map: {},
         immigrated: {
             id: { '1/0': '0', '2/0': '1', '3/0': '2', '5/0': '3' },
             promise: { '0': '1/0', '1': '2/0', '2': '3/0', '3': '5/0' }
@@ -131,11 +129,11 @@ function prove (okay) {
     network.send('0', '2', [ '1' ])
 
     okay(network.denizens[0].government, {
+        promise: 'a/0',
         majority: [ '0', '2' ],
         minority: [ '3' ],
+        naturalized: [ '0', '2', '3' ],
         constituents: [],
-        promise: 'a/0',
-        map: {},
         immigrated: {
             id: { '1/0': '0', '3/0': '2', '5/0': '3' },
             promise: { '0': '1/0', '2': '3/0', '3': '5/0' }
@@ -145,7 +143,7 @@ function prove (okay) {
             '2': { location: '2' },
             '3': { location: '3' }
         }
-    }, 'recover from collapse')
+    }, 'exile')
 
     var shifter = network.denizens[0].log.shifter()
 
@@ -176,12 +174,11 @@ function prove (okay) {
     okay(network.denizens[2].log.head.body.promise, 'b/2', 'remapped')
 
     okay(network.denizens[0].government, {
+        promise: 'b/0',
         majority: [ '0', '2' ],
         minority: [ '3' ],
+        naturalized: [ '0', '2', '3', '4' ],
         constituents: [ '4' ],
-        promise: 'b/0',
-        map: { 'a/2': 'b/1', 'a/3': 'b/2' },
-        immigrate: { id: '4', cookie: 12, properties: { location: '4' } },
         immigrated: {
             id: { '1/0': '0', '3/0': '2', '5/0': '3', 'b/0': '4' },
             promise: { '0': '1/0', '2': '3/0', '3': '5/0', '4': 'b/0' }
@@ -230,11 +227,11 @@ function prove (okay) {
     network.send()
 
     okay(network.denizens[0].government, {
-        promise: '15/0',
+        promise: '13/0',
         majority: [ '0', '2', '3' ],
         minority: [ '6', '7' ],
+        naturalized: [ '0', '2', '3', '6', '7' ],
         constituents: [],
-        map: {},
         immigrated: {
             id: { '1/0': '0', '3/0': '2', '5/0': '3', 'd/0': '6', 'e/0': '7' },
             promise: { '0': '1/0', '2': '3/0', '3': '5/0', '6': 'd/0', '7': 'e/0' }
@@ -296,12 +293,11 @@ function prove (okay) {
     network.send('3')
 
     okay(network.denizens[3].government, {
-        promise: '1a/0',
+        promise: '19/0',
         majority: [ '3', '0', '2' ],
         minority: [ '6', '7' ],
+        naturalized: [ '0', '2', '3', '6', '7' ],
         constituents: [],
-        map: {},
-        exile: { id: '8', promise: '16/0', properties: { location: '8' } },
         immigrated: {
             id: { '1/0': '0', '3/0': '2', '5/0': '3', 'd/0': '6', 'e/0': '7' },
             promise: { '0': '1/0', '2': '3/0', '3': '5/0', '6': 'd/0', '7': 'e/0' }
@@ -326,9 +322,9 @@ function prove (okay) {
     network.send([ '7' ])
 
     okay(network.denizens[3]._minimums, {
-        '0': { version: '1a/0', propagated: '16/0', reduced: '1a/1' },
-        '2': { version: '1a/0', propagated: '16/0', reduced: '0/0' },
-        '3': { version: '1a/0', propagated: '0/0', reduced: '0/0' },
+        '0': { version: '19/0', propagated: '14/0', reduced: '19/1' },
+        '2': { version: '19/0', propagated: '14/0', reduced: '0/0' },
+        '3': { version: '19/0', propagated: '0/0', reduced: '0/0' },
     }, 'minimum unreduced')
 
     network.send()
@@ -382,6 +378,7 @@ function prove (okay) {
     var accept = network.send('3', { prepare: { message: { method: 'accept' } } })
 
     dump(network.denizens[3].inspect())
+
     return
 
     network.pluck(intercept.collision, { from: '2' }).forEach(function (envelope) {
@@ -393,8 +390,6 @@ function prove (okay) {
         network.request(envelope)
         network.response(envelope)
     })
-
-    return
 
     dump(network.denizens[0].inspect())
     dump(network.denizens[2].inspect())

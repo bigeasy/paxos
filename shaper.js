@@ -59,7 +59,10 @@ var assert = require('assert')
 // TODO Stop saying "quorum" when you mean "seats filled."
 
 //
-function Shaper (parliamentSize, government) {
+function Shaper (parliamentSize, government, recovered) {
+    if (government.promise == 'f/0') {
+        var x = 0
+    }
     this._parliamentSize = government.majority.length * 2 - 1
     this._shouldExpand = parliamentSize != this._parliamentSize
     this._government = government
@@ -70,11 +73,11 @@ function Shaper (parliamentSize, government) {
     this._governments = []
     this.outbox = {}
     this._representative = null
-    this._shouldRecover() || this._shouldContract()
+    this._shouldRecover(recovered) || this._shouldContract()
 }
 
-Shaper.prototype._shouldRecover = function () {
-    if (this._government.map == null) {
+Shaper.prototype._shouldRecover = function (recovered) {
+    if (recovered) {
         this._governments.push({
             quorum: this._government.majority,
             government: {
@@ -93,12 +96,13 @@ Shaper.prototype._shouldContract = function () {
         var majority = this._government.majority.slice()
         var minority = this._government.minority.slice()
         minority.unshift(majority.pop())
-        minority.pop()
+        var demote = minority.pop()
         this._governments.push({
             quorum: this._government.majority,
             government: {
                 majority: majority,
-                minority: minority
+                minority: minority,
+                demote: demote
             }
         })
     }
@@ -110,7 +114,7 @@ Shaper.prototype.unreachable = function (id) {
     }
 
     // Exile any unreachable citizen.
-    return {
+    return this._governments.shift() || {
         quorum: this._government.majority,
         government: {
             majority: this._government.majority,
@@ -129,6 +133,9 @@ Shaper.prototype.naturalized = function (id) {
         return null
     }
 
+    // We're not going to return an expanded government until we get two
+    // expandable entries so if we have a contraction it will go the first time
+    // naturalized is called.
     if (~this._government.majority.indexOf(id)) {
         // Majority members are not our resposibility. They trigger their own
         // collapse.
@@ -143,11 +150,16 @@ Shaper.prototype.naturalized = function (id) {
             // government so let's grow the government.
             var majority = this._government.majority.slice()
             var minority = this._government.minority.slice()
-            minority.push(this._expandable.shift(), this._expandable.shift())
+            var promote = [ this._expandable.shift(), this._expandable.shift() ]
+            minority.push.apply(minority, promote)
             majority.push(minority.shift())
             return {
                 quorum: majority,
-                government: { majority: majority, minority: minority }
+                government: {
+                    majority: majority,
+                    minority: minority,
+                    promote: promote
+                }
             }
         }
     }
@@ -183,6 +195,7 @@ Shaper.prototype.immigrate = function (immigration) {
     } else {
         this._immigrating[i].properties = immigration.properties
         this._immigrating[i].cookie = immigration.cookie
+        this._immigrating[i].naturalized = immigration.naturalized
     }
 
     // Do nothing if our container indicates that a decision has been reached.
@@ -204,7 +217,8 @@ Shaper.prototype._immigration = function () {
                     id: immigration.id,
                     properties: immigration.properties,
                     cookie: immigration.cookie
-                }
+                },
+                naturalize: immigration.naturalized ? immigration.id : null
             }
         }
     }

@@ -31,6 +31,7 @@ var Recorder = require('./recorder')
 
 var departure = require('departure')
 var Constituency = require('./constituency')
+var Government = require('./government')
 
 // ### Constructor
 function Paxos (now, republic, id, options) {
@@ -65,8 +66,9 @@ function Paxos (now, republic, id, options) {
     // Initial government. A null government.
     this.government = {
         promise: '0/0',
-        minority: [],
         majority: [],
+        minority: [],
+        naturalized: [],
         constituents: [],
         properties: {},
         immigrated: { id: {}, promise: {} }
@@ -114,7 +116,7 @@ function Paxos (now, republic, id, options) {
 
     // Shaper a new government by fiat based on whose availble to grow to the
     // desired government size and who is unreachable.
-    this._shaper = new Shaper(this.parliamentSize, this.government)
+    this._shaper = new Shaper(this.parliamentSize, this.government, false)
 
     // Used for our pseudo-random number generator to vary retry times.
     this._seed = 1
@@ -151,14 +153,7 @@ Paxos.prototype.newGovernment = function (now, promise, quorum, government) {
     // we get a new shaper.
     this._shaper.decided = true
 
-    // The government's constituents are our current population less the members
-    // of the government itself.
-    government.constituents = Object.keys(this.government.properties)
-        .sort()
-        .filter(function (citizen) {
-            return !~government.majority.indexOf(citizen)
-                && !~government.minority.indexOf(citizen)
-        })
+    government = Government.explode(this.government, government)
 
     // If we are doing a two-phase commit, gemap the proposals so that they have
     // a promise value in the new government.
@@ -175,34 +170,7 @@ Paxos.prototype.newGovernment = function (now, promise, quorum, government) {
     }
     this._promised = remapped
 
-    // Copy the properties and immigration id to promise map.
-    var properties = JSON.parse(JSON.stringify(this.government.properties))
-    var immigrated = JSON.parse(JSON.stringify(this.government.immigrated))
-
-    // Add the new denizen to the governments structures during immigraiton.
-    // Remove the denizen from the governments structures during exile.
-    if (government.immigrate) {
-        var immigrate = government.immigrate
-        properties[immigrate.id] = JSON.parse(JSON.stringify(government.immigrate.properties))
-        government.constituents.push(immigrate.id)
-        immigrated.promise[immigrate.id] = promise
-        immigrated.id[promise] = immigrate.id
-    } else if (government.exile) {
-        var exile = government.exile
-        government.exile = {
-            id: exile,
-            promise: immigrated.promise[exile],
-            properties: properties[exile]
-        }
-        delete immigrated.id[immigrated.promise[exile]]
-        delete immigrated.promise[exile]
-        delete properties[exile]
-        government.constituents.splice(government.constituents.indexOf(exile), 1)
-    }
-
     government.map = map
-    government.immigrated = immigrated
-    government.properties = properties
 
     assert(this._writer.proposals.length == 0 || !Monotonic.isBoundary(this._writer.proposals[0].promise, 0))
 
@@ -218,8 +186,9 @@ Paxos.prototype.newGovernment = function (now, promise, quorum, government) {
 Paxos.prototype.bootstrap = function (now, properties) {
     var government = {
         promise: '1/0',
-        majority: [ this.id ],
+        majority: [],
         minority: [],
+        naturalize: this.id,
         constituents: [],
         map: {},
         immigrate: { id: this.id, properties: properties, cookie: 0 },
@@ -356,7 +325,7 @@ Paxos.prototype.immigrate = function (now, republic, id, cookie, properties) {
             }
         } else {
             response = { enqueued: true }
-            this._reshape(now, this._shaper.immigrate({ id: id, properties: properties, cookie: cookie }))
+            this._reshape(now, this._shaper.immigrate({ id: id, properties: properties, cookie: cookie, naturalized: true }))
         }
     }
     return response
@@ -554,11 +523,13 @@ Paxos.prototype._sync = function (committed) {
 //
 Paxos.prototype._send = function (message) {
     var envelopes = [], responses = {}
-    TO: for (var j = 0, to; (to = message.to[j]) != null; j++) {
+    TO: for (var i = 0, to; (to = message.to[i]) != null; i++) {
         this.scheduler.unschedule(to)
 
         var promise = this.government.immigrated.promise[to]
         var committed = this._committed[promise]
+        var governments = []
+        var government = null
         if (committed == '0/0') {
             var iterator = this.log.trailer.node.next, previous
             for (;;) {
@@ -576,6 +547,26 @@ Paxos.prototype._send = function (message) {
                 previous = iterator
                 iterator = iterator.next
             }
+
+            while (iterator != null) {
+                if (Monotonic.isBoundary(iterator.body.promise, 0)) {
+                    governments.push(iterator.body)
+                }
+                iterator = iterator.next
+            }
+
+            government = JSON.parse(JSON.stringify(this.government))
+            for (var j = governments.length - 1; j != 0; j--) {
+                Government.retreat(government, governments[j], governments[j - 1])
+            }
+
+            Government.retreat(government, governments[0], {
+                promise: '0/0',
+                body: {
+                    majority: governments[0].majority,
+                    minority: governments[0].minority
+                }
+            })
         }
 
         // TODO Tidy.
@@ -584,6 +575,7 @@ Paxos.prototype._send = function (message) {
                 to: to,
                 from: this.id,
                 message: message,
+                government: government,
                 sync: this._sync(committed)
             },
             responses: responses
@@ -626,6 +618,7 @@ Paxos.prototype.request = function (now, request) {
             ) {
                 return { message: { method: 'unreachable' } }
             }
+            this.government = request.government
             this._commit(now, request.sync.commits[0], request.sync.commits[0].previous)
         } else {
             return { message: { method: 'unreachable' } }
@@ -908,13 +901,13 @@ Paxos.prototype._commit = function (now, entry, top) {
 
         assert(Monotonic.compare(this.government.promise, entry.promise) < 0, 'governments out of order')
 
-        this.government = entry.body
+        Government.advance(this.government, entry)
 
         // If we collapsed and ran Paxos we would have carried on regardless of
         // unreachability until we made progress. During Paxos we ignore
         // unreacability so we delete it here in case we happened to make
         // progress in spite of it.
-        if (this.government.map == null) {
+        if (entry.body.map == null) {
             for (var i = 0, id; (id = this.government.majority[i]) != null; i++) {
                 // TODO Probably okay to track by id. The worst that you can do
                 // is delete reachable information that exists for a subsequent
@@ -939,13 +932,13 @@ Paxos.prototype._commit = function (now, entry, top) {
         if (this.id == this.government.majority[0]) {
             // If we are the leader, we are going to want to look for
             // opportunities to change the shape of the government.
-            var shaper = new Shaper(this.parliamentSize, this.government)
+            var shaper = new Shaper(this.parliamentSize, this.government, entry.body.map == null)
             for (var i = 0, immigration; (immigration = this._shaper._immigrating[i]) != null; i++) {
                 shaper.immigrate(immigration)
             }
             this._shaper = shaper
-            if (this.government.immigrate) {
-                shaper.immigrated(this.government.immigrate.id)
+            if (entry.body.immigrate) {
+                shaper.immigrated(entry.body.immigrate.id)
             }
             for (var promise in this._unreachable) {
                 this._reshape(now, shaper.unreachable(this.government.immigrated.id[promise]))
