@@ -896,7 +896,6 @@ Paxos.prototype._commit = function (now, entry, top) {
         return
     }
 
-    console.log('head', this.log.head.body, '\nentry', entry)
     // Otherwise, we assert that entry has a correct previous promise.
     assert(top == entry.previous, 'incorrect previous')
 

@@ -47,7 +47,6 @@ Writer.prototype.push = function (proposal) {
 }
 
 Writer.prototype.unshift = function (proposal) {
-    console.log('unshift', this._paxos.id, this._previous, proposal)
     this.proposals.unshift({
         quorum: proposal.quorum,
         promise: proposal.promise,

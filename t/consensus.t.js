@@ -78,8 +78,11 @@ function prove (okay) {
 
     network.time++
 
+    // Grab a ping and hold onto to it for a while. We're going to return it to
+    // the sender failed after the government changes to test that it rejects
+    // the delayed message.
     var ping = network.send('2', { ping: [ '3' ] })
-    dump(ping)
+
     network.send(1, '0', [ '1' ])
 
     network.time += 3
