@@ -357,6 +357,8 @@ function prove (okay) {
         }
     }
 
+    network.denizens[0].inspect()
+
     network.time += 4
 
     function receive (envelope) {
@@ -375,25 +377,49 @@ function prove (okay) {
 
     network.time += 4
 
-    var accept = network.send('3', { prepare: { message: { method: 'accept' } } })
+    var accept = network.send('3', { accept: { message: { method: 'accept' } } })
 
-    dump(network.denizens[3].inspect())
+    network.pluck(accept.accept, { to: '7' }).forEach(receive)
 
+    network.send('2')
+
+    network.time += 4
+
+    network.send('2', { accept: { message: { method: 'accept' } } }).accept.forEach(receive)
+
+    dump(network.denizens[6].inspect())
+    dump(network.denizens[2].inspect())
+   // var register = network.send('2', { sync: { message: { method: 'register' } } })
+    var register = network.send('2', { sync: { from: '2' } })
+    dump(network.denizens[6].inspect())
+    dump(register)
+    register.sync.forEach(receive)
+    // dump(network.denizens[6].inspect())
     return
 
-    network.pluck(intercept.collision, { from: '2' }).forEach(function (envelope) {
-        network.request(envelope)
-        network.response(envelope)
-    })
+    network.send('0', [ '6' ])
 
-    intercept.collision.forEach(function (envelope) {
-        network.request(envelope)
-        network.response(envelope)
-    })
+    network.time += 4
 
-    dump(network.denizens[0].inspect())
-    dump(network.denizens[2].inspect())
-    dump(network.denizens[3].inspect())
-    dump(network.denizens[1].inspect())
-    dump(network.denizens[7].inspect())
+    network.send('0', [ '2' ])
+
+    network.time += 4
+
+    network.send('0', [ '6' ])
+
+    network.time += 4
+
+    var zero = network.send('0', { accept: { message: { method: 'accept' } } })
+
+    // dump(zero)
+
+    dump(network.pluck(sync.sync, { to: '6' }))
+    return
+    network.pluck(sync.sync, { to: '6' }).forEach(receive)
+    dump(network.denizens[6].inspect())
+
+    // dump(network.denizens[6].inspect())
+    return
+
+    accept.accept.forEach(receive)
 }

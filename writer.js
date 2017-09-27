@@ -82,7 +82,7 @@ Writer.prototype.nudge = function () {
     }
 }
 
-Writer.prototype.response = function (now, request) {
+Writer.prototype.response = function (now, request, responses) {
     assert(request.method == 'register', 'unexpected request type')
     this._previous = request.register.body.promise
     this._paxos._register(now, request.register)

@@ -37,7 +37,7 @@ Recorder.prototype.request = function (now, request) {
 }
 
 Recorder.prototype.createRecorder = function () {
-    return this
+    return new Recorder(this._paxos)
 }
 
 Recorder.prototype.inspect = function () {

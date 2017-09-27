@@ -708,12 +708,27 @@ Paxos.prototype.response = function (now, message, responses) {
         var response = responses[id]
         var promise = this.government.immigrated.promise[id]
 
+        if (
+            (
+                response.message.method == 'unreachable'
+            ) &&
+            message.collapsible && !this._writer.collapsed
+        ) {
+            this._collapse(now)
+        }
+
+        if (
+            (
+                response.message.method == 'reject'
+            ) &&
+            message.collapsible && !this._writer.collapsed
+        ) {
+            this._collapse(now)
+        }
+
         // Go through responses converting network errors to "unreachable"
         // messages with appropriate defaults.
         if (response.message.method == 'unreachable') {
-            if (message.collapsible && !this._writer.collapsed) {
-                this._collapse(now)
-            }
             if (this._disappeared[promise] == null) {
                 this._disappeared[promise] = now
             } else if (now - this._disappeared[promise] >= this.timeout) {
@@ -779,6 +794,15 @@ Paxos.prototype.response = function (now, message, responses) {
         }
     }
 
+    if (
+        !(
+            message._government == this.government.promise &&
+            message._collapsed == this._writer.collapsed
+        )
+    ) {
+        return
+    }
+
     // Here's were I'm using messages to drive the algorithm even when the
     // information is available for recalcuation.
     //
@@ -821,6 +845,8 @@ Paxos.prototype.response = function (now, message, responses) {
                 method: 'synchronize', to: message.to, collapsible: message.collapsible
             })
         }
+
+        this._sendShape(now)
     } else {
         // TODO If the recepient is at '0/0' and we attempted to synchronize it,
         // then we must not have had the right cookie, let's mark it as
@@ -867,11 +893,31 @@ Paxos.prototype._synchronize = function (now, entries) {
     return true
 }
 
+Paxos.prototype._sendShape = function (now) {
+    var shape = this._shape
+    if (shape == null) {
+        return false
+    }
+    var added = shape.quorum[shape.quorum.length - 1]
+    if (this._committed[this.government.immigrated.promise[added]] == null) {
+        return false
+    }
+    this._shape = null
+    var promise = Monotonic.increment(this.government.promise, 0)
+    this.newGovernment(now, promise, shape.quorum, shape.government)
+    return true
+}
+
 Paxos.prototype._reshape = function (now, shape) {
     if (shape != null) {
-        // Increment the government part of the promise.
-        var promise = Monotonic.increment(this.government.promise, 0)
-        this.newGovernment(now, promise, shape.quorum, shape.government)
+        // Mark the shaper as complete. We won't get a new government proposal
+        // until we get a new shaper.
+        this._shaper.decided = true
+        this._shape = shape
+        if (!this._sendShape(now)) {
+            var added = shape.quorum[shape.quorum.length - 1]
+            this.scheduler.schedule(now, added, { method: 'synchronize', to: [ added ] })
+        }
     }
 }
 
@@ -916,6 +962,8 @@ Paxos.prototype._commit = function (now, entry, top) {
 
     if (isGovernment) {
         this.scheduler.clear()
+
+        this._shape = null
 
         // If we collapsed and ran Paxos we would have carried on regardless of
         // unreachability until we made progress. During Paxos we ignore
@@ -1030,7 +1078,12 @@ Paxos.prototype._commit = function (now, entry, top) {
 }
 
 Paxos.prototype.inspect = function () {
-    return { id: this.id, writer: this._writer.inspect(), recorder: this._recorder.inspect() }
+    return {
+        id: this.id,
+        writer: this._writer.inspect(),
+        recorder: this._recorder.inspect(),
+        head: this.log.head.body
+    }
 }
 
 module.exports = Paxos
