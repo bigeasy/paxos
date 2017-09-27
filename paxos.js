@@ -897,11 +897,25 @@ Paxos.prototype._commit = function (now, entry, top) {
     logger.info('enact', { isGovernment: isGovernment, $entry: entry })
 
     if (isGovernment) {
-        this.scheduler.clear()
-
         assert(Monotonic.compare(this.government.promise, entry.promise) < 0, 'governments out of order')
-
         Government.advance(this.government, entry)
+
+        Constituency(this.government, this.id, this)
+        this.citizens = this.government.majority
+                            .concat(this.government.minority)
+                            .concat(this.government.constituents)
+    }
+
+    this.log.push({
+        module: 'paxos',
+        method: isGovernment ? 'government' : 'entry',
+        promise: entry.promise,
+        body: entry.body,
+        previous: entry.previous
+    })
+
+    if (isGovernment) {
+        this.scheduler.clear()
 
         // If we collapsed and ran Paxos we would have carried on regardless of
         // unreachability until we made progress. During Paxos we ignore
@@ -919,11 +933,6 @@ Paxos.prototype._commit = function (now, entry, top) {
                 delete this._unreachable[this.government.immigrated.promise[id]]
             }
         }
-
-        Constituency(this.government, this.id, this)
-        this.citizens = this.government.majority
-                            .concat(this.government.minority)
-                            .concat(this.government.constituents)
 
         this._writer = this._writer.createWriter(entry.promise)
         this._recorder = this._recorder.createRecorder(entry.promise)
@@ -1001,15 +1010,6 @@ Paxos.prototype._commit = function (now, entry, top) {
     if (this.constituency.length == 0) {
         this._minimum.reduced = entry.promise
     }
-
-    assert(entry.previous, 'null previous')
-    this.log.push({
-        module: 'paxos',
-        method: isGovernment ? 'government' : 'entry',
-        promise: entry.promise,
-        body: entry.body,
-        previous: entry.previous
-    })
 
     // Notify our constituents of a new update.
 
