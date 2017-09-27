@@ -20,10 +20,11 @@ function Recorder (paxos) {
 
 Recorder.prototype.request = function (now, request) {
     // Anything else is going to get caught synchronization and rejected.
-    assert(/^prepare|register$/.test(request.method))
     switch (request.method) {
     case 'prepare':
         return this._paxos._prepare(now, request)
+    case 'accept':
+        return { method: 'reject', promise: '0/0' }
     case 'register':
         // TODO Explain why we check the expected previous intead of doing a
         // Paxos-esque comparison.

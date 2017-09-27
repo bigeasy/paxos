@@ -2,7 +2,7 @@ var assert = require('assert')
 
 var Monotonic = require('monotonic').asString
 
-function Writer (paxos, promise) {
+function Writer (paxos, promise, proposals) {
     this._paxos = paxos
     this.version = [ promise, this.collapsed = false ]
     this._previous = promise
@@ -34,7 +34,7 @@ function Writer (paxos, promise) {
     // and when a ping changes the reachable state of a constituent. Recall that
     // a new government is formed to immigrate or exile a citizen.
     //
-    this.proposals = []
+    this.proposals = proposals
     this._writing = false
 }
 
@@ -47,6 +47,7 @@ Writer.prototype.push = function (proposal) {
 }
 
 Writer.prototype.unshift = function (proposal) {
+    console.log('unshift', this._paxos.id, this._previous, proposal)
     this.proposals.unshift({
         quorum: proposal.quorum,
         promise: proposal.promise,
@@ -98,8 +99,8 @@ Writer.prototype.response = function (now, request) {
     }
 }
 
-Writer.prototype.createWriter = function () {
-    return this
+Writer.prototype.createWriter = function (promise) {
+    return new Writer(this._paxos, promise, this.proposals)
 }
 
 Writer.prototype.inspect = function () {

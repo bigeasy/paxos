@@ -64,8 +64,8 @@ Proposer.prototype.response = function (now, request, responses) {
         this._paxos._send({
             method: 'accept',
             version: this.version,
-        _government: this._paxos.government.promise,
-        _collapsed: this.collapsed,
+            _government: this._paxos.government.promise,
+            _collapsed: this.collapsed,
             to: this.proposal.quorum,
             promise: request.promise,
             body: {
@@ -83,7 +83,7 @@ Proposer.prototype.response = function (now, request, responses) {
 }
 
 Proposer.prototype.createWriter = function (promise) {
-    return new Writer(this._paxos, promise)
+    return new Writer(this._paxos, promise, [])
 }
 
 Proposer.prototype.inspect = function () {

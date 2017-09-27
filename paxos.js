@@ -109,7 +109,7 @@ function Paxos (now, republic, id, options) {
 
     // Write strategy is polymorphic, changes based on whether we're recovering
     // from collapse uing Paxos or writing values using two-phase commit.
-    this._writer = new Writer(this, '1/0')
+    this._writer = new Writer(this, '1/0', [])
     this._recorder = new Recorder(this, this.log.head.body)
 
     // Shaper a new government by fiat based on whose availble to grow to the
@@ -896,6 +896,7 @@ Paxos.prototype._commit = function (now, entry, top) {
         return
     }
 
+    console.log('head', this.log.head.body, '\nentry', entry)
     // Otherwise, we assert that entry has a correct previous promise.
     assert(top == entry.previous, 'incorrect previous')
 
