@@ -687,7 +687,7 @@ Paxos.prototype.response = function (now, message, responses) {
                 '0/0' == response.sync.committed
             )
         ) {
-            responses[message.to[i]] = response = {
+            responses[id] = response = {
                 message: { method: 'unreachable', promise: '0/0' },
                 sync: { committed: null, commits: [] },
                 minimum: null,
@@ -751,12 +751,12 @@ Paxos.prototype.response = function (now, message, responses) {
             message.constituent &&
             minimum &&
             (
-                this._minimums[message.to[i]] == null ||
-                this._minimums[message.to[i]].version != minimum.version ||
-                this._minimums[message.to[i]].reduced != minimum.reduced
+                this._minimums[id] == null ||
+                this._minimums[id].version != minimum.version ||
+                this._minimums[id].reduced != minimum.reduced
             )
         ) {
-            this._minimums[message.to[i]] = {
+            this._minimums[id] = {
                 version: minimum.version,
                 propagated: minimum.propagated,
                 reduced: minimum.reduced
