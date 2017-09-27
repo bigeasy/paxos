@@ -894,30 +894,41 @@ Paxos.prototype._synchronize = function (now, entries) {
 }
 
 Paxos.prototype._sendShape = function (now) {
-    var shape = this._shape
-    if (shape == null) {
-        return false
+    var cue = this._cue, unsynced = []
+    if (cue == null) {
+        return unsynced
     }
-    var added = shape.quorum[shape.quorum.length - 1]
-    if (this._committed[this.government.immigrated.promise[added]] == null) {
-        return false
+    var shape = cue.shape
+    for (var i = 0, id; (id = shape.quorum[i]) != null; i++ ) {
+        var promise = this.government.immigrated.promise[id]
+        if (this._committed[promise] == null) {
+            unsynced.push(id)
+        }
     }
-    this._shape = null
-    var promise = Monotonic.increment(this.government.promise, 0)
-    this.newGovernment(now, promise, shape.quorum, shape.government)
-    return true
+    if (unsynced.length == 0) {
+        this._cue = null
+        this.newGovernment(now, cue.promise, shape.quorum, shape.government)
+    }
+    return unsynced
+}
+
+Paxos.prototype._cueShape = function (now, promise, shape) {
+    // Mark the shaper as complete. We won't get a new government proposal
+    // until we get a new shaper.
+    this._shaper.decided = true
+    this._cue = { shape: shape, promise: promise }
+    var unsynced = this._sendShape(now)
+    if (unsynced.length != 0) {
+        var added = shape.quorum[shape.quorum.length - 1]
+        for (var i = 0, id; (id = unsynced[i]) != null; i++) {
+            this.scheduler.schedule(now, added, { method: 'synchronize', to: [ id ] })
+        }
+    }
 }
 
 Paxos.prototype._reshape = function (now, shape) {
     if (shape != null) {
-        // Mark the shaper as complete. We won't get a new government proposal
-        // until we get a new shaper.
-        this._shaper.decided = true
-        this._shape = shape
-        if (!this._sendShape(now)) {
-            var added = shape.quorum[shape.quorum.length - 1]
-            this.scheduler.schedule(now, added, { method: 'synchronize', to: [ added ] })
-        }
+        this._cueShape(now, Monotonic.increment(this.government.promise, 0), shape)
     }
 }
 
@@ -963,7 +974,7 @@ Paxos.prototype._commit = function (now, entry, top) {
     if (isGovernment) {
         this.scheduler.clear()
 
-        this._shape = null
+        this._cue = null
 
         // If we collapsed and ran Paxos we would have carried on regardless of
         // unreachability until we made progress. During Paxos we ignore
