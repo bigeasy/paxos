@@ -572,6 +572,7 @@ Paxos.prototype._send = function (message) {
                 to: to,
                 from: this.id,
                 message: message,
+                synchronize: message.method == 'synchronize',
                 government: government,
                 sync: this._sync(committed)
             },
@@ -655,8 +656,8 @@ Paxos.prototype.request = function (now, request) {
             })
         }
 
-        message = request.message.method == 'synchronize'
-                ? { method: 'respond', promise: this.log.head.body.promise }
+        message = request.synchronize
+                ? { method: 'synchronized', promise: this.log.head.body.promise }
                 : this._recorder.request(now, request.message)
     }
     return {
@@ -835,7 +836,8 @@ Paxos.prototype.response = function (now, request, responses) {
             delay = this.ping
         }
 
-        // Schedule the next synchronization.
+        // Schedule the next synchronization if it is not a keep alive pulse or
+        // if it is a keep alive pulse and we have not collapsed.
         if (message.key != this.id || ! this._writer.collapsed) {
             this.scheduler.schedule(now + delay, message.key, {
                 method: 'synchronize', to: message.to, collapsible: message.collapsible
