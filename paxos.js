@@ -488,7 +488,9 @@ Paxos.prototype._sync = function (committed) {
         committed: this.log.head.body.promise,
         commits: []
     }
-    if (committed != null) {
+    if (committed == null) {
+        sync.synced = false
+    } else {
         var iterator
 
         assert(Monotonic.compare(committed, this._minimum.propagated) >= 0, 'minimum breached')
@@ -504,6 +506,10 @@ Paxos.prototype._sync = function (committed) {
             })
             iterator = iterator.next
         }
+
+        sync.synced =
+            sync.commits.length == 0 ||
+            sync.commits[sync.commits.length - 1].promise == this.log.head.body.promise
     }
     return sync
 }
@@ -519,7 +525,11 @@ Paxos.prototype._sync = function (committed) {
 
 //
 Paxos.prototype._send = function (message) {
-    var envelopes = [], responses = {}
+    var original = message
+    var envelopes = []
+    var responses = {}
+    var syncs = {}
+    var outOfSync = false
     TO: for (var i = 0, to; (to = message.to[i]) != null; i++) {
         this.scheduler.unschedule(to)
 
@@ -566,15 +576,35 @@ Paxos.prototype._send = function (message) {
             })
         }
 
+        var sync = syncs[to] = this._sync(committed)
+        outOfSync = outOfSync || ! sync.synced
+    }
+
+    if (outOfSync) {
+        var x_message = {
+            method: 'synchronize',
+            to: message.to,
+            collapsible: message.collapsible,
+            constituent: message.constituent,
+            send: message,
+            key: null
+        }
+    }
+
+    for (var i = 0, to; (to = message.to[i]) != null; i++) {
+        if (syncs[to] == null) {
+            continue
+        }
+
         // TODO Tidy.
         var envelope = {
             request: {
                 to: to,
                 from: this.id,
                 message: message,
-                synchronize: message.method == 'synchronize',
+                synchronize: outOfSync || message.method == 'synchronize',
                 government: government,
-                sync: this._sync(committed)
+                sync: syncs[to]
             },
             responses: responses
         }
@@ -588,6 +618,7 @@ Paxos.prototype._send = function (message) {
         request: {
             from: this.id,
             message: message,
+            outOfSync: outOfSync,
             government: this.government.promise,
             collapsed: this._writer.collapsed
         },
@@ -836,6 +867,12 @@ Paxos.prototype.response = function (now, request, responses) {
             delay = this.ping
         }
 
+        if (message.send != null) {
+            this._send(message.send)
+        }
+
+        else
+
         // Schedule the next synchronization if it is not a keep alive pulse or
         // if it is a keep alive pulse and we have not collapsed.
         if (message.key != this.id || ! this._writer.collapsed) {
@@ -846,18 +883,22 @@ Paxos.prototype.response = function (now, request, responses) {
 
         this._sendShape(now)
     } else if (!collapsible) {
-        // TODO I don't like how the `Recorder` gets skipped on collapse, but
-        // the `Acceptor` handles it's own failures. My fastidiousness tells my
-        // that this one bit of reject logic escaping to another function in
-        // another file is an indication of poor design and that a design
-        // pattern is required to make this architecturally sound. However, the
-        // bit that is escaping is the only bit that will be dealing with
-        // inspecting returned promises and deciding a specific next action, it
-        // is Paxos logic that does not otherwise exist, it might actually be an
-        // additional layer.
+        if (request.outOfSync) {
+            this._send(request.message)
+        } else {
+            // TODO I don't like how the `Recorder` gets skipped on collapse,
+            // but the `Acceptor` handles it's own failures. My fastidiousness
+            // tells my that this one bit of reject logic escaping to another
+            // function in another file is an indication of poor design and that
+            // a design pattern is required to make this architecturally sound.
+            // However, the bit that is escaping is the only bit that will be
+            // dealing with inspecting returned promises and deciding a specific
+            // next action, it is Paxos logic that does not otherwise exist, it
+            // might actually be an additional layer.
 
-        //
-        this._writer.response(now, message, responses)
+            //
+            this._writer.response(now, message, responses)
+        }
     }
 }
 
