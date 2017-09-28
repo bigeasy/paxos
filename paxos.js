@@ -691,13 +691,14 @@ Paxos.prototype.response = function (now, message, responses) {
         }
     }
 
-
     if (
         message._government != this.government.promise ||
         message._collapsed != this._writer.collapsed
     ) {
         return
     }
+
+    var collapsible = false
 
     // Perform housekeeping for each receipent of the message.
 
@@ -708,32 +709,18 @@ Paxos.prototype.response = function (now, message, responses) {
         var response = responses[id]
         var promise = this.government.immigrated.promise[id]
 
-        if (
-            (
-                response.message.method == 'unreachable'
-            ) &&
-            message.collapsible && !this._writer.collapsed
-        ) {
-            this._collapse(now)
-        }
-
-        if (
-            (
-                response.message.method == 'reject'
-            ) &&
-            message.collapsible && !this._writer.collapsed
-        ) {
-            this._collapse(now)
-        }
-
         // Go through responses converting network errors to "unreachable"
         // messages with appropriate defaults.
-        if (response.message.method == 'unreachable') {
+        switch (response.message.method) {
+        case 'unreachable':
             if (this._disappeared[promise] == null) {
                 this._disappeared[promise] = now
             } else if (now - this._disappeared[promise] >= this.timeout) {
                 response.unreachable[promise] = true
             }
+        case 'reject':
+            collapsible = true
+            break
         }
 
         if (response.sync.committed != null) {
@@ -794,6 +781,12 @@ Paxos.prototype.response = function (now, message, responses) {
         }
     }
 
+    if (collapsible && message.collapsible) {
+        this._writer.collapse(now, message, responses)
+    } else {
+        collapsible = false
+    }
+
     if (
         !(
             message._government == this.government.promise &&
@@ -823,7 +816,8 @@ Paxos.prototype.response = function (now, message, responses) {
     // gets scheduled because you can only have one scheduled per key.
 
     //
-    if (message.method == 'synchronize') {
+    if (collapsible) {
+    } else if (message.method == 'synchronize') {
         // Immediately continue sync if our constituent is not completely
         // synced. Note that majority members are never behind by more than one,
         // so they always successfully sync. This is why we only check the first

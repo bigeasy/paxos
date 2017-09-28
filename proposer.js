@@ -33,31 +33,32 @@ Proposer.prototype.prepare = function (now) {
         method: 'prepare',
         _government: this._paxos.government.promise,
         _collapsed: this.collapsed,
+        collapsible: true,
         version: this.version,
         to: this.proposal.quorum,
         promise: this.promise
     })
 }
 
-Proposer.prototype.response = function (now, request, responses) {
-    var promised = request.promise, failed = false
+Proposer.prototype.collapse = function (now, request, responses) {
+    var promised = request.promise
     for (var i = 0, I = request.to.length; i < I; i++) {
         var response = responses[request.to[i]]
         if (Monotonic.compare(promised, response.message.promise) < 0) {
             promised = response.message.promise
         }
-        if (response.message.method == 'unreachable' || response.message.method == 'reject') {
-            failed = true
-        }
     }
-    switch (failed || request.method) {
-    case true:
-        this.promise = Monotonic.increment(promised, 0)
-        this._paxos._propose(now, true)
-        break
+    this.promise = Monotonic.increment(promised, 0)
+    this._paxos._propose(now, true)
+}
+
+Proposer.prototype.response = function (now, request, responses) {
+    switch (request.method) {
     case 'prepare':
         for (var id in responses) {
-            if (Monotonic.compare(this.register.body.promise, responses[id].message.register.body.promise) < 0) {
+            if (
+                Monotonic.compare(this.register.body.promise, responses[id].message.register.body.promise) < 0
+            ) {
                 this.register = responses[id].message.register
             }
         }

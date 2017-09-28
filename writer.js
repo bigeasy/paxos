@@ -82,6 +82,10 @@ Writer.prototype.nudge = function () {
     }
 }
 
+Writer.prototype.collapse = function (now) {
+    this._paxos._collapse(now)
+}
+
 Writer.prototype.response = function (now, request, responses) {
     assert(request.method == 'register', 'unexpected request type')
     this._previous = request.register.body.promise
