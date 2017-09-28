@@ -6,7 +6,7 @@ var Writer = require('./writer')
 // TODO Really need to have the value for previous, which is the writer register.
 function Proposer (paxos, promise) {
     this._paxos = paxos
-    this.version = [ promise, this.collapsed = true ]
+    this.collapsed = true
     this.promise = Monotonic.increment(promise, 0)
     this.proposals = []
     this.register = {
@@ -32,7 +32,6 @@ Proposer.prototype.prepare = function (now) {
     this._paxos._send({
         method: 'prepare',
         collapsible: true,
-        version: this.version,
         to: this.proposal.quorum,
         promise: this.promise
     })
@@ -62,7 +61,6 @@ Proposer.prototype.response = function (now, request, responses) {
         }
         this._paxos._send({
             method: 'accept',
-            version: this.version,
             to: this.proposal.quorum,
             promise: request.promise,
             body: {

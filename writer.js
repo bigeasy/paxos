@@ -4,7 +4,7 @@ var Monotonic = require('monotonic').asString
 
 function Writer (paxos, promise, proposals) {
     this._paxos = paxos
-    this.version = [ promise, this.collapsed = false ]
+    this.collapsed = false
     this._previous = promise
     // This is the right data structure for the job. It is an array of proposals
     // that can have at most one proposals for a new government, where that
@@ -59,7 +59,6 @@ Writer.prototype._send = function () {
     this._writing = true
     this._paxos._send({
         method: 'register',
-        version: this.version,
         to: proposal.quorum,
         collapsible: true,
         constituent: true,

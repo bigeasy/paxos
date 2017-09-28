@@ -356,7 +356,6 @@ Paxos.prototype.event = function (envelope) {
     case 'synchronize':
         this._send({
             method: 'synchronize',
-            version: this._writer.version,
             to: envelope.body.to,
             collapsible: !! envelope.body.collapsible,
             constituent: true,
