@@ -525,18 +525,13 @@ Paxos.prototype._sync = function (committed) {
 
 //
 Paxos.prototype._send = function (message) {
-    var original = message
-    var envelopes = []
-    var responses = {}
-    var syncs = {}
-    var outOfSync = false
+    var envelopes = [], responses = {}, syncs = {}, outOfSync = false
     TO: for (var i = 0, to; (to = message.to[i]) != null; i++) {
         this.scheduler.unschedule(to)
 
         var promise = this.government.immigrated.promise[to]
         var committed = this._committed[promise]
-        var governments = []
-        var government = null
+
         if (committed == '0/0') {
             var iterator = this.log.trailer.node.next, previous
             for (;;) {
@@ -555,6 +550,7 @@ Paxos.prototype._send = function (message) {
                 iterator = iterator.next
             }
 
+            var governments = []
             while (iterator != null) {
                 if (Monotonic.isBoundary(iterator.body.promise, 0)) {
                     governments.push(iterator.body)
@@ -562,7 +558,7 @@ Paxos.prototype._send = function (message) {
                 iterator = iterator.next
             }
 
-            government = JSON.parse(JSON.stringify(this.government))
+            var government = JSON.parse(JSON.stringify(this.government))
             for (var j = governments.length - 1; j != 0; j--) {
                 Government.retreat(government, governments[j], governments[j - 1])
             }
@@ -576,8 +572,8 @@ Paxos.prototype._send = function (message) {
             })
         }
 
-        var sync = syncs[to] = this._sync(committed)
-        outOfSync = outOfSync || ! sync.synced
+        syncs[to] = this._sync(committed)
+        outOfSync = outOfSync || ! syncs[to].synced
     }
 
     for (var i = 0, to; (to = message.to[i]) != null; i++) {
@@ -585,20 +581,17 @@ Paxos.prototype._send = function (message) {
             continue
         }
 
-        // TODO Tidy.
-        var envelope = {
+        envelopes.push({
             request: {
                 to: to,
                 from: this.id,
                 message: message,
-                synchronize: outOfSync || message.method == 'synchronize',
+                skipRecorder: outOfSync || message.method == 'synchronize',
                 government: government,
                 sync: syncs[to]
             },
             responses: responses
-        }
-
-        envelopes.push(envelope)
+        })
     }
 
     // Structured so that you can invoke `_response` using either an individual
@@ -676,7 +669,7 @@ Paxos.prototype.request = function (now, request) {
             })
         }
 
-        message = request.synchronize
+        message = request.skipRecorder
                 ? { method: 'synchronized', promise: this.log.head.body.promise }
                 : this._recorder.request(now, request.message)
     }
