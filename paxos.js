@@ -527,6 +527,7 @@ Paxos.prototype._sync = function (committed) {
 Paxos.prototype._send = function (message) {
     var envelopes = [], responses = {}, syncs = {}, synchronize = false
     var sender = {
+        message: message,
         synchronize: false,
         government: this.government.promise,
         collapsed: this._writer.collapsed
@@ -686,8 +687,9 @@ Paxos.prototype.request = function (now, request) {
     }
 }
 
-Paxos.prototype.response = function (now, request, responses) {
-    var message = request.message
+Paxos.prototype.response = function (now, _request, responses) {
+    var cookie = _request.sender
+    var message = cookie.message
     for (var i = 0, I = message.to.length; i < I; i++) {
         // Deduce receipent properties.
         var id = message.to[i]
@@ -714,8 +716,8 @@ Paxos.prototype.response = function (now, request, responses) {
     }
 
     if (
-        request.sender.government != this.government.promise ||
-        request.sender.collapsed != this._writer.collapsed
+        cookie.government != this.government.promise ||
+        cookie.collapsed != this._writer.collapsed
     ) {
         return
     }
@@ -811,8 +813,8 @@ Paxos.prototype.response = function (now, request, responses) {
 
     if (
         !(
-            request.sender.government == this.government.promise &&
-            request.sender.collapsed == this._writer.collapsed
+            cookie.government == this.government.promise &&
+            cookie.collapsed == this._writer.collapsed
         )
     ) {
         return
@@ -862,8 +864,8 @@ Paxos.prototype.response = function (now, request, responses) {
             })
         }
     } else if (!collapsible) {
-        if (request.sender.synchronize) {
-            this._send(request.message)
+        if (cookie.synchronize) {
+            this._send(cookie.message)
         } else {
             // TODO I don't like how the `Recorder` gets skipped on collapse,
             // but the `Acceptor` handles it's own failures. My fastidiousness
