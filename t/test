@@ -9,8 +9,6 @@ echo ""
     || exit 1
 
 if [ "$TRAVIS" = "true" ]; then
-  printenv | sort
-
   echo ""
   echo "running with coverage"
   t/cover
