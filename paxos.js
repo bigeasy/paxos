@@ -580,17 +580,6 @@ Paxos.prototype._send = function (message) {
         outOfSync = outOfSync || ! sync.synced
     }
 
-    if (outOfSync) {
-        var x_message = {
-            method: 'synchronize',
-            to: message.to,
-            collapsible: message.collapsible,
-            constituent: message.constituent,
-            send: message,
-            key: null
-        }
-    }
-
     for (var i = 0, to; (to = message.to[i]) != null; i++) {
         if (syncs[to] == null) {
             continue
@@ -867,12 +856,6 @@ Paxos.prototype.response = function (now, request, responses) {
             delay = this.ping
         }
 
-        if (message.send != null) {
-            this._send(message.send)
-        }
-
-        else
-
         // Schedule the next synchronization if it is not a keep alive pulse or
         // if it is a keep alive pulse and we have not collapsed.
         if (message.key != this.id || ! this._writer.collapsed) {
@@ -880,8 +863,6 @@ Paxos.prototype.response = function (now, request, responses) {
                 method: 'synchronize', to: message.to, collapsible: message.collapsible
             })
         }
-
-        this._sendShape(now)
     } else if (!collapsible) {
         if (request.outOfSync) {
             this._send(request.message)
@@ -925,44 +906,13 @@ Paxos.prototype._synchronize = function (now, entries) {
     return true
 }
 
-Paxos.prototype._sendShape = function (now) {
-    var cue = this._cue, unsynced = []
-    if (cue == null) {
-        return unsynced
-    }
-    var shape = cue.shape
-    for (var i = 0, id; (id = shape.quorum[i]) != null; i++ ) {
-        var promise = this.government.immigrated.promise[id]
-        if (this._committed[promise] == null) {
-            unsynced.push(id)
-        }
-    }
-    if (unsynced.length == 0) {
-        this._cue = null
-        this.newGovernment(now, cue.promise, shape.quorum, shape.government)
-    }
-    return unsynced
-}
-
-Paxos.prototype._cueShape = function (now, promise, shape) {
-    // Mark the shaper as complete. We won't get a new government proposal
-    // until we get a new shaper.
-    this._shaper.decided = true
-    this._cue = { shape: shape, promise: promise }
-    var unsynced = this._sendShape(now)
-    if (unsynced.length != 0) {
-        var added = shape.quorum[shape.quorum.length - 1]
-        for (var i = 0, id; (id = unsynced[i]) != null; i++) {
-            this.scheduler.schedule(now, added, { method: 'synchronize', to: [ id ] })
-        }
-    }
-}
-
 Paxos.prototype._reshape = function (now, shape) {
     if (shape != null) {
-        this._cueShape(now, Monotonic.increment(this.government.promise, 0), shape)
+        var promise = Monotonic.increment(this.government.promise, 0)
+        this.newGovernment(now, promise, shape.quorum, shape.government)
     }
 }
+
 
 Paxos.prototype._commit = function (now, entry, top) {
     entry = JSON.parse(JSON.stringify(entry))
