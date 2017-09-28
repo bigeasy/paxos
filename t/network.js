@@ -44,7 +44,7 @@ Network.prototype.request = function (envelope) {
 
 Network.prototype.response = function (envelope) {
     if (Object.keys(envelope.responses).length == envelope.request.message.to.length) {
-        this.denizens[envelope.request.from].response(this.time, envelope.request.message, envelope.responses)
+        this.denizens[envelope.request.from].response(this.time, envelope.request, envelope.responses)
     }
 }
 

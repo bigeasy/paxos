@@ -665,7 +665,8 @@ Paxos.prototype.request = function (now, request) {
     }
 }
 
-Paxos.prototype.response = function (now, message, responses) {
+Paxos.prototype.response = function (now, request, responses) {
+    var message = request.message
     for (var i = 0, I = message.to.length; i < I; i++) {
         // Deduce receipent properties.
         var id = message.to[i]
