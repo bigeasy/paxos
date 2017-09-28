@@ -525,7 +525,7 @@ Paxos.prototype._sync = function (committed) {
 
 //
 Paxos.prototype._send = function (message) {
-    var envelopes = [], responses = {}, syncs = {}, outOfSync = false
+    var envelopes = [], responses = {}, syncs = {}, synchronize = false
     TO: for (var i = 0, to; (to = message.to[i]) != null; i++) {
         this.scheduler.unschedule(to)
 
@@ -573,7 +573,7 @@ Paxos.prototype._send = function (message) {
         }
 
         syncs[to] = this._sync(committed)
-        outOfSync = outOfSync || ! syncs[to].synced
+        synchronize = synchronize || ! syncs[to].synced
     }
 
     for (var i = 0, to; (to = message.to[i]) != null; i++) {
@@ -586,7 +586,7 @@ Paxos.prototype._send = function (message) {
                 to: to,
                 from: this.id,
                 message: message,
-                skipRecorder: outOfSync || message.method == 'synchronize',
+                synchronize: synchronize || message.method == 'synchronize',
                 government: government,
                 sync: syncs[to]
             },
@@ -600,7 +600,7 @@ Paxos.prototype._send = function (message) {
         request: {
             from: this.id,
             message: message,
-            outOfSync: outOfSync,
+            synchronize: synchronize,
             government: this.government.promise,
             collapsed: this._writer.collapsed
         },
@@ -669,7 +669,7 @@ Paxos.prototype.request = function (now, request) {
             })
         }
 
-        message = request.skipRecorder
+        message = request.synchronize
                 ? { method: 'synchronized', promise: this.log.head.body.promise }
                 : this._recorder.request(now, request.message)
     }
@@ -857,7 +857,7 @@ Paxos.prototype.response = function (now, request, responses) {
             })
         }
     } else if (!collapsible) {
-        if (request.outOfSync) {
+        if (request.synchronize) {
             this._send(request.message)
         } else {
             // TODO I don't like how the `Recorder` gets skipped on collapse,
