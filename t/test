@@ -16,7 +16,7 @@ if [ "$TRAVIS" = "true" ]; then
   echo ""
 
   echo "submitting to coveralls.io"
-  (cat coverage/lcov.info | node_modules/.bin/coveralls) > /dev/null 2>&1
+  (cat coverage/lcov.info | node_modules/.bin/coveralls)
 fi
 
 echo ""
