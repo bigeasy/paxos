@@ -377,6 +377,7 @@ function prove (okay) {
 
     network.time += 4
 
+    return
     var accept = network.send('3', { accept: { message: { method: 'accept' } } })
 
     network.pluck(accept.accept, { to: '7' }).forEach(receive)
@@ -395,7 +396,6 @@ function prove (okay) {
     dump(register)
     register.sync.forEach(receive)
     // dump(network.denizens[6].inspect())
-    return
 
     network.send('0', [ '6' ])
 

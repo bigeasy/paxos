@@ -357,8 +357,6 @@ Paxos.prototype.event = function (envelope) {
         this._send({
             method: 'synchronize',
             version: this._writer.version,
-            _government: this.government.promise,
-            _collapsed: this._writer.collapsed,
             to: envelope.body.to,
             collapsible: !! envelope.body.collapsible,
             constituent: true,
@@ -587,7 +585,12 @@ Paxos.prototype._send = function (message) {
     // Structured so that you can invoke `_response` using either an individual
     // envelope or the entire send structure.
     this.outbox.push({
-        request: { from: this.id, message: message },
+        request: {
+            from: this.id,
+            message: message,
+            government: this.government.promise,
+            collapsed: this._writer.collapsed
+        },
         responses: responses,
         envelopes: envelopes
     })
@@ -693,8 +696,8 @@ Paxos.prototype.response = function (now, request, responses) {
     }
 
     if (
-        message._government != this.government.promise ||
-        message._collapsed != this._writer.collapsed
+        request.government != this.government.promise ||
+        request.collapsed != this._writer.collapsed
     ) {
         return
     }
@@ -790,8 +793,8 @@ Paxos.prototype.response = function (now, request, responses) {
 
     if (
         !(
-            message._government == this.government.promise &&
-            message._collapsed == this._writer.collapsed
+            request.government == this.government.promise &&
+            request.collapsed == this._writer.collapsed
         )
     ) {
         return

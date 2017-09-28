@@ -31,8 +31,6 @@ Proposer.prototype.nudge = function (now) {
 Proposer.prototype.prepare = function (now) {
     this._paxos._send({
         method: 'prepare',
-        _government: this._paxos.government.promise,
-        _collapsed: this.collapsed,
         collapsible: true,
         version: this.version,
         to: this.proposal.quorum,
@@ -65,8 +63,6 @@ Proposer.prototype.response = function (now, request, responses) {
         this._paxos._send({
             method: 'accept',
             version: this.version,
-            _government: this._paxos.government.promise,
-            _collapsed: this.collapsed,
             to: this.proposal.quorum,
             promise: request.promise,
             body: {
