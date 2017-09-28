@@ -526,6 +526,11 @@ Paxos.prototype._sync = function (committed) {
 //
 Paxos.prototype._send = function (message) {
     var envelopes = [], responses = {}, syncs = {}, synchronize = false
+    var sender = {
+        synchronize: false,
+        government: this.government.promise,
+        collapsed: this._writer.collapsed
+    }
     TO: for (var i = 0, to; (to = message.to[i]) != null; i++) {
         this.scheduler.unschedule(to)
 
@@ -573,7 +578,7 @@ Paxos.prototype._send = function (message) {
         }
 
         syncs[to] = this._sync(committed)
-        synchronize = synchronize || ! syncs[to].synced
+        sender.synchronize = sender.synchronize || ! syncs[to].synced
     }
 
     for (var i = 0, to; (to = message.to[i]) != null; i++) {
@@ -586,8 +591,9 @@ Paxos.prototype._send = function (message) {
                 to: to,
                 from: this.id,
                 message: message,
-                synchronize: synchronize || message.method == 'synchronize',
+                synchronize: sender.synchronize || message.method == 'synchronize',
                 government: government,
+                sender: sender,
                 sync: syncs[to]
             },
             responses: responses
@@ -600,9 +606,8 @@ Paxos.prototype._send = function (message) {
         request: {
             from: this.id,
             message: message,
-            synchronize: synchronize,
-            government: this.government.promise,
-            collapsed: this._writer.collapsed
+            synchronize: sender.synchronize,
+            sender: sender
         },
         responses: responses,
         envelopes: envelopes
@@ -709,8 +714,8 @@ Paxos.prototype.response = function (now, request, responses) {
     }
 
     if (
-        request.government != this.government.promise ||
-        request.collapsed != this._writer.collapsed
+        request.sender.government != this.government.promise ||
+        request.sender.collapsed != this._writer.collapsed
     ) {
         return
     }
@@ -806,8 +811,8 @@ Paxos.prototype.response = function (now, request, responses) {
 
     if (
         !(
-            request.government == this.government.promise &&
-            request.collapsed == this._writer.collapsed
+            request.sender.government == this.government.promise &&
+            request.sender.collapsed == this._writer.collapsed
         )
     ) {
         return
@@ -857,7 +862,7 @@ Paxos.prototype.response = function (now, request, responses) {
             })
         }
     } else if (!collapsible) {
-        if (request.synchronize) {
+        if (request.sender.synchronize) {
             this._send(request.message)
         } else {
             // TODO I don't like how the `Recorder` gets skipped on collapse,
