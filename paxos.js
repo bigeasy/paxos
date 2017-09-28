@@ -819,8 +819,7 @@ Paxos.prototype.response = function (now, request, responses) {
     // gets scheduled because you can only have one scheduled per key.
 
     //
-    if (collapsible) {
-    } else if (message.method == 'synchronize') {
+    if (message.method == 'synchronize') {
         // Immediately continue sync if our constituent is not completely
         // synced. Note that majority members are never behind by more than one,
         // so they always successfully sync. This is why we only check the first
@@ -844,14 +843,7 @@ Paxos.prototype.response = function (now, request, responses) {
         }
 
         this._sendShape(now)
-    } else {
-        // TODO If the recepient is at '0/0' and we attempted to synchronize it,
-        // then we must not have had the right cookie, let's mark it as
-        // unreachable for exile. UPDATE: Dubious.
-
-        // Only handle a response if it was issued by our current
-        // writer/proposer.
-
+    } else if (!collapsible) {
         // TODO I don't like how the `Recorder` gets skipped on collapse, but
         // the `Acceptor` handles it's own failures. My fastidiousness tells my
         // that this one bit of reject logic escaping to another function in
