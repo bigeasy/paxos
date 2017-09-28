@@ -39,12 +39,12 @@ function Network () {
 }
 
 Network.prototype.request = function (envelope) {
-    envelope.responses[envelope.request.to] = this.denizens[envelope.request.to].request(this.time, envelope.request)
+    envelope.responses[envelope.to] = this.denizens[envelope.to].request(this.time, envelope.request)
 }
 
 Network.prototype.response = function (envelope) {
-    if (Object.keys(envelope.responses).length == envelope.request.message.to.length) {
-        this.denizens[envelope.request.from].response(this.time, envelope.request, envelope.responses)
+    if (Object.keys(envelope.responses).length == envelope.cookie.message.to.length) {
+        this.denizens[envelope.from].response(this.time, envelope.cookie, envelope.responses)
     }
 }
 
@@ -92,11 +92,11 @@ Network.prototype.send = function () {
                 for (var j = 0, envelope; (envelope = communique.envelopes[j]) != null; j++) {
                     MATCH: for (var k = 0, match; (match = matches[k]) != null; k++) {
                         for (var l = 0, L = match.subsets.length; l < L; l++) {
-                            if (subset(envelope.request, match.subsets[l])) {
+                            if (subset(envelope, match.subsets[l])) {
                                 match.count = Math.max(0, match.count - 1)
                                 if (match.count == 0) {
                                     if (match.name == null) {
-                                        envelope.responses[envelope.request.to] = null
+                                        envelope.responses[envelope.to] = null
                                     } else {
                                         intercepted[match.name].push(envelope)
                                     }

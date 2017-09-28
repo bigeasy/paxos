@@ -526,7 +526,7 @@ Paxos.prototype._sync = function (committed) {
 //
 Paxos.prototype._send = function (message) {
     var envelopes = [], responses = {}, syncs = {}, synchronize = false
-    var sender = {
+    var cookie = {
         message: message,
         synchronize: false,
         government: this.government.promise,
@@ -579,7 +579,7 @@ Paxos.prototype._send = function (message) {
         }
 
         syncs[to] = this._sync(committed)
-        sender.synchronize = sender.synchronize || ! syncs[to].synced
+        cookie.synchronize = cookie.synchronize || ! syncs[to].synced
     }
 
     for (var i = 0, to; (to = message.to[i]) != null; i++) {
@@ -588,13 +588,13 @@ Paxos.prototype._send = function (message) {
         }
 
         envelopes.push({
+            from: this.id,
+            to: to,
+            cookie: cookie,
             request: {
-                to: to,
-                from: this.id,
                 message: message,
-                synchronize: sender.synchronize || message.method == 'synchronize',
                 government: government,
-                sender: sender,
+                synchronize: cookie.synchronize || message.method == 'synchronize',
                 sync: syncs[to]
             },
             responses: responses
@@ -604,12 +604,8 @@ Paxos.prototype._send = function (message) {
     // Structured so that you can invoke `_response` using either an individual
     // envelope or the entire send structure.
     this.outbox.push({
-        request: {
-            from: this.id,
-            message: message,
-            synchronize: sender.synchronize,
-            sender: sender
-        },
+        from: this.id,
+        cookie: cookie,
         responses: responses,
         envelopes: envelopes
     })
@@ -687,8 +683,7 @@ Paxos.prototype.request = function (now, request) {
     }
 }
 
-Paxos.prototype.response = function (now, _request, responses) {
-    var cookie = _request.sender
+Paxos.prototype.response = function (now, cookie, responses) {
     var message = cookie.message
     for (var i = 0, I = message.to.length; i < I; i++) {
         // Deduce receipent properties.
