@@ -63,6 +63,7 @@ Proposer.prototype.response = function (now, request, responses) {
             method: 'accept',
             to: this.proposal.quorum,
             promise: request.promise,
+            collapsible: true,
             body: {
                 promise: request.promise,
                 body: this.proposal.body,

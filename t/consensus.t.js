@@ -341,21 +341,14 @@ function prove (okay) {
 
     network.time += 4
 
-    var intercept = network.send('0', '2', { prepare: { message: { method: 'prepare' } } })
-
-    for (var i = 0, envelope; (envelope = intercept.prepare[i]) != null; i++) {
-        if (envelope.request.from == '0') {
-            network.request(envelope)
-            network.response(envelope)
+    var intercept = network.send('0', '2', {
+        prepare: {
+            request: { message: { method: 'prepare' }, synchronize: false }
         }
-    }
+    })
 
-    for (var i = 0, envelope; (envelope = intercept.prepare[i]) != null; i++) {
-        if (envelope.request.from == '2') {
-            network.request(envelope)
-            network.response(envelope)
-        }
-    }
+    network.pluck(intercept.prepare, { from: '0' }).forEach(receive)
+    network.pluck(intercept.prepare, { from: '2' }).forEach(receive)
 
     network.denizens[0].inspect()
 
@@ -373,19 +366,30 @@ function prove (okay) {
     intercept.seven.forEach(receive)
     intercept.six.forEach(receive)
 
-    network.send('3', { prepare: { message: { method: 'prepare' } } }).prepare.forEach(receive)
+    network.send('3', {
+        prepare: {
+            request: { message: { method: 'prepare' }, synchronize: false }
+        }
+    }).prepare.forEach(receive)
 
     network.time += 4
 
-    return
-    var accept = network.send('3', { accept: { message: { method: 'accept' } } })
+    var accept = network.send('3', {
+        accept: {
+            request: { message: { method: 'accept' }, synchronize: false }
+        }
+    })
 
     network.pluck(accept.accept, { to: '7' }).forEach(receive)
 
     network.send('2')
+    dump(network.denizens[7].inspect())
+    dump(network.denizens[6].inspect())
+    return
 
     network.time += 4
 
+    return
     network.send('2', { accept: { message: { method: 'accept' } } }).accept.forEach(receive)
 
     dump(network.denizens[6].inspect())

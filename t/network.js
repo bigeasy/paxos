@@ -170,7 +170,7 @@ Network.prototype.tick = function (count) {
 Network.prototype.pluck = function (envelopes, pluck) {
     var i = 0, plucked = []
     while (i < envelopes.length) {
-        if (subSubset(envelopes[i].request, pluck)) {
+        if (subSubset(envelopes[i], pluck)) {
             plucked.push.apply(plucked, envelopes.splice(i, 1))
         } else {
             i++
