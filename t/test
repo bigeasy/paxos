@@ -8,7 +8,7 @@ echo ""
     || (proof errors < .proof.out) \
     || exit 1
 
-if [ "$TRAVIS" = "true" ]; then
+if [[ "$TRAVIS" = "true" ]]; then
   echo ""
   echo "running with coverage"
   t/cover
