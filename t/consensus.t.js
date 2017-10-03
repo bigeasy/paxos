@@ -383,21 +383,35 @@ function prove (okay) {
     network.pluck(accept.accept, { to: '7' }).forEach(receive)
 
     network.send('2')
-    dump(network.denizens[7].inspect())
-    dump(network.denizens[6].inspect())
-    return
 
     network.time += 4
 
+    network.send('2', {
+        accept: {
+            request: { message: { method: 'accept' }, synchronize: false }
+        }
+    }).accept.forEach(receive)
+
+    // var register = network.send('2', { sync: { message: { method: 'register' } } })
+    console.log('------------------------')
+    var register = network.send('2', {
+        sync: {
+            request: { message: { method: 'register' }, synchronize: false }
+        }
+    })
+
+    network.pluck(register.sync, { to: '6' }).forEach(receive)
+    dump(network.denizens[2].inspect())
+    dump(network.denizens[6].inspect())
+    dump(network.denizens[7].inspect())
     return
-    network.send('2', { accept: { message: { method: 'accept' } } }).accept.forEach(receive)
+    network.pluck(register.sync, { to: '6' }).forEach(receive)
 
     dump(network.denizens[6].inspect())
-    dump(network.denizens[2].inspect())
-   // var register = network.send('2', { sync: { message: { method: 'register' } } })
-    var register = network.send('2', { sync: { from: '2' } })
-    dump(network.denizens[6].inspect())
-    dump(register)
+    dump(network.denizens[7].inspect())
+
+    return
+
     register.sync.forEach(receive)
     // dump(network.denizens[6].inspect())
 
