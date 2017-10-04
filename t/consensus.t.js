@@ -158,7 +158,7 @@ function prove (okay) {
     network.populate(1)
 
     shifter.join(function (envelope) {
-        return envelope.method == 'government'
+        return envelope.government != null
     }, function (error, envelope) {
         if (error) throw error
         okay({

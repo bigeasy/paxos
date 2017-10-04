@@ -1003,6 +1003,8 @@ Paxos.prototype._commit = function (now, entry, top) {
     assert(isGovernment || Monotonic.increment(top, 1) == entry.promise)
     logger.info('enact', { isGovernment: isGovernment, $entry: entry })
 
+    var government = null
+
     if (isGovernment) {
         assert(Monotonic.compare(this.government.promise, entry.promise) < 0, 'governments out of order')
         Government.advance(this.government, entry)
@@ -1011,10 +1013,13 @@ Paxos.prototype._commit = function (now, entry, top) {
         this.citizens = this.government.majority
                             .concat(this.government.minority)
                             .concat(this.government.constituents)
+
+        government = JSON.parse(JSON.stringify(this.government))
     }
 
     this.log.push({
         module: 'paxos',
+        government: government,
         method: isGovernment ? 'government' : 'entry',
         promise: entry.promise,
         body: entry.body,
