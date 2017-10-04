@@ -121,8 +121,7 @@ Network.prototype.push = function () {
     var denizen = new Paxos(this.time, 1, id, {
         parliamentSize: 5,
         ping: 1,
-        timeout: 3,
-        naturalized: true
+        timeout: 3
     })
     denizen.scheduler.events.shifter().pump(denizen.event.bind(denizen))
     denizen.shifter = denizen.outbox.shifter()
@@ -134,8 +133,7 @@ Network.prototype.reboot = function (i, republic) {
     var denizen = new Paxos(this.time, coalesce(republic, 1), id, {
         parliamentSize: 5,
         ping: 1,
-        timeout: 3,
-        naturalized: true
+        timeout: 3
     })
     denizen.scheduler.events.shifter().pump(denizen.event.bind(denizen))
     denizen.shifter = denizen.outbox.shifter()
@@ -149,7 +147,7 @@ Network.prototype.bootstrap = function () {
 
 Network.prototype.immigrate = function (i) {
     var denizen = this.denizens[i]
-    this.denizens[0].immigrate(this.time, 1, denizen.id, denizen.cookie, { location: denizen.id })
+    this.denizens[0].immigrate(this.time, 1, denizen.id, denizen.cookie, { location: denizen.id }, true)
 }
 
 Network.prototype.populate = function (count) {

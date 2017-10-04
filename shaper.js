@@ -73,6 +73,9 @@ function Shaper (parliamentSize, government, recovered) {
     this._governments = []
     this.outbox = {}
     this._representative = null
+    this._shouldNaturalize = this._government.majority.length +
+        this._government.minority.length +
+        this._government.constituents.length != this._government.naturalized.length
     this._shouldRecover(recovered) || this._shouldContract()
 }
 
@@ -123,6 +126,29 @@ Shaper.prototype.unreachable = function (unreachable) {
             majority: this._government.majority,
             minority: this._government.minority.filter(function ($id) { return $id != id }),
             exile: id
+        }
+    }
+}
+
+Shaper.prototype.naturalize = function (promise) {
+    if (this.decided) {
+        return null
+    }
+
+    var government = this._government
+
+    var id = government.immigrated.id[promise]
+    assert(id != null, 'unable to determine naturalize id')
+
+
+    assert(!~government.naturalized.indexOf(id), 'already naturalized')
+
+    return this._governments.shift() || {
+        quorum: this._government.majority,
+        government: {
+            majority: this._government.majority,
+            minority: this._government.minority,
+            naturalize: id
         }
     }
 }
@@ -226,6 +252,13 @@ Shaper.prototype._immigration = function () {
         }
     }
     return null
+}
+
+Shaper.null = {
+    unreachable: function () { return null },
+    naturalize: function () { return null },
+    immigrated: function () { return null },
+    _immigrating: []
 }
 
 module.exports = Shaper

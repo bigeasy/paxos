@@ -97,6 +97,8 @@ function Paxos (now, republic, id, options) {
     this._minimums = {}
     this._minimums[this.id] = this._minimum
 
+    this._naturalizing = {}
+
     // Network message queue.
     this.outbox = new Procession
 
@@ -309,7 +311,7 @@ Paxos.prototype.enqueue = function (now, republic, message) {
 // until the proposal was enacted.
 
 //
-Paxos.prototype.immigrate = function (now, republic, id, cookie, properties) {
+Paxos.prototype.immigrate = function (now, republic, id, cookie, properties, naturalized) {
     var response = this._enqueuable(republic)
     if (response == null) {
         // Do not allow the user to initiate the immigration of an id that
@@ -325,10 +327,14 @@ Paxos.prototype.immigrate = function (now, republic, id, cookie, properties) {
             }
         } else {
             response = { enqueued: true }
-            this._reshape(now, this._shaper.immigrate({ id: id, properties: properties, cookie: cookie, naturalized: true }))
+            this._reshape(now, this._shaper.immigrate({ id: id, properties: properties, cookie: cookie, naturalized: naturalized }))
         }
     }
     return response
+}
+
+Paxos.prototype.naturalize = function () {
+    this._naturalizing[this.government.immigrated.promise[this.id]] = true
 }
 
 // ### Scheduled Events
@@ -681,6 +687,7 @@ Paxos.prototype.request = function (now, request) {
         sync: this._sync(committed),
         government: this.government.promise,
         minimum: this._minimum,
+        naturalizing: this._naturalizing,
         unreachable: this._unreachable
     }
 }
@@ -813,6 +820,13 @@ Paxos.prototype.response = function (now, cookie, responses) {
             if (!this._unreachable[unreachable]) {
                 this._unreachable[unreachable] = true
                 this._reshape(now, this._shaper.unreachable(unreachable))
+            }
+        }
+
+        for (var naturalizing in response.naturalizing) {
+            if (!this._naturalizing[naturalizing]) {
+                this._naturalizing[naturalizing] = true
+                this._reshape(now, this._shaper.naturalize(naturalizing))
             }
         }
 
@@ -1033,6 +1047,13 @@ Paxos.prototype._commit = function (now, entry, top) {
             }
         }
 
+        for (var naturalizing in this._naturalizing) {
+            var id = this.government.immigrated.id[naturalizing]
+            if (!~this.citizens.indexOf(id) || ~this.government.naturalized.indexOf(id)) {
+                delete this._naturalizing[naturalizing]
+            }
+        }
+
         this._writer = this._writer.createWriter(entry.promise)
         this._recorder = this._recorder.createRecorder(entry.promise)
 
@@ -1051,14 +1072,14 @@ Paxos.prototype._commit = function (now, entry, top) {
             for (var promise in this._unreachable) {
                 this._reshape(now, shaper.unreachable(promise))
             }
+            for (var promise in this._naturalizing) {
+                this._reshape(now, shaper.naturalize(promise))
+            }
             this.citizens.forEach(function (id) {
                 this._reshape(now, shaper.naturalized(id))
             }, this)
         } else {
-            this._shaper = {
-                unreachable: function () {},
-                _immigrating: []
-            }
+            this._shaper = Shaper.null
         }
 
         if (~this.government.majority.indexOf(this.id)) {

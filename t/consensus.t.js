@@ -1,4 +1,4 @@
-require('proof')(17, prove)
+require('proof')(19, prove)
 
 function prove (okay) {
     var Paxos = require('..'), denizen
@@ -23,8 +23,7 @@ function prove (okay) {
     }, 'bootstrap')
 
     network.push()
-
-    okay(network.denizens[0].immigrate(network.time, 1, '1', network.denizens[1].cookie, { location: '1' }).enqueued, 'immigrate')
+    okay(network.denizens[0].immigrate(network.time, 1, '1', network.denizens[1].cookie, { location: '1' }, true).enqueued, 'immigrate')
 
     network.send()
 
@@ -44,7 +43,10 @@ function prove (okay) {
         }
     }, 'leader and constituent pair')
 
-    network.populate(1)
+    network.push()
+    // TODO Turn off immigration and ensure that it is not able to join the
+    // government.
+    network.denizens[0].immigrate(network.time, 1, '2', network.denizens[2].cookie, { location: '2' }, true)
 
     network.send()
 
@@ -331,10 +333,70 @@ function prove (okay) {
 
     network.denizens[7].inspect()
 
-    network.time += 4
+    network.push()
+    network.denizens[3].immigrate(network.time, 1, '9', network.denizens[9].cookie, { location: '9' })
+    network.push()
+    network.denizens[3].immigrate(network.time, 1, '10', network.denizens[10].cookie, { location: '10' })
+
+    network.send()
+
+    okay(network.denizens[3].government, {
+        promise: '1b/0',
+        majority: [ '3', '0', '2' ],
+        minority: [ '6', '7' ],
+        naturalized: [ '0', '2', '3', '6', '7' ],
+        constituents: [ '9', '10' ],
+        immigrated: {
+            id: { '1/0': '0', '3/0': '2', '5/0': '3', 'd/0': '6', 'e/0': '7', '1a/0': '9', '1b/0': '10' },
+            promise: { '0': '1/0', '2': '3/0', '3': '5/0', '6': 'd/0', '7': 'e/0', '9': '1a/0', '10': '1b/0' }
+        },
+        properties: {
+            '0': { location: '0' },
+            '2': { location: '2' },
+            '3': { location: '3' },
+            '6': { location: '6' },
+            '7': { location: '7' },
+            '9': { location: '9' },
+            '10': { location: '10' }
+        }
+    }, 'immigrate without naturalization')
+
+    network.denizens[9].naturalize()
+    network.denizens[10].naturalize()
+
+    network.time += 1
+
+    network.send()
+
+    network.time += 1
+
+    network.send()
+
+    okay(network.denizens[3].government, {
+        promise: '1d/0',
+        majority: [ '3', '0', '2' ],
+        minority: [ '6', '7' ],
+        naturalized: [ '0', '2', '3', '6', '7', '9', '10' ],
+        constituents: [ '9', '10' ],
+        immigrated: {
+            id: { '1/0': '0', '3/0': '2', '5/0': '3', 'd/0': '6', 'e/0': '7', '1a/0': '9', '1b/0': '10' },
+            promise: { '0': '1/0', '2': '3/0', '3': '5/0', '6': 'd/0', '7': 'e/0', '9': '1a/0', '10': '1b/0' }
+        },
+        properties: {
+            '0': { location: '0' },
+            '2': { location: '2' },
+            '3': { location: '3' },
+            '6': { location: '6' },
+            '7': { location: '7' },
+            '9': { location: '9' },
+            '10': { location: '10' }
+        }
+    }, 'naturalized')
 
     // Set it up so that the proposers do not make proposals to one another
     // since that's how I've always sketched it out on paper.
+    network.time += 4
+
     network.send('0', [ '2' ], [ '3' ])
     network.send('2', [ '0' ], [ '3' ])
     network.send(1, '3', [ '0' ], [ '2' ])
@@ -401,7 +463,6 @@ function prove (okay) {
     })
 
     network.pluck(register.sync, { to: '6' }).forEach(receive)
-    dump(network.denizens[2].inspect())
     dump(network.denizens[6].inspect())
     dump(network.denizens[7].inspect())
     return
