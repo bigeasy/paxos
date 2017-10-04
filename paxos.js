@@ -951,8 +951,6 @@ Paxos.prototype._commit = function (now, entry, top) {
     if (isGovernment) {
         this.scheduler.clear()
 
-        this._cue = null
-
         // If we collapsed and ran Paxos we would have carried on regardless of
         // unreachability until we made progress. During Paxos we ignore
         // unreacability so we delete it here in case we happened to make
