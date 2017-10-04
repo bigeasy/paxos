@@ -108,12 +108,13 @@ Shaper.prototype._shouldContract = function () {
     }
 }
 
-Shaper.prototype.unreachable = function (id) {
-    assert(id != null, 'unreachable id is null')
-
+Shaper.prototype.unreachable = function (unreachable) {
     if (this.decided) {
         return null
     }
+
+    var id = this._government.immigrated.id[unreachable]
+    assert(id != null, 'unable to determine unreachable id')
 
     // Exile any unreachable citizen.
     return this._governments.shift() || {

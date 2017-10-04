@@ -812,7 +812,7 @@ Paxos.prototype.response = function (now, cookie, responses) {
         for (var unreachable in response.unreachable) {
             if (!this._unreachable[unreachable]) {
                 this._unreachable[unreachable] = true
-                this._reshape(now, this._shaper.unreachable(this.government.immigrated.id[unreachable]))
+                this._reshape(now, this._shaper.unreachable(unreachable))
             }
         }
 
@@ -1049,7 +1049,7 @@ Paxos.prototype._commit = function (now, entry, top) {
                 shaper.immigrated(entry.body.immigrate.id)
             }
             for (var promise in this._unreachable) {
-                this._reshape(now, shaper.unreachable(this.government.immigrated.id[promise]))
+                this._reshape(now, shaper.unreachable(promise))
             }
             this.citizens.forEach(function (id) {
                 this._reshape(now, shaper.naturalized(id))
