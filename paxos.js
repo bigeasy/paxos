@@ -752,7 +752,7 @@ Paxos.prototype.response = function (now, cookie, responses) {
         // Update set of unreachable citizens.
         for (var unreachable in response.unreachable) {
             if (!this._unreachable[unreachable]) {
-                this._unreachable[unreachable] = response.unreachable[unreachable]
+                this._unreachable[unreachable] = true
                 this._reshape(now, this._shaper.unreachable(this.government.immigrated.id[unreachable]))
             }
         }
