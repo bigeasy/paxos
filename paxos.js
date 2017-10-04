@@ -625,7 +625,8 @@ Paxos.prototype.request = function (now, request) {
             if (request.sync.commits.length == 0) {
                 return {
                     message: { method: 'respond', promise: '0/0' },
-                    sync: this._sync(null)
+                    sync: this._sync(null),
+                    government: null
                 }
             }
             if (
@@ -678,18 +679,29 @@ Paxos.prototype.request = function (now, request) {
     return {
         message: message,
         sync: this._sync(committed),
+        government: this.government.promise,
         minimum: this._minimum,
         unreachable: this._unreachable
     }
 }
 
 Paxos.prototype.response = function (now, cookie, responses) {
+    // We only process messages if the government that generated them is the
+    // same as our current governent. This is so that promises match ids
+    // correctly, so that we're not processing an old message with out of date
+    // id to promise mappings or missing mappings. We make an exception for a
+    // successful network connection, which we use to delete a disappered flag.
+
+    //
     var message = cookie.message
     for (var i = 0, I = message.to.length; i < I; i++) {
         // Deduce receipent properties.
         var id = message.to[i]
         var response = responses[id]
         var promise = this.government.immigrated.promise[id]
+        // If the citizen is unreachable we create a dummy record that uses our
+        // current government for the government promise and a bunch of
+        // defaults so that it will pass through the logic.
         if (
             response == null ||
             response.message.method == 'unreachable' ||
@@ -703,13 +715,16 @@ Paxos.prototype.response = function (now, cookie, responses) {
                 message: { method: 'unreachable', promise: '0/0' },
                 sync: { committed: null, commits: [] },
                 minimum: null,
-                unreachable: {}
+                unreachable: {},
+                government: this.government.promise
             }
         } else {
-            delete this._disappeared[promise]
+            delete this._disappeared[coalesce(promise, '0/0')]
         }
     }
 
+    // We stop if we've received a new government since this message has been
+    // sent.
     if (
         cookie.government != this.government.promise ||
         cookie.collapsed != this._writer.collapsed
@@ -742,12 +757,56 @@ Paxos.prototype.response = function (now, cookie, responses) {
             break
         }
 
+        // Record the receipient's most committed message.
         if (response.sync.committed != null) {
             this._committed[promise] = response.sync.committed
         }
 
         // Synchronize commits.
         this._synchronize(now, response.sync.commits)
+    }
+
+    // If we have been updated with a new government by the citizen we've
+    // tried to update, then we should let the new government take effect.
+    if (
+        cookie.government != this.government.promise ||
+        cookie.collapsed != this._writer.collapsed
+    ) {
+        return
+    }
+
+    // TODO Make a not to yourself somewhere, probably in tests, that if you do
+    // want to deal with tricksy messages then testing is simple. At this point,
+    // you're trying to winnow down conditions by breaking up operations and
+    // guarding them on pre-conditions. The one on your mind now is that if you
+    // want to do something that requires translating a promise to an id or
+    // vice-versa, then you're going to need to have the goverment that was
+    // active when that promise or id was posited.
+
+    // You'll forget this but, when you do add checks to validate the structure
+    // of a message you will test it by calling these methods directly. Testing
+    // that sort of thing would be simple. First, though, you want to create the
+    // happy path and see that it is covered. Then you have to descide if you
+    // want to protect against malicious messages or if you're going to assume
+    // that you're on an secure network.
+
+    // The following operations assume that the citizen we're talking too is
+    // operating under the same government as ourselves. We want promise or id
+    // look ups to not return null.
+
+    //
+    for (var i = 0, I = message.to.length; i < I; i++) {
+        // Deduce receipent properties.
+        var id = message.to[i]
+        var response = responses[id]
+        var promise = this.government.immigrated.promise[id]
+
+        // If the message was generated using government information that does
+        // not match our current government, do not use it to update our
+        // housekeeping state.
+        if (this.government.promise != response.government) {
+            continue
+        }
 
         // Update set of unreachable citizens.
         for (var unreachable in response.unreachable) {

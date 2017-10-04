@@ -109,7 +109,9 @@ Shaper.prototype._shouldContract = function () {
 }
 
 Shaper.prototype.unreachable = function (id) {
-    if (this.decided || id == null) {
+    assert(id != null, 'unreachable id is null')
+
+    if (this.decided) {
         return null
     }
 
