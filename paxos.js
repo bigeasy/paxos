@@ -966,6 +966,12 @@ Paxos.prototype._commit = function (now, entry, top) {
             for (var i = 0, id; (id = this.government.minority[i]) != null; i++) {
                 delete this._unreachable[this.government.immigrated.promise[id]]
             }
+        } else {
+            for (var unreachable in this._unreachable) {
+                if (!(unreachable in this.government.immigrated.id)) {
+                    delete this._unreachable[unreachable]
+                }
+            }
         }
 
         this._writer = this._writer.createWriter(entry.promise)
