@@ -1154,6 +1154,14 @@ Paxos.prototype._commit = function (now, entry, top) {
             this.scheduler.schedule(now, id, { method: 'synchronize', to: [ id ] })
         }
     }
+
+    if (this.id == this.government.majority[0]) {
+        this.scheduler.schedule(now, this.id, {
+            method: 'synchronize',
+            to: this.government.majority,
+            collapsible: true
+        })
+    }
 }
 
 Paxos.prototype.inspect = function () {
