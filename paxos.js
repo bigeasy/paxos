@@ -596,6 +596,7 @@ Paxos.prototype._send = function (message) {
         envelopes.push({
             from: this.id,
             to: to,
+            properties: this.government.properties[to],
             cookie: cookie,
             request: {
                 message: message,
@@ -611,6 +612,7 @@ Paxos.prototype._send = function (message) {
     // envelope or the entire send structure.
     this.outbox.push({
         from: this.id,
+        properties: this.government.properties[this.id],
         cookie: cookie,
         responses: responses,
         envelopes: envelopes
