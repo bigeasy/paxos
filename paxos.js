@@ -1090,7 +1090,7 @@ Paxos.prototype._commit = function (now, entry, top) {
         }
 
         if (~this.government.majority.indexOf(this.id)) {
-            this.scheduler.schedule(now + this.ping, this.id, {
+            this.scheduler.schedule(now + this.timeout, this.id, {
                 module: 'paxos',
                 method: 'collapse',
                 body: null
