@@ -334,7 +334,9 @@ Paxos.prototype.immigrate = function (now, republic, id, cookie, properties, nat
 }
 
 Paxos.prototype.naturalize = function () {
-    this._naturalizing[this.government.immigrated.promise[this.id]] = true
+    if (!~this.government.naturalized.indexOf(this.id)) {
+        this._naturalizing[this.government.immigrated.promise[this.id]] = true
+    }
 }
 
 // ### Scheduled Events
