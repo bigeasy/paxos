@@ -257,7 +257,6 @@ Shaper.prototype._immigration = function () {
 Shaper.null = {
     unreachable: function () { return null },
     naturalize: function () { return null },
-    immigrated: function () { return null },
     _immigrating: []
 }
 
