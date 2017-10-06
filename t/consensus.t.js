@@ -361,6 +361,9 @@ function prove (okay) {
         }
     }, 'immigrate without naturalization')
 
+    // This exercises the already naturalized branch of `Paxos.naturalize`.
+    network.denizens[3].naturalize()
+
     network.denizens[9].naturalize()
     network.denizens[10].naturalize()
 
