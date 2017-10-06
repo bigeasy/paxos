@@ -879,8 +879,6 @@ Paxos.prototype.response = function (now, cookie, responses) {
 
     if (collapsible && message.collapsible) {
         this._writer.collapse(now, message, responses)
-    } else {
-        collapsible = false
     }
 
     if (
@@ -903,38 +901,43 @@ Paxos.prototype.response = function (now, cookie, responses) {
     // Consistuent synchronize messages are sent to each constituent
     // individually.
     //
-    // TODO This is new. Pings keep on going. When you start one it will
-    // perpetuate until the government is superceeded. If you want to
-    // synchronize before a ping, simply schedule the ping immediately. If there
-    // is an outstanding ping when you jump the gun, that's fine. Pings are
-    // pretty much always valid. Won't this duplicate mean you now have two ping
-    // intervals? No. The duplicate messaging will be reduced when the next ping
-    // gets scheduled because you can only have one scheduled per key.
+    // TODO This is new.
+
+    // Pings keep on going. When you start one it will perpetuate until the
+    // government is superceeded. If you want to synchronize before a ping,
+    // simply schedule the ping immediately. If there is an outstanding ping
+    // when you jump the gun, that's fine. Pings are pretty much always valid.
+    // Won't this duplicate mean you now have two ping intervals? No. The
+    // duplicate messaging will be reduced when the next ping gets scheduled
+    // because you can only have one scheduled per key.
 
     //
     if (message.method == 'synchronize') {
-        // Immediately continue sync if our constituent is not completely
-        // synced. Note that majority members are never behind by more than one,
-        // so they always successfully sync. This is why we only check the first
-        // response, because only a constituent sync can fail to successfully
-        // sync. TODO How do we detect a failed immigration race again?
-        //
-        // Node that a `null` value for `committed` indicates a network timeout
-        // which is set above in the response refactoring.
+        // How long to wait before our next ping.
         var delay = 0
+
+        // Use the ping interval if the citizen is unreachable or if it is
+        // already up to date.
         if (
-            ~([ null, this.log.head.body.promise ]).indexOf(responses[message.to[0]].sync.committed)
+            collapsible ||
+            this.log.head.body.promise == responses[message.to[0]].sync.committed
         ) {
             delay = this.ping
         }
 
-        // Schedule the next synchronization if it is not a keep alive pulse or
-        // if it is a keep alive pulse and we have not collapsed.
-        if (message.key != this.id || ! this._writer.collapsed) {
-            this.scheduler.schedule(now + delay, message.key, {
-                method: 'synchronize', to: message.to, collapsible: message.collapsible
-            })
-        }
+        // TODO Come back and consider this so you know that it is true.
+
+        // Syncronizations live for the life of a government. We are not going
+        // to double up or otherwise accumulate pings. They will be created by
+        // with the promise of the government registered by the commit. If there
+        // is a change of government the response won't get beyond the first
+        // exit of this function.
+
+        // A keep alive might collapse the government, but it would then take
+        // the last exit of this function before rescheduling itself.
+        this.scheduler.schedule(now + delay, message.key, {
+            method: 'synchronize', to: message.to, collapsible: message.collapsible
+        })
     } else if (!collapsible) {
         if (cookie.synchronize) {
             this._send(cookie.message)
@@ -1153,7 +1156,7 @@ Paxos.prototype._commit = function (now, entry, top) {
     // leader of a government that is not a dictatorship.
     if (this.id != this.government.majority[0] || this.government.majority.length == 1) {
         for (var i = 0, id; (id = this.constituency[i]) != null; i++) {
-            this.scheduler.schedule(now, id, { method: 'synchronize', to: [ id ] })
+            this.scheduler.schedule(now, id, { method: 'synchronize', to: [ id ], collapsible: false })
         }
     }
 
