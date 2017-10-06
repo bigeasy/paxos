@@ -1084,7 +1084,7 @@ Paxos.prototype._commit = function (now, entry, top) {
             for (var promise in this._naturalizing) {
                 this._reshape(now, shaper.naturalize(promise))
             }
-            this.citizens.forEach(function (id) {
+            this.government.naturalized.forEach(function (id) {
                 this._reshape(now, shaper.naturalized(id))
             }, this)
         } else {
