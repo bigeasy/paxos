@@ -432,6 +432,7 @@ Paxos.prototype.event = function (envelope) {
 
 //
 Paxos.prototype._prepare = function (now, request, sync) {
+    // TODO Always, really? Let the acceptor decide when to replace itself.
     this._recorder = new Acceptor(this)
     return this._recorder.request(now, request, sync)
 }
