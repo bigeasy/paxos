@@ -1,4 +1,4 @@
-require('proof')(19, prove)
+require('proof')(21, prove)
 
 function prove (okay) {
     var Paxos = require('..'), denizen
@@ -395,6 +395,70 @@ function prove (okay) {
             '10': { location: '10' }
         }
     }, 'naturalized')
+
+    network.push()
+    network.denizens[3].immigrate(network.time, 1, '11', network.denizens[11].cookie, { location: '11' })
+
+    network.send()
+
+    okay(network.denizens[3].government, {
+        promise: '1e/0',
+        majority: [ '3', '0', '2' ],
+        minority: [ '6', '7' ],
+        naturalized: [ '0', '2', '3', '6', '7', '9', '10' ],
+        constituents: [ '9', '10', '11' ],
+        immigrated: {
+            id: { '1/0': '0', '3/0': '2', '5/0': '3', 'd/0': '6', 'e/0': '7', '1a/0': '9', '1b/0': '10', '1e/0': '11' },
+            promise: { '0': '1/0', '2': '3/0', '3': '5/0', '6': 'd/0', '7': 'e/0', '9': '1a/0', '10': '1b/0', '11': '1e/0' }
+        },
+        properties: {
+            '0': { location: '0' },
+            '2': { location: '2' },
+            '3': { location: '3' },
+            '6': { location: '6' },
+            '7': { location: '7' },
+            '9': { location: '9' },
+            '10': { location: '10' },
+            '11': { location: '11' }
+        }
+    }, 'not yet naturalized')
+
+    network.time += 1
+
+    network.send([ '11' ])
+
+    network.time += 1
+
+    network.send([ '11' ])
+
+    network.time += 2
+
+    network.send([ '11' ])
+
+    network.time += 1
+
+    network.send()
+
+    okay(network.denizens[3].government, {
+        promise: '1f/0',
+        majority: [ '3', '0', '2' ],
+        minority: [ '6', '7' ],
+        naturalized: [ '0', '2', '3', '6', '7', '9', '10' ],
+        constituents: [ '9', '10' ],
+        immigrated: {
+            id: { '1/0': '0', '3/0': '2', '5/0': '3', 'd/0': '6', 'e/0': '7', '1a/0': '9', '1b/0': '10' },
+            promise: { '0': '1/0', '2': '3/0', '3': '5/0', '6': 'd/0', '7': 'e/0', '9': '1a/0', '10': '1b/0' }
+        },
+        properties: {
+            '0': { location: '0' },
+            '2': { location: '2' },
+            '3': { location: '3' },
+            '6': { location: '6' },
+            '7': { location: '7' },
+            '9': { location: '9' },
+            '10': { location: '10' }
+        }
+    }, 'exiled before naturalized')
 
     // Set it up so that the proposers do not make proposals to one another
     // since that's how I've always sketched it out on paper.

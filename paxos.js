@@ -735,6 +735,8 @@ Paxos.prototype.response = function (now, cookie, responses) {
         }
     }
 
+    // TODO Why was it important that we keep pinging constituents while we are
+    // negotiating a new government? Because it's not happening now.
     // We stop if we've received a new government since this message has been
     // sent.
     if (
