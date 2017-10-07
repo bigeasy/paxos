@@ -25,33 +25,23 @@
                 </a>
 
 
-                <a class="source" href="assembly.js.html">
-                  assembly.js
-                </a>
-
-
                 <a class="source" href="completion.js.html">
                   completion.js
                 </a>
 
 
-                <a class="source" href="legislator.js.html">
-                  legislator.js
+                <a class="source" href="constituency.js.html">
+                  constituency.js
                 </a>
 
 
-                <a class="source" href="log.js.html">
-                  log.js
+                <a class="source" href="government.js.html">
+                  government.js
                 </a>
 
 
                 <a class="source" href="paxos.js.html">
                   paxos.js
-                </a>
-
-
-                <a class="source" href="pinger.js.html">
-                  pinger.js
                 </a>
 
 
@@ -65,23 +55,8 @@
                 </a>
 
 
-                <a class="source" href="redux.js.html">
-                  redux.js
-                </a>
-
-
-                <a class="source" href="relay.js.html">
-                  relay.js
-                </a>
-
-
                 <a class="source" href="replay.js.html">
                   replay.js
-                </a>
-
-
-                <a class="source" href="shape.js.html">
-                  shape.js
                 </a>
 
 
@@ -119,51 +94,80 @@
             </div>
 
             <div class="content"><div class='highlight'><pre><span class="hljs-keyword">var</span> Recorder = <span class="hljs-built_in">require</span>(<span class="hljs-string">'./recorder'</span>)
-<span class="hljs-keyword">var</span> Monotonic = <span class="hljs-built_in">require</span>(<span class="hljs-string">'monotonic'</span>)
+<span class="hljs-keyword">var</span> Monotonic = <span class="hljs-built_in">require</span>(<span class="hljs-string">'monotonic'</span>).asString
 
 <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Acceptor</span> (<span class="hljs-params">paxos</span>) </span>{
-    <span class="hljs-keyword">this</span>.register = <span class="hljs-literal">null</span>
+    <span class="hljs-keyword">this</span>.register = paxos._writer.register || {
+        <span class="hljs-attr">body</span>: paxos.log.head.body,
+        <span class="hljs-attr">previous</span>: <span class="hljs-literal">null</span>
+    }
+    <span class="hljs-keyword">this</span>.promise = paxos.log.head.body.promise
     <span class="hljs-keyword">this</span>._paxos = paxos
 }
 
-Acceptor.prototype.request = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">now, message, sync</span>) </span>{
+Acceptor.prototype.request = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">now, message</span>) </span>{
     <span class="hljs-keyword">switch</span> (message.method) {
     <span class="hljs-keyword">case</span> <span class="hljs-string">'prepare'</span>:
-        <span class="hljs-keyword">if</span> (Monotonic.compare(<span class="hljs-keyword">this</span>._paxos.promise, message.promise) &lt; <span class="hljs-number">0</span>) {
-            <span class="hljs-keyword">this</span>._paxos.promise = message.promise
+        <span class="hljs-keyword">if</span> (Monotonic.compare(<span class="hljs-keyword">this</span>.promise, message.promise) &lt; <span class="hljs-number">0</span>) {
+            <span class="hljs-keyword">this</span>.promise = message.promise
             <span class="hljs-keyword">return</span> {
                 <span class="hljs-attr">method</span>: <span class="hljs-string">'promise'</span>,
-                <span class="hljs-attr">promise</span>: <span class="hljs-keyword">this</span>._paxos.promise,
-                <span class="hljs-attr">previous</span>: <span class="hljs-keyword">this</span>.register,
-                <span class="hljs-attr">sync</span>: sync
+                <span class="hljs-attr">promise</span>: <span class="hljs-keyword">this</span>.promise,
+                <span class="hljs-attr">register</span>: <span class="hljs-keyword">this</span>.register
             }
         }
+        <span class="hljs-keyword">break</span>
     <span class="hljs-keyword">case</span> <span class="hljs-string">'accept'</span>:
-        <span class="hljs-keyword">if</span> (Monotonic.compare(<span class="hljs-keyword">this</span>._paxos.promise, message.promise) == <span class="hljs-number">0</span>) {
-            <span class="hljs-keyword">this</span>.register = {
-                <span class="hljs-attr">promise</span>: message.promise,
+        <span class="hljs-keyword">if</span> (Monotonic.compare(<span class="hljs-keyword">this</span>.promise, message.body.promise) == <span class="hljs-number">0</span>) {
+            <span class="hljs-keyword">var</span> register = {
                 <span class="hljs-attr">body</span>: message.body,
                 <span class="hljs-attr">previous</span>: message.previous
             }
-            <span class="hljs-keyword">return</span> { <span class="hljs-attr">method</span>: <span class="hljs-string">'accepted'</span>, <span class="hljs-attr">promise</span>: <span class="hljs-keyword">this</span>._paxos.promise, <span class="hljs-attr">sync</span>: sync }
+            <span class="hljs-keyword">this</span>.register = register
+            <span class="hljs-keyword">this</span>.promise = register.body.promise
+            <span class="hljs-keyword">return</span> { <span class="hljs-attr">method</span>: <span class="hljs-string">'accepted'</span>, <span class="hljs-attr">promise</span>: <span class="hljs-keyword">this</span>.promise }
         }
-    <span class="hljs-keyword">case</span> <span class="hljs-string">'commit'</span>:
-        <span class="hljs-keyword">if</span> (Monotonic.compare(<span class="hljs-keyword">this</span>._paxos.promise, message.promise) == <span class="hljs-number">0</span>) {
-            <span class="hljs-keyword">this</span>._paxos._commit(now, <span class="hljs-keyword">this</span>.register)
-            sync.committed = <span class="hljs-keyword">this</span>.register.promise
-            <span class="hljs-keyword">return</span> { <span class="hljs-attr">method</span>: <span class="hljs-string">'committed'</span>, <span class="hljs-attr">promise</span>: <span class="hljs-keyword">this</span>._paxos.promise, <span class="hljs-attr">sync</span>: sync }
-        }
+        <span class="hljs-keyword">break</span>
     }
-    <span class="hljs-keyword">return</span> { <span class="hljs-attr">method</span>: <span class="hljs-string">'reject'</span>, <span class="hljs-attr">promise</span>: <span class="hljs-keyword">this</span>._paxos.promise, <span class="hljs-attr">sync</span>: sync }
+    <span class="hljs-keyword">return</span> { <span class="hljs-attr">method</span>: <span class="hljs-string">'reject'</span>, <span class="hljs-attr">promise</span>: <span class="hljs-keyword">this</span>.promise }
 }
 
 Acceptor.prototype.createRecorder = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">promise</span>) </span>{
-    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Recorder(<span class="hljs-keyword">this</span>._paxos, promise)
+    <span class="hljs-keyword">var</span> entries = [], register = <span class="hljs-keyword">this</span>.register
+    <span class="hljs-keyword">while</span> (register) {
+        entries.push(register.body)
+        register = register.previous
+    }
+
+    entries.reverse()
+
+    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">1</span>, I = entries.length - <span class="hljs-number">1</span>; i &lt; I; i++) {
+        <span class="hljs-keyword">if</span> (entries[i].promise == promise) {
+            <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>
+        }
+    }</pre></div></div>
+
+        </li>
+
+
+        <li id="section-2">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <p>TODO Does it matter if the promise is off? Or only register contents?</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Recorder(<span class="hljs-keyword">this</span>._paxos)
 }
 
-<span class="hljs-built_in">module</span>.exports = Acceptor
+Acceptor.prototype.inspect = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+    <span class="hljs-keyword">return</span> { <span class="hljs-attr">type</span>: <span class="hljs-string">'Acceptor'</span>, <span class="hljs-attr">register</span>: <span class="hljs-keyword">this</span>.register }
+}
 
-</pre></div></div>
+<span class="hljs-built_in">module</span>.exports = Acceptor</pre></div></div>
 
         </li>
 
