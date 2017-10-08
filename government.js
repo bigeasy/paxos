@@ -25,19 +25,6 @@ exports.explode = function (government, entry) {
     return entry
 }
 
-function register (government, record, promise) {
-    government.immigrated.id[government.immigrated.promise[record.id]]
-    government.immigrated.promise[record.id] = promise
-    government.immigrated.id[promise] = record.id
-    government.properties[record.id] = record.properties
-}
-
-function unregister (government, id) {
-    delete government.immigrated.id[government.immigrated.promise[id]]
-    delete government.immigrated.promise[id]
-    delete government.properties[id]
-}
-
 exports.advance = function (government, entry) {
     government.promise = entry.promise
     government.majority = entry.body.majority
@@ -48,9 +35,14 @@ exports.advance = function (government, entry) {
         } else {
             government.constituents.push(entry.body.immigrate.id)
         }
-        register(government, entry.body.immigrate, entry.promise)
+        government.immigrated.id[government.immigrated.promise[entry.body.immigrate.id]]
+        government.immigrated.promise[entry.body.immigrate.id] = entry.promise
+        government.immigrated.id[entry.promise] = entry.body.immigrate.id
+        government.properties[entry.body.immigrate.id] = entry.body.immigrate.properties
     } else if (entry.body.exile != null) {
-        unregister(government, entry.body.exile.id)
+        delete government.immigrated.id[government.immigrated.promise[entry.body.exile.id]]
+        delete government.immigrated.promise[entry.body.exile.id]
+        delete government.properties[entry.body.exile.id]
         if ('constituents' in entry.body.exile.index) {
             government.constituents.splice(entry.body.exile.index.constituents, 1)
         }
@@ -66,35 +58,6 @@ exports.advance = function (government, entry) {
     }
     if (entry.body.naturalize != null) {
         government.naturalized.push(entry.body.naturalize)
-    }
-    return government
-}
-
-exports.retreat = function (government, entry, previous) {
-    government.promise = previous.promise
-    government.majority = previous.body.majority
-    government.minority = previous.body.minority
-    if (entry.body.immigrate != null) {
-        assert(government.constituents.pop() == entry.body.immigrate.id, 'unexpected immigration retreat')
-        unregister(government, entry.body.immigrate.id)
-    } else if (entry.body.exile != null) {
-        if (entry.body.exile.index.constituents != null) {
-            government.constituents.splice(entry.body.exile.index.constituents, 0, entry.body.exile.id)
-        }
-        if (entry.body.exile.index.naturalized != null) {
-            government.naturalized.splice(entry.body.exile.index.naturalized, 0, entry.body.exile.id)
-        }
-        register(government, entry.body.exile, entry.body.exile.promise)
-    } else if (entry.body.promote != null) {
-        var promote = entry.body.promote.slice().reverse()
-        for (var i = 0, promotion; (promotion = promote[i]) != null; i++) {
-            government.constituents.splice(promotion.index, 0, promotion.id)
-        }
-    } else if (entry.body.demote != null) {
-        assert(government.constituents.shift() == entry.body.demote, 'exile wrong demotion')
-    }
-    if (entry.body.naturalize != null) {
-        assert(government.naturalized.pop() == entry.body.naturalize, 'exile wrong naturalize')
     }
     return government
 }

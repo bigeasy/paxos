@@ -73,6 +73,8 @@ function Paxos (now, republic, id, options) {
         properties: {},
         immigrated: { id: {}, promise: {} }
     }
+    // Keep track of governments for bootstrapping.
+    this._governments = [ null ]
 
     // Last promise issued.
     this._promised = null
@@ -534,7 +536,7 @@ Paxos.prototype._sync = function (committed) {
 
 //
 Paxos.prototype._send = function (message) {
-    var envelopes = [], responses = {}, syncs = {}, synchronize = false
+    var envelopes = [], responses = {}, syncs = {}, synchronize = false, government = null
     var cookie = {
         message: message,
         synchronize: false,
@@ -565,26 +567,12 @@ Paxos.prototype._send = function (message) {
                 iterator = iterator.next
             }
 
-            var governments = []
-            while (iterator != null) {
-                if (Monotonic.isBoundary(iterator.body.promise, 0)) {
-                    governments.push(iterator.body)
+            for (var j = 1, J = this._governments.length; j < J; j++) {
+                if (this._governments[j].promise == iterator.body.promise) {
+                    government = this._governments[j - 1]
+                    break
                 }
-                iterator = iterator.next
             }
-
-            var government = JSON.parse(JSON.stringify(this.government))
-            for (var j = governments.length - 1; j != 0; j--) {
-                Government.retreat(government, governments[j], governments[j - 1])
-            }
-
-            Government.retreat(government, governments[0], {
-                promise: '0/0',
-                body: {
-                    majority: governments[0].majority,
-                    minority: governments[0].minority
-                }
-            })
         }
 
         syncs[to] = this._sync(committed)
@@ -669,7 +657,11 @@ Paxos.prototype.request = function (now, request) {
     } else {
         this._synchronize(now, request.sync.commits)
         while (Monotonic.compare(this.log.trailer.peek().promise, this._minimum.propagated) < 0) {
-            this.log.trailer.shift()
+            var entry = this.log.trailer.shift()
+            if (entry.government != null) {
+                assert(entry.promise == this._governments[1].promise, 'wrong government at shift time')
+                this._governments.shift()
+            }
         }
 
         if (
@@ -1025,6 +1017,7 @@ Paxos.prototype._commit = function (now, entry, top) {
                             .concat(this.government.constituents)
 
         government = JSON.parse(JSON.stringify(this.government))
+        this._governments.push(government)
     }
 
     this.log.push({

@@ -39,7 +39,7 @@ function Network () {
 }
 
 Network.prototype.request = function (envelope) {
-    envelope.responses[envelope.to] = this.denizens[envelope.to].request(this.time, envelope.request)
+    envelope.responses[envelope.to] = this.denizens[envelope.to].request(this.time, JSON.parse(JSON.stringify(envelope.request)))
 }
 
 Network.prototype.response = function (envelope) {
