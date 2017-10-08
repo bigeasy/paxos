@@ -1138,14 +1138,17 @@ Paxos.prototype._commit = function (now, entry, top) {
                 // version, well, the wrost you can do is get rid of informaiton
                 // that will once again materialize.
                 delete this._unreachable[this.government.immigrated.promise[id]]
+                delete this._disappeared[this.government.immigrated.promise[id]]
             }
             for (var i = 0, id; (id = this.government.minority[i]) != null; i++) {
                 delete this._unreachable[this.government.immigrated.promise[id]]
+                delete this._disappeared[this.government.immigrated.promise[id]]
             }
         } else {
             for (var unreachable in this._unreachable) {
                 if (!(unreachable in this.government.immigrated.id)) {
                     delete this._unreachable[unreachable]
+                    delete this._disappeared[unreachable]
                 }
             }
         }

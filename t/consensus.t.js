@@ -1,4 +1,4 @@
-require('proof')(23, prove)
+require('proof')(24, prove)
 
 function prove (okay) {
     var Paxos = require('..'), denizen
@@ -497,6 +497,8 @@ function prove (okay) {
     network.immigrate(12)
 
     network.send()
+
+    okay(network.denizens[6]._disappeared, {}, 'disappeared cleared')
 
     okay(network.denizens[12].government, {
         promise: '23/0',
