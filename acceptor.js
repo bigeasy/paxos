@@ -37,6 +37,10 @@ Acceptor.prototype.request = function (now, message) {
     return { method: 'reject', promise: this.promise }
 }
 
+Acceptor.prototype.createAcceptor = function (promise) {
+    return this
+}
+
 Acceptor.prototype.createRecorder = function (promise) {
     var entries = [], register = this.register
     while (register) {

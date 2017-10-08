@@ -447,13 +447,17 @@ Paxos.prototype.event = function (envelope) {
 
 // ### Collapse
 
+Paxos.prototype._createAcceptor = function () {
+    return new Acceptor(this)
+}
+
 // Called by a recorder when a prepare method is received to transition from a
 // two-phase commit recorder to a Paxos acceptor.
 
 //
 Paxos.prototype._prepare = function (now, request, sync) {
     // TODO Always, really? Let the acceptor decide when to replace itself.
-    this._recorder = new Acceptor(this)
+    this._recorder = this._recorder.createAcceptor()
     return this._recorder.request(now, request, sync)
 }
 
