@@ -1,5 +1,6 @@
 var Paxos = require('..')
 var coalesce = require('extant')
+var Monotonic = require('monotonic').asString
 
 function subSubset (container, contained) {
     if (typeof contained != 'object') {
@@ -147,7 +148,12 @@ Network.prototype.bootstrap = function () {
 
 Network.prototype.immigrate = function (i) {
     var denizen = this.denizens[i]
-    this.denizens[0].immigrate(this.time, 1, denizen.id, denizen.cookie, { location: denizen.id }, true)
+    var leader = this.denizens.map(function (denizen) {
+        return denizen.government
+    }).sort(function (left, right) {
+        return Monotonic.compare(left.promise, right.promise)
+    }).pop().majority[0]
+    this.denizens[leader].immigrate(this.time, 1, denizen.id, denizen.cookie, { location: denizen.id }, true)
 }
 
 Network.prototype.populate = function (count) {

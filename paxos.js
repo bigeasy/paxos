@@ -565,28 +565,35 @@ Paxos.prototype._send = function (message) {
         this.scheduler.unschedule(to)
 
         var promise = this.government.immigrated.promise[to]
-        var committed = this._committed[promise]
+        var committed = coalesce(this._committed[promise])
 
         if (committed == '0/0') {
+            var immigrations = []
             var iterator = this.log.trailer.node.next, previous
             for (;;) {
                 if (iterator == null) {
-                    responses[to] = null
-                    continue TO
+                    break
                 }
                 if (Monotonic.isBoundary(iterator.body.promise, 0)) {
                     var immigrate = iterator.body.body.immigrate
                     if (immigrate && immigrate.id == to) {
-                        committed = previous.body.promise
-                        break
+                        immigrations.push(iterator)
                     }
                 }
                 previous = iterator
                 iterator = iterator.next
             }
 
+            if (immigrations.length == 0) {
+                responses[to] = null
+                continue TO
+            }
+
+            var immigration = immigrations.pop()
+            committed = immigration.body.previous
+
             for (var j = 1, J = this._governments.length; j < J; j++) {
-                if (this._governments[j].promise == iterator.body.promise) {
+                if (this._governments[j].promise == immigration.body.promise) {
                     government = this._governments[j - 1]
                     break
                 }

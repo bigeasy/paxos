@@ -1,4 +1,4 @@
-require('proof')(21, prove)
+require('proof')(22, prove)
 
 function prove (okay) {
     var Paxos = require('..'), denizen
@@ -247,7 +247,6 @@ function prove (okay) {
         }
     }, 'reboot, exile and double immigrate')
 
-
     // Reject messages from a different republic.
     network.populate(1)
 
@@ -459,6 +458,46 @@ function prove (okay) {
             '10': { location: '10' }
         }
     }, 'exiled before naturalized')
+
+    network.populate(1)
+    var intercept = network.send('0', '2', '3',  '6', '7', { sync: [{ to: '9' }] })
+    network.time += 1
+    network.send([ '12' ])
+    network.time += 2
+    network.send([ '12' ])
+    network.time += 2
+    network.send([ '12' ])
+    network.time += 1
+    network.send([ '12' ])
+    network.time += 1
+    network.send([ '12' ])
+
+    network.reboot(12)
+    network.immigrate(12)
+
+    network.send()
+
+    okay(network.denizens[12].government, {
+        promise: '22/0',
+        majority: [ '3', '0', '2' ],
+        minority: [ '6', '7' ],
+        naturalized: [ '0', '2', '3', '6', '7', '9', '10', '12' ],
+        constituents: [ '9', '10', '12' ],
+        immigrated: {
+            id: { '1/0': '0', '3/0': '2', '5/0': '3', 'd/0': '6', 'e/0': '7', '1a/0': '9', '1b/0': '10', '22/0': '12' },
+            promise: { '0': '1/0', '2': '3/0', '3': '5/0', '6': 'd/0', '7': 'e/0', '9': '1a/0', '10': '1b/0', '12': '22/0' }
+        },
+        properties: {
+            '0': { location: '0' },
+            '2': { location: '2' },
+            '3': { location: '3' },
+            '6': { location: '6' },
+            '7': { location: '7' },
+            '9': { location: '9' },
+            '10': { location: '10' },
+            '12': { location: '12' }
+        }
+    }, 'use latest immigration to onboard')
 
     // Set it up so that the proposers do not make proposals to one another
     // since that's how I've always sketched it out on paper.
