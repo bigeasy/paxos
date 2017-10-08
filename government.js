@@ -1,5 +1,3 @@
-var assert = require('assert')
-
 exports.explode = function (government, entry) {
     if (entry.exile != null) {
         entry.exile = {
