@@ -31,7 +31,6 @@ var Recorder = require('./recorder')
 
 var departure = require('departure')
 var Constituency = require('./constituency')
-var Government = require('./government')
 
 // ### Constructor
 function Paxos (now, republic, id, options) {
@@ -157,7 +156,27 @@ Paxos.prototype.newGovernment = function (now, promise, quorum, government) {
     // we get a new shaper.
     this._shaper.decided = true
 
-    government = Government.explode(this.government, government)
+    if (government.exile != null) {
+        government.exile = {
+            id: government.exile,
+            promise: this.government.immigrated.promise[government.exile],
+            properties: this.government.properties[government.exile],
+            index: {}
+        }
+        var index = this.government.constituents.indexOf(government.exile.id)
+        if (~index) {
+            government.exile.index.constituents = index
+        }
+        index = this.government.naturalized.indexOf(government.exile.id)
+        if (~index) {
+            government.exile.index.naturalized = index
+        }
+    } else if (government.promote != null) {
+        for (var i = 0, id; (id = government.promote[i]) != null; i++) {
+            government.promote[i] = { id: id, index: this.government.constituents.indexOf(id) }
+        }
+        government.promote.sort(function (left, right) { return right.index - left.index })
+    }
 
     // If we are doing a two-phase commit, gemap the proposals so that they have
     // a promise value in the new government.
@@ -983,7 +1002,6 @@ Paxos.prototype._reshape = function (now, shape) {
     }
 }
 
-
 Paxos.prototype._commit = function (now, entry, top) {
     entry = JSON.parse(JSON.stringify(entry))
 
@@ -1009,7 +1027,39 @@ Paxos.prototype._commit = function (now, entry, top) {
 
     if (isGovernment) {
         assert(Monotonic.compare(this.government.promise, entry.promise) < 0, 'governments out of order')
-        Government.advance(this.government, entry)
+        this.government.promise = entry.promise
+        this.government.majority = entry.body.majority
+        this.government.minority = entry.body.minority
+        if (entry.body.immigrate != null) {
+            if (entry.promise == '1/0') {
+                this.government.majority.push(entry.body.immigrate.id)
+            } else {
+                this.government.constituents.push(entry.body.immigrate.id)
+            }
+            this.government.immigrated.id[this.government.immigrated.promise[entry.body.immigrate.id]]
+            this.government.immigrated.promise[entry.body.immigrate.id] = entry.promise
+            this.government.immigrated.id[entry.promise] = entry.body.immigrate.id
+            this.government.properties[entry.body.immigrate.id] = entry.body.immigrate.properties
+        } else if (entry.body.exile != null) {
+            delete this.government.immigrated.id[this.government.immigrated.promise[entry.body.exile.id]]
+            delete this.government.immigrated.promise[entry.body.exile.id]
+            delete this.government.properties[entry.body.exile.id]
+            if ('constituents' in entry.body.exile.index) {
+                this.government.constituents.splice(entry.body.exile.index.constituents, 1)
+            }
+            if ('naturalized' in entry.body.exile.index) {
+                this.government.naturalized.splice(entry.body.exile.index.naturalized, 1)
+            }
+        } else if (entry.body.promote != null) {
+            for (var i = 0, promotion; (promotion = entry.body.promote[i]) != null; i++) {
+                this.government.constituents.splice(promotion.index, 1)
+            }
+        } else if (entry.body.demote != null) {
+            this.government.constituents.unshift(entry.body.demote)
+        }
+        if (entry.body.naturalize != null) {
+            this.government.naturalized.push(entry.body.naturalize)
+        }
 
         Constituency(this.government, this.id, this)
         this.citizens = this.government.majority
