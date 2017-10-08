@@ -30,7 +30,6 @@ var Writer = require('./writer')
 var Recorder = require('./recorder')
 
 var departure = require('departure')
-var Constituency = require('./constituency')
 
 // ### Constructor
 function Paxos (now, republic, id, options) {
@@ -1061,7 +1060,46 @@ Paxos.prototype._commit = function (now, entry, top) {
             this.government.naturalized.push(entry.body.naturalize)
         }
 
-        Constituency(this.government, this.id, this)
+        var parliament = this.government.majority.concat(this.government.minority), index
+        if (parliament.length == 1) {
+            if (this.id == this.government.majority[0]) {
+                this.constituency = this.government.constituents
+                this.representative = null
+            } else {
+                this.constituency = []
+                this.representative = this.government.majority[0]
+            }
+        } else if (this.government.majority[0] == this.id) {
+            this.constituency = this.government.majority.slice(1)
+            this.representative = null
+        } else {
+            var majority = this.government.majority.slice(1)
+            var index = majority.indexOf(this.id)
+            if (~index) {
+                var length = majority.length
+                var population = this.government.minority.length == 0 ? this.government.constituents : this.government.minority
+                this.constituency = population.filter(function (id, i) { return i % length == index })
+                this.representative = this.government.majority[0]
+            } else if (~(index = this.government.minority.indexOf(this.id))) {
+                var length = this.government.minority.length
+                this.constituency = this.government.constituents.filter(function (id, i) {
+                    return i % length == index
+                })
+                var length = majority.length
+                this.representative = this.government.majority.slice(1).filter(function (id, i) {
+                    return index % length == i
+                }).shift()
+            } else {
+                var index = this.government.constituents.indexOf(this.id)
+                var representatives = this.government.minority.length == 0 ? majority : this.government.minority
+                var length = representatives.length
+                this.constituency = []
+                this.representative = representatives.filter(function (id, i) {
+                    return index % length == i
+                }).shift()
+            }
+        }
+
         this.citizens = this.government.majority
                             .concat(this.government.minority)
                             .concat(this.government.constituents)
