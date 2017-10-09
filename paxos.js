@@ -680,8 +680,12 @@ Paxos.prototype.request = function (now, request) {
     if (
         Monotonic.compare(request.sync.committed, this.log.head.body.promise) < 0
     ) {
-        // We are ahead of the bozo trying to update us, so update him back.
-        committed = request.sync.committed
+        // We are ahead of the citizen trying to update us so update him back,
+        // or maybe this is just a way out of date network delayed message, in
+        // which case just reject, do not sync.
+        if (Monotonic.compare(request.sync.committed, this._minimum.propagated) >= 0) {
+            committed = request.sync.committed
+        }
         message = { method: 'reject', promise: this.log.head.body.promise }
     } else {
         this._synchronize(now, request.sync.commits)

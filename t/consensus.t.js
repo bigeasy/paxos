@@ -498,6 +498,10 @@ function prove (okay) {
 
     network.send()
 
+    // Note that with this I discovered that delayed network messages can of
+    // course be below the minimum so the receipient cannot return sync.
+    intercept.sync.forEach(receive)
+
     okay(network.denizens[6]._disappeared, {}, 'disappeared cleared')
 
     okay(network.denizens[12].government, {
