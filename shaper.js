@@ -60,9 +60,6 @@ var assert = require('assert')
 
 //
 function Shaper (parliamentSize, government, recovered) {
-    if (government.promise == 'f/0') {
-        var x = 0
-    }
     this._parliamentSize = government.majority.length * 2 - 1
     this._shouldExpand = parliamentSize != this._parliamentSize
     this._government = government
