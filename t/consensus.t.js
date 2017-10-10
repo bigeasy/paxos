@@ -536,6 +536,7 @@ function prove (okay) {
 
     network.time += 4
 
+    // Test rejecting a prepare message with a prepare race.
     var intercept = network.send('0', '2', {
         prepare: {
             request: { message: { method: 'prepare' }, synchronize: false }
@@ -545,8 +546,6 @@ function prove (okay) {
     network.pluck(intercept.prepare, { from: '0' }).forEach(receive)
     network.pluck(intercept.prepare, { from: '2' }).forEach(receive)
 
-    network.denizens[0].inspect()
-
     network.time += 4
 
     function receive (envelope) {
@@ -554,6 +553,7 @@ function prove (okay) {
         network.response(envelope)
     }
 
+    // Test rejecting an accept because a subsequent promise has been made.
     var intercept = network.send('0', '2', { six: [{ to: '6' }], seven: [{ to: '7' }] })
 
     network.pluck(intercept.six, { from: '0' }).forEach(receive)
@@ -569,6 +569,7 @@ function prove (okay) {
 
     network.time += 4
 
+    // Get a round of Paxos poised to accept.
     var accept = network.send('3', {
         accept: {
             request: { message: { method: 'accept' }, synchronize: false }
@@ -576,6 +577,7 @@ function prove (okay) {
     })
 
     network.pluck(accept.accept, { to: '7' }).forEach(receive)
+    network.pluck(accept.accept, { to: '6' }).forEach(receive)
 
     network.send('2')
 
@@ -587,51 +589,41 @@ function prove (okay) {
         }
     }).accept.forEach(receive)
 
-    // var register = network.send('2', { sync: { message: { method: 'register' } } })
-    console.log('------------------------')
-    var register = network.send('2', {
+    accept.accept.forEach(receive)
+
+    network.send('3', {
         sync: {
             request: { message: { method: 'register' }, synchronize: false }
         }
-    })
+    }).sync.forEach(receive)
 
-    network.pluck(register.sync, { to: '6' }).forEach(receive)
-    dump(network.denizens[6].inspect())
-    dump(network.denizens[7].inspect())
-    return
-    network.pluck(register.sync, { to: '6' }).forEach(receive)
+    // Leave these for the coverage.
+    network.denizens[3].inspect()
+    network.denizens[7].inspect()
 
-    dump(network.denizens[6].inspect())
     dump(network.denizens[7].inspect())
 
+    network.send('0')
+
+    network.time += 4
+
     return
 
-    register.sync.forEach(receive)
+    network.send('0', {
+        accept: {
+            request: { message: { method: 'accept' }, synchronize: false }
+        }
+    }).accept.forEach(receive)
+    return
+
+    network.pluck(register.sync, { to: '6' }).forEach(receive)
     // dump(network.denizens[6].inspect())
+    // dump(network.denizens[7].inspect())
 
-    network.send('0', [ '6' ])
+    network.time += 6
 
-    network.time += 4
-
-    network.send('0', [ '2' ])
-
-    network.time += 4
-
-    network.send('0', [ '6' ])
-
-    network.time += 4
-
-    var zero = network.send('0', { accept: { message: { method: 'accept' } } })
-
-    // dump(zero)
-
-    dump(network.pluck(sync.sync, { to: '6' }))
-    return
-    network.pluck(sync.sync, { to: '6' }).forEach(receive)
-    dump(network.denizens[6].inspect())
-
-    // dump(network.denizens[6].inspect())
-    return
-
-    accept.accept.forEach(receive)
+    dump(network.denizens[3].inspect())
+    dump(network.denizens[7].inspect())
+    network.pluck(accept.accept, { to: '3' }).forEach(receive)
+    dump(network.denizens[7].inspect())
 }

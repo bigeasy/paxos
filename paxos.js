@@ -796,13 +796,14 @@ Paxos.prototype.response = function (now, cookie, responses) {
             break
         }
 
-        // Record the receipient's most committed message.
-        if (response.sync.committed != null) {
+        // If we are out of date, then update our log. Otherwise, record the
+        // receipient's most committed message. Do not record the the
+        // receipient's most committed message if it is ahead of us.
+        if (response.sync.commits.length != 0) {
+            this._synchronize(now, response.sync.commits)
+        } else if (response.sync.committed != null) {
             this._committed[promise] = response.sync.committed
         }
-
-        // Synchronize commits.
-        this._synchronize(now, response.sync.commits)
     }
 
     // If we have been updated with a new government by the citizen we've
