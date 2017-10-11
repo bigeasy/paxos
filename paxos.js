@@ -680,15 +680,22 @@ Paxos.prototype.request = function (now, request) {
     if (
         Monotonic.compare(request.sync.committed, this.log.head.body.promise) < 0
     ) {
-        // We are ahead of the citizen trying to update us so update him back,
-        // or maybe this is just a way out of date network delayed message, in
-        // which case just reject, do not sync.
-        if (Monotonic.compare(request.sync.committed, this._minimum.propagated) >= 0) {
-            committed = request.sync.committed
+        return {
+            message: {
+                method: 'reject',
+                promise: this.log.head.body.promise,
+            },
+            government: null,
+            sync: {
+                promise: this.government.immigrated.promise[this.id],
+                committed: null,
+                commits: []
+            },
+            backwards: true
         }
-        message = { method: 'reject', promise: this.log.head.body.promise }
     } else {
         this._synchronize(now, request.sync.commits)
+
         while (Monotonic.compare(this.log.trailer.peek().promise, this._minimum.propagated) < 0) {
             var entry = this.log.trailer.shift()
             if (entry.government != null) {
@@ -721,6 +728,7 @@ Paxos.prototype.request = function (now, request) {
         unreachable: this._unreachable
     }
 }
+var count =0
 
 Paxos.prototype.response = function (now, cookie, responses) {
     // We only process messages if the government that generated them is the
@@ -799,47 +807,30 @@ Paxos.prototype.response = function (now, cookie, responses) {
         // If we are out of date, then update our log. Otherwise, record the
         // receipient's most committed message. Do not record the the
         // receipient's most committed message if it is ahead of us.
-        if (response.sync.commits.length != 0) {
-            this._synchronize(now, response.sync.commits)
-        } else if (response.sync.committed != null) {
+        if (response.sync.committed != null) {
             this._committed[promise] = response.sync.committed
         }
-    }
 
-    // If we have been updated with a new government by the citizen we've
-    // tried to update, then we should let the new government take effect.
-    if (
-        cookie.government != this.government.promise ||
-        cookie.collapsed != this._writer.collapsed
-    ) {
-        return
-    }
+        // TODO Make a note to yourself somewhere, probably in tests, that if
+        // you do want to deal with tricksy messages then testing is simple. At
+        // this point, you're trying to winnow down conditions by breaking up
+        // operations and guarding them on pre-conditions. The one on your mind
+        // now is that if you want to do something that requires translating a
+        // promise to an id or vice-versa, then you're going to need to have the
+        // goverment that was active when that promise or id was posited.
 
-    // TODO Make a not to yourself somewhere, probably in tests, that if you do
-    // want to deal with tricksy messages then testing is simple. At this point,
-    // you're trying to winnow down conditions by breaking up operations and
-    // guarding them on pre-conditions. The one on your mind now is that if you
-    // want to do something that requires translating a promise to an id or
-    // vice-versa, then you're going to need to have the goverment that was
-    // active when that promise or id was posited.
+        // You'll forget this but, when you do add checks to validate the
+        // structure of a message you will test it by calling these methods
+        // directly. Testing that sort of thing would be simple. First, though,
+        // you want to create the happy path and see that it is covered. Then
+        // you have to descide if you want to protect against malicious messages
+        // or if you're going to assume that you're on an secure network.
 
-    // You'll forget this but, when you do add checks to validate the structure
-    // of a message you will test it by calling these methods directly. Testing
-    // that sort of thing would be simple. First, though, you want to create the
-    // happy path and see that it is covered. Then you have to descide if you
-    // want to protect against malicious messages or if you're going to assume
-    // that you're on an secure network.
+        // The following operations assume that the citizen we're talking too is
+        // operating under the same government as ourselves. We want promise or
+        // id look ups to not return null.
 
-    // The following operations assume that the citizen we're talking too is
-    // operating under the same government as ourselves. We want promise or id
-    // look ups to not return null.
-
-    //
-    for (var i = 0, I = message.to.length; i < I; i++) {
-        // Deduce receipent properties.
-        var id = message.to[i]
-        var response = responses[id]
-        var promise = this.government.immigrated.promise[id]
+        //
 
         // If the message was generated using government information that does
         // not match our current government, do not use it to update our
@@ -1007,7 +998,6 @@ Paxos.prototype._synchronize = function (now, entries) {
     for (var i = 0, entry; (entry = entries[i]) != null; i++) {
         this._commit(now, entry, this.log.head.body.promise)
     }
-    return true
 }
 
 Paxos.prototype._reshape = function (now, shape) {
