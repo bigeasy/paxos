@@ -728,7 +728,6 @@ Paxos.prototype.request = function (now, request) {
         unreachable: this._unreachable
     }
 }
-var count =0
 
 Paxos.prototype.response = function (now, cookie, responses) {
     // We only process messages if the government that generated them is the
