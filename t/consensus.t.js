@@ -556,7 +556,7 @@ function prove (okay) {
     // Test rejecting an accept because a subsequent promise has been made.
     var intercept = network.send('0', '2', { six: [{ to: '6' }], seven: [{ to: '7' }] })
 
-    network.denizens[7].inspect()
+    network.denizens[0].inspect()
 
     network.pluck(intercept.six, { from: '0' }).forEach(receive)
     network.pluck(intercept.seven, { from: '2' }).forEach(receive)
