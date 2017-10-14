@@ -1,4 +1,4 @@
-require('proof')(24, prove)
+require('proof')(25, prove)
 
 function prove (okay) {
     var Paxos = require('..'), denizen
@@ -597,33 +597,27 @@ function prove (okay) {
         }
     }).sync.forEach(receive)
 
-    // Leave these for the coverage.
-    network.denizens[3].inspect()
-    network.denizens[7].inspect()
+    network.send()
 
-    dump(network.denizens[7].inspect())
-
-    network.send('0')
-
-    network.time += 4
-
-    return
-
-    network.send('0', {
-        accept: {
-            request: { message: { method: 'accept' }, synchronize: false }
+    okay(network.denizens[2].government, {
+        promise: '29/0',
+        majority: [ '2', '6', '7' ],
+        minority: [ '3', '0' ],
+        naturalized: [ '0', '2', '3', '6', '7', '9', '10', '12' ],
+        constituents: [ '9', '10', '12' ],
+        immigrated: {
+            id: { '1/0': '0', '3/0': '2', '6/0': '3', 'e/0': '6', 'f/0': '7', '1b/0': '9', '1c/0': '10', '23/0': '12' },
+            promise: { '0': '1/0', '2': '3/0', '3': '6/0', '6': 'e/0', '7': 'f/0', '9': '1b/0', '10': '1c/0', '12': '23/0' }
+        },
+        properties: {
+            '0': { location: '0' },
+            '2': { location: '2' },
+            '3': { location: '3' },
+            '6': { location: '6' },
+            '7': { location: '7' },
+            '9': { location: '9' },
+            '10': { location: '10' },
+            '12': { location: '12' }
         }
-    }).accept.forEach(receive)
-    return
-
-    network.pluck(register.sync, { to: '6' }).forEach(receive)
-    // dump(network.denizens[6].inspect())
-    // dump(network.denizens[7].inspect())
-
-    network.time += 6
-
-    dump(network.denizens[3].inspect())
-    dump(network.denizens[7].inspect())
-    network.pluck(accept.accept, { to: '3' }).forEach(receive)
-    dump(network.denizens[7].inspect())
+    }, 'a lot of paxos')
 }
