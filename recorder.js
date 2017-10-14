@@ -33,10 +33,6 @@ Recorder.prototype.request = function (now, request) {
     }
 }
 
-Recorder.prototype.createAcceptor = function () {
-    return this._paxos._createAcceptor()
-}
-
 Recorder.prototype.createRecorder = function () {
     return new Recorder(this._paxos)
 }
