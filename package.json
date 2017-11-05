@@ -1,6 +1,6 @@
 {
     "name":                 "paxos",
-    "version":              "9.0.0",
+    "version":              "9.0.1",
     "description":
 
       "A Multi-Paxos implementation in pure JavaScript.",
