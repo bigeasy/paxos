@@ -39,7 +39,7 @@ function Paxos (now, republic, id, options) {
     // Use the create time as a cookie to identify this instance of this id.
     this.cookie = now
 
-    // A republic identifies a paritcular instance of the Paxos algorithm.
+    // A republic identifies a particular instance of the Paxos algorithm.
     this.republic = republic
 
     // Maximum size of a parliament. The government will grow to this size.
@@ -77,7 +77,7 @@ function Paxos (now, republic, id, options) {
     // Last promise issued.
     this._promised = null
 
-    // Ping is the freqency of keep alive pings.
+    // Ping is the frequency of keep alive pings.
     this.ping = coalesce(options.ping, 1000)
 
     // Timeout when that reached marks a citizen for exile.
@@ -112,11 +112,11 @@ function Paxos (now, republic, id, options) {
     })
 
     // Write strategy is polymorphic, changes based on whether we're recovering
-    // from collapse uing Paxos or writing values using two-phase commit.
+    // from collapse using Paxos or writing values using two-phase commit.
     this._writer = new Writer(this, '1/0', [])
     this._recorder = new Recorder(this, this.log.head.body)
 
-    // Shaper a new government by fiat based on whose availble to grow to the
+    // Shaper a new government by fiat based on whose available to grow to the
     // desired government size and who is unreachable.
     this._shaper = new Shaper(this.parliamentSize, this.government, false)
 
@@ -139,14 +139,14 @@ function Paxos (now, republic, id, options) {
 // message and all user messages are dropped.
 //
 // There is only ever supposed to be one new government in process or in the
-// list of proposals. Many decisions about the new goverment are based on the
+// list of proposals. Many decisions about the new government are based on the
 // current government and the current health of the island, so queuing up a
 // bunch of governments would at the very least require that we double check
 // that they are still valid.
 //
 // Basically, we have new governments queued elsewhere. Actually, we have
 // network status queued elsewhere and new governments are proposed after the
-// current new government is established based on that reachabilit data.
+// current new government is established based on that reachability data.
 
 //
 Paxos.prototype.newGovernment = function (now, promise, quorum, government) {
@@ -177,7 +177,7 @@ Paxos.prototype.newGovernment = function (now, promise, quorum, government) {
         government.promote.sort(function (left, right) { return right.index - left.index })
     }
 
-    // If we are doing a two-phase commit, gemap the proposals so that they have
+    // If we are doing a two-phase commit, remap the proposals so that they have
     // a promise value in the new government.
     var remapped = government.promise = promise, map = null
     if (!this._writer.collapsed) {
@@ -238,8 +238,8 @@ Paxos.prototype.bootstrap = function (now, properties) {
 // address resolution. From the suggested logic, it will only have a single
 // address, and maybe be told of an actual leader. What happens when that
 // address is lost? Don't see where returning `republic` and leader helps at
-// all. It is enough to say you failed, backoff and try again. The network layer
-// can perform checks to see if the recepient is the leader and hop to the
+// all. It is enough to say you failed, back-off and try again. The network
+// layer can perform checks to see if the recipient is the leader and hop to the
 // actual leader if it isn't, reject if it is but collapsed.
 //
 // Once you've externalized this in kibitz, remove it, or pare it down.
@@ -286,8 +286,8 @@ Paxos.prototype.enqueue = function (now, republic, message) {
 // to take measures to allow for the reuse of ids. It still feels right to me
 // that a display of government or of the census would be displayed using values
 // meaningful to our dear user; Kubernetes HOSTNAMES, AWS instance names, IP
-// address, and not something that is garunteed unique like a UUID, because such
-// things are indistinguishable to the human observer.
+// address, and not something that is guaranteed unique like a UUID, because
+// such things are indistinguishable to the human observer.
 //
 // Yet, here I am again contending with an issue that would be so simple if ids
 // where required to be unique. When a citizen that is a constituent dies and
@@ -303,9 +303,9 @@ Paxos.prototype.enqueue = function (now, republic, message) {
 // sync beats the immigration record, but what if the immigration record beats
 // the representative?
 //
-// In that case their will be a new government with the same represenative with
-// the same consitutent, but now there will be an immigration record. The
-// consituent will be naturalized. It will never have been exiled.
+// In that case their will be a new government with the same representative with
+// the same constituent, but now there will be an immigration record. The
+// constituent will be naturalized. It will never have been exiled.
 //
 // This is a problem. Implementations are going to need to know that they've
 // restarted. A participant should be exiled before it can immigrate again.
@@ -468,7 +468,7 @@ Paxos.prototype._collapse = function (now) {
     this._propose(now, false)
 }
 
-// Note that even if the PNRG where not determinsitic, it wouldn't matter during
+// Note that even if the PNRG where not deterministic, it wouldn't matter during
 // replay because the delay is lost and the actual timer event is recorded.
 
 // TODO Convince yourself that the above is true and the come back and replace
@@ -549,7 +549,7 @@ Paxos.prototype._sync = function (committed) {
 // Note that messages can take however long they're going to take. They requests
 // can always be received and the responses can always be handled. If they are
 // made invalid by their time in transit they will be rejected. Our dear user
-// needs only to send the messages to our fellow citiens by any means and
+// needs only to send the messages to our fellow citizens by any means and
 // return the responses to us all at once.
 
 //
@@ -727,15 +727,15 @@ Paxos.prototype.request = function (now, request) {
 
 Paxos.prototype.response = function (now, cookie, responses) {
     // We only process messages if the government that generated them is the
-    // same as our current governent. This is so that promises match ids
+    // same as our current government. This is so that promises match ids
     // correctly, so that we're not processing an old message with out of date
     // id to promise mappings or missing mappings. We make an exception for a
-    // successful network connection, which we use to delete a disappered flag.
+    // successful network connection, which we use to delete a disappeared flag.
 
     //
     var message = cookie.message
     for (var i = 0, I = message.to.length; i < I; i++) {
-        // Deduce receipent properties.
+        // Deduce recipient properties.
         var id = message.to[i]
         var response = responses[id]
         var promise = this.government.immigrated.promise[id]
@@ -776,11 +776,11 @@ Paxos.prototype.response = function (now, cookie, responses) {
 
     var collapsible = false
 
-    // Perform housekeeping for each receipent of the message.
+    // Perform housekeeping for each recipient of the message.
 
     //
     for (var i = 0, I = message.to.length; i < I; i++) {
-        // Deduce receipent properties.
+        // Deduce recipient properties.
         var id = message.to[i]
         var response = responses[id]
         var promise = this.government.immigrated.promise[id]
@@ -800,8 +800,8 @@ Paxos.prototype.response = function (now, cookie, responses) {
         }
 
         // If we are out of date, then update our log. Otherwise, record the
-        // receipient's most committed message. Do not record the the
-        // receipient's most committed message if it is ahead of us.
+        // recipient's most committed message. Do not record the recipient's
+        // most committed message if it is ahead of us.
         if (response.sync.committed != null) {
             this._committed[promise] = response.sync.committed
         }
@@ -812,13 +812,13 @@ Paxos.prototype.response = function (now, cookie, responses) {
         // operations and guarding them on pre-conditions. The one on your mind
         // now is that if you want to do something that requires translating a
         // promise to an id or vice-versa, then you're going to need to have the
-        // goverment that was active when that promise or id was posited.
+        // government that was active when that promise or id was posited.
 
         // You'll forget this but, when you do add checks to validate the
         // structure of a message you will test it by calling these methods
         // directly. Testing that sort of thing would be simple. First, though,
         // you want to create the happy path and see that it is covered. Then
-        // you have to descide if you want to protect against malicious messages
+        // you have to deicide if you want to protect against malicious messages
         // or if you're going to assume that you're on an secure network.
 
         // The following operations assume that the citizen we're talking too is
@@ -913,13 +913,13 @@ Paxos.prototype.response = function (now, cookie, responses) {
     // constituents. With a majority sync, the leader will sync with all of the
     // majority members at once, any one of them failing triggers a collapse.
     //
-    // Consistuent synchronize messages are sent to each constituent
+    // Consistent synchronize messages are sent to each constituent
     // individually.
     //
     // TODO This is new.
 
     // Pings keep on going. When you start one it will perpetuate until the
-    // government is superceeded. If you want to synchronize before a ping,
+    // government is superseded. If you want to synchronize before a ping,
     // simply schedule the ping immediately. If there is an outstanding ping
     // when you jump the gun, that's fine. Pings are pretty much always valid.
     // Won't this duplicate mean you now have two ping intervals? No. The
@@ -942,7 +942,7 @@ Paxos.prototype.response = function (now, cookie, responses) {
 
         // TODO Come back and consider this so you know that it is true.
 
-        // Syncronizations live for the life of a government. We are not going
+        // Synchronizations live for the life of a government. We are not going
         // to double up or otherwise accumulate pings. They will be created by
         // with the promise of the government registered by the commit. If there
         // is a change of government the response won't get beyond the first
@@ -1122,14 +1122,14 @@ Paxos.prototype._commit = function (now, entry, top) {
         this.scheduler.clear()
 
         // If we collapsed and ran Paxos we would have carried on regardless of
-        // unreachability until we made progress. During Paxos we ignore
-        // unreacability so we delete it here in case we happened to make
+        // reachability until we made progress. During Paxos we ignore
+        // reachability so we delete it here in case we happened to make
         // progress in spite of it.
         if (entry.body.map == null) {
             for (var i = 0, id; (id = this.government.majority[i]) != null; i++) {
                 // TODO Probably okay to track by id. The worst that you can do
                 // is delete reachable information that exists for a subsequent
-                // version, well, the wrost you can do is get rid of informaiton
+                // version, well, the worse you can do is get rid of information
                 // that will once again materialize.
                 delete this._unreachable[this.government.immigrated.promise[id]]
                 delete this._disappeared[this.government.immigrated.promise[id]]
@@ -1192,7 +1192,7 @@ Paxos.prototype._commit = function (now, entry, top) {
 
         // You cannot keep a cached value for a constituent because new
         // governments will change that constituents constituents. The reduced
-        // value must be recalcuated.
+        // value must be recalculated.
         this._minimum = {
             version: this.government.promise,
             propagated: this._minimum.propagated,
