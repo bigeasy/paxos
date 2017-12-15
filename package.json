@@ -7,9 +7,9 @@
 
     "keywords":
     [
-                            "paxos", "database", "database", "network", "consensus",
-                            "atomic", "broadcast", "multi-paxos", "queue",
-                            "fifo"
+                            "consensus", "paxos", "database", "database",
+                            "network", "atomic", "broadcast", "multi-paxos",
+                            "queue", "fifo"
     ],
     "author":               "Alan Gutierrez <alan@prettyrobots.com>",
     "contributors":
