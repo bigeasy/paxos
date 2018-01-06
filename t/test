@@ -12,11 +12,11 @@ if [[ "$TRAVIS" = "true" ]]; then
   echo ""
   echo "running with coverage"
   t/cover
-  node_modules/.bin/istanbul report --format text
+  istanbul report --format text
   echo ""
 
   echo "submitting to coveralls.io"
-  (cat coverage/lcov.info | node_modules/.bin/coveralls)
+  (cat coverage/lcov.info | coveralls)
 fi
 
 echo ""
