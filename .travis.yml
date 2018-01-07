@@ -13,5 +13,5 @@ branches:
     - travis-ci
 
 before_install:
-  - npm install
-  - npm install -g istanbul coveralls
+  - yarn install
+  - yarn install -g istanbul coveralls
