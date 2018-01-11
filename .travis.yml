@@ -12,6 +12,7 @@ branches:
     - master
     - travis-ci
 
-before_install:
-  - yarn install
-  - yarn global add istanbul coveralls
+install:
+  - npm install -g npm
+  - npm install --no-package-lock --no-save
+  - npm install -g istanbul coveralls
