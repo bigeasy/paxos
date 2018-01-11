@@ -123,10 +123,7 @@ their structure.)</p>
         <span class="hljs-attr">previous</span>: <span class="hljs-literal">null</span>
     }
     <span class="hljs-keyword">this</span>._paxos = paxos
-}
-
-Recorder.prototype.request = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">now, request</span>) </span>{
-    assert(<span class="hljs-regexp">/^prepare|register$/</span>.test(request.method), <span class="hljs-string">'unexpected message to record'</span>)</pre></div></div>
+}</pre></div></div>
 
         </li>
 
@@ -137,6 +134,84 @@ Recorder.prototype.request = <span class="hljs-function"><span class="hljs-keywo
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-3">&#182;</a>
               </div>
+              <p>We do not need to handle accept messages.</p>
+
+            </div>
+
+        </li>
+
+
+        <li id="section-4">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
+              <p>If we received an accept message it would mean that a proposer had a promise
+from this citizen but the Acceptor that issued the promise has been replaced
+by this recorder. That in turn means that we have received a new, stable
+government and that government has been written to the atomic log. Our atomic
+log is therefore ahead of the atomic log of the sender of the accept message
+so the request would have been rejected because the logs are out of sync.</p>
+
+            </div>
+
+        </li>
+
+
+        <li id="section-5">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-5">&#182;</a>
+              </div>
+              <p>The previous promise of the registered entry submitted will match the
+registered entry recorder.</p>
+
+            </div>
+
+        </li>
+
+
+        <li id="section-6">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-6">&#182;</a>
+              </div>
+              <p>This one is because our previous entry is always synonymous with what is in
+our atomic log. If we receive a message with a different previous entry then
+the atomic logs are out of sync and our whole algorithm has failed. If it is
+merely the case that we’re getting a register message that was delayed or
+lost a race to write a recover fiat government, then the request would be
+rejected because the logs are out of sync.</p>
+
+            </div>
+
+        </li>
+
+
+        <li id="section-7">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-7">&#182;</a>
+              </div>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>Recorder.prototype.request = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">now, request</span>) </span>{
+    assert(<span class="hljs-regexp">/^prepare|register$/</span>.test(request.method), <span class="hljs-string">'unexpected message to record'</span>)</pre></div></div>
+
+        </li>
+
+
+        <li id="section-8">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-8">&#182;</a>
+              </div>
               <p>Anything else is going to get caught synchronization and rejected.</p>
 
             </div>
@@ -145,9 +220,8 @@ Recorder.prototype.request = <span class="hljs-function"><span class="hljs-keywo
     <span class="hljs-keyword">case</span> <span class="hljs-string">'prepare'</span>:
         <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>._paxos._prepare(now, request)
     <span class="hljs-keyword">case</span> <span class="hljs-string">'register'</span>:
-        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._paxos.log.head.body.promise != request.register.body.previous) {
-            <span class="hljs-keyword">return</span> { <span class="hljs-attr">method</span>: <span class="hljs-string">'reject'</span>, <span class="hljs-attr">promise</span>: <span class="hljs-string">'0/0'</span> }
-        }
+        assert(request.register.body.previous ==  <span class="hljs-keyword">this</span>.register.body.promise, <span class="hljs-string">'register has unexpected previous'</span>)
+        assert(<span class="hljs-keyword">this</span>._paxos.log.head.body.promise == <span class="hljs-keyword">this</span>.register.body.promise, <span class="hljs-string">'recorder and log out of sync'</span>)
         <span class="hljs-keyword">this</span>.register = request.register
         <span class="hljs-keyword">return</span> { <span class="hljs-attr">method</span>: <span class="hljs-string">'receive'</span>, <span class="hljs-attr">promise</span>: <span class="hljs-string">'0/0'</span> }
     }
