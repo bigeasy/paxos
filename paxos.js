@@ -999,7 +999,6 @@ Paxos.prototype._synchronize = function (now, entries) {
 Paxos.prototype._reshape = function (now, shape) {
     if (shape != null) {
         var promise = Monotonic.increment(this.government.promise, 0)
-        assert(this.republic)
         this.newGovernment(now, promise, shape.quorum, shape.government)
     }
 }
