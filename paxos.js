@@ -63,6 +63,7 @@ function Paxos (now, republic, id, options) {
 
     // Initial government. A null government.
     this.government = {
+        republic: this.republic,
         promise: '0/0',
         majority: [],
         minority: [],
@@ -998,6 +999,7 @@ Paxos.prototype._synchronize = function (now, entries) {
 Paxos.prototype._reshape = function (now, shape) {
     if (shape != null) {
         var promise = Monotonic.increment(this.government.promise, 0)
+        assert(this.republic)
         this.newGovernment(now, promise, shape.quorum, shape.government)
     }
 }

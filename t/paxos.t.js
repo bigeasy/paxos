@@ -13,6 +13,7 @@ function prove (okay) {
     network.bootstrap()
 
     okay(network.denizens[0].government, {
+        republic: 1,
         majority: [ '0' ],
         minority: [],
         naturalized: [ '0' ],
@@ -28,6 +29,7 @@ function prove (okay) {
     network.send()
 
     okay(network.denizens[1].government, {
+        republic: 1,
         majority: [ '0' ],
         minority: [],
         naturalized: [ '0', '1' ],
@@ -51,6 +53,7 @@ function prove (okay) {
     network.send()
 
     okay(network.denizens[2].government, {
+        republic: 1,
         majority: [ '0' ],
         minority: [],
         naturalized: [ '0', '1' ],
@@ -72,6 +75,7 @@ function prove (okay) {
     network.send()
 
     okay(network.denizens[2].government, {
+        republic: 1,
         majority: [ '0', '1' ],
         minority: [ '2' ],
         naturalized: [ '0', '1', '2' ],
@@ -115,6 +119,7 @@ function prove (okay) {
     network.send('0', [ '1' ])
 
     okay(network.denizens[0].government, {
+        republic: 1,
         majority: [ '0', '2' ],
         minority: [ '1' ],
         naturalized: [ '0', '1', '2', '3' ],
@@ -152,6 +157,7 @@ function prove (okay) {
     network.send('0', '2', [ '1' ])
 
     okay(network.denizens[0].government, {
+        republic: 1,
         promise: 'b/0',
         majority: [ '0', '2' ],
         minority: [ '3' ],
@@ -197,6 +203,7 @@ function prove (okay) {
     okay(network.denizens[2].log.head.body.promise, 'c/2', 'remapped')
 
     okay(network.denizens[0].government, {
+        republic: 1,
         promise: 'c/0',
         majority: [ '0', '2' ],
         minority: [ '3' ],
@@ -250,6 +257,7 @@ function prove (okay) {
     network.send()
 
     okay(network.denizens[0].government, {
+        republic: 1,
         promise: '14/0',
         majority: [ '0', '2', '3' ],
         minority: [ '6', '7' ],
@@ -315,6 +323,7 @@ function prove (okay) {
     network.send('3')
 
     okay(network.denizens[3].government, {
+        republic: 1,
         promise: '1a/0',
         majority: [ '3', '0', '2' ],
         minority: [ '6', '7' ],
@@ -361,6 +370,7 @@ function prove (okay) {
     network.send()
 
     okay(network.denizens[3].government, {
+        republic: 1,
         promise: '1c/0',
         majority: [ '3', '0', '2' ],
         minority: [ '6', '7' ],
@@ -396,6 +406,7 @@ function prove (okay) {
     network.send()
 
     okay(network.denizens[3].government, {
+        republic: 1,
         promise: '1e/0',
         majority: [ '3', '0', '2' ],
         minority: [ '6', '7' ],
@@ -422,6 +433,7 @@ function prove (okay) {
     network.send()
 
     okay(network.denizens[3].government, {
+        republic: 1,
         promise: '1f/0',
         majority: [ '3', '0', '2' ],
         minority: [ '6', '7' ],
@@ -460,6 +472,7 @@ function prove (okay) {
     network.send()
 
     okay(network.denizens[3].government, {
+        republic: 1,
         promise: '20/0',
         majority: [ '3', '0', '2' ],
         minority: [ '6', '7' ],
@@ -505,6 +518,7 @@ function prove (okay) {
     okay(network.denizens[6]._disappeared, {}, 'disappeared cleared')
 
     okay(network.denizens[12].government, {
+        republic: 1,
         promise: '23/0',
         majority: [ '3', '0', '2' ],
         minority: [ '6', '7' ],
@@ -602,6 +616,7 @@ function prove (okay) {
     network.send()
 
     okay(network.denizens[2].government, {
+        republic: 1,
         promise: '29/0',
         majority: [ '2', '6', '7' ],
         minority: [ '3', '0' ],
