@@ -40,9 +40,6 @@ function Paxos (now, id, options) {
     // Use the create time as a cookie to identify this instance of this id.
     this.cookie = now
 
-    // A republic identifies a particular instance of the Paxos algorithm.
-    this.republic = null
-
     // Maximum size of a parliament. The government will grow to this size.
     this.parliamentSize = coalesce(options.parliamentSize, 5)
 
@@ -208,7 +205,6 @@ Paxos.prototype.newGovernment = function (now, promise, quorum, government) {
 
 //
 Paxos.prototype.bootstrap = function (republic, now, properties) {
-    this.republic = republic
     this.government.republic = republic
 
     var government = {
@@ -236,7 +232,6 @@ Paxos.prototype.bootstrap = function (republic, now, properties) {
 }
 
 Paxos.prototype.join = function (republic) {
-    this.republic = republic
     this.government.republic = republic
 }
 
@@ -255,17 +250,17 @@ Paxos.prototype.join = function (republic) {
 //
 // Once you've externalized this in kibitz, remove it, or pare it down.
 Paxos.prototype._enqueuable = function (republic) {
-    if (this._writer.collapsed || this.republic != republic) {
+    if (this._writer.collapsed || this.government.republic != republic) {
         return {
             enqueued: false,
-            republic: this.republic,
+            republic: this.government.republic,
             leader: null
         }
     }
     if (this.government.majority[0] != this.id) {
         return {
             enqueued: false,
-            republic: this.republic,
+            republic: this.government.republic,
             leader: this.government.majority[0]
         }
     }
@@ -353,7 +348,7 @@ Paxos.prototype.arrive = function (now, republic, id, cookie, properties, acclim
         if (id in this.government.properties) {
             response = {
                 enqueued: false,
-                republic: this.republic,
+                republic: this.government.republic,
                 leader: this.government.majority[0]
             }
         } else {
@@ -519,7 +514,7 @@ Paxos.prototype._findRound = function (sought) {
 
 Paxos.prototype._sync = function (committed) {
     var sync = {
-        republic: this.republic,
+        republic: this.government.republic,
         promise: this.government.arrived.promise[this.id],
         from: this.id,
         minimum: this._minimum,
@@ -651,7 +646,7 @@ Paxos.prototype._send = function (message) {
 
 //
 Paxos.prototype.request = function (now, request) {
-    if (request.sync.republic != this.republic) {
+    if (request.sync.republic != this.government.republic) {
         return { message: { method: 'unreachable' } }
     } else if (
         this.government.arrived.promise[request.sync.from] != request.sync.promise
