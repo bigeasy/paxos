@@ -119,7 +119,7 @@ Network.prototype.send = function () {
 
 Network.prototype.push = function () {
     var id = String(this.denizens.length)
-    var denizen = new Paxos(this.time, 1, id, {
+    var denizen = new Paxos(this.time, id, {
         parliamentSize: 5,
         ping: 1,
         timeout: 3
@@ -131,7 +131,7 @@ Network.prototype.push = function () {
 
 Network.prototype.reboot = function (i, republic) {
     var id = String(i)
-    var denizen = new Paxos(this.time, coalesce(republic, 1), id, {
+    var denizen = new Paxos(this.time, id, {
         parliamentSize: 5,
         ping: 1,
         timeout: 3
@@ -141,9 +141,9 @@ Network.prototype.reboot = function (i, republic) {
     this.denizens[i] = denizen
 }
 
-Network.prototype.bootstrap = function () {
+Network.prototype.bootstrap = function (republic) {
     this.reboot(0)
-    this.denizens[0].bootstrap(this.time, { location: '0' })
+    this.denizens[0].bootstrap(coalesce(republic, 1), this.time, { location: '0' })
 }
 
 Network.prototype.arrive = function (i) {
@@ -153,6 +153,7 @@ Network.prototype.arrive = function (i) {
     }).sort(function (left, right) {
         return Monotonic.compare(left.promise, right.promise)
     }).pop().majority[0]
+    denizen.join(1)
     this.denizens[leader].arrive(this.time, 1, denizen.id, denizen.cookie, { location: denizen.id }, true)
 }
 

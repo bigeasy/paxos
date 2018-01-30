@@ -24,6 +24,7 @@ function prove (okay) {
     }, 'bootstrap')
 
     network.push()
+    network.denizens[1].join(1)
     okay(network.denizens[0].arrive(network.time, 1, '1', network.denizens[1].cookie, { location: '1' }, true).enqueued, 'arrive')
 
     network.send()
@@ -46,6 +47,7 @@ function prove (okay) {
     }, 'leader and constituent pair')
 
     network.push()
+    network.denizens[2].join(1)
     // TODO Turn off immigration and ensure that it is not able to join the
     // government.
     network.denizens[0].arrive(network.time, 1, '2', network.denizens[2].cookie, { location: '2' }, false)
@@ -281,8 +283,8 @@ function prove (okay) {
 
     network.send()
 
-    network.reboot(8, 2)
-    network.denizens[8].bootstrap(network.time, { location: '8' })
+    network.reboot(8)
+    network.denizens[8].bootstrap(2, network.time, { location: '8' })
 
     network.send()
 
@@ -363,8 +365,10 @@ function prove (okay) {
     network.denizens[7].inspect()
 
     network.push()
+    network.denizens[9].join(1)
     network.denizens[3].arrive(network.time, 1, '9', network.denizens[9].cookie, { location: '9' })
     network.push()
+    network.denizens[10].join(1)
     network.denizens[3].arrive(network.time, 1, '10', network.denizens[10].cookie, { location: '10' })
 
     network.send()
@@ -428,6 +432,7 @@ function prove (okay) {
     }, 'acclimated')
 
     network.push()
+    network.denizens[11].join(1)
     network.denizens[3].arrive(network.time, 1, '11', network.denizens[11].cookie, { location: '11' })
 
     network.send()

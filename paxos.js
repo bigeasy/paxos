@@ -32,7 +32,8 @@ var Recorder = require('./recorder')
 var departure = require('departure')
 
 // ### Constructor
-function Paxos (now, republic, id, options) {
+function Paxos (now, id, options) {
+    assert(arguments.length == 3)
     // Uniquely identify ourselves relative to the other participants.
     this.id = String(id)
 
@@ -40,7 +41,7 @@ function Paxos (now, republic, id, options) {
     this.cookie = now
 
     // A republic identifies a particular instance of the Paxos algorithm.
-    this.republic = republic
+    this.republic = null
 
     // Maximum size of a parliament. The government will grow to this size.
     this.parliamentSize = coalesce(options.parliamentSize, 5)
@@ -63,7 +64,7 @@ function Paxos (now, republic, id, options) {
 
     // Initial government. A null government.
     this.government = {
-        republic: this.republic,
+        republic: null,
         promise: '0/0',
         majority: [],
         minority: [],
@@ -206,8 +207,12 @@ Paxos.prototype.newGovernment = function (now, promise, quorum, government) {
 // Initialize the citizen with a government where it is the dictator.
 
 //
-Paxos.prototype.bootstrap = function (now, properties) {
+Paxos.prototype.bootstrap = function (republic, now, properties) {
+    this.republic = republic
+    this.government.republic = republic
+
     var government = {
+        republic: republic,
         promise: '1/0',
         majority: [],
         minority: [],
@@ -228,6 +233,11 @@ Paxos.prototype.bootstrap = function (now, properties) {
     this._shaper.arrive({ id: this.id, cookie: 0 })
 
     this._commit(now, { promise: '1/0', body: government, previous: '0/0' }, '0/0')
+}
+
+Paxos.prototype.join = function (republic) {
+    this.republic = republic
+    this.government.republic = republic
 }
 
 // ### Enqueue and Immigrate
