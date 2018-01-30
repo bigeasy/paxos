@@ -113,7 +113,7 @@ Shaper.prototype.unreachable = function (unreachable) {
         return null
     }
 
-    var id = this._government.immigrated.id[unreachable]
+    var id = this._government.arrived.id[unreachable]
     assert(id != null, 'unable to determine unreachable id')
 
     // Exile any unreachable citizen.
@@ -134,7 +134,7 @@ Shaper.prototype.naturalize = function (promise) {
 
     var government = this._government
 
-    var id = government.immigrated.id[promise]
+    var id = government.arrived.id[promise]
     assert(id != null, 'unable to determine naturalize id')
 
 
@@ -194,7 +194,7 @@ Shaper.prototype.naturalized = function (id) {
     return this._governments.shift() || this._immigration() || null
 }
 
-Shaper.prototype.immigrated = function (id) {
+Shaper.prototype.arrived = function (id) {
     assert(this._immigrating.length > 0 && id == this._immigrating[0].id)
     this._immigrating.shift()
 }

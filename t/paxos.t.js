@@ -19,7 +19,7 @@ function prove (okay) {
         naturalized: [ '0' ],
         constituents: [],
         promise: '1/0',
-        immigrated: { id: { '1/0': '0' }, promise: { '0': '1/0' } },
+        arrived: { id: { '1/0': '0' }, promise: { '0': '1/0' } },
         properties: { '0': { location: '0' } }
     }, 'bootstrap')
 
@@ -35,7 +35,7 @@ function prove (okay) {
         naturalized: [ '0', '1' ],
         constituents: [ '1' ],
         promise: '2/0',
-        immigrated: {
+        arrived: {
             id: { '1/0': '0', '2/0': '1' },
             promise: { '0': '1/0', '1': '2/0' }
         },
@@ -59,7 +59,7 @@ function prove (okay) {
         naturalized: [ '0', '1' ],
         constituents: [ '1', '2' ],
         promise: '3/0',
-        immigrated: {
+        arrived: {
             id: { '1/0': '0', '2/0': '1', '3/0': '2' },
             promise: { '0': '1/0', '1': '2/0', '2': '3/0' }
         },
@@ -81,7 +81,7 @@ function prove (okay) {
         naturalized: [ '0', '1', '2' ],
         constituents: [],
         promise: '5/0',
-        immigrated: {
+        arrived: {
             id: { '1/0': '0', '2/0': '1', '3/0': '2' },
             promise: { '0': '1/0', '1': '2/0', '2': '3/0' }
         },
@@ -92,7 +92,7 @@ function prove (okay) {
         }
     }, 'three member parliament')
 
-    okay(!network.denizens[0].immigrate(network.time, 1, '1', network.denizens[1].cookie, { location: '1' }).enqueued, 'already immigrated')
+    okay(!network.denizens[0].immigrate(network.time, 1, '1', network.denizens[1].cookie, { location: '1' }).enqueued, 'already arrived')
     okay(!network.denizens[1].enqueue(network.time, 1, {}).enqueued, 'enqueue not leader')
 
     okay(!network.denizens[1].immigrate(network.time, 1, '4', 0, { location: '4' }).enqueued, 'immigrate not leader')
@@ -125,7 +125,7 @@ function prove (okay) {
         naturalized: [ '0', '1', '2', '3' ],
         constituents: [ '3' ],
         promise: '8/0',
-        immigrated: {
+        arrived: {
             id: { '1/0': '0', '2/0': '1', '3/0': '2', '6/0': '3' },
             promise: { '0': '1/0', '1': '2/0', '2': '3/0', '3': '6/0' }
         },
@@ -163,7 +163,7 @@ function prove (okay) {
         minority: [ '3' ],
         naturalized: [ '0', '2', '3' ],
         constituents: [],
-        immigrated: {
+        arrived: {
             id: { '1/0': '0', '3/0': '2', '6/0': '3' },
             promise: { '0': '1/0', '2': '3/0', '3': '6/0' }
         },
@@ -209,7 +209,7 @@ function prove (okay) {
         minority: [ '3' ],
         naturalized: [ '0', '2', '3', '4' ],
         constituents: [ '4' ],
-        immigrated: {
+        arrived: {
             id: { '1/0': '0', '3/0': '2', '6/0': '3', 'c/0': '4' },
             promise: { '0': '1/0', '2': '3/0', '3': '6/0', '4': 'c/0' }
         },
@@ -263,7 +263,7 @@ function prove (okay) {
         minority: [ '6', '7' ],
         naturalized: [ '0', '2', '3', '6', '7' ],
         constituents: [],
-        immigrated: {
+        arrived: {
             id: { '1/0': '0', '3/0': '2', '6/0': '3', 'e/0': '6', 'f/0': '7' },
             promise: { '0': '1/0', '2': '3/0', '3': '6/0', '6': 'e/0', '7': 'f/0' }
         },
@@ -329,7 +329,7 @@ function prove (okay) {
         minority: [ '6', '7' ],
         naturalized: [ '0', '2', '3', '6', '7' ],
         constituents: [],
-        immigrated: {
+        arrived: {
             id: { '1/0': '0', '3/0': '2', '6/0': '3', 'e/0': '6', 'f/0': '7' },
             promise: { '0': '1/0', '2': '3/0', '3': '6/0', '6': 'e/0', '7': 'f/0' }
         },
@@ -376,7 +376,7 @@ function prove (okay) {
         minority: [ '6', '7' ],
         naturalized: [ '0', '2', '3', '6', '7' ],
         constituents: [ '9', '10' ],
-        immigrated: {
+        arrived: {
             id: { '1/0': '0', '3/0': '2', '6/0': '3', 'e/0': '6', 'f/0': '7', '1b/0': '9', '1c/0': '10' },
             promise: { '0': '1/0', '2': '3/0', '3': '6/0', '6': 'e/0', '7': 'f/0', '9': '1b/0', '10': '1c/0' }
         },
@@ -412,7 +412,7 @@ function prove (okay) {
         minority: [ '6', '7' ],
         naturalized: [ '0', '2', '3', '6', '7', '9', '10' ],
         constituents: [ '9', '10' ],
-        immigrated: {
+        arrived: {
             id: { '1/0': '0', '3/0': '2', '6/0': '3', 'e/0': '6', 'f/0': '7', '1b/0': '9', '1c/0': '10' },
             promise: { '0': '1/0', '2': '3/0', '3': '6/0', '6': 'e/0', '7': 'f/0', '9': '1b/0', '10': '1c/0' }
         },
@@ -439,7 +439,7 @@ function prove (okay) {
         minority: [ '6', '7' ],
         naturalized: [ '0', '2', '3', '6', '7', '9', '10' ],
         constituents: [ '9', '10', '11' ],
-        immigrated: {
+        arrived: {
             id: { '1/0': '0', '3/0': '2', '6/0': '3', 'e/0': '6', 'f/0': '7', '1b/0': '9', '1c/0': '10', '1f/0': '11' },
             promise: { '0': '1/0', '2': '3/0', '3': '6/0', '6': 'e/0', '7': 'f/0', '9': '1b/0', '10': '1c/0', '11': '1f/0' }
         },
@@ -478,7 +478,7 @@ function prove (okay) {
         minority: [ '6', '7' ],
         naturalized: [ '0', '2', '3', '6', '7', '9', '10' ],
         constituents: [ '9', '10' ],
-        immigrated: {
+        arrived: {
             id: { '1/0': '0', '3/0': '2', '6/0': '3', 'e/0': '6', 'f/0': '7', '1b/0': '9', '1c/0': '10' },
             promise: { '0': '1/0', '2': '3/0', '3': '6/0', '6': 'e/0', '7': 'f/0', '9': '1b/0', '10': '1c/0' }
         },
@@ -524,7 +524,7 @@ function prove (okay) {
         minority: [ '6', '7' ],
         naturalized: [ '0', '2', '3', '6', '7', '9', '10', '12' ],
         constituents: [ '9', '10', '12' ],
-        immigrated: {
+        arrived: {
             id: { '1/0': '0', '3/0': '2', '6/0': '3', 'e/0': '6', 'f/0': '7', '1b/0': '9', '1c/0': '10', '23/0': '12' },
             promise: { '0': '1/0', '2': '3/0', '3': '6/0', '6': 'e/0', '7': 'f/0', '9': '1b/0', '10': '1c/0', '12': '23/0' }
         },
@@ -622,7 +622,7 @@ function prove (okay) {
         minority: [ '3', '0' ],
         naturalized: [ '0', '2', '3', '6', '7', '9', '10', '12' ],
         constituents: [ '9', '10', '12' ],
-        immigrated: {
+        arrived: {
             id: { '1/0': '0', '3/0': '2', '6/0': '3', 'e/0': '6', 'f/0': '7', '1b/0': '9', '1c/0': '10', '23/0': '12' },
             promise: { '0': '1/0', '2': '3/0', '3': '6/0', '6': 'e/0', '7': 'f/0', '9': '1b/0', '10': '1c/0', '12': '23/0' }
         },

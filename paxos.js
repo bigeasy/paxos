@@ -70,7 +70,7 @@ function Paxos (now, republic, id, options) {
         naturalized: [],
         constituents: [],
         properties: {},
-        immigrated: { id: {}, promise: {} }
+        arrived: { id: {}, promise: {} }
     }
     // Keep track of governments for bootstrapping.
     this._governments = [ null ]
@@ -159,7 +159,7 @@ Paxos.prototype.newGovernment = function (now, promise, quorum, government) {
     if (government.exile != null) {
         government.exile = {
             id: government.exile,
-            promise: this.government.immigrated.promise[government.exile],
+            promise: this.government.arrived.promise[government.exile],
             properties: this.government.properties[government.exile],
             index: {}
         }
@@ -216,12 +216,12 @@ Paxos.prototype.bootstrap = function (now, properties) {
         map: {},
         immigrate: { id: this.id, properties: properties, cookie: 0 },
         properties: {},
-        immigrated: { promise: {}, id: {} }
+        arrived: { promise: {}, id: {} }
     }
 
     government.properties[this.id] = properties
-    government.immigrated.promise[this.id] = '1/0'
-    government.immigrated.id['1/0'] = this.id
+    government.arrived.promise[this.id] = '1/0'
+    government.arrived.id['1/0'] = this.id
 
     this._promised = '1/0'
 
@@ -356,7 +356,7 @@ Paxos.prototype.immigrate = function (now, republic, id, cookie, properties, nat
 
 Paxos.prototype.naturalize = function () {
     if (!~this.government.naturalized.indexOf(this.id)) {
-        this._naturalizing[this.government.immigrated.promise[this.id]] = true
+        this._naturalizing[this.government.arrived.promise[this.id]] = true
     }
 }
 
@@ -422,7 +422,7 @@ Paxos.prototype.event = function (envelope) {
                 if (id != this.id) {
                     if (
                         majority.length == this.government.majority.length ||
-                        this._disappeared[this.government.immigrated.promise[id]] != null
+                        this._disappeared[this.government.arrived.promise[id]] != null
                     ) {
                         minority.push(id)
                     } else {
@@ -510,7 +510,7 @@ Paxos.prototype._findRound = function (sought) {
 Paxos.prototype._sync = function (committed) {
     var sync = {
         republic: this.republic,
-        promise: this.government.immigrated.promise[this.id],
+        promise: this.government.arrived.promise[this.id],
         from: this.id,
         minimum: this._minimum,
         government: this.government.promise,
@@ -565,7 +565,7 @@ Paxos.prototype._send = function (message) {
     TO: for (var i = 0, to; (to = message.to[i]) != null; i++) {
         this.scheduler.unschedule(to)
 
-        var promise = this.government.immigrated.promise[to]
+        var promise = this.government.arrived.promise[to]
         var committed = coalesce(this._committed[promise])
 
         if (committed == '0/0') {
@@ -644,7 +644,7 @@ Paxos.prototype.request = function (now, request) {
     if (request.sync.republic != this.republic) {
         return { message: { method: 'unreachable' } }
     } else if (
-        this.government.immigrated.promise[request.sync.from] != request.sync.promise
+        this.government.arrived.promise[request.sync.from] != request.sync.promise
     ) {
         if (this.government.promise == '0/0') {
             if (request.sync.commits.length == 0) {
@@ -684,7 +684,7 @@ Paxos.prototype.request = function (now, request) {
             },
             government: null,
             sync: {
-                promise: this.government.immigrated.promise[this.id],
+                promise: this.government.arrived.promise[this.id],
                 committed: null,
                 commits: []
             },
@@ -739,7 +739,7 @@ Paxos.prototype.response = function (now, cookie, responses) {
         // Deduce recipient properties.
         var id = message.to[i]
         var response = responses[id]
-        var promise = this.government.immigrated.promise[id]
+        var promise = this.government.arrived.promise[id]
         // If the citizen is unreachable we create a dummy record that uses our
         // current government for the government promise and a bunch of
         // defaults so that it will pass through the logic.
@@ -784,7 +784,7 @@ Paxos.prototype.response = function (now, cookie, responses) {
         // Deduce recipient properties.
         var id = message.to[i]
         var response = responses[id]
-        var promise = this.government.immigrated.promise[id]
+        var promise = this.government.arrived.promise[id]
 
         // Go through responses converting network errors to "unreachable"
         // messages with appropriate defaults.
@@ -1037,13 +1037,13 @@ Paxos.prototype._commit = function (now, entry, top) {
             } else {
                 this.government.constituents.push(entry.body.immigrate.id)
             }
-            this.government.immigrated.id[this.government.immigrated.promise[entry.body.immigrate.id]]
-            this.government.immigrated.promise[entry.body.immigrate.id] = entry.promise
-            this.government.immigrated.id[entry.promise] = entry.body.immigrate.id
+            this.government.arrived.id[this.government.arrived.promise[entry.body.immigrate.id]]
+            this.government.arrived.promise[entry.body.immigrate.id] = entry.promise
+            this.government.arrived.id[entry.promise] = entry.body.immigrate.id
             this.government.properties[entry.body.immigrate.id] = entry.body.immigrate.properties
         } else if (entry.body.exile != null) {
-            delete this.government.immigrated.id[this.government.immigrated.promise[entry.body.exile.id]]
-            delete this.government.immigrated.promise[entry.body.exile.id]
+            delete this.government.arrived.id[this.government.arrived.promise[entry.body.exile.id]]
+            delete this.government.arrived.promise[entry.body.exile.id]
             delete this.government.properties[entry.body.exile.id]
             if ('constituents' in entry.body.exile.index) {
                 this.government.constituents.splice(entry.body.exile.index.constituents, 1)
@@ -1132,16 +1132,16 @@ Paxos.prototype._commit = function (now, entry, top) {
                 // is delete reachable information that exists for a subsequent
                 // version, well, the worse you can do is get rid of information
                 // that will once again materialize.
-                delete this._unreachable[this.government.immigrated.promise[id]]
-                delete this._disappeared[this.government.immigrated.promise[id]]
+                delete this._unreachable[this.government.arrived.promise[id]]
+                delete this._disappeared[this.government.arrived.promise[id]]
             }
             for (var i = 0, id; (id = this.government.minority[i]) != null; i++) {
-                delete this._unreachable[this.government.immigrated.promise[id]]
-                delete this._disappeared[this.government.immigrated.promise[id]]
+                delete this._unreachable[this.government.arrived.promise[id]]
+                delete this._disappeared[this.government.arrived.promise[id]]
             }
         } else {
             for (var unreachable in this._unreachable) {
-                if (!(unreachable in this.government.immigrated.id)) {
+                if (!(unreachable in this.government.arrived.id)) {
                     delete this._unreachable[unreachable]
                     delete this._disappeared[unreachable]
                 }
@@ -1149,7 +1149,7 @@ Paxos.prototype._commit = function (now, entry, top) {
         }
 
         for (var naturalizing in this._naturalizing) {
-            var id = this.government.immigrated.id[naturalizing]
+            var id = this.government.arrived.id[naturalizing]
             if (!~this.citizens.indexOf(id) || ~this.government.naturalized.indexOf(id)) {
                 delete this._naturalizing[naturalizing]
             }
@@ -1168,7 +1168,7 @@ Paxos.prototype._commit = function (now, entry, top) {
             }
             this._shaper = shaper
             if (entry.body.immigrate) {
-                shaper.immigrated(entry.body.immigrate.id)
+                shaper.arrived(entry.body.immigrate.id)
             }
             for (var promise in this._unreachable) {
                 this._reshape(now, shaper.unreachable(promise))
@@ -1203,7 +1203,7 @@ Paxos.prototype._commit = function (now, entry, top) {
 
         var committed = {}
         for (var i = 0, id; (id = this.constituency[i]) != null; i++) {
-            var promise = this.government.immigrated.promise[id]
+            var promise = this.government.arrived.promise[id]
             committed[promise] = this._committed[promise]
         }
         this._committed = committed
