@@ -538,7 +538,7 @@ function prove (okay) {
             '10': { location: '10' },
             '12': { location: '12' }
         }
-    }, 'use latest immigration to onboard')
+    }, 'use latest arrival to onboard')
 
     // Set it up so that the proposers do not make proposals to one another
     // since that's how I've always sketched it out on paper.

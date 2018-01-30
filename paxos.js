@@ -590,11 +590,11 @@ Paxos.prototype._send = function (message) {
                 continue TO
             }
 
-            var immigration = arrivals.pop()
-            committed = immigration.body.previous
+            var arrival = arrivals.pop()
+            committed = arrival.body.previous
 
             for (var j = 1, J = this._governments.length; j < J; j++) {
-                if (this._governments[j].promise == immigration.body.promise) {
+                if (this._governments[j].promise == arrival.body.promise) {
                     government = this._governments[j - 1]
                     break
                 }
@@ -1163,8 +1163,8 @@ Paxos.prototype._commit = function (now, entry, top) {
             // If we are the leader, we are going to want to look for
             // opportunities to change the shape of the government.
             var shaper = new Shaper(this.parliamentSize, this.government, entry.body.map == null)
-            for (var i = 0, immigration; (immigration = this._shaper._immigrating[i]) != null; i++) {
-                shaper.immigrate(immigration)
+            for (var i = 0, arrival; (arrival = this._shaper._immigrating[i]) != null; i++) {
+                shaper.immigrate(arrival)
             }
             this._shaper = shaper
             if (entry.body.immigrate) {
