@@ -122,7 +122,7 @@ Shaper.prototype.unreachable = function (unreachable) {
         government: {
             majority: this._government.majority,
             minority: this._government.minority.filter(function ($id) { return $id != id }),
-            exile: id
+            departed: id
         }
     }
 }

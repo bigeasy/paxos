@@ -156,20 +156,20 @@ Paxos.prototype.newGovernment = function (now, promise, quorum, government) {
     // we get a new shaper.
     this._shaper.decided = true
 
-    if (government.exile != null) {
-        government.exile = {
-            id: government.exile,
-            promise: this.government.arrived.promise[government.exile],
-            properties: this.government.properties[government.exile],
+    if (government.departed != null) {
+        government.departed = {
+            id: government.departed,
+            promise: this.government.arrived.promise[government.departed],
+            properties: this.government.properties[government.departed],
             index: {}
         }
-        var index = this.government.constituents.indexOf(government.exile.id)
+        var index = this.government.constituents.indexOf(government.departed.id)
         if (~index) {
-            government.exile.index.constituents = index
+            government.departed.index.constituents = index
         }
-        index = this.government.naturalized.indexOf(government.exile.id)
+        index = this.government.naturalized.indexOf(government.departed.id)
         if (~index) {
-            government.exile.index.naturalized = index
+            government.departed.index.naturalized = index
         }
     } else if (government.promote != null) {
         for (var i = 0, id; (id = government.promote[i]) != null; i++) {
@@ -1041,15 +1041,15 @@ Paxos.prototype._commit = function (now, entry, top) {
             this.government.arrived.promise[entry.body.immigrate.id] = entry.promise
             this.government.arrived.id[entry.promise] = entry.body.immigrate.id
             this.government.properties[entry.body.immigrate.id] = entry.body.immigrate.properties
-        } else if (entry.body.exile != null) {
-            delete this.government.arrived.id[this.government.arrived.promise[entry.body.exile.id]]
-            delete this.government.arrived.promise[entry.body.exile.id]
-            delete this.government.properties[entry.body.exile.id]
-            if ('constituents' in entry.body.exile.index) {
-                this.government.constituents.splice(entry.body.exile.index.constituents, 1)
+        } else if (entry.body.departed != null) {
+            delete this.government.arrived.id[this.government.arrived.promise[entry.body.departed.id]]
+            delete this.government.arrived.promise[entry.body.departed.id]
+            delete this.government.properties[entry.body.departed.id]
+            if ('constituents' in entry.body.departed.index) {
+                this.government.constituents.splice(entry.body.departed.index.constituents, 1)
             }
-            if ('naturalized' in entry.body.exile.index) {
-                this.government.naturalized.splice(entry.body.exile.index.naturalized, 1)
+            if ('naturalized' in entry.body.departed.index) {
+                this.government.naturalized.splice(entry.body.departed.index.naturalized, 1)
             }
         } else if (entry.body.promote != null) {
             for (var i = 0, promotion; (promotion = entry.body.promote[i]) != null; i++) {

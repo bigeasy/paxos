@@ -172,7 +172,7 @@ function prove (okay) {
             '2': { location: '2' },
             '3': { location: '3' }
         }
-    }, 'exile')
+    }, 'depart')
 
     var shifter = network.denizens[0].log.shifter()
 
@@ -274,7 +274,7 @@ function prove (okay) {
             '6': { location: '6' },
             '7': { location: '7' }
         }
-    }, 'reboot, exile and double immigrate')
+    }, 'reboot, depart and double immigrate')
 
     // Reject messages from a different republic.
     network.populate(1)
@@ -491,7 +491,7 @@ function prove (okay) {
             '9': { location: '9' },
             '10': { location: '10' }
         }
-    }, 'exiled before naturalized')
+    }, 'departed before naturalized')
 
     network.populate(1)
     var intercept = network.send('0', '2', '3',  '6', '7', { sync: [{ to: '9' }] })
