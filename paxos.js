@@ -38,7 +38,7 @@ function Paxos (now, id, options) {
     this.id = String(id)
 
     // Use the create time as a cookie to identify this instance of this id.
-    this.cookie = now
+    this.cookie = null
 
     // Maximum size of a parliament. The government will grow to this size.
     this.parliamentSize = coalesce(options.parliamentSize, 5)
@@ -231,8 +231,9 @@ Paxos.prototype.bootstrap = function (republic, now, properties) {
     this._commit(now, { promise: '1/0', body: government, previous: '0/0' }, '0/0')
 }
 
-Paxos.prototype.join = function (republic) {
+Paxos.prototype.join = function (republic, cookie) {
     this.government.republic = republic
+    this.cookie = cookie
 }
 
 // ### Enqueue and Immigrate

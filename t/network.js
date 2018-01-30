@@ -153,7 +153,7 @@ Network.prototype.arrive = function (i) {
     }).sort(function (left, right) {
         return Monotonic.compare(left.promise, right.promise)
     }).pop().majority[0]
-    denizen.join(1)
+    denizen.join(1, this.time)
     this.denizens[leader].arrive(this.time, 1, denizen.id, denizen.cookie, { location: denizen.id }, true)
 }
 
