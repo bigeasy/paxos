@@ -68,9 +68,9 @@ function prove (okay) {
             '1': { location: '1' },
             '2': { location: '2' }
         }
-    }, 'immigrate without naturalization')
+    }, 'immigrate without acclimation')
 
-    network.denizens[2].naturalize()
+    network.denizens[2].acclimate()
     network.time += 1
     network.send()
 
@@ -389,13 +389,13 @@ function prove (okay) {
             '9': { location: '9' },
             '10': { location: '10' }
         }
-    }, 'immigrate without naturalization')
+    }, 'immigrate without acclimation')
 
-    // This exercises the already acclimated branch of `Paxos.naturalize`.
-    network.denizens[3].naturalize()
+    // This exercises the already acclimated branch of `Paxos.acclimate`.
+    network.denizens[3].acclimate()
 
-    network.denizens[9].naturalize()
-    network.denizens[10].naturalize()
+    network.denizens[9].acclimate()
+    network.denizens[10].acclimate()
 
     network.time += 1
 

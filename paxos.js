@@ -211,7 +211,7 @@ Paxos.prototype.bootstrap = function (now, properties) {
         promise: '1/0',
         majority: [],
         minority: [],
-        naturalize: this.id,
+        acclimate: this.id,
         constituents: [],
         map: {},
         immigrate: { id: this.id, properties: properties, cookie: 0 },
@@ -354,7 +354,7 @@ Paxos.prototype.immigrate = function (now, republic, id, cookie, properties, acc
     return response
 }
 
-Paxos.prototype.naturalize = function () {
+Paxos.prototype.acclimate = function () {
     if (!~this.government.acclimated.indexOf(this.id)) {
         this._acclimating[this.government.arrived.promise[this.id]] = true
     }
@@ -846,7 +846,7 @@ Paxos.prototype.response = function (now, cookie, responses) {
         for (var acclimating in response.acclimating) {
             if (!this._acclimating[acclimating]) {
                 this._acclimating[acclimating] = true
-                this._reshape(now, this._shaper.naturalize(acclimating))
+                this._reshape(now, this._shaper.acclimate(acclimating))
             }
         }
 
@@ -1058,8 +1058,8 @@ Paxos.prototype._commit = function (now, entry, top) {
         } else if (entry.body.demote != null) {
             this.government.constituents.unshift(entry.body.demote)
         }
-        if (entry.body.naturalize != null) {
-            this.government.acclimated.push(entry.body.naturalize)
+        if (entry.body.acclimate != null) {
+            this.government.acclimated.push(entry.body.acclimate)
         }
 
         var parliament = this.government.majority.concat(this.government.minority), index
@@ -1174,7 +1174,7 @@ Paxos.prototype._commit = function (now, entry, top) {
                 this._reshape(now, shaper.unreachable(promise))
             }
             for (var promise in this._acclimating) {
-                this._reshape(now, shaper.naturalize(promise))
+                this._reshape(now, shaper.acclimate(promise))
             }
             this.government.acclimated.forEach(function (id) {
                 this._reshape(now, shaper.acclimated(id))

@@ -127,7 +127,7 @@ Shaper.prototype.unreachable = function (unreachable) {
     }
 }
 
-Shaper.prototype.naturalize = function (promise) {
+Shaper.prototype.acclimate = function (promise) {
     if (this.decided) {
         return null
     }
@@ -135,7 +135,7 @@ Shaper.prototype.naturalize = function (promise) {
     var government = this._government
 
     var id = government.arrived.id[promise]
-    assert(id != null, 'unable to determine naturalize id')
+    assert(id != null, 'unable to determine acclimate id')
 
 
     assert(!~government.acclimated.indexOf(id), 'already acclimated')
@@ -145,7 +145,7 @@ Shaper.prototype.naturalize = function (promise) {
         government: {
             majority: this._government.majority,
             minority: this._government.minority,
-            naturalize: id
+            acclimate: id
         }
     }
 }
@@ -244,7 +244,7 @@ Shaper.prototype._immigration = function () {
                     properties: immigration.properties,
                     cookie: immigration.cookie
                 },
-                naturalize: immigration.acclimated ? immigration.id : null
+                acclimate: immigration.acclimated ? immigration.id : null
             }
         }
     }
@@ -253,7 +253,7 @@ Shaper.prototype._immigration = function () {
 
 Shaper.null = {
     unreachable: function () { return null },
-    naturalize: function () { return null },
+    acclimate: function () { return null },
     _immigrating: []
 }
 
