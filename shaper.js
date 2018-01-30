@@ -72,7 +72,7 @@ function Shaper (parliamentSize, government, recovered) {
     this._representative = null
     this._shouldNaturalize = this._government.majority.length +
         this._government.minority.length +
-        this._government.constituents.length != this._government.naturalized.length
+        this._government.constituents.length != this._government.acclimated.length
     this._shouldRecover(recovered) || this._shouldContract()
 }
 
@@ -138,7 +138,7 @@ Shaper.prototype.naturalize = function (promise) {
     assert(id != null, 'unable to determine naturalize id')
 
 
-    assert(!~government.naturalized.indexOf(id), 'already naturalized')
+    assert(!~government.acclimated.indexOf(id), 'already acclimated')
 
     return this._governments.shift() || {
         quorum: this._government.majority,
@@ -154,7 +154,7 @@ Shaper.prototype.naturalize = function (promise) {
 // new shape. Note that immigration takes place is elsewhere.
 
 //
-Shaper.prototype.naturalized = function (id) {
+Shaper.prototype.acclimated = function (id) {
     if (this.decided) {
         return null
     }
@@ -221,7 +221,7 @@ Shaper.prototype.immigrate = function (immigration) {
     } else {
         this._immigrating[i].properties = immigration.properties
         this._immigrating[i].cookie = immigration.cookie
-        this._immigrating[i].naturalized = immigration.naturalized
+        this._immigrating[i].acclimated = immigration.acclimated
     }
 
     // Do nothing if our container indicates that a decision has been reached.
@@ -244,7 +244,7 @@ Shaper.prototype._immigration = function () {
                     properties: immigration.properties,
                     cookie: immigration.cookie
                 },
-                naturalize: immigration.naturalized ? immigration.id : null
+                naturalize: immigration.acclimated ? immigration.id : null
             }
         }
     }

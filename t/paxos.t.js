@@ -16,7 +16,7 @@ function prove (okay) {
         republic: 1,
         majority: [ '0' ],
         minority: [],
-        naturalized: [ '0' ],
+        acclimated: [ '0' ],
         constituents: [],
         promise: '1/0',
         arrived: { id: { '1/0': '0' }, promise: { '0': '1/0' } },
@@ -32,7 +32,7 @@ function prove (okay) {
         republic: 1,
         majority: [ '0' ],
         minority: [],
-        naturalized: [ '0', '1' ],
+        acclimated: [ '0', '1' ],
         constituents: [ '1' ],
         promise: '2/0',
         arrived: {
@@ -56,7 +56,7 @@ function prove (okay) {
         republic: 1,
         majority: [ '0' ],
         minority: [],
-        naturalized: [ '0', '1' ],
+        acclimated: [ '0', '1' ],
         constituents: [ '1', '2' ],
         promise: '3/0',
         arrived: {
@@ -78,7 +78,7 @@ function prove (okay) {
         republic: 1,
         majority: [ '0', '1' ],
         minority: [ '2' ],
-        naturalized: [ '0', '1', '2' ],
+        acclimated: [ '0', '1', '2' ],
         constituents: [],
         promise: '5/0',
         arrived: {
@@ -122,7 +122,7 @@ function prove (okay) {
         republic: 1,
         majority: [ '0', '2' ],
         minority: [ '1' ],
-        naturalized: [ '0', '1', '2', '3' ],
+        acclimated: [ '0', '1', '2', '3' ],
         constituents: [ '3' ],
         promise: '8/0',
         arrived: {
@@ -161,7 +161,7 @@ function prove (okay) {
         promise: 'b/0',
         majority: [ '0', '2' ],
         minority: [ '3' ],
-        naturalized: [ '0', '2', '3' ],
+        acclimated: [ '0', '2', '3' ],
         constituents: [],
         arrived: {
             id: { '1/0': '0', '3/0': '2', '6/0': '3' },
@@ -207,7 +207,7 @@ function prove (okay) {
         promise: 'c/0',
         majority: [ '0', '2' ],
         minority: [ '3' ],
-        naturalized: [ '0', '2', '3', '4' ],
+        acclimated: [ '0', '2', '3', '4' ],
         constituents: [ '4' ],
         arrived: {
             id: { '1/0': '0', '3/0': '2', '6/0': '3', 'c/0': '4' },
@@ -261,7 +261,7 @@ function prove (okay) {
         promise: '14/0',
         majority: [ '0', '2', '3' ],
         minority: [ '6', '7' ],
-        naturalized: [ '0', '2', '3', '6', '7' ],
+        acclimated: [ '0', '2', '3', '6', '7' ],
         constituents: [],
         arrived: {
             id: { '1/0': '0', '3/0': '2', '6/0': '3', 'e/0': '6', 'f/0': '7' },
@@ -327,7 +327,7 @@ function prove (okay) {
         promise: '1a/0',
         majority: [ '3', '0', '2' ],
         minority: [ '6', '7' ],
-        naturalized: [ '0', '2', '3', '6', '7' ],
+        acclimated: [ '0', '2', '3', '6', '7' ],
         constituents: [],
         arrived: {
             id: { '1/0': '0', '3/0': '2', '6/0': '3', 'e/0': '6', 'f/0': '7' },
@@ -374,7 +374,7 @@ function prove (okay) {
         promise: '1c/0',
         majority: [ '3', '0', '2' ],
         minority: [ '6', '7' ],
-        naturalized: [ '0', '2', '3', '6', '7' ],
+        acclimated: [ '0', '2', '3', '6', '7' ],
         constituents: [ '9', '10' ],
         arrived: {
             id: { '1/0': '0', '3/0': '2', '6/0': '3', 'e/0': '6', 'f/0': '7', '1b/0': '9', '1c/0': '10' },
@@ -391,7 +391,7 @@ function prove (okay) {
         }
     }, 'immigrate without naturalization')
 
-    // This exercises the already naturalized branch of `Paxos.naturalize`.
+    // This exercises the already acclimated branch of `Paxos.naturalize`.
     network.denizens[3].naturalize()
 
     network.denizens[9].naturalize()
@@ -410,7 +410,7 @@ function prove (okay) {
         promise: '1e/0',
         majority: [ '3', '0', '2' ],
         minority: [ '6', '7' ],
-        naturalized: [ '0', '2', '3', '6', '7', '9', '10' ],
+        acclimated: [ '0', '2', '3', '6', '7', '9', '10' ],
         constituents: [ '9', '10' ],
         arrived: {
             id: { '1/0': '0', '3/0': '2', '6/0': '3', 'e/0': '6', 'f/0': '7', '1b/0': '9', '1c/0': '10' },
@@ -425,7 +425,7 @@ function prove (okay) {
             '9': { location: '9' },
             '10': { location: '10' }
         }
-    }, 'naturalized')
+    }, 'acclimated')
 
     network.push()
     network.denizens[3].immigrate(network.time, 1, '11', network.denizens[11].cookie, { location: '11' })
@@ -437,7 +437,7 @@ function prove (okay) {
         promise: '1f/0',
         majority: [ '3', '0', '2' ],
         minority: [ '6', '7' ],
-        naturalized: [ '0', '2', '3', '6', '7', '9', '10' ],
+        acclimated: [ '0', '2', '3', '6', '7', '9', '10' ],
         constituents: [ '9', '10', '11' ],
         arrived: {
             id: { '1/0': '0', '3/0': '2', '6/0': '3', 'e/0': '6', 'f/0': '7', '1b/0': '9', '1c/0': '10', '1f/0': '11' },
@@ -453,7 +453,7 @@ function prove (okay) {
             '10': { location: '10' },
             '11': { location: '11' }
         }
-    }, 'not yet naturalized')
+    }, 'not yet acclimated')
 
     network.time += 1
 
@@ -476,7 +476,7 @@ function prove (okay) {
         promise: '20/0',
         majority: [ '3', '0', '2' ],
         minority: [ '6', '7' ],
-        naturalized: [ '0', '2', '3', '6', '7', '9', '10' ],
+        acclimated: [ '0', '2', '3', '6', '7', '9', '10' ],
         constituents: [ '9', '10' ],
         arrived: {
             id: { '1/0': '0', '3/0': '2', '6/0': '3', 'e/0': '6', 'f/0': '7', '1b/0': '9', '1c/0': '10' },
@@ -491,7 +491,7 @@ function prove (okay) {
             '9': { location: '9' },
             '10': { location: '10' }
         }
-    }, 'departed before naturalized')
+    }, 'departed before acclimated')
 
     network.populate(1)
     var intercept = network.send('0', '2', '3',  '6', '7', { sync: [{ to: '9' }] })
@@ -522,7 +522,7 @@ function prove (okay) {
         promise: '23/0',
         majority: [ '3', '0', '2' ],
         minority: [ '6', '7' ],
-        naturalized: [ '0', '2', '3', '6', '7', '9', '10', '12' ],
+        acclimated: [ '0', '2', '3', '6', '7', '9', '10', '12' ],
         constituents: [ '9', '10', '12' ],
         arrived: {
             id: { '1/0': '0', '3/0': '2', '6/0': '3', 'e/0': '6', 'f/0': '7', '1b/0': '9', '1c/0': '10', '23/0': '12' },
@@ -620,7 +620,7 @@ function prove (okay) {
         promise: '29/0',
         majority: [ '2', '6', '7' ],
         minority: [ '3', '0' ],
-        naturalized: [ '0', '2', '3', '6', '7', '9', '10', '12' ],
+        acclimated: [ '0', '2', '3', '6', '7', '9', '10', '12' ],
         constituents: [ '9', '10', '12' ],
         arrived: {
             id: { '1/0': '0', '3/0': '2', '6/0': '3', 'e/0': '6', 'f/0': '7', '1b/0': '9', '1c/0': '10', '23/0': '12' },

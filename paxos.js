@@ -67,7 +67,7 @@ function Paxos (now, republic, id, options) {
         promise: '0/0',
         majority: [],
         minority: [],
-        naturalized: [],
+        acclimated: [],
         constituents: [],
         properties: {},
         arrived: { id: {}, promise: {} }
@@ -167,9 +167,9 @@ Paxos.prototype.newGovernment = function (now, promise, quorum, government) {
         if (~index) {
             government.departed.index.constituents = index
         }
-        index = this.government.naturalized.indexOf(government.departed.id)
+        index = this.government.acclimated.indexOf(government.departed.id)
         if (~index) {
-            government.departed.index.naturalized = index
+            government.departed.index.acclimated = index
         }
     } else if (government.promote != null) {
         for (var i = 0, id; (id = government.promote[i]) != null; i++) {
@@ -332,7 +332,7 @@ Paxos.prototype.enqueue = function (now, republic, message) {
 // until the proposal was enacted.
 
 //
-Paxos.prototype.immigrate = function (now, republic, id, cookie, properties, naturalized) {
+Paxos.prototype.immigrate = function (now, republic, id, cookie, properties, acclimated) {
     var response = this._enqueuable(republic)
     if (response == null) {
         // Do not allow the user to initiate the immigration of an id that
@@ -348,14 +348,14 @@ Paxos.prototype.immigrate = function (now, republic, id, cookie, properties, nat
             }
         } else {
             response = { enqueued: true }
-            this._reshape(now, this._shaper.immigrate({ id: id, properties: properties, cookie: cookie, naturalized: naturalized }))
+            this._reshape(now, this._shaper.immigrate({ id: id, properties: properties, cookie: cookie, acclimated: acclimated }))
         }
     }
     return response
 }
 
 Paxos.prototype.naturalize = function () {
-    if (!~this.government.naturalized.indexOf(this.id)) {
+    if (!~this.government.acclimated.indexOf(this.id)) {
         this._naturalizing[this.government.arrived.promise[this.id]] = true
     }
 }
@@ -1048,8 +1048,8 @@ Paxos.prototype._commit = function (now, entry, top) {
             if ('constituents' in entry.body.departed.index) {
                 this.government.constituents.splice(entry.body.departed.index.constituents, 1)
             }
-            if ('naturalized' in entry.body.departed.index) {
-                this.government.naturalized.splice(entry.body.departed.index.naturalized, 1)
+            if ('acclimated' in entry.body.departed.index) {
+                this.government.acclimated.splice(entry.body.departed.index.acclimated, 1)
             }
         } else if (entry.body.promote != null) {
             for (var i = 0, promotion; (promotion = entry.body.promote[i]) != null; i++) {
@@ -1059,7 +1059,7 @@ Paxos.prototype._commit = function (now, entry, top) {
             this.government.constituents.unshift(entry.body.demote)
         }
         if (entry.body.naturalize != null) {
-            this.government.naturalized.push(entry.body.naturalize)
+            this.government.acclimated.push(entry.body.naturalize)
         }
 
         var parliament = this.government.majority.concat(this.government.minority), index
@@ -1150,7 +1150,7 @@ Paxos.prototype._commit = function (now, entry, top) {
 
         for (var naturalizing in this._naturalizing) {
             var id = this.government.arrived.id[naturalizing]
-            if (!~this.citizens.indexOf(id) || ~this.government.naturalized.indexOf(id)) {
+            if (!~this.citizens.indexOf(id) || ~this.government.acclimated.indexOf(id)) {
                 delete this._naturalizing[naturalizing]
             }
         }
@@ -1176,8 +1176,8 @@ Paxos.prototype._commit = function (now, entry, top) {
             for (var promise in this._naturalizing) {
                 this._reshape(now, shaper.naturalize(promise))
             }
-            this.government.naturalized.forEach(function (id) {
-                this._reshape(now, shaper.naturalized(id))
+            this.government.acclimated.forEach(function (id) {
+                this._reshape(now, shaper.acclimated(id))
             }, this)
         } else {
             this._shaper = Shaper.null
