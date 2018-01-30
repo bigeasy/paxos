@@ -569,7 +569,7 @@ Paxos.prototype._send = function (message) {
         var committed = coalesce(this._committed[promise])
 
         if (committed == '0/0') {
-            var immigrations = []
+            var arrivals = []
             var iterator = this.log.trailer.node.next, previous
             for (;;) {
                 if (iterator == null) {
@@ -578,19 +578,19 @@ Paxos.prototype._send = function (message) {
                 if (Monotonic.isBoundary(iterator.body.promise, 0)) {
                     var immigrate = iterator.body.body.immigrate
                     if (immigrate && immigrate.id == to) {
-                        immigrations.push(iterator)
+                        arrivals.push(iterator)
                     }
                 }
                 previous = iterator
                 iterator = iterator.next
             }
 
-            if (immigrations.length == 0) {
+            if (arrivals.length == 0) {
                 responses[to] = null
                 continue TO
             }
 
-            var immigration = immigrations.pop()
+            var immigration = arrivals.pop()
             committed = immigration.body.previous
 
             for (var j = 1, J = this._governments.length; j < J; j++) {
