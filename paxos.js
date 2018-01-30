@@ -214,7 +214,7 @@ Paxos.prototype.bootstrap = function (now, properties) {
         acclimate: this.id,
         constituents: [],
         map: {},
-        immigrate: { id: this.id, properties: properties, cookie: 0 },
+        arrive: { id: this.id, properties: properties, cookie: 0 },
         properties: {},
         arrived: { promise: {}, id: {} }
     }
@@ -225,7 +225,7 @@ Paxos.prototype.bootstrap = function (now, properties) {
 
     this._promised = '1/0'
 
-    this._shaper.immigrate({ id: this.id, cookie: 0 })
+    this._shaper.arrive({ id: this.id, cookie: 0 })
 
     this._commit(now, { promise: '1/0', body: government, previous: '0/0' }, '0/0')
 }
@@ -332,7 +332,7 @@ Paxos.prototype.enqueue = function (now, republic, message) {
 // until the proposal was enacted.
 
 //
-Paxos.prototype.immigrate = function (now, republic, id, cookie, properties, acclimated) {
+Paxos.prototype.arrive = function (now, republic, id, cookie, properties, acclimated) {
     var response = this._enqueuable(republic)
     if (response == null) {
         // Do not allow the user to initiate the immigration of an id that
@@ -348,7 +348,7 @@ Paxos.prototype.immigrate = function (now, republic, id, cookie, properties, acc
             }
         } else {
             response = { enqueued: true }
-            this._reshape(now, this._shaper.immigrate({ id: id, properties: properties, cookie: cookie, acclimated: acclimated }))
+            this._reshape(now, this._shaper.arrive({ id: id, properties: properties, cookie: cookie, acclimated: acclimated }))
         }
     }
     return response
@@ -576,8 +576,8 @@ Paxos.prototype._send = function (message) {
                     break
                 }
                 if (Monotonic.isBoundary(iterator.body.promise, 0)) {
-                    var immigrate = iterator.body.body.immigrate
-                    if (immigrate && immigrate.id == to) {
+                    var arrive = iterator.body.body.arrive
+                    if (arrive && arrive.id == to) {
                         arrivals.push(iterator)
                     }
                 }
@@ -656,9 +656,9 @@ Paxos.prototype.request = function (now, request) {
             }
             if (
                 !Monotonic.isBoundary(request.sync.commits[0].promise, 0) ||
-                request.sync.commits[0].body.immigrate == null ||
-                request.sync.commits[0].body.immigrate.id != this.id ||
-                request.sync.commits[0].body.immigrate.cookie != this.cookie
+                request.sync.commits[0].body.arrive == null ||
+                request.sync.commits[0].body.arrive.id != this.id ||
+                request.sync.commits[0].body.arrive.cookie != this.cookie
             ) {
                 return { message: { method: 'unreachable' } }
             }
@@ -1031,16 +1031,16 @@ Paxos.prototype._commit = function (now, entry, top) {
         this.government.promise = entry.promise
         this.government.majority = entry.body.majority
         this.government.minority = entry.body.minority
-        if (entry.body.immigrate != null) {
+        if (entry.body.arrive != null) {
             if (entry.promise == '1/0') {
-                this.government.majority.push(entry.body.immigrate.id)
+                this.government.majority.push(entry.body.arrive.id)
             } else {
-                this.government.constituents.push(entry.body.immigrate.id)
+                this.government.constituents.push(entry.body.arrive.id)
             }
-            this.government.arrived.id[this.government.arrived.promise[entry.body.immigrate.id]]
-            this.government.arrived.promise[entry.body.immigrate.id] = entry.promise
-            this.government.arrived.id[entry.promise] = entry.body.immigrate.id
-            this.government.properties[entry.body.immigrate.id] = entry.body.immigrate.properties
+            this.government.arrived.id[this.government.arrived.promise[entry.body.arrive.id]]
+            this.government.arrived.promise[entry.body.arrive.id] = entry.promise
+            this.government.arrived.id[entry.promise] = entry.body.arrive.id
+            this.government.properties[entry.body.arrive.id] = entry.body.arrive.properties
         } else if (entry.body.departed != null) {
             delete this.government.arrived.id[this.government.arrived.promise[entry.body.departed.id]]
             delete this.government.arrived.promise[entry.body.departed.id]
@@ -1164,11 +1164,11 @@ Paxos.prototype._commit = function (now, entry, top) {
             // opportunities to change the shape of the government.
             var shaper = new Shaper(this.parliamentSize, this.government, entry.body.map == null)
             for (var i = 0, arrival; (arrival = this._shaper._immigrating[i]) != null; i++) {
-                shaper.immigrate(arrival)
+                shaper.arrive(arrival)
             }
             this._shaper = shaper
-            if (entry.body.immigrate) {
-                shaper.arrived(entry.body.immigrate.id)
+            if (entry.body.arrive) {
+                shaper.arrived(entry.body.arrive.id)
             }
             for (var promise in this._unreachable) {
                 this._reshape(now, shaper.unreachable(promise))

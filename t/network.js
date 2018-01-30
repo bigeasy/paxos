@@ -146,21 +146,21 @@ Network.prototype.bootstrap = function () {
     this.denizens[0].bootstrap(this.time, { location: '0' })
 }
 
-Network.prototype.immigrate = function (i) {
+Network.prototype.arrive = function (i) {
     var denizen = this.denizens[i]
     var leader = this.denizens.map(function (denizen) {
         return denizen.government
     }).sort(function (left, right) {
         return Monotonic.compare(left.promise, right.promise)
     }).pop().majority[0]
-    this.denizens[leader].immigrate(this.time, 1, denizen.id, denizen.cookie, { location: denizen.id }, true)
+    this.denizens[leader].arrive(this.time, 1, denizen.id, denizen.cookie, { location: denizen.id }, true)
 }
 
 Network.prototype.populate = function (count) {
     while (count-- != 0) {
         var i = this.denizens.length
         this.reboot(i)
-        this.immigrate(i)
+        this.arrive(i)
     }
 }
 

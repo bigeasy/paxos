@@ -199,7 +199,7 @@ Shaper.prototype.arrived = function (id) {
     this._immigrating.shift()
 }
 
-Shaper.prototype.immigrate = function (immigration) {
+Shaper.prototype.arrive = function (immigration) {
     // We do not going to reject a duplicate immigration for a particular id.
     //
     // Here is a race condition and how it will shake itself out.
@@ -239,7 +239,7 @@ Shaper.prototype._immigration = function () {
             government: {
                 majority: this._government.majority,
                 minority: this._government.minority,
-                immigrate: {
+                arrive: {
                     id: immigration.id,
                     properties: immigration.properties,
                     cookie: immigration.cookie

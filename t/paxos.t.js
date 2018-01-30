@@ -24,7 +24,7 @@ function prove (okay) {
     }, 'bootstrap')
 
     network.push()
-    okay(network.denizens[0].immigrate(network.time, 1, '1', network.denizens[1].cookie, { location: '1' }, true).enqueued, 'immigrate')
+    okay(network.denizens[0].arrive(network.time, 1, '1', network.denizens[1].cookie, { location: '1' }, true).enqueued, 'arrive')
 
     network.send()
 
@@ -48,7 +48,7 @@ function prove (okay) {
     network.push()
     // TODO Turn off immigration and ensure that it is not able to join the
     // government.
-    network.denizens[0].immigrate(network.time, 1, '2', network.denizens[2].cookie, { location: '2' }, false)
+    network.denizens[0].arrive(network.time, 1, '2', network.denizens[2].cookie, { location: '2' }, false)
 
     network.send()
 
@@ -68,7 +68,7 @@ function prove (okay) {
             '1': { location: '1' },
             '2': { location: '2' }
         }
-    }, 'immigrate without acclimation')
+    }, 'arrive without acclimation')
 
     network.denizens[2].acclimate()
     network.time += 1
@@ -92,10 +92,10 @@ function prove (okay) {
         }
     }, 'three member parliament')
 
-    okay(!network.denizens[0].immigrate(network.time, 1, '1', network.denizens[1].cookie, { location: '1' }).enqueued, 'already arrived')
+    okay(!network.denizens[0].arrive(network.time, 1, '1', network.denizens[1].cookie, { location: '1' }).enqueued, 'already arrived')
     okay(!network.denizens[1].enqueue(network.time, 1, {}).enqueued, 'enqueue not leader')
 
-    okay(!network.denizens[1].immigrate(network.time, 1, '4', 0, { location: '4' }).enqueued, 'immigrate not leader')
+    okay(!network.denizens[1].arrive(network.time, 1, '4', 0, { location: '4' }).enqueued, 'arrive not leader')
 
     network.populate(1)
 
@@ -240,7 +240,7 @@ function prove (okay) {
 
     // This one will join, but with the new cookie.
     network.reboot(6)
-    network.immigrate(6)
+    network.arrive(6)
 
     network.send()
 
@@ -274,7 +274,7 @@ function prove (okay) {
             '6': { location: '6' },
             '7': { location: '7' }
         }
-    }, 'reboot, depart and double immigrate')
+    }, 'reboot, depart and double arrive')
 
     // Reject messages from a different republic.
     network.populate(1)
@@ -363,9 +363,9 @@ function prove (okay) {
     network.denizens[7].inspect()
 
     network.push()
-    network.denizens[3].immigrate(network.time, 1, '9', network.denizens[9].cookie, { location: '9' })
+    network.denizens[3].arrive(network.time, 1, '9', network.denizens[9].cookie, { location: '9' })
     network.push()
-    network.denizens[3].immigrate(network.time, 1, '10', network.denizens[10].cookie, { location: '10' })
+    network.denizens[3].arrive(network.time, 1, '10', network.denizens[10].cookie, { location: '10' })
 
     network.send()
 
@@ -389,7 +389,7 @@ function prove (okay) {
             '9': { location: '9' },
             '10': { location: '10' }
         }
-    }, 'immigrate without acclimation')
+    }, 'arrive without acclimation')
 
     // This exercises the already acclimated branch of `Paxos.acclimate`.
     network.denizens[3].acclimate()
@@ -428,7 +428,7 @@ function prove (okay) {
     }, 'acclimated')
 
     network.push()
-    network.denizens[3].immigrate(network.time, 1, '11', network.denizens[11].cookie, { location: '11' })
+    network.denizens[3].arrive(network.time, 1, '11', network.denizens[11].cookie, { location: '11' })
 
     network.send()
 
@@ -507,7 +507,7 @@ function prove (okay) {
     network.send([ '12' ])
 
     network.reboot(12)
-    network.immigrate(12)
+    network.arrive(12)
 
     network.send()
 
