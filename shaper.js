@@ -65,7 +65,7 @@ function Shaper (parliamentSize, government, recovered) {
     this._government = government
     this._seen = {}
     this._expandable = []
-    this._immigrating = []
+    this._arriving = []
     this.decided = false
     this._governments = []
     this.outbox = {}
@@ -191,15 +191,15 @@ Shaper.prototype.acclimated = function (id) {
     }
 
     // Otherwise let's exile someone if we have someone to exile.
-    return this._governments.shift() || this._immigration() || null
+    return this._governments.shift() || this._arrival() || null
 }
 
 Shaper.prototype.arrived = function (id) {
-    assert(this._immigrating.length > 0 && id == this._immigrating[0].id)
-    this._immigrating.shift()
+    assert(this._arriving.length > 0 && id == this._arriving[0].id)
+    this._arriving.shift()
 }
 
-Shaper.prototype.arrive = function (immigration) {
+Shaper.prototype.arrive = function (arrival) {
     // We do not going to reject a duplicate immigration for a particular id.
     //
     // Here is a race condition and how it will shake itself out.
@@ -211,40 +211,40 @@ Shaper.prototype.arrive = function (immigration) {
     //
     // We can make it a general case that if the cookies mismatch
     // every one is very disappointed. Thus, we can catch this on sync.
-    for (var i = 0, I = this._immigrating.length; i < I; i++) {
-        if (this._immigrating[i].id == immigration.id) {
+    for (var i = 0, I = this._arriving.length; i < I; i++) {
+        if (this._arriving[i].id == arrival.id) {
             break
         }
     }
-    if (i == this._immigrating.length) {
-        this._immigrating.push(immigration)
+    if (i == this._arriving.length) {
+        this._arriving.push(arrival)
     } else {
-        this._immigrating[i].properties = immigration.properties
-        this._immigrating[i].cookie = immigration.cookie
-        this._immigrating[i].acclimated = immigration.acclimated
+        this._arriving[i].properties = arrival.properties
+        this._arriving[i].cookie = arrival.cookie
+        this._arriving[i].acclimated = arrival.acclimated
     }
 
     // Do nothing if our container indicates that a decision has been reached.
-    return this.decided ? null : this._immigration()
+    return this.decided ? null : this._arrival()
 }
 
 // Geneate an immigration government if we have an immigration available.
 
 //
-Shaper.prototype._immigration = function () {
-    if (this._immigrating.length) {
-        var immigration = this._immigrating[0]
+Shaper.prototype._arrival = function () {
+    if (this._arriving.length) {
+        var arrival = this._arriving[0]
         return {
             quorum: this._government.majority,
             government: {
                 majority: this._government.majority,
                 minority: this._government.minority,
                 arrive: {
-                    id: immigration.id,
-                    properties: immigration.properties,
-                    cookie: immigration.cookie
+                    id: arrival.id,
+                    properties: arrival.properties,
+                    cookie: arrival.cookie
                 },
-                acclimate: immigration.acclimated ? immigration.id : null
+                acclimate: arrival.acclimated ? arrival.id : null
             }
         }
     }
@@ -254,7 +254,7 @@ Shaper.prototype._immigration = function () {
 Shaper.null = {
     unreachable: function () { return null },
     acclimate: function () { return null },
-    _immigrating: []
+    _arriving: []
 }
 
 module.exports = Shaper

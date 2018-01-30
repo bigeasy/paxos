@@ -1163,7 +1163,7 @@ Paxos.prototype._commit = function (now, entry, top) {
             // If we are the leader, we are going to want to look for
             // opportunities to change the shape of the government.
             var shaper = new Shaper(this.parliamentSize, this.government, entry.body.map == null)
-            for (var i = 0, arrival; (arrival = this._shaper._immigrating[i]) != null; i++) {
+            for (var i = 0, arrival; (arrival = this._shaper._arriving[i]) != null; i++) {
                 shaper.arrive(arrival)
             }
             this._shaper = shaper
