@@ -98,7 +98,7 @@ function Paxos (now, republic, id, options) {
     this._minimums = {}
     this._minimums[this.id] = this._minimum
 
-    this._naturalizing = {}
+    this._acclimating = {}
 
     // Network message queue.
     this.outbox = new Procession
@@ -356,7 +356,7 @@ Paxos.prototype.immigrate = function (now, republic, id, cookie, properties, acc
 
 Paxos.prototype.naturalize = function () {
     if (!~this.government.acclimated.indexOf(this.id)) {
-        this._naturalizing[this.government.arrived.promise[this.id]] = true
+        this._acclimating[this.government.arrived.promise[this.id]] = true
     }
 }
 
@@ -721,7 +721,7 @@ Paxos.prototype.request = function (now, request) {
         sync: this._sync(committed),
         government: this.government.promise,
         minimum: this._minimum,
-        naturalizing: this._naturalizing,
+        acclimating: this._acclimating,
         unreachable: this._unreachable
     }
 }
@@ -843,10 +843,10 @@ Paxos.prototype.response = function (now, cookie, responses) {
             }
         }
 
-        for (var naturalizing in response.naturalizing) {
-            if (!this._naturalizing[naturalizing]) {
-                this._naturalizing[naturalizing] = true
-                this._reshape(now, this._shaper.naturalize(naturalizing))
+        for (var acclimating in response.acclimating) {
+            if (!this._acclimating[acclimating]) {
+                this._acclimating[acclimating] = true
+                this._reshape(now, this._shaper.naturalize(acclimating))
             }
         }
 
@@ -1148,10 +1148,10 @@ Paxos.prototype._commit = function (now, entry, top) {
             }
         }
 
-        for (var naturalizing in this._naturalizing) {
-            var id = this.government.arrived.id[naturalizing]
+        for (var acclimating in this._acclimating) {
+            var id = this.government.arrived.id[acclimating]
             if (!~this.citizens.indexOf(id) || ~this.government.acclimated.indexOf(id)) {
-                delete this._naturalizing[naturalizing]
+                delete this._acclimating[acclimating]
             }
         }
 
@@ -1173,7 +1173,7 @@ Paxos.prototype._commit = function (now, entry, top) {
             for (var promise in this._unreachable) {
                 this._reshape(now, shaper.unreachable(promise))
             }
-            for (var promise in this._naturalizing) {
+            for (var promise in this._acclimating) {
                 this._reshape(now, shaper.naturalize(promise))
             }
             this.government.acclimated.forEach(function (id) {
