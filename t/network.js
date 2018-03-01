@@ -126,7 +126,7 @@ Network.prototype.push = function () {
         ping: 1,
         timeout: 3
     })
-    new Pump(denizen.scheduler.events.shifter(), denizen.event.bind(denizen)).pump(abend)
+    new Pump(denizen.scheduler.events.shifter(), denizen.event.bind(denizen)).pumpify(abend)
     denizen.shifter = denizen.outbox.shifter()
     this.denizens.push(denizen)
 }
@@ -138,7 +138,7 @@ Network.prototype.reboot = function (i, republic) {
         ping: 1,
         timeout: 3
     })
-    new Pump(denizen.scheduler.events.shifter(), denizen.event.bind(denizen)).pump(abend)
+    new Pump(denizen.scheduler.events.shifter(), denizen.event.bind(denizen)).pumpify(abend)
     denizen.shifter = denizen.outbox.shifter()
     this.denizens[i] = denizen
 }

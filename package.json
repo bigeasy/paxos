@@ -33,7 +33,7 @@
                             "extant":                       "1.0.x",
                             "happenstance":                 "9.0.x",
                             "monotonic":                    "3.0.x",
-                            "procession":                   "0.12.x",
+                            "procession":                   "0.13.x",
                             "prolific.logger":              "5.0.x"
     },
     "devDependencies":
