@@ -378,7 +378,7 @@ Paxos.prototype.acclimate = function () {
 //
 Paxos.prototype.event = function (envelope) {
     // Other envelope times are related to timer maintenance.
-    if (envelope.module != 'happenstance' || envelope.method != 'event') {
+    if (envelope == null || envelope.module != 'happenstance' || envelope.method != 'event') {
         return
     }
     var now = envelope.now
