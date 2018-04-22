@@ -1,7 +1,6 @@
 var Paxos = require('..')
 var coalesce = require('extant')
 var Monotonic = require('monotonic').asString
-var Pump = require('procession/pump')
 var abend = require('abend')
 
 function subSubset (container, contained) {
@@ -126,7 +125,7 @@ Network.prototype.push = function () {
         ping: 1,
         timeout: 3
     })
-    new Pump(denizen.scheduler.events.shifter(), denizen.event.bind(denizen)).pumpify(abend)
+    denizen.scheduler.events.shifter().pump(denizen.event.bind(denizen), abend)
     denizen.shifter = denizen.outbox.shifter()
     this.denizens.push(denizen)
 }
@@ -138,7 +137,7 @@ Network.prototype.reboot = function (i, republic) {
         ping: 1,
         timeout: 3
     })
-    new Pump(denizen.scheduler.events.shifter(), denizen.event.bind(denizen)).pumpify(abend)
+    denizen.scheduler.events.shifter().pump(denizen.event.bind(denizen), abend)
     denizen.shifter = denizen.outbox.shifter()
     this.denizens[i] = denizen
 }
