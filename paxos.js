@@ -54,6 +54,7 @@ function Paxos (now, id, options) {
         assert(left.body && right.body)
         return Monotonic.compare(left.body.promise, right.body.promise)
     }))
+    this.pinged = new Procession
 
     // Implements a calendar for events that we can check during runtime or
     // ignore during debugging playback.
@@ -716,6 +717,10 @@ Paxos.prototype.request = function (now, request) {
                 method: 'collapse',
                 body: null
             })
+        }
+
+        if (! this._writer.collapsed) {
+            this.pinged.push(true)
         }
 
         message = request.synchronize
