@@ -31,7 +31,7 @@
                             "bintrees":                     "1.0.2",
                             "departure":                    "0.0.x",
                             "extant":                       "1.0.x",
-                            "happenstance":                 "10.2.x",
+                            "happenstance":                 "10.3.x",
                             "monotonic":                    "3.0.x",
                             "procession":                   "0.20.x",
                             "prolific.logger":              "6.0.x"
