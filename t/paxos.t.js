@@ -46,6 +46,24 @@ function prove (okay) {
         }
     }, 'leader and constituent pair')
 
+    // Fix a bug from the days when the leader would not update it's
+    // `_committed` table entry for itself immediately after and an entry to the
+    // log. Race condition where if we're lucky, the leader will update itself
+    // with a keep-alive synchronization before it updates it's consistent. If
+    // the constituent goes first, the minimum propagated promise would be
+    // calculated using the results of pinging the single member synod's one
+    // constituent. Then when the leader pings itself, it's entry in the
+    // `_committed` table will precede the minimum propagated resulting in an
+    // error.
+    network.denizens[0].intercept = [ '0' ]
+    network.denizens[0].enqueue(network.time, 1, 5)
+    network.send()
+    network.denizens[0].intercept.length = 0
+    network.denizens[0].events.splice(0, network.denizens[0].events.length).forEach(function (event) {
+        network.denizens[0].event(event)
+    })
+    network.send()
+
     network.push()
     network.denizens[2].join(1, network.time)
     // TODO Turn off immigration and ensure that it is not able to join the

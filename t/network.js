@@ -118,28 +118,39 @@ Network.prototype.send = function () {
     return intercepted
 }
 
-Network.prototype.push = function () {
-    var id = String(this.denizens.length)
+function createDenizen (id) {
     var denizen = new Paxos(this.time, id, {
         parliamentSize: 5,
         ping: 1,
         timeout: 3
     })
-    denizen.scheduler.events.pump(denizen.event.bind(denizen), abend)
+    denizen.intercept = []
+    denizen.events = []
+    denizen.scheduler.events.pump(function (envelope) {
+        if (
+            envelope.module == 'happenstance' &&
+            envelope.method == 'event' &&
+            envelope.body.method == 'synchronize' &&
+            envelope.body.to.filter(function (to) {
+                return ~denizen.intercept.indexOf(to)
+            }).length != 0
+        ) {
+            console.log('intercepting', envelope)
+            denizen.events.push(envelope)
+        } else {
+            denizen.event(envelope)
+        }
+    }, abend)
     denizen.shifter = denizen.outbox.shifter()
-    this.denizens.push(denizen)
+    return denizen
+}
+
+Network.prototype.push = function () {
+    this.denizens.push(createDenizen(String(this.denizens.length)))
 }
 
 Network.prototype.reboot = function (i, republic) {
-    var id = String(i)
-    var denizen = new Paxos(this.time, id, {
-        parliamentSize: 5,
-        ping: 1,
-        timeout: 3
-    })
-    denizen.scheduler.events.pump(denizen.event.bind(denizen), abend)
-    denizen.shifter = denizen.outbox.shifter()
-    this.denizens[i] = denizen
+    this.denizens[i] = createDenizen(String(i))
 }
 
 Network.prototype.bootstrap = function (republic) {

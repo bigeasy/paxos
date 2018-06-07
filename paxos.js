@@ -1129,6 +1129,17 @@ Paxos.prototype._commit = function (now, entry, top) {
         body: entry.body,
         previous: entry.previous
     })
+    // We know what our most committed record it is at this moment, so we record
+    // it in our most-committed table used to manage propagation.
+    //
+    // At one point we assumed that the pinging would update committed and
+    // propagated so we didn't update here. However, we only update committed
+    // and propagated for our constituency which never includes ourselves. Our
+    // minimum propagated promise forward based on our constituency without
+    // updating the committed record we keep to ping ourselves with the minimum
+    // propagated promise causes us to attempt to ping ourselves with a record
+    // we've disposed of.
+    this._committed[this.government.arrived.promise[this.id]] = entry.promise
 
     if (isGovernment) {
         this.scheduler.clear()
