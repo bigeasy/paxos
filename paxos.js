@@ -394,6 +394,7 @@ Paxos.prototype.event = function (envelope) {
             method: 'synchronize',
             to: envelope.body.to,
             collapsible: !! envelope.body.collapsible,
+            constituent: true,
             key: envelope.key
         })
         break
@@ -865,6 +866,7 @@ Paxos.prototype.response = function (now, cookie, responses) {
         // able to do any damage. They will get updated eventually.
         var minimum = response.minimum
         if (
+            message.constituent &&
             minimum &&
             (
                 this._minimums[id] == null ||
