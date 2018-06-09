@@ -32,6 +32,7 @@ Proposer.prototype.prepare = function (now) {
     this._paxos._send({
         method: 'prepare',
         collapsible: true,
+        constituent: false,
         to: this.proposal.quorum,
         promise: this.promise
     })
@@ -64,6 +65,7 @@ Proposer.prototype.response = function (now, request, responses) {
             to: this.proposal.quorum,
             promise: request.promise,
             collapsible: true,
+            constituent: false,
             body: {
                 promise: request.promise,
                 body: this.proposal.body,
