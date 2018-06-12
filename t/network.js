@@ -135,7 +135,6 @@ function createDenizen (id) {
                 return ~denizen.intercept.indexOf(to)
             }).length != 0
         ) {
-            console.log('intercepting', envelope)
             denizen.events.push(envelope)
         } else {
             denizen.event(envelope)
