@@ -621,7 +621,9 @@ Paxos.prototype._send = function (message) {
         }
 
         syncs[to] = this._sync(committed)
-        cookie.synchronize = cookie.synchronize || ! syncs[to].synced
+        if (message.method != 'synchronize') {
+            cookie.synchronize = cookie.synchronize || ! syncs[to].synced
+        }
     }
 
 
@@ -968,7 +970,7 @@ Paxos.prototype.response = function (now, cookie, responses) {
     // because you can only have one scheduled per key.
 
     //
-    if (message.method == 'synchronize') {
+    if (message.method == 'synchronize' && !cookie.synchronize) {
         // How long to wait before our next ping.
         var delay = 0
 
