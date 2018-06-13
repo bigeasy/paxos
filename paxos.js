@@ -817,7 +817,7 @@ Paxos.prototype.response = function (now, cookie, responses) {
         return
     }
 
-    var collapsible = false
+    var uncommunicative = false
 
     // Perform housekeeping for each recipient of the message.
 
@@ -838,7 +838,7 @@ Paxos.prototype.response = function (now, cookie, responses) {
                 response.unreachable[promise] = true
             }
         case 'reject':
-            collapsible = true
+            uncommunicative = true
             break
         }
 
@@ -935,7 +935,7 @@ Paxos.prototype.response = function (now, cookie, responses) {
         }
     }
 
-    if (collapsible && message.collapsible) {
+    if (uncommunicative && message.collapsible) {
         this._writer.collapse(now, message, responses)
     }
 
@@ -977,7 +977,7 @@ Paxos.prototype.response = function (now, cookie, responses) {
         // Use the ping interval if the citizen is unreachable or if it is
         // already up to date.
         if (
-            collapsible ||
+            uncommunicative ||
             this.log.head.body.promise == responses[message.to[0]].sync.committed
         ) {
             delay = this.ping
@@ -996,7 +996,7 @@ Paxos.prototype.response = function (now, cookie, responses) {
         this.scheduler.schedule(now + delay, message.key, {
             method: 'synchronize', to: message.to, collapsible: message.collapsible
         })
-    } else if (!collapsible) {
+    } else if (!uncommunicative) {
         if (cookie.synchronize) {
             this._send(cookie.message)
         } else {
