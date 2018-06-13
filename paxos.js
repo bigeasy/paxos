@@ -939,6 +939,16 @@ Paxos.prototype.response = function (now, cookie, responses) {
         this._writer.collapse(now, message, responses)
     }
 
+    if (cookie.collapsed != this._writer.collapsed) {
+        // console.log(cookie)
+        // console.log(cookie.collapsed, this._writer.collapsed)
+    }
+
+    if (cookie.government != this.government.promise) {
+        console.log('GOV!!')
+        console.log(cookie)
+    }
+
     if (
         !(
             cookie.government == this.government.promise &&
@@ -946,6 +956,12 @@ Paxos.prototype.response = function (now, cookie, responses) {
         )
     ) {
         return
+    }
+
+
+    // Okay, so we fire off our
+    if (cookie.collapsed) {
+        console.log('x!', message.method != 'synchronize' && !uncommunicative && cookie.synchronize)
     }
 
     // Here's were I'm using messages to drive the algorithm even when the
