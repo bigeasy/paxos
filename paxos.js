@@ -569,7 +569,7 @@ Paxos.prototype._send = function (message) {
         government: this.government.promise,
         collapsed: this._writer.collapsed
     }
-    TO: for (var i = 0, to; (to = message.to[i]) != null; i++) {
+    for (var i = 0, to; (to = message.to[i]) != null; i++) {
         this.scheduler.unschedule(to)
 
         var promise = this.government.arrived.promise[to]
@@ -592,10 +592,22 @@ Paxos.prototype._send = function (message) {
                 iterator = iterator.next
             }
 
-            if (arrivals.length == 0) {
-                responses[to] = null
-                continue TO
-            }
+            // Use to be the case that we would accommodate a missing arrival
+            // record by preemptively setting the response to `null` and
+            // excluding it from the envelopes sent. This was necessary when the
+            // log length was trimmed by virtue of a max log length so that an
+            // arrival record could get pruned before the arriving islander
+            // received it's first synchronization.
+            //
+            // Now we will only prune the log when everyone has received the
+            // message. The arrival record will have added the islander to the
+            // population and it will only be removed when the entire
+            // population, including the arriving islander, receives the
+            // message. If the arriving islander departs, the arrival record
+            // will only be pruned after the departure completes.
+
+            //
+            assert(arrivals.length != 0, 'no arrival found')
 
             var arrival = arrivals.pop()
             committed = arrival.body.previous
@@ -612,11 +624,28 @@ Paxos.prototype._send = function (message) {
         cookie.synchronize = cookie.synchronize || ! syncs[to].synced
     }
 
-    for (var i = 0, to; (to = message.to[i]) != null; i++) {
-        if (syncs[to] == null) {
-            continue
-        }
 
+    // TODO Would appear that you could push synced islanders onto one array and
+    // unsynced onto another. If the unsynced is empty, send the message as
+    // expected, otherwise set a `synchronize` method only, but have the desired
+    // message kept in the cookie so that the response will resend it. We're
+    // already doing this, but let's sort things out on this end and reduce the
+    // complexity (remove one conditional) from there receiving end.
+    /*
+    if (cookie.synchronize && message.method != 'synchronize') {
+        console.log('---', message.method)
+    }
+     */
+
+    // Separate loop because we needed to determine whether or not we
+    // `synchronize` separately.
+    //
+    // TODO Why can't  synchronize property be a property of the cookie?
+    // TODO Can we build and array and map it at the end instead of working
+    // though the messages array?
+    // TODO I don't like how if one target needs to sync then everyone needs to
+    // sync and I'm not sure how that state arises.
+    for (var i = 0, to; (to = message.to[i]) != null; i++) {
         envelopes.push({
             from: this.id,
             to: to,
