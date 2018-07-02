@@ -1,4 +1,4 @@
-require('proof')(25, prove)
+require('proof')(27, prove)
 
 function prove (okay) {
     var Paxos = require('..'), denizen
@@ -662,4 +662,23 @@ function prove (okay) {
     }, 'a lot of paxos')
 
     network.denizens[2].inspect()
+
+    network.reboot(13)
+    network.denizens[13].join(1, 0)
+    network.denizens[2].arrive(network.time, 1, '13', 1, { location: '13' }, true)
+
+    network.send()
+
+    okay(network.denizens[2].government.arrived.promise['13'], '2a/0', 'arrived')
+
+    network.time++
+    network.send()
+    network.time++
+    network.send()
+    network.time++
+    network.send()
+    network.time++
+    network.send()
+
+    okay(!network.denizens[2].government.arrived.promise['13'], 'bad embark cookie')
 }
