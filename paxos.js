@@ -17,9 +17,6 @@ var Window = require('procession/window')
 // A sorted index into the atomic log. TODO Must it be a tree?
 var Indexer = require('procession/indexer')
 
-// Logging conduit.
-var logger = require('prolific.logger').createLogger('paxos')
-
 // The participants in the Paxos strategy.
 var Proposer = require('./proposer')
 var Acceptor = require('./acceptor')
@@ -1048,8 +1045,6 @@ Paxos.prototype._reshape = function (now, shape) {
 Paxos.prototype._commit = function (now, entry, top) {
     entry = JSON.parse(JSON.stringify(entry))
 
-    logger.info('_receiveEnact', { now: now, $entry: entry })
-
     // We already have this entry. The value is invariant, so let's assert
     // that the given value matches the one we have.
 
@@ -1064,7 +1059,6 @@ Paxos.prototype._commit = function (now, entry, top) {
 
     var isGovernment = Monotonic.isBoundary(entry.promise, 0)
     assert(isGovernment || Monotonic.increment(top, 1) == entry.promise)
-    logger.info('enact', { isGovernment: isGovernment, $entry: entry })
 
     var government = null
 
