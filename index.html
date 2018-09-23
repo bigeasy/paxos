@@ -15,11 +15,11 @@
       <h1>Paxos</h1>
       <!-- todo: code font is too small for body text font-->
     </div>
-    <div class="unit description markdown include" data-file="index.md"><p>A replayable, deterministic implemenation of Paxos.</p>
+    <div class="unit description markdown include" data-file="index.md"><p>A replayable, deterministic implementation of Paxos.</p>
 <p>Sketch of what to say.</p>
 <ul>
 <li>Implements an atomic log and/or atomic broadcast.</li>
-<li>Reproducable events for unit testing, but still a true Paxos.</li>
+<li>Reproducible events for unit testing, but still a true Paxos.</li>
 <li>Paxos itself is in memory so that there are no disk writes.</li>
 </ul>
 <p>A consensus algorithm will maintain a log between multiple machines, and
@@ -54,7 +54,7 @@ and a new government has been established.</li>
 before it can write a commit message, one or more of it&apos;s acceptors issues a
 subsequent promise to another proposer. The proposer will have committed its own
 accept write to the log (TODO wondering of accept should just stage a write to
-the log instead of having its own register.) When the proposing citizen commits
+the log instead of having its own register.) When the proposing islander commits
 it will establish the new government, but it will immediately mark it as
 collapsed.</p>
 <p>Hmm... Committed and collapsed. If the proposer can do it, then the acceptors
@@ -99,7 +99,7 @@ will get synced and it will not be marked as collapsed.</p>
 <p>TODO Add a flag to sync so that we can determine if the government should
 collapse.</p>
 <h3 id="proposer-is-halted-by-its-acceptor">Proposer is halted by its acceptor</h3>
-<p>What happens when a citizen that proposing receives a proposal and issues a
+<p>What happens when a islander that proposing receives a proposal and issues a
 promise, but is in the midst of its own proposal? The synchronous response would
 come at the end of a network request. The response can find that the proposer
 has been destroyed.</p>

@@ -377,7 +377,7 @@ ignore during debugging playback.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-19">&#182;</a>
               </div>
-              <p>Timeout when that reached marks a citizen for exile.</p>
+              <p>Timeout when that reached marks a islander for departure.</p>
 
             </div>
 
@@ -392,7 +392,7 @@ ignore during debugging playback.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-20">&#182;</a>
               </div>
-              <p>The citizens that this citizen updates with new log entries.</p>
+              <p>The islanders that this islander updates with new log entries.</p>
 
             </div>
 
@@ -411,7 +411,7 @@ ignore during debugging playback.</p>
 
             </div>
 
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">this</span>.citizens = []</pre></div></div>
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">this</span>.population = []</pre></div></div>
 
         </li>
 
@@ -509,7 +509,7 @@ from collapse using Paxos or writing values using two-phase commit.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-27">&#182;</a>
               </div>
-              <p>Shaper a new government by fiat based on whose available to grow to the
+              <p>Shape a new government by fiat based on whose available to grow to the
 desired government size and who is unreachable.</p>
 
             </div>
@@ -540,7 +540,7 @@ desired government size and who is unreachable.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-29">&#182;</a>
               </div>
-              <p>Track unreachable citizens.</p>
+              <p>Track unreachable islanders.</p>
 
             </div>
 
@@ -571,9 +571,9 @@ desired government size and who is unreachable.</p>
                 <a class="pilcrow" href="#section-31">&#182;</a>
               </div>
               <p>Constructs a new government and unshifts it onto the head of the proposal
-queue. During two-phase commit, new governments jump to the line. All the
-user messages are given new promises whose values are greater than the value
-of the government’s promise.</p>
+queue. During two-phase commit, new governments jump to the head of the line.
+All the user messages are given new promises whose values are greater than
+the value of the government’s promise.</p>
 <p>During a collapse when we are running Paxos, the new government is the only
 message and all user messages are dropped.</p>
 <p>There is only ever supposed to be one new government in process or in the
@@ -697,7 +697,7 @@ a promise value in the new government.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-36">&#182;</a>
               </div>
-              <p>Initialize the citizen with a government where it is the dictator.</p>
+              <p>Initialize the islander with a government where it is the dictator.</p>
 
             </div>
 
@@ -754,7 +754,7 @@ Paxos.prototype.join = <span class="hljs-function"><span class="hljs-keyword">fu
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-38">&#182;</a>
               </div>
-              <h3 id="enqueue-and-immigrate">Enqueue and Immigrate</h3>
+              <h3 id="embark-and-arrive">Embark and Arrive</h3>
 
             </div>
 
@@ -848,38 +848,37 @@ meaningful to our dear user; Kubernetes HOSTNAMES, AWS instance names, IP
 address, and not something that is guaranteed unique like a UUID, because
 such things are indistinguishable to the human observer.</p>
 <p>Yet, here I am again contending with an issue that would be so simple if ids
-where required to be unique. When a citizen that is a constituent dies and
+where required to be unique. When a islander that is a constituent dies and
 restarts with the same id it will be pinged by someone in government, it will
-report that it’s empty, and its representative will look for it’s immigration
-record. There’s a race now. Is the new instance going to immigrate before its
-pinged? Or is the representative going to search for an immigration record
-and not find one, which causes us to abend at the moment?</p>
-<p>When we get a sync before immigration, it will not see a cookie or not see
-the right cookie and fail the sync. These syncs fail, time passes, the time
-out comes and the record is cleared. That takes care of the race when the
-sync beats the immigration record, but what if the immigration record beats
-the representative?</p>
+report that it’s uninitialized, and its representative will look for it’s
+arrival record. There’s a race now. Is the new instance going to embark
+before its pinged? Or is the representative going to search for an arrival
+record and not find one, which causes us to abend at the moment?</p>
+<p>When we get a sync before arrival, it will not see a cookie or not see the
+right cookie and fail the sync. These syncs fail, time passes, the time out
+comes and the record is cleared. That takes care of the race when the sync
+beats the arrival, but what if the arrival beats the representative?</p>
 <p>In that case their will be a new government with the same representative with
-the same constituent, but now there will be an immigration record. The
-constituent will be naturalized. It will never have been exiled.</p>
+the same constituent, but now there will be an arrival record. The
+constituent will be acclimated. It will never have departed.</p>
 <p>This is a problem. Implementations are going to need to know that they’ve
-restarted. A participant should be exiled before it can immigrate again.</p>
+restarted. A participant should depart before it can embark again.</p>
 <p>Obviously, much easier if the ids are unique. Whole new id means not
-ambiguity. The new id immigrates, the old id exiles. (Unique ids are easy
+ambiguity. The new id arrival, the old id departs. (Unique ids are easy
 enough to foist upon our dear user implementation wise. Most implementations
 reset a process or at least an object, and that new instance can have a new
 id generated from POSIX time or UUID.)</p>
 <p>However, we do have an atomic log at our disposal, so every time I think that
 I should give up and go with unique ids, something comes along to make it
 simple. I was actually musing about how the client, if they really wanted
-pretty ids, they could just check and wait for the old id to exile, since it
+pretty ids, they could just check and wait for the old id to depart, since it
 only needs to be unique in the set of current ids. Then, duh, I can do that
-same check on immigration and reject the immigration if the id already exists
-in the census.</p>
+same check on embark and reject an arrival if the id already exists in the
+population.</p>
 <p>That’s what you’re looking at here.</p>
-<p>Now that that is done, though, is there a race condition where the
-immigration is currently being proposed? The property wouldn’t be removed
-until the proposal was enacted.</p>
+<p>Now that that is done, though, is there a race condition where the arrival is
+currently being proposed? The property wouldn’t be removed until the proposal
+was enacted.</p>
 
             </div>
 
@@ -908,11 +907,11 @@ until the proposal was enacted.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-43">&#182;</a>
               </div>
-              <p>Do not allow the user to initiate the immigration of an id that
-already exists. This will happen if a denizen crash restarts and
-tries to rejoin before Paxos can determine that the denizen is no
-longer viable. The immigrating denizen should enter a back off and
-retry loop in order to wait for exile.</p>
+              <p>Do not allow the user to embark an id that already exists. This will
+happen if an islander crash restarts and tries to rejoin before Paxos
+can determine that the islander is no longer viable. The embarking
+islander should enter a back off and retry loop in order to wait for
+departure.</p>
 
             </div>
 
@@ -959,11 +958,11 @@ Paxos.prototype.acclimate = <span class="hljs-function"><span class="hljs-keywor
                 <a class="pilcrow" href="#section-45">&#182;</a>
               </div>
               <p>Timer-driven events are managed using <a href="http://github.com/bigeasy/happenstance">Happenstance</a>.
-Events are scheduled by calling the <code>schedule</code> method of a Happenstance
-the <code>Schedule</code> object for this citizen. Each event has a key and scheduling
-an event will replace an scheduled event with the same key, making it easy to
+Events are scheduled by calling the <code>schedule</code> method of a Happenstance the
+<code>Schedule</code> object for this islander. Each event has a key and scheduling an
+event will replace an scheduled event with the same key, making it easy to
 reset timeouts, to basically reset countdowns or replace the countdown action
-as the role of the citizen changes.</p>
+as the role of the islander changes.</p>
 
             </div>
 
@@ -1009,7 +1008,7 @@ as the role of the citizen changes.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-48">&#182;</a>
               </div>
-              <p>Send a synchronization message to one or more fellow citizens. Note that
+              <p>Send a synchronization message to one or more fellow islanders. Note that
 the to field is an array.</p>
 
             </div>
@@ -1325,7 +1324,7 @@ this PRNG with <code>Math.rand()</code>. TODO Meh.</p>
               <p>TODO Consider how to back off. If the leader is gone and two majority members
 are competing, do we really want them backing off for approaching “timeout”
 milliseconds? How fast does it take to complete a round of Paxos and how big
-of a window do we want to give two or more citizens to launch their retries
+of a window do we want to give two or more islanders to launch their retries
 such that they avoid collision?</p>
 
             </div>
@@ -1459,11 +1458,11 @@ Paxos.prototype._sync = <span class="hljs-function"><span class="hljs-keyword">f
                 <a class="pilcrow" href="#section-73">&#182;</a>
               </div>
               <p>Package a message with log synchronization messages and put it in our outbox
-for delivery to the intended fellow citizens.</p>
-<p>Note that messages can take however long they’re going to take. They requests
+for delivery to the intended fellow islanders.</p>
+<p>Note that messages can take however long they’re going to take. The requests
 can always be received and the responses can always be handled. If they are
 made invalid by their time in transit they will be rejected. Our dear user
-needs only to send the messages to our fellow citizens by any means and
+needs only to send the messages to our fellow islander by any means and
 return the responses to us all at once.</p>
 
             </div>
@@ -1824,9 +1823,9 @@ successful network connection, which we use to delete a disappeared flag.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-85">&#182;</a>
               </div>
-              <p>If the citizen is unreachable we create a dummy record that uses our
-current government for the government promise and a bunch of
-defaults so that it will pass through the logic.</p>
+              <p>If the islander is unreachable we create a dummy record that uses our
+current government for the government promise and a bunch of defaults
+so that it will pass through the logic.</p>
 
             </div>
 
@@ -1861,9 +1860,8 @@ defaults so that it will pass through the logic.</p>
                 <a class="pilcrow" href="#section-86">&#182;</a>
               </div>
               <p>TODO Why was it important that we keep pinging constituents while we are
-negotiating a new government? Because it’s not happening now.
-We stop if we’ve received a new government since this message has been
-sent.</p>
+negotiating a new government? Because it’s not happening now. We stop if
+we’ve received a new government since this message has been sent.</p>
 
             </div>
 
@@ -2011,9 +2009,9 @@ or if you’re going to assume that you’re on an secure network.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-94">&#182;</a>
               </div>
-              <p>The following operations assume that the citizen we’re talking too is
-operating under the same government as ourselves. We want promise or
-id look ups to not return null.</p>
+              <p>The following operations assume that the islander we’re talking too
+is operating under the same government as ourselves. We want promise
+or id look ups to not return null.</p>
 
             </div>
 
@@ -2057,7 +2055,7 @@ housekeeping state.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-97">&#182;</a>
               </div>
-              <p>Update set of unreachable citizens.</p>
+              <p>Update set of unreachable islanders.</p>
 
             </div>
 
@@ -2153,7 +2151,7 @@ able to do any damage. They will get updated eventually.</p>
                 <a class="pilcrow" href="#section-99">&#182;</a>
               </div>
               <p>Here’s were I’m using messages to drive the algorithm even when the
-information is available for recalcuation.</p>
+information is available for recalculation.</p>
 <p>There are two types of explicit synchronize. The leader will sync its log
 with its majority, other members of the government will sync with their
 constituents. With a majority sync, the leader will sync with all of the
@@ -2221,7 +2219,7 @@ because you can only have one scheduled per key.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-103">&#182;</a>
               </div>
-              <p>Use the ping interval if the citizen is unreachable or if it is
+              <p>Use the ping interval if the islander is unreachable or if it is
 already up to date.</p>
 
             </div>
@@ -2494,9 +2492,9 @@ that the given value matches the one we have.</p>
             }
         }
 
-        <span class="hljs-keyword">this</span>.citizens = <span class="hljs-keyword">this</span>.government.majority
-                            .concat(<span class="hljs-keyword">this</span>.government.minority)
-                            .concat(<span class="hljs-keyword">this</span>.government.constituents)
+        <span class="hljs-keyword">this</span>.population = <span class="hljs-keyword">this</span>.government.majority
+                              .concat(<span class="hljs-keyword">this</span>.government.minority)
+                              .concat(<span class="hljs-keyword">this</span>.government.constituents)
 
         government = <span class="hljs-built_in">JSON</span>.parse(<span class="hljs-built_in">JSON</span>.stringify(<span class="hljs-keyword">this</span>.government))
         <span class="hljs-keyword">this</span>._governments.push(government)
@@ -2590,7 +2588,7 @@ that will once again materialize.</p>
 
         <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> acclimating <span class="hljs-keyword">in</span> <span class="hljs-keyword">this</span>._acclimating) {
             <span class="hljs-keyword">var</span> id = <span class="hljs-keyword">this</span>.government.arrived.id[acclimating]
-            <span class="hljs-keyword">if</span> (!~<span class="hljs-keyword">this</span>.citizens.indexOf(id) || ~<span class="hljs-keyword">this</span>.government.acclimated.indexOf(id)) {
+            <span class="hljs-keyword">if</span> (!~<span class="hljs-keyword">this</span>.population.indexOf(id) || ~<span class="hljs-keyword">this</span>.government.acclimated.indexOf(id)) {
                 <span class="hljs-keyword">delete</span> <span class="hljs-keyword">this</span>._acclimating[acclimating]
             }
         }
@@ -2702,14 +2700,15 @@ ourselves to return all ping information we’ve gathered to anyone
 that pings us, knowing that it is all flowing from minority members
 to the leader. We do not have to version the records, timestamp them,
 etc.</p>
-<p>If we didn’t clear them out, then a stale record for a citizen can be
-held onto by a majority member. If the minority member that pings the
-citizen is no longer downstream from the majority member, that stale
-record will not get updated, but it will be reported to the leader.</p>
+<p>If we didn’t clear them out, then a stale record for a islander can
+be held onto by a majority member. If the minority member that pings
+the islander is no longer downstream from the majority member, that
+stale record will not get updated, but it will be reported to the
+leader.</p>
 <p>We keep ping information if we are the leader, since it all flows
 back to the leader. All leader information will soon be updated. Not
-resetting the leader during normal operation makes adjustments to
-citizenship go faster.</p>
+resetting the leader during normal operation makes adjustments to the
+population go faster.</p>
 
             </div>
 

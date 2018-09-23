@@ -94,8 +94,8 @@
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-2">&#182;</a>
               </div>
-              <p>Monitor the reachability of denizens in order to suggest the shape of a new
-government. The <code>Shaper.update</code> method is invoked with a denizen id and a
+              <p>Monitor the reachability of islanders in order to suggest the shape of a new
+government. The <code>Shaper.update</code> method is invoked with a islander id and a
 reachability status. <code>Shaper.update</code> returns either a new government to
 appoint or <code>null</code>. Once <code>Shaper.update</code> returns a new government to appoint
 the <code>Shaper</code> object is used up and should be replaced.</p>
@@ -127,8 +127,9 @@ of <code>Shaper</code> reachability is defined as follows.</p>
                 <a class="pilcrow" href="#section-4">&#182;</a>
               </div>
               <ul>
-<li>A denizen is reachable if the denizen responds to pings and it naturalized.</li>
-<li>A denizen is unreachable if the denizen does not respond to pings.</li>
+<li>A islander is reachable if the islander responds to pings and has
+acclimated.</li>
+<li>A islander is unreachable if the islander does not respond to pings.</li>
 </ul>
 
             </div>
@@ -142,7 +143,7 @@ of <code>Shaper</code> reachability is defined as follows.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-5">&#182;</a>
               </div>
-              <p>If the the denizen responds to pings, but is not naturalized, it is neither
+              <p>If the islander responds to pings, but has not acclimated, it is neither
 reachable nor unreachable and we don’t want to hear about it.</p>
 
             </div>
@@ -169,10 +170,9 @@ reachable nor unreachable and we don’t want to hear about it.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-7">&#182;</a>
               </div>
-              <p>Could think harder about priorities as they releate to healing. Wouldn’t want
-to starve the recovery of the cluster by performing immigrations only, when
-newly naturalized citizens could join the legislature and preserve the
-republic.</p>
+              <p>Could think harder about priorities as they relate to healing. Wouldn’t want
+to starve the recovery of the cluster by performing arrivals only, when newly
+acclimated islanders could join the legislature and preserve the republic.</p>
 
             </div>
 
@@ -187,7 +187,7 @@ republic.</p>
               </div>
               <p>Note that we currently favor impeachment because the minority updates the
 constituents. A non-functioning minority member would keep all of its
-constitutents in the dark.</p>
+constituents in the dark.</p>
 
             </div>
 
@@ -227,10 +227,11 @@ government size is less than the population of the island.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-11">&#182;</a>
               </div>
-              <p>All this assuming an external mechnism for tracking pings that will calculate
-when a paricular participant is reachable or unreachable. After <code>update</code>
-returns a reshape operation, the <code>Shaper</code> object is consumed. At that point
-you should no longer call <code>Shaper</code>. Put a dummy shape object in its place.</p>
+              <p>All this assuming an external mechanism for tracking pings that will
+calculate when a particular islander is reachable or unreachable. After
+<code>update</code> returns a reshape operation, the <code>Shaper</code> object is consumed. At
+that point you should no longer call <code>Shaper</code>. Put a dummy shape object in
+its place.</p>
 
             </div>
 
@@ -257,10 +258,10 @@ created.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-13">&#182;</a>
               </div>
-              <p>I’m imagining that the unreachability of a participant will be remembered so
+              <p>I’m imagining that the unreachability of an islander will be remembered so
 that when a new government is created the unreachability can replayed. Causes
-me to muse about whether it should be possible for a citizen to become
-reachable again, whether we should continue to ping the citizen, or if we
+me to muse about whether it should be possible for a islander to become
+reachable again, whether we should continue to ping the islander, or if we
 simply surrender.</p>
 
             </div>
@@ -399,7 +400,7 @@ Shaper.prototype.unreachable = <span class="hljs-function"><span class="hljs-key
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-19">&#182;</a>
               </div>
-              <p>Exile any unreachable citizen.</p>
+              <p>Depart any unreachable islanders.</p>
 
             </div>
 
@@ -446,7 +447,7 @@ Shaper.prototype.acclimate = <span class="hljs-function"><span class="hljs-keywo
                 <a class="pilcrow" href="#section-20">&#182;</a>
               </div>
               <p><code>Shaper.update</code> determines if a new government should be created that has a
-new shape. Note that immigration takes place is elsewhere.</p>
+new shape. Note that embark and arrive takes place is elsewhere.</p>
 
             </div>
 
@@ -478,7 +479,7 @@ new shape. Note that immigration takes place is elsewhere.</p>
               </div>
               <p>We’re not going to return an expanded government until we get two
 expandable entries so if we have a contraction it will go the first time
-naturalized is called.</p>
+acclimated is called.</p>
 
             </div>
 
@@ -493,7 +494,7 @@ naturalized is called.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-23">&#182;</a>
               </div>
-              <p>Majority members are not our resposibility. They trigger their own
+              <p>Majority members are not our responsibility. They trigger their own
 collapse.</p>
 
             </div>
@@ -538,8 +539,8 @@ TODO Think about growth commit race conditions again.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-26">&#182;</a>
               </div>
-              <p>We should expand and we have citzens who can be appointed to the
-government so let’s grow the government.</p>
+              <p>We should expand and we have islanders who can be appointed to
+the government so let’s grow the government.</p>
 
             </div>
 
@@ -557,22 +558,9 @@ government so let’s grow the government.</p>
                 }
             }
         }
-    }</pre></div></div>
+    }
 
-        </li>
-
-
-        <li id="section-27">
-            <div class="annotation">
-
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-27">&#182;</a>
-              </div>
-              <p>Otherwise let’s exile someone if we have someone to exile.</p>
-
-            </div>
-
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>._governments.shift() || <span class="hljs-keyword">this</span>._arrival() || <span class="hljs-literal">null</span>
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>._governments.shift() || <span class="hljs-keyword">this</span>._arrival() || <span class="hljs-literal">null</span>
 }
 
 Shaper.prototype.arrived = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">id</span>) </span>{
@@ -585,16 +573,16 @@ Shaper.prototype.embark = <span class="hljs-function"><span class="hljs-keyword"
         </li>
 
 
-        <li id="section-28">
+        <li id="section-27">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-28">&#182;</a>
+                <a class="pilcrow" href="#section-27">&#182;</a>
               </div>
-              <p>We do not going to reject a duplicate immigration for a particular id.</p>
+              <p>We do not going to reject a duplicate embarkation for a particular id.</p>
 <p>Here is a race condition and how it will shake itself out.</p>
-<p>We could be in the middle of immigrating a partuclar id when the
-immigrant crash restarts and submits a new cookie. We will update the
+<p>We could be in the middle of arriving a particular islander id when the
+islander crashed restarts and submits a new cookie. We will update the
 cookie here, but that’s not going to be the same as the cookie that got
 written into the log.</p>
 <p>We can make it a general case that if the cookies mismatch
@@ -618,11 +606,11 @@ every one is very disappointed. Thus, we can catch this on sync.</p>
         </li>
 
 
-        <li id="section-29">
+        <li id="section-28">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-29">&#182;</a>
+                <a class="pilcrow" href="#section-28">&#182;</a>
               </div>
               <p>Do nothing if our container indicates that a decision has been reached.</p>
 
@@ -634,24 +622,24 @@ every one is very disappointed. Thus, we can catch this on sync.</p>
         </li>
 
 
-        <li id="section-30">
+        <li id="section-29">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-30">&#182;</a>
+                <a class="pilcrow" href="#section-29">&#182;</a>
               </div>
-              <p>Geneate an immigration government if we have an immigration available.</p>
+              <p>Generate an arrival government if we have an arrival available.</p>
 
             </div>
 
         </li>
 
 
-        <li id="section-31">
+        <li id="section-30">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-31">&#182;</a>
+                <a class="pilcrow" href="#section-30">&#182;</a>
               </div>
 
             </div>
