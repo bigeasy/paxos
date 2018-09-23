@@ -46,7 +46,7 @@ After the proposer has written an accept message to all the acceptors, but
 before it can write a commit message, one or more of it's acceptors issues a
 subsequent promise to another proposer. The proposer will have committed its own
 accept write to the log (TODO wondering of accept should just stage a write to
-the log instead of having its own register.) When the proposing citizen commits
+the log instead of having its own register.) When the proposing islander commits
 it will establish the new government, but it will immediately mark it as
 collapsed.
 
@@ -107,7 +107,7 @@ collapse.
 
 ### Proposer is halted by its acceptor
 
-What happens when a citizen that proposing receives a proposal and issues a
+What happens when a islander that proposing receives a proposal and issues a
 promise, but is in the midst of its own proposal? The synchronous response would
 come at the end of a network request. The response can find that the proposer
 has been destroyed.
