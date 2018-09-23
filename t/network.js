@@ -157,7 +157,7 @@ Network.prototype.bootstrap = function (republic) {
     this.denizens[0].bootstrap(coalesce(republic, 1), this.time, { location: '0' })
 }
 
-Network.prototype.arrive = function (i) {
+Network.prototype.embark = function (i) {
     var denizen = this.denizens[i]
     var leader = this.denizens.map(function (denizen) {
         return denizen.government
@@ -165,14 +165,14 @@ Network.prototype.arrive = function (i) {
         return Monotonic.compare(left.promise, right.promise)
     }).pop().majority[0]
     denizen.join(1, this.time)
-    this.denizens[leader].arrive(this.time, 1, denizen.id, denizen.cookie, { location: denizen.id }, true)
+    this.denizens[leader].embark(this.time, 1, denizen.id, denizen.cookie, { location: denizen.id }, true)
 }
 
 Network.prototype.populate = function (count) {
     while (count-- != 0) {
         var i = this.denizens.length
         this.reboot(i)
-        this.arrive(i)
+        this.embark(i)
     }
 }
 

@@ -224,7 +224,7 @@ Paxos.prototype.bootstrap = function (republic, now, properties) {
 
     this._promised = '1/0'
 
-    this._shaper.arrive({ id: this.id, cookie: 0 })
+    this._shaper.embark({ id: this.id, cookie: 0 })
 
     this._commit(now, { promise: '1/0', body: government, previous: '0/0' }, '0/0')
 }
@@ -336,7 +336,7 @@ Paxos.prototype.enqueue = function (now, republic, message) {
 // until the proposal was enacted.
 
 //
-Paxos.prototype.arrive = function (now, republic, id, cookie, properties, acclimated) {
+Paxos.prototype.embark = function (now, republic, id, cookie, properties, acclimated) {
     var response = this._enqueuable(republic)
     if (response == null) {
         // Do not allow the user to initiate the immigration of an id that
@@ -352,7 +352,7 @@ Paxos.prototype.arrive = function (now, republic, id, cookie, properties, acclim
             }
         } else {
             response = { enqueued: true }
-            this._reshape(now, this._shaper.arrive({ id: id, properties: properties, cookie: cookie, acclimated: acclimated }))
+            this._reshape(now, this._shaper.embark({ id: id, properties: properties, cookie: cookie, acclimated: acclimated }))
         }
     }
     return response
@@ -1211,7 +1211,7 @@ Paxos.prototype._commit = function (now, entry, top) {
             // opportunities to change the shape of the government.
             var shaper = new Shaper(this.parliamentSize, this.government, entry.body.map == null)
             for (var i = 0, arrival; (arrival = this._shaper._arriving[i]) != null; i++) {
-                shaper.arrive(arrival)
+                shaper.embark(arrival)
             }
             this._shaper = shaper
             if (entry.body.arrive) {

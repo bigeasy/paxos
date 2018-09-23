@@ -199,7 +199,7 @@ Shaper.prototype.arrived = function (id) {
     this._arriving.shift()
 }
 
-Shaper.prototype.arrive = function (arrival) {
+Shaper.prototype.embark = function (arrival) {
     // We do not going to reject a duplicate immigration for a particular id.
     //
     // Here is a race condition and how it will shake itself out.

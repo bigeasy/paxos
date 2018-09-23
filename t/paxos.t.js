@@ -25,7 +25,7 @@ function prove (okay) {
 
     network.push()
     network.denizens[1].join(1, network.time)
-    okay(network.denizens[0].arrive(network.time, 1, '1', network.denizens[1].cookie, { location: '1' }, true).enqueued, 'arrive')
+    okay(network.denizens[0].embark(network.time, 1, '1', network.denizens[1].cookie, { location: '1' }, true).enqueued, 'arrive')
 
     network.send()
 
@@ -68,7 +68,7 @@ function prove (okay) {
     network.denizens[2].join(1, network.time)
     // TODO Turn off immigration and ensure that it is not able to join the
     // government.
-    network.denizens[0].arrive(network.time, 1, '2', network.denizens[2].cookie, { location: '2' }, false)
+    network.denizens[0].embark(network.time, 1, '2', network.denizens[2].cookie, { location: '2' }, false)
 
     network.send()
 
@@ -112,10 +112,10 @@ function prove (okay) {
         }
     }, 'three member parliament')
 
-    okay(!network.denizens[0].arrive(network.time, 1, '1', network.denizens[1].cookie, { location: '1' }).enqueued, 'already arrived')
+    okay(!network.denizens[0].embark(network.time, 1, '1', network.denizens[1].cookie, { location: '1' }).enqueued, 'already arrived')
     okay(!network.denizens[1].enqueue(network.time, 1, {}).enqueued, 'enqueue not leader')
 
-    okay(!network.denizens[1].arrive(network.time, 1, '4', 0, { location: '4' }).enqueued, 'arrive not leader')
+    okay(!network.denizens[1].embark(network.time, 1, '4', 0, { location: '4' }).enqueued, 'arrive not leader')
 
     network.populate(1)
 
@@ -260,7 +260,7 @@ function prove (okay) {
 
     // This one will join, but with the new cookie.
     network.reboot(6)
-    network.arrive(6)
+    network.embark(6)
 
     network.send()
 
@@ -384,10 +384,10 @@ function prove (okay) {
 
     network.push()
     network.denizens[9].join(1, network.time)
-    network.denizens[3].arrive(network.time, 1, '9', network.denizens[9].cookie, { location: '9' })
+    network.denizens[3].embark(network.time, 1, '9', network.denizens[9].cookie, { location: '9' })
     network.push()
     network.denizens[10].join(1, network.time)
-    network.denizens[3].arrive(network.time, 1, '10', network.denizens[10].cookie, { location: '10' })
+    network.denizens[3].embark(network.time, 1, '10', network.denizens[10].cookie, { location: '10' })
 
     network.send()
 
@@ -451,7 +451,7 @@ function prove (okay) {
 
     network.push()
     network.denizens[11].join(1, network.time)
-    network.denizens[3].arrive(network.time, 1, '11', network.denizens[11].cookie, { location: '11' })
+    network.denizens[3].embark(network.time, 1, '11', network.denizens[11].cookie, { location: '11' })
 
     network.send()
 
@@ -530,7 +530,7 @@ function prove (okay) {
     network.send([ '12' ])
 
     network.reboot(12)
-    network.arrive(12)
+    network.embark(12)
 
     network.send()
 
@@ -665,7 +665,7 @@ function prove (okay) {
 
     network.reboot(13)
     network.denizens[13].join(1, 0)
-    network.denizens[2].arrive(network.time, 1, '13', 1, { location: '13' }, true)
+    network.denizens[2].embark(network.time, 1, '13', 1, { location: '13' }, true)
 
     network.send()
 
