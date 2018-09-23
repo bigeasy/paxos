@@ -30,16 +30,6 @@
                 </a>
 
 
-                <a class="source" href="constituency.js.html">
-                  constituency.js
-                </a>
-
-
-                <a class="source" href="government.js.html">
-                  government.js
-                </a>
-
-
                 <a class="source" href="paxos.js.html">
                   paxos.js
                 </a>
@@ -139,6 +129,7 @@ Proposer.prototype.prepare = <span class="hljs-function"><span class="hljs-keywo
     <span class="hljs-keyword">this</span>._paxos._send({
         <span class="hljs-attr">method</span>: <span class="hljs-string">'prepare'</span>,
         <span class="hljs-attr">collapsible</span>: <span class="hljs-literal">true</span>,
+        <span class="hljs-attr">constituent</span>: <span class="hljs-literal">false</span>,
         <span class="hljs-attr">to</span>: <span class="hljs-keyword">this</span>.proposal.quorum,
         <span class="hljs-attr">promise</span>: <span class="hljs-keyword">this</span>.promise
     })
@@ -171,6 +162,7 @@ Proposer.prototype.response = <span class="hljs-function"><span class="hljs-keyw
             <span class="hljs-attr">to</span>: <span class="hljs-keyword">this</span>.proposal.quorum,
             <span class="hljs-attr">promise</span>: request.promise,
             <span class="hljs-attr">collapsible</span>: <span class="hljs-literal">true</span>,
+            <span class="hljs-attr">constituent</span>: <span class="hljs-literal">false</span>,
             <span class="hljs-attr">body</span>: {
                 <span class="hljs-attr">promise</span>: request.promise,
                 <span class="hljs-attr">body</span>: <span class="hljs-keyword">this</span>.proposal.body,

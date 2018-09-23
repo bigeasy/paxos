@@ -30,16 +30,6 @@
                 </a>
 
 
-                <a class="source" href="constituency.js.html">
-                  constituency.js
-                </a>
-
-
-                <a class="source" href="government.js.html">
-                  government.js
-                </a>
-
-
                 <a class="source" href="paxos.js.html">
                   paxos.js
                 </a>
@@ -349,14 +339,14 @@ expanding the government to the desired government size.</p>
     <span class="hljs-keyword">this</span>._government = government
     <span class="hljs-keyword">this</span>._seen = {}
     <span class="hljs-keyword">this</span>._expandable = []
-    <span class="hljs-keyword">this</span>._immigrating = []
+    <span class="hljs-keyword">this</span>._arriving = []
     <span class="hljs-keyword">this</span>.decided = <span class="hljs-literal">false</span>
     <span class="hljs-keyword">this</span>._governments = []
     <span class="hljs-keyword">this</span>.outbox = {}
     <span class="hljs-keyword">this</span>._representative = <span class="hljs-literal">null</span>
     <span class="hljs-keyword">this</span>._shouldNaturalize = <span class="hljs-keyword">this</span>._government.majority.length +
         <span class="hljs-keyword">this</span>._government.minority.length +
-        <span class="hljs-keyword">this</span>._government.constituents.length != <span class="hljs-keyword">this</span>._government.naturalized.length
+        <span class="hljs-keyword">this</span>._government.constituents.length != <span class="hljs-keyword">this</span>._government.acclimated.length
     <span class="hljs-keyword">this</span>._shouldRecover(recovered) || <span class="hljs-keyword">this</span>._shouldContract()
 }
 
@@ -397,7 +387,7 @@ Shaper.prototype.unreachable = <span class="hljs-function"><span class="hljs-key
         <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>
     }
 
-    <span class="hljs-keyword">var</span> id = <span class="hljs-keyword">this</span>._government.immigrated.id[unreachable]
+    <span class="hljs-keyword">var</span> id = <span class="hljs-keyword">this</span>._government.arrived.id[unreachable]
     assert(id != <span class="hljs-literal">null</span>, <span class="hljs-string">'unable to determine unreachable id'</span>)</pre></div></div>
 
         </li>
@@ -418,30 +408,30 @@ Shaper.prototype.unreachable = <span class="hljs-function"><span class="hljs-key
         <span class="hljs-attr">government</span>: {
             <span class="hljs-attr">majority</span>: <span class="hljs-keyword">this</span>._government.majority,
             <span class="hljs-attr">minority</span>: <span class="hljs-keyword">this</span>._government.minority.filter(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">$id</span>) </span>{ <span class="hljs-keyword">return</span> $id != id }),
-            <span class="hljs-attr">exile</span>: id
+            <span class="hljs-attr">departed</span>: id
         }
     }
 }
 
-Shaper.prototype.naturalize = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">promise</span>) </span>{
+Shaper.prototype.acclimate = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">promise</span>) </span>{
     <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.decided) {
         <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>
     }
 
     <span class="hljs-keyword">var</span> government = <span class="hljs-keyword">this</span>._government
 
-    <span class="hljs-keyword">var</span> id = government.immigrated.id[promise]
-    assert(id != <span class="hljs-literal">null</span>, <span class="hljs-string">'unable to determine naturalize id'</span>)
+    <span class="hljs-keyword">var</span> id = government.arrived.id[promise]
+    assert(id != <span class="hljs-literal">null</span>, <span class="hljs-string">'unable to determine acclimate id'</span>)
 
 
-    assert(!~government.naturalized.indexOf(id), <span class="hljs-string">'already naturalized'</span>)
+    assert(!~government.acclimated.indexOf(id), <span class="hljs-string">'already acclimated'</span>)
 
     <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>._governments.shift() || {
         <span class="hljs-attr">quorum</span>: <span class="hljs-keyword">this</span>._government.majority,
         <span class="hljs-attr">government</span>: {
             <span class="hljs-attr">majority</span>: <span class="hljs-keyword">this</span>._government.majority,
             <span class="hljs-attr">minority</span>: <span class="hljs-keyword">this</span>._government.minority,
-            <span class="hljs-attr">naturalize</span>: id
+            <span class="hljs-attr">acclimate</span>: id
         }
     }
 }</pre></div></div>
@@ -472,7 +462,7 @@ new shape. Note that immigration takes place is elsewhere.</p>
 
             </div>
 
-            <div class="content"><div class='highlight'><pre>Shaper.prototype.naturalized = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">id</span>) </span>{
+            <div class="content"><div class='highlight'><pre>Shaper.prototype.acclimated = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">id</span>) </span>{
     <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.decided) {
         <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>
     }</pre></div></div>
@@ -582,15 +572,15 @@ government so let’s grow the government.</p>
 
             </div>
 
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>._governments.shift() || <span class="hljs-keyword">this</span>._immigration() || <span class="hljs-literal">null</span>
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>._governments.shift() || <span class="hljs-keyword">this</span>._arrival() || <span class="hljs-literal">null</span>
 }
 
-Shaper.prototype.immigrated = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">id</span>) </span>{
-    assert(<span class="hljs-keyword">this</span>._immigrating.length &gt; <span class="hljs-number">0</span> &amp;&amp; id == <span class="hljs-keyword">this</span>._immigrating[<span class="hljs-number">0</span>].id)
-    <span class="hljs-keyword">this</span>._immigrating.shift()
+Shaper.prototype.arrived = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">id</span>) </span>{
+    assert(<span class="hljs-keyword">this</span>._arriving.length &gt; <span class="hljs-number">0</span> &amp;&amp; id == <span class="hljs-keyword">this</span>._arriving[<span class="hljs-number">0</span>].id)
+    <span class="hljs-keyword">this</span>._arriving.shift()
 }
 
-Shaper.prototype.immigrate = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">immigration</span>) </span>{</pre></div></div>
+Shaper.prototype.embark = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">arrival</span>) </span>{</pre></div></div>
 
         </li>
 
@@ -612,17 +602,17 @@ every one is very disappointed. Thus, we can catch this on sync.</p>
 
             </div>
 
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>, I = <span class="hljs-keyword">this</span>._immigrating.length; i &lt; I; i++) {
-        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._immigrating[i].id == immigration.id) {
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>, I = <span class="hljs-keyword">this</span>._arriving.length; i &lt; I; i++) {
+        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._arriving[i].id == arrival.id) {
             <span class="hljs-keyword">break</span>
         }
     }
-    <span class="hljs-keyword">if</span> (i == <span class="hljs-keyword">this</span>._immigrating.length) {
-        <span class="hljs-keyword">this</span>._immigrating.push(immigration)
+    <span class="hljs-keyword">if</span> (i == <span class="hljs-keyword">this</span>._arriving.length) {
+        <span class="hljs-keyword">this</span>._arriving.push(arrival)
     } <span class="hljs-keyword">else</span> {
-        <span class="hljs-keyword">this</span>._immigrating[i].properties = immigration.properties
-        <span class="hljs-keyword">this</span>._immigrating[i].cookie = immigration.cookie
-        <span class="hljs-keyword">this</span>._immigrating[i].naturalized = immigration.naturalized
+        <span class="hljs-keyword">this</span>._arriving[i].properties = arrival.properties
+        <span class="hljs-keyword">this</span>._arriving[i].cookie = arrival.cookie
+        <span class="hljs-keyword">this</span>._arriving[i].acclimated = arrival.acclimated
     }</pre></div></div>
 
         </li>
@@ -638,7 +628,7 @@ every one is very disappointed. Thus, we can catch this on sync.</p>
 
             </div>
 
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.decided ? <span class="hljs-literal">null</span> : <span class="hljs-keyword">this</span>._immigration()
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.decided ? <span class="hljs-literal">null</span> : <span class="hljs-keyword">this</span>._arrival()
 }</pre></div></div>
 
         </li>
@@ -666,20 +656,20 @@ every one is very disappointed. Thus, we can catch this on sync.</p>
 
             </div>
 
-            <div class="content"><div class='highlight'><pre>Shaper.prototype._immigration = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
-    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._immigrating.length) {
-        <span class="hljs-keyword">var</span> immigration = <span class="hljs-keyword">this</span>._immigrating[<span class="hljs-number">0</span>]
+            <div class="content"><div class='highlight'><pre>Shaper.prototype._arrival = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._arriving.length) {
+        <span class="hljs-keyword">var</span> arrival = <span class="hljs-keyword">this</span>._arriving[<span class="hljs-number">0</span>]
         <span class="hljs-keyword">return</span> {
             <span class="hljs-attr">quorum</span>: <span class="hljs-keyword">this</span>._government.majority,
             <span class="hljs-attr">government</span>: {
                 <span class="hljs-attr">majority</span>: <span class="hljs-keyword">this</span>._government.majority,
                 <span class="hljs-attr">minority</span>: <span class="hljs-keyword">this</span>._government.minority,
-                <span class="hljs-attr">immigrate</span>: {
-                    <span class="hljs-attr">id</span>: immigration.id,
-                    <span class="hljs-attr">properties</span>: immigration.properties,
-                    <span class="hljs-attr">cookie</span>: immigration.cookie
+                <span class="hljs-attr">arrive</span>: {
+                    <span class="hljs-attr">id</span>: arrival.id,
+                    <span class="hljs-attr">properties</span>: arrival.properties,
+                    <span class="hljs-attr">cookie</span>: arrival.cookie
                 },
-                <span class="hljs-attr">naturalize</span>: immigration.naturalized ? immigration.id : <span class="hljs-literal">null</span>
+                <span class="hljs-attr">acclimate</span>: arrival.acclimated ? arrival.id : <span class="hljs-literal">null</span>
             }
         }
     }
@@ -688,8 +678,8 @@ every one is very disappointed. Thus, we can catch this on sync.</p>
 
 Shaper.null = {
     <span class="hljs-attr">unreachable</span>: <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{ <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span> },
-    <span class="hljs-attr">naturalize</span>: <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{ <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span> },
-    <span class="hljs-attr">_immigrating</span>: []
+    <span class="hljs-attr">acclimate</span>: <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{ <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span> },
+    <span class="hljs-attr">_arriving</span>: []
 }
 
 <span class="hljs-built_in">module</span>.exports = Shaper</pre></div></div>
