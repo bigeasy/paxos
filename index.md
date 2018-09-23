@@ -1,9 +1,9 @@
-A replayable, deterministic implemenation of Paxos.
+A replayable, deterministic implementation of Paxos.
 
 Sketch of what to say.
 
  * Implements an atomic log and/or atomic broadcast.
- * Reproducable events for unit testing, but still a true Paxos.
+ * Reproducible events for unit testing, but still a true Paxos.
  * Paxos itself is in memory so that there are no disk writes.
 
 A consensus algorithm will maintain a log between multiple machines, and
