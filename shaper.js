@@ -1,7 +1,7 @@
 var assert = require('assert')
 
-// Monitor the reachability of denizens in order to suggest the shape of a new
-// government. The `Shaper.update` method is invoked with a denizen id and a
+// Monitor the reachability of islanders in order to suggest the shape of a new
+// government. The `Shaper.update` method is invoked with a islander id and a
 // reachability status. `Shaper.update` returns either a new government to
 // appoint or `null`. Once `Shaper.update` returns a new government to appoint
 // the `Shaper` object is used up and should be replaced.
@@ -10,40 +10,41 @@ var assert = require('assert')
 // only ever called with a true or false value for reachable. For the purposes
 // of `Shaper` reachability is defined as follows.
 
-// * A denizen is reachable if the denizen responds to pings and it naturalized.
-// * A denizen is unreachable if the denizen does not respond to pings.
+// * A islander is reachable if the islander responds to pings and has
+// acclimated.
+// * A islander is unreachable if the islander does not respond to pings.
 
-// If the the denizen responds to pings, but is not naturalized, it is neither
+// If the islander responds to pings, but has not acclimated, it is neither
 // reachable nor unreachable and we don't want to hear about it.
 
 // Notes:
 
-// Could think harder about priorities as they releate to healing. Wouldn't want
-// to starve the recovery of the cluster by performing immigrations only, when
-// newly naturalized citizens could join the legislature and preserve the
-// republic.
+// Could think harder about priorities as they relate to healing. Wouldn't want
+// to starve the recovery of the cluster by performing arrivals only, when newly
+// acclimated islanders could join the legislature and preserve the republic.
 
 // Note that we currently favor impeachment because the minority updates the
 // constituents. A non-functioning minority member would keep all of its
-// constitutents in the dark.
+// constituents in the dark.
 
 // We favor filling empty seats in government as soon as they are detected.
 
 // We favor shrinking the government as soon as it becomes obvious that the
 // government size is less than the population of the island.
 
-// All this assuming an external mechnism for tracking pings that will calculate
-// when a paricular participant is reachable or unreachable. After `update`
-// returns a reshape operation, the `Shaper` object is consumed. At that point
-// you should no longer call `Shaper`. Put a dummy shape object in its place.
+// All this assuming an external mechanism for tracking pings that will
+// calculate when a particular islander is reachable or unreachable. After
+// `update` returns a reshape operation, the `Shaper` object is consumed. At
+// that point you should no longer call `Shaper`. Put a dummy shape object in
+// its place.
 
 // A new `Shaper` object should then be created when a new government is
 // created.
 
-// I'm imagining that the unreachability of a participant will be remembered so
+// I'm imagining that the unreachability of an islander will be remembered so
 // that when a new government is created the unreachability can replayed. Causes
-// me to muse about whether it should be possible for a citizen to become
-// reachable again, whether we should continue to ping the citizen, or if we
+// me to muse about whether it should be possible for a islander to become
+// reachable again, whether we should continue to ping the islander, or if we
 // simply surrender.
 
 // In the case of collapse when we switch to paxos, it seems that we'll keep on
@@ -116,7 +117,7 @@ Shaper.prototype.unreachable = function (unreachable) {
     var id = this._government.arrived.id[unreachable]
     assert(id != null, 'unable to determine unreachable id')
 
-    // Exile any unreachable citizen.
+    // Depart any unreachable islanders.
     return this._governments.shift() || {
         quorum: this._government.majority,
         government: {
@@ -151,7 +152,7 @@ Shaper.prototype.acclimate = function (promise) {
 }
 
 // `Shaper.update` determines if a new government should be created that has a
-// new shape. Note that immigration takes place is elsewhere.
+// new shape. Note that embark and arrive takes place is elsewhere.
 
 //
 Shaper.prototype.acclimated = function (id) {
@@ -161,9 +162,9 @@ Shaper.prototype.acclimated = function (id) {
 
     // We're not going to return an expanded government until we get two
     // expandable entries so if we have a contraction it will go the first time
-    // naturalized is called.
+    // acclimated is called.
     if (~this._government.majority.indexOf(id)) {
-        // Majority members are not our resposibility. They trigger their own
+        // Majority members are not our responsibility. They trigger their own
         // collapse.
     } else if (this._shouldExpand && !~this._government.minority.indexOf(id)) {
         this._expandable.push(id)
@@ -172,8 +173,8 @@ Shaper.prototype.acclimated = function (id) {
 
         //
         if (this._expandable.length == 2) {
-            // We should expand and we have citzens who can be appointed to the
-            // government so let's grow the government.
+            // We should expand and we have islanders who can be appointed to
+            // the government so let's grow the government.
             var majority = this._government.majority.slice()
             var minority = this._government.minority.slice()
             var promote = [ this._expandable.shift(), this._expandable.shift() ]
@@ -190,7 +191,6 @@ Shaper.prototype.acclimated = function (id) {
         }
     }
 
-    // Otherwise let's exile someone if we have someone to exile.
     return this._governments.shift() || this._arrival() || null
 }
 
@@ -200,12 +200,12 @@ Shaper.prototype.arrived = function (id) {
 }
 
 Shaper.prototype.embark = function (arrival) {
-    // We do not going to reject a duplicate immigration for a particular id.
+    // We do not going to reject a duplicate embarkation for a particular id.
     //
     // Here is a race condition and how it will shake itself out.
     //
-    // We could be in the middle of immigrating a partuclar id when the
-    // immigrant crash restarts and submits a new cookie. We will update the
+    // We could be in the middle of arriving a particular islander id when the
+    // islander crashed restarts and submits a new cookie. We will update the
     // cookie here, but that's not going to be the same as the cookie that got
     // written into the log.
     //
@@ -228,7 +228,7 @@ Shaper.prototype.embark = function (arrival) {
     return this.decided ? null : this._arrival()
 }
 
-// Geneate an immigration government if we have an immigration available.
+// Generate an arrival government if we have an arrival available.
 
 //
 Shaper.prototype._arrival = function () {

@@ -77,14 +77,14 @@ function Paxos (now, id, options) {
     // Ping is the frequency of keep alive pings.
     this.ping = coalesce(options.ping, 1000)
 
-    // Timeout when that reached marks a citizen for exile.
+    // Timeout when that reached marks a islander for departure.
     this.timeout = coalesce(options.timeout, 5000)
 
-    // The citizens that this citizen updates with new log entries.
+    // The islanders that this islander updates with new log entries.
     this.constituency = []
 
     // Entire population.
-    this.citizens = []
+    this.population = []
 
     // Upper bound of the atomic log.
     this._committed = {}
@@ -113,14 +113,14 @@ function Paxos (now, id, options) {
     this._writer = new Writer(this, '1/0', [])
     this._recorder = new Recorder(this, this.log.head.body)
 
-    // Shaper a new government by fiat based on whose available to grow to the
+    // Shape a new government by fiat based on whose available to grow to the
     // desired government size and who is unreachable.
     this._shaper = new Shaper(this.parliamentSize, this.government, false)
 
     // Used for our pseudo-random number generator to vary retry times.
     this._seed = 1
 
-    // Track unreachable citizens.
+    // Track unreachable islanders.
     this._disappeared = {}
     this._unreachable = {}
 }
@@ -128,9 +128,9 @@ function Paxos (now, id, options) {
 // ### Government
 
 // Constructs a new government and unshifts it onto the head of the proposal
-// queue. During two-phase commit, new governments jump to the line. All the
-// user messages are given new promises whose values are greater than the value
-// of the government's promise.
+// queue. During two-phase commit, new governments jump to the head of the line.
+// All the user messages are given new promises whose values are greater than
+// the value of the government's promise.
 //
 // During a collapse when we are running Paxos, the new government is the only
 // message and all user messages are dropped.
@@ -199,7 +199,7 @@ Paxos.prototype.newGovernment = function (now, promise, quorum, government) {
 
 // ### Bootstrap
 
-// Initialize the citizen with a government where it is the dictator.
+// Initialize the islander with a government where it is the dictator.
 
 //
 Paxos.prototype.bootstrap = function (republic, now, properties) {
@@ -234,7 +234,7 @@ Paxos.prototype.join = function (republic, cookie) {
     this.cookie = cookie
 }
 
-// ### Enqueue and Immigrate
+// ### Embark and Arrive
 
 // TODO Is all this checking necessary? Is it necessary to return the island id
 // and leader? This imagines that the client is going to do the retry, but in
@@ -295,28 +295,27 @@ Paxos.prototype.enqueue = function (now, republic, message) {
 // such things are indistinguishable to the human observer.
 //
 // Yet, here I am again contending with an issue that would be so simple if ids
-// where required to be unique. When a citizen that is a constituent dies and
+// where required to be unique. When a islander that is a constituent dies and
 // restarts with the same id it will be pinged by someone in government, it will
-// report that it's empty, and its representative will look for it's immigration
-// record. There's a race now. Is the new instance going to immigrate before its
-// pinged? Or is the representative going to search for an immigration record
-// and not find one, which causes us to abend at the moment?
+// report that it's uninitialized, and its representative will look for it's
+// arrival record. There's a race now. Is the new instance going to embark
+// before its pinged? Or is the representative going to search for an arrival
+// record and not find one, which causes us to abend at the moment?
 //
-// When we get a sync before immigration, it will not see a cookie or not see
-// the right cookie and fail the sync. These syncs fail, time passes, the time
-// out comes and the record is cleared. That takes care of the race when the
-// sync beats the immigration record, but what if the immigration record beats
-// the representative?
+// When we get a sync before arrival, it will not see a cookie or not see the
+// right cookie and fail the sync. These syncs fail, time passes, the time out
+// comes and the record is cleared. That takes care of the race when the sync
+// beats the arrival, but what if the arrival beats the representative?
 //
 // In that case their will be a new government with the same representative with
-// the same constituent, but now there will be an immigration record. The
-// constituent will be naturalized. It will never have been exiled.
+// the same constituent, but now there will be an arrival record. The
+// constituent will be acclimated. It will never have departed.
 //
 // This is a problem. Implementations are going to need to know that they've
-// restarted. A participant should be exiled before it can immigrate again.
+// restarted. A participant should depart before it can embark again.
 //
 // Obviously, much easier if the ids are unique. Whole new id means not
-// ambiguity. The new id immigrates, the old id exiles. (Unique ids are easy
+// ambiguity. The new id arrival, the old id departs. (Unique ids are easy
 // enough to foist upon our dear user implementation wise. Most implementations
 // reset a process or at least an object, and that new instance can have a new
 // id generated from POSIX time or UUID.)
@@ -324,26 +323,26 @@ Paxos.prototype.enqueue = function (now, republic, message) {
 // However, we do have an atomic log at our disposal, so every time I think that
 // I should give up and go with unique ids, something comes along to make it
 // simple. I was actually musing about how the client, if they really wanted
-// pretty ids, they could just check and wait for the old id to exile, since it
+// pretty ids, they could just check and wait for the old id to depart, since it
 // only needs to be unique in the set of current ids. Then, duh, I can do that
-// same check on immigration and reject the immigration if the id already exists
-// in the census.
+// same check on embark and reject an arrival if the id already exists in the
+// population.
 //
 // That's what you're looking at here.
 //
-// Now that that is done, though, is there a race condition where the
-// immigration is currently being proposed? The property wouldn't be removed
-// until the proposal was enacted.
+// Now that that is done, though, is there a race condition where the arrival is
+// currently being proposed? The property wouldn't be removed until the proposal
+// was enacted.
 
 //
 Paxos.prototype.embark = function (now, republic, id, cookie, properties, acclimated) {
     var response = this._enqueuable(republic)
     if (response == null) {
-        // Do not allow the user to initiate the immigration of an id that
-        // already exists. This will happen if a denizen crash restarts and
-        // tries to rejoin before Paxos can determine that the denizen is no
-        // longer viable. The immigrating denizen should enter a back off and
-        // retry loop in order to wait for exile.
+        // Do not allow the user to embark an id that already exists. This will
+        // happen if an islander crash restarts and tries to rejoin before Paxos
+        // can determine that the islander is no longer viable. The embarking
+        // islander should enter a back off and retry loop in order to wait for
+        // departure.
         if (id in this.government.properties) {
             response = {
                 enqueued: false,
@@ -367,11 +366,11 @@ Paxos.prototype.acclimate = function () {
 // ### Scheduled Events
 
 // Timer-driven events are managed using [Happenstance](http://github.com/bigeasy/happenstance).
-// Events are scheduled by calling the `schedule` method of a Happenstance
-// the `Schedule` object for this citizen. Each event has a key and scheduling
-// an event will replace an scheduled event with the same key, making it easy to
+// Events are scheduled by calling the `schedule` method of a Happenstance the
+// `Schedule` object for this islander. Each event has a key and scheduling an
+// event will replace an scheduled event with the same key, making it easy to
 // reset timeouts, to basically reset countdowns or replace the countdown action
-// as the role of the citizen changes.
+// as the role of the islander changes.
 
 //
 Paxos.prototype.event = function (envelope) {
@@ -382,7 +381,7 @@ Paxos.prototype.event = function (envelope) {
     var now = envelope.now
     switch (envelope.body.method) {
 
-    // Send a synchronization message to one or more fellow citizens. Note that
+    // Send a synchronization message to one or more fellow islanders. Note that
     // the to field is an array.
 
     //
@@ -482,7 +481,7 @@ Paxos.prototype._collapse = function (now) {
 // TODO Consider how to back off. If the leader is gone and two majority members
 // are competing, do we really want them backing off for approaching "timeout"
 // milliseconds? How fast does it take to complete a round of Paxos and how big
-// of a window do we want to give two or more citizens to launch their retries
+// of a window do we want to give two or more islanders to launch their retries
 // such that they avoid collision?
 
 //
@@ -549,12 +548,12 @@ Paxos.prototype._sync = function (committed) {
 }
 
 // Package a message with log synchronization messages and put it in our outbox
-// for delivery to the intended fellow citizens.
+// for delivery to the intended fellow islanders.
 //
-// Note that messages can take however long they're going to take. They requests
+// Note that messages can take however long they're going to take. The requests
 // can always be received and the responses can always be handled. If they are
 // made invalid by their time in transit they will be rejected. Our dear user
-// needs only to send the messages to our fellow citizens by any means and
+// needs only to send the messages to our fellow islander by any means and
 // return the responses to us all at once.
 
 //
@@ -779,9 +778,9 @@ Paxos.prototype.response = function (now, cookie, responses) {
         var id = message.to[i]
         var response = responses[id]
         var promise = this.government.arrived.promise[id]
-        // If the citizen is unreachable we create a dummy record that uses our
-        // current government for the government promise and a bunch of
-        // defaults so that it will pass through the logic.
+        // If the islander is unreachable we create a dummy record that uses our
+        // current government for the government promise and a bunch of defaults
+        // so that it will pass through the logic.
         if (
             response == null ||
             response.message.method == 'unreachable' ||
@@ -804,9 +803,8 @@ Paxos.prototype.response = function (now, cookie, responses) {
     }
 
     // TODO Why was it important that we keep pinging constituents while we are
-    // negotiating a new government? Because it's not happening now.
-    // We stop if we've received a new government since this message has been
-    // sent.
+    // negotiating a new government? Because it's not happening now. We stop if
+    // we've received a new government since this message has been sent.
     if (
         cookie.government != this.government.promise ||
         cookie.collapsed != this._writer.collapsed
@@ -861,9 +859,9 @@ Paxos.prototype.response = function (now, cookie, responses) {
         // you have to deicide if you want to protect against malicious messages
         // or if you're going to assume that you're on an secure network.
 
-        // The following operations assume that the citizen we're talking too is
-        // operating under the same government as ourselves. We want promise or
-        // id look ups to not return null.
+        // The following operations assume that the islander we're talking too
+        // is operating under the same government as ourselves. We want promise
+        // or id look ups to not return null.
 
         //
 
@@ -874,7 +872,7 @@ Paxos.prototype.response = function (now, cookie, responses) {
             continue
         }
 
-        // Update set of unreachable citizens.
+        // Update set of unreachable islanders.
         for (var unreachable in response.unreachable) {
             if (!this._unreachable[unreachable]) {
                 this._unreachable[unreachable] = true
@@ -946,7 +944,7 @@ Paxos.prototype.response = function (now, cookie, responses) {
     }
 
     // Here's were I'm using messages to drive the algorithm even when the
-    // information is available for recalcuation.
+    // information is available for recalculation.
     //
     // There are two types of explicit synchronize. The leader will sync its log
     // with its majority, other members of the government will sync with their
@@ -971,7 +969,7 @@ Paxos.prototype.response = function (now, cookie, responses) {
         // How long to wait before our next ping.
         var delay = 0
 
-        // Use the ping interval if the citizen is unreachable or if it is
+        // Use the ping interval if the islander is unreachable or if it is
         // already up to date.
         if (
             uncommunicative ||
@@ -1138,9 +1136,9 @@ Paxos.prototype._commit = function (now, entry, top) {
             }
         }
 
-        this.citizens = this.government.majority
-                            .concat(this.government.minority)
-                            .concat(this.government.constituents)
+        this.population = this.government.majority
+                              .concat(this.government.minority)
+                              .concat(this.government.constituents)
 
         government = JSON.parse(JSON.stringify(this.government))
         this._governments.push(government)
@@ -1197,7 +1195,7 @@ Paxos.prototype._commit = function (now, entry, top) {
 
         for (var acclimating in this._acclimating) {
             var id = this.government.arrived.id[acclimating]
-            if (!~this.citizens.indexOf(id) || ~this.government.acclimated.indexOf(id)) {
+            if (!~this.population.indexOf(id) || ~this.government.acclimated.indexOf(id)) {
                 delete this._acclimating[acclimating]
             }
         }
@@ -1264,15 +1262,16 @@ Paxos.prototype._commit = function (now, entry, top) {
         // to the leader. We do not have to version the records, timestamp them,
         // etc.
         //
-        // If we didn't clear them out, then a stale record for a citizen can be
-        // held onto by a majority member. If the minority member that pings the
-        // citizen is no longer downstream from the majority member, that stale
-        // record will not get updated, but it will be reported to the leader.
+        // If we didn't clear them out, then a stale record for a islander can
+        // be held onto by a majority member. If the minority member that pings
+        // the islander is no longer downstream from the majority member, that
+        // stale record will not get updated, but it will be reported to the
+        // leader.
         //
         // We keep ping information if we are the leader, since it all flows
         // back to the leader. All leader information will soon be updated. Not
-        // resetting the leader during normal operation makes adjustments to
-        // citizenship go faster.
+        // resetting the leader during normal operation makes adjustments to the
+        // population go faster.
     }
 
     if (this.constituency.length == 0) {

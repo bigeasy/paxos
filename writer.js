@@ -18,7 +18,7 @@ function Writer (paxos, promise, proposals) {
     // last future government pushed onto the proposal array.
     //
     // Although it's not multi-dimensional, I see this structure in my mind as
-    // somehow ether dash shapped, an array of just proposals, or L shaped an
+    // somehow ether dash shaped, an array of just proposals, or L shaped an
     // array of proposals with a new government unshifted.
     //
     // Sometimes there's a scout leader, and sometimes there's not.
@@ -32,7 +32,7 @@ function Writer (paxos, promise, proposals) {
     // This means that there is a queue of awaiting governments. It is, however,
     // implicit. We will review our current government when we create a new one,
     // and when a ping changes the reachable state of a constituent. Recall that
-    // a new government is formed to immigrate or exile a citizen.
+    // a new government is for the arrival or departure of an islander.
     //
     this.proposals = proposals
     this._writing = false

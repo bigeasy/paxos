@@ -66,7 +66,7 @@ function prove (okay) {
 
     network.push()
     network.denizens[2].join(1, network.time)
-    // TODO Turn off immigration and ensure that it is not able to join the
+    // TODO Turn off arrival and ensure that it is not able to join the
     // government.
     network.denizens[0].embark(network.time, 1, '2', network.denizens[2].cookie, { location: '2' }, false)
 
@@ -241,10 +241,10 @@ function prove (okay) {
         }
     }, 'add fourth')
 
-    // Propagate minimums to clear out the immigration entry for 4.
+    // Propagate minimums to clear out the arrival entry for 4.
     network.tick(2)
 
-    // Add some new citizens.
+    // Add some new islanders.
     network.populate(3)
 
     // Move our clock forward to get a differnt cookie.

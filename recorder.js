@@ -21,7 +21,7 @@ function Recorder (paxos) {
 // We do not need to handle accept messages.
 
 // If we received an accept message it would mean that a proposer had a promise
-// from this citizen but the Acceptor that issued the promise has been replaced
+// from this islander but the Acceptor that issued the promise has been replaced
 // by this recorder. That in turn means that we have received a new, stable
 // government and that government has been written to the atomic log. Our atomic
 // log is therefore ahead of the atomic log of the sender of the accept message
