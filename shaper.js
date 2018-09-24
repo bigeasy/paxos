@@ -199,6 +199,25 @@ Shaper.prototype.arrived = function (id) {
     this._arriving.shift()
 }
 
+// TODO This seems really broken to me. (It is not. Read the following
+// description and then the description in body of `embark` and then amalgamate
+// the two of them.)
+//
+// Looks broken, doesn't it? Updating the cookie and properties of an existing
+// record makes think that there is a race condition where the leader is going
+// to have a different version of the arrival message from the other majority
+// members if `embark` is called and the arrival is the `0` entry in the array.
+//
+// However, we're not using the entry in the array. Our arrival government is
+// an object created in `_arrival`. Calling `embark` for the `0` arrival is a
+// missed update if `_arrival` has been called to create an arrival government
+// from the entry. If the call to `embark` provided a different cookie, it's a
+// miss. The wrong cookie will arrive. We'll have to wait for the arrival and
+// subsequent departure followed by that higher-level departure detection that
+// will trigger a restart.
+//
+// The notes below still stand. The make sense having re-read them.
+//
 Shaper.prototype.embark = function (arrival) {
     // We do not going to reject a duplicate embarkation for a particular id.
     //
