@@ -139,7 +139,7 @@ function createDenizen (id) {
         } else {
             denizen.event(envelope)
         }
-    }, abend)
+    }).run(abend)
     denizen.shifter = denizen.outbox.shifter()
     return denizen
 }
