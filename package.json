@@ -33,7 +33,7 @@
                             "extant":                       "1.0.x",
                             "happenstance":                 "10.6.x",
                             "monotonic":                    "3.0.x",
-                            "procession":                   "0.22.x"
+                            "procession":                   "0.23.x"
     },
     "devDependencies":
     {
