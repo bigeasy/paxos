@@ -1178,11 +1178,9 @@ Paxos.prototype._commit = function (now, entry, top) {
                 // version, well, the worse you can do is get rid of information
                 // that will once again materialize.
                 delete this._unreachable[this.government.arrived.promise[id]]
-                delete this._disappeared[this.government.arrived.promise[id]]
             }
             for (var i = 0, id; (id = this.government.minority[i]) != null; i++) {
                 delete this._unreachable[this.government.arrived.promise[id]]
-                delete this._disappeared[this.government.arrived.promise[id]]
             }
         } else {
             for (var unreachable in this._unreachable) {
@@ -1222,7 +1220,9 @@ Paxos.prototype._commit = function (now, entry, top) {
                 this._reshape(now, shaper.acclimate(promise))
             }
             this.government.acclimated.forEach(function (id) {
-                this._reshape(now, shaper.acclimated(id))
+                if (this._disappeared[this.government.arrived.promise[id]] == null) {
+                    this._reshape(now, shaper.acclimated(id))
+                }
             }, this)
         } else {
             this._shaper = Shaper.null
