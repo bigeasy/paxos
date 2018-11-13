@@ -31,7 +31,7 @@
                             "bintrees":                     "1.0.2",
                             "departure":                    "0.0.x",
                             "extant":                       "1.0.x",
-                            "happenstance":                 "10.9.x",
+                            "happenstance":                 "10.10.x",
                             "monotonic":                    "3.0.x",
                             "procession":                   "2.2.x"
     },
