@@ -1,6 +1,16 @@
 // Common utilities.
 var assert = require('assert')
 
+// Updated upstream Paxos for a fix to a bug where it would add a member
+// to the government as part of expansion that it just rejected because
+// it was unreachable. The expandable logic will not exclude an
+// acclimated member if it has disappeared; that is if we are counting
+// it down for unreachable status. We where resetting unreadability
+// because we where not accounting for it during collapse recovery, but
+// we are accounting for disappearance, so we do not reset
+// disappearance.
+
+
 // Return the first not null-like value.
 var coalesce = require('extant')
 
