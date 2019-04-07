@@ -307,7 +307,7 @@ Paxos.prototype.enqueue = function (now, republic, message) {
 // Yet, here I am again contending with an issue that would be so simple if ids
 // where required to be unique. When a islander that is a constituent dies and
 // restarts with the same id it will be pinged by someone in government, it will
-// report that it's uninitialized, and its representative will look for it's
+// report that it's uninitialized, and its representative will look for its
 // arrival record. There's a race now. Is the new instance going to embark
 // before its pinged? Or is the representative going to search for an arrival
 // record and not find one, which causes us to abend at the moment?
