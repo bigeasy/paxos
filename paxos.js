@@ -1058,7 +1058,7 @@ Paxos.prototype._commit = function (now, entry, top) {
 
     //
     if (Monotonic.compare(entry.promise, top) <= 0) {
-        departure.raise(this._findRound(entry.promise).body.body, entry.body)
+        assert.deepStrictEqual(this._findRound(entry.promise).body.body, entry.body)
         return
     }
 
