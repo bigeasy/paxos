@@ -106,7 +106,7 @@ function Paxos (now, id, options) {
     this._acclimating = {}
 
     // Network message queue.
-    this.outbox = new Procession
+    this.outbox = new Avenue().sync
 
     // Push the null government onto the atomic log.
     this.log.push(this.top = {

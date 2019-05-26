@@ -140,7 +140,7 @@ function createDenizen (id) {
             denizen.event(envelope)
         }
     }).run(abend)
-    denizen.shifter = denizen.outbox.shifter()
+    denizen.shifter = denizen.outbox.shifter().sync
     return denizen
 }
 
