@@ -586,19 +586,20 @@ Paxos.prototype._send = function (message) {
 
         if (committed == '0/0') {
             var arrivals = []
-            var iterator = this.log.trailer.node.next
+            var shifter = this.log.trailer.shifter()
             for (;;) {
-                if (iterator == null) {
+                if (shifter.peek() == null) {
                     break
                 }
-                if (Monotonic.isBoundary(iterator.body.promise, 0)) {
-                    var arrive = iterator.body.body.arrive
+                const iterator = shifter.shift()
+                if (Monotonic.isBoundary(iterator.promise, 0)) {
+                    var arrive = iterator.body.arrive
                     if (arrive && arrive.id == to) {
                         arrivals.push(iterator)
                     }
                 }
-                iterator = iterator.next
             }
+            shifter.destroy()
 
             // Use to be the case that we would accommodate a missing arrival
             // record by preemptively setting the response to `null` and
@@ -618,10 +619,10 @@ Paxos.prototype._send = function (message) {
             assert(arrivals.length != 0, 'no arrival found')
 
             var arrival = arrivals.pop()
-            committed = arrival.body.previous
+            committed = arrival.previous
 
             for (var j = 1, J = this._governments.length; j < J; j++) {
-                if (this._governments[j].promise == arrival.body.promise) {
+                if (this._governments[j].promise == arrival.promise) {
                     government = this._governments[j - 1]
                     break
                 }
