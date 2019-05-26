@@ -36,12 +36,11 @@
     },
     "devDependencies":
     {
-                            "abend":                        "1.0.x",
-                            "proof":                        "7.0.x"
+                            "abend":                        "1.0.x"
     },
     "main":                 "paxos",
     "scripts":
     {
-                            "test": "proof test test/*.t.js"
+                            "test": "mocha"
     }
 }

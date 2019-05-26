@@ -36,8 +36,6 @@ var Shaper = require('./shaper')
 var Writer = require('./writer')
 var Recorder = require('./recorder')
 
-var departure = require('departure')
-
 // ### Constructor
 function Paxos (now, id, options) {
     assert(arguments.length == 3)
