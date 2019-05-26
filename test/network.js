@@ -126,20 +126,18 @@ function createDenizen (id) {
     })
     denizen.intercept = []
     denizen.events = []
-    denizen.scheduler.events.pump(function (envelope) {
+    denizen.scheduler.on('data', (event) => {
         if (
-            envelope.module == 'happenstance' &&
-            envelope.method == 'event' &&
-            envelope.body.method == 'synchronize' &&
-            envelope.body.to.filter(function (to) {
+            event.body.method == 'synchronize' &&
+            event.body.to.filter(function (to) {
                 return ~denizen.intercept.indexOf(to)
             }).length != 0
         ) {
-            denizen.events.push(envelope)
+            denizen.events.push(event)
         } else {
-            denizen.event(envelope)
+            denizen.event(event)
         }
-    }).run(abend)
+    })
     denizen.shifter = denizen.outbox.shifter().sync
     return denizen
 }
