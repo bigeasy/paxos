@@ -23,10 +23,6 @@ var Scheduler = require('happenstance').Scheduler
 // An evented message queue used for the atomic log.
 var Avenue = require('avenue')
 var Procession = require('procession')
-var Window = require('procession/window')
-
-// A sorted index into the atomic log. TODO Must it be a tree?
-var Indexer = require('procession/indexer')
 
 // The participants in the Paxos strategy.
 var Proposer = require('./proposer')
@@ -54,12 +50,8 @@ function Paxos (now, id, options) {
     // garbage collector. We advance the head of the list when we are certain
     // that all participants have received a copy of the entry and added it to
     // their logs. Outstanding user iterators prevent garbage collection.
-    this.log = new Window
-    this.log.addListener(this.indexer = new Indexer(function (left, right) {
-        assert(left && right)
-        assert(left.body && right.body)
-        return Monotonic.compare(left.body.promise, right.body.promise)
-    }))
+    this.log = new Procession
+    this._tail = this.log.shifter()
     this.pinged = new Avenue().sync
 
     // Implements a calendar for events that we can check during runtime or
@@ -516,7 +508,7 @@ Paxos.prototype._propose = function (now, retry) {
 
 //
 Paxos.prototype._findRound = function (sought) {
-    const shifter = this.log.trailer.shifter()
+    const shifter = this._tail.shifter()
     while (shifter.peek().promise != sought) {
         shifter.shift()
     }
@@ -586,7 +578,7 @@ Paxos.prototype._send = function (message) {
 
         if (committed == '0/0') {
             var arrivals = []
-            var shifter = this.log.trailer.shifter()
+            var shifter = this._tail.shifter()
             for (;;) {
                 if (shifter.peek() == null) {
                     break
@@ -740,8 +732,8 @@ Paxos.prototype.request = function (now, request) {
     } else {
         this._synchronize(now, request.sync.commits)
 
-        while (Monotonic.compare(this.log.trailer.peek().promise, this._minimum.propagated) < 0) {
-            var entry = this.log.trailer.shift()
+        while (Monotonic.compare(this._tail.peek().promise, this._minimum.propagated) < 0) {
+            var entry = this._tail.shift()
             if (entry.government != null) {
                 assert(entry.promise == this._governments[1].promise, 'wrong government at shift time')
                 this._governments.shift()
