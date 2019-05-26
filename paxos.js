@@ -586,7 +586,7 @@ Paxos.prototype._send = function (message) {
 
         if (committed == '0/0') {
             var arrivals = []
-            var iterator = this.log.trailer.node.next, previous
+            var iterator = this.log.trailer.node.next
             for (;;) {
                 if (iterator == null) {
                     break
@@ -597,7 +597,6 @@ Paxos.prototype._send = function (message) {
                         arrivals.push(iterator)
                     }
                 }
-                previous = iterator
                 iterator = iterator.next
             }
 
