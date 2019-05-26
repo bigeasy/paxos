@@ -516,7 +516,11 @@ Paxos.prototype._propose = function (now, retry) {
 
 //
 Paxos.prototype._findRound = function (sought) {
-    return this.indexer.tree.find({ body: { promise: sought } })
+    const shifter = this.log.trailer.shifter()
+    while (shifter.peek().promise != sought) {
+        shifter.shift()
+    }
+    return shifter
 }
 
 Paxos.prototype._sync = function (committed) {
@@ -533,21 +537,21 @@ Paxos.prototype._sync = function (committed) {
     if (committed == null) {
         sync.synced = false
     } else {
-        var iterator
-
         assert(Monotonic.compare(committed, this._minimum.propagated) >= 0, 'minimum breached')
         assert(Monotonic.compare(committed, this.top.promise) <= 0, 'maximum breached')
-        iterator = this._findRound(committed).next
+        const shifter = this._findRound(committed)
+        shifter.shift()
 
         var count = 24
-        while (--count && iterator != null) {
+        while (--count && shifter.peek() != null) {
+            const iterator = shifter.shift()
             sync.commits.push({
-                promise: iterator.body.promise,
-                body: iterator.body.body,
-                previous: iterator.body.previous
+                promise: iterator.promise,
+                body: iterator.body,
+                previous: iterator.previous
             })
-            iterator = iterator.next
         }
+        shifter.destroy()
 
         sync.synced =
             sync.commits.length == 0 ||
@@ -1057,7 +1061,9 @@ Paxos.prototype._commit = function (now, entry, top) {
 
     //
     if (Monotonic.compare(entry.promise, top) <= 0) {
-        assert.deepStrictEqual(this._findRound(entry.promise).body.body, entry.body)
+        const shifter = this._findRound(entry.promise)
+        assert.deepStrictEqual(shifter.shift().body, entry.body)
+        shifter.destroy()
         return
     }
 
