@@ -21,6 +21,7 @@ var Monotonic = require('monotonic').asString
 var Scheduler = require('happenstance').Scheduler
 
 // An evented message queue used for the atomic log.
+var Avenue = require('avenue')
 var Procession = require('procession')
 var Window = require('procession/window')
 
@@ -59,7 +60,7 @@ function Paxos (now, id, options) {
         assert(left.body && right.body)
         return Monotonic.compare(left.body.promise, right.body.promise)
     }))
-    this.pinged = new Procession
+    this.pinged = new Avenue().sync
 
     // Implements a calendar for events that we can check during runtime or
     // ignore during debugging playback.

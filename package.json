@@ -28,6 +28,7 @@
     },
     "dependencies":
     {
+                            "avenue":                       "0.1.x",
                             "bintrees":                     "1.0.2",
                             "extant":                       "1.0.x",
                             "happenstance":                 "11.0.x",

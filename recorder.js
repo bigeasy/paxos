@@ -45,7 +45,7 @@ Recorder.prototype.request = function (now, request) {
         return this._paxos._prepare(now, request)
     case 'register':
         assert(request.register.body.previous ==  this.register.body.promise, 'register has unexpected previous')
-        assert(this._paxos.log.head.body.promise == this.register.body.promise, 'recorder and log out of sync')
+        assert(this._paxos.top.promise == this.register.body.promise, 'recorder and log out of sync')
         this.register = request.register
         return { method: 'receive', promise: '0/0' }
     }
