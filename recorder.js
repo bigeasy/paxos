@@ -1,5 +1,4 @@
 var assert = require('assert')
-var Monotonic = require('monotonic').asString
 
 // TODO Remember that the code is more complicated than the messaging. Let the
 // messages absorb some of the complexity of the code. (Divide them. Restrict
