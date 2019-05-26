@@ -108,7 +108,7 @@ function Paxos (now, id, options) {
     this.outbox = new Procession
 
     // Push the null government onto the atomic log.
-    this.log.push({
+    this.log.push(this.top = {
         module: 'paxos',
         method: 'government',
         promise: '0/0',
@@ -119,7 +119,7 @@ function Paxos (now, id, options) {
     // Write strategy is polymorphic, changes based on whether we're recovering
     // from collapse using Paxos or writing values using two-phase commit.
     this._writer = new Writer(this, '1/0', [])
-    this._recorder = new Recorder(this, this.log.head.body)
+    this._recorder = new Recorder(this)
 
     // Shape a new government by fiat based on whose available to grow to the
     // desired government size and who is unreachable.
@@ -526,7 +526,7 @@ Paxos.prototype._sync = function (committed) {
         minimum: this._minimum,
         government: this.government.promise,
         collapsed: this._writer.collapsed,
-        committed: this.log.head.body.promise,
+        committed: this.top.promise,
         commits: []
     }
     if (committed == null) {
@@ -535,7 +535,7 @@ Paxos.prototype._sync = function (committed) {
         var iterator
 
         assert(Monotonic.compare(committed, this._minimum.propagated) >= 0, 'minimum breached')
-        assert(Monotonic.compare(committed, this.log.head.body.promise) <= 0, 'maximum breached')
+        assert(Monotonic.compare(committed, this.top.promise) <= 0, 'maximum breached')
         iterator = this._findRound(committed).next
 
         var count = 24
@@ -550,7 +550,7 @@ Paxos.prototype._sync = function (committed) {
 
         sync.synced =
             sync.commits.length == 0 ||
-            sync.commits[sync.commits.length - 1].promise == this.log.head.body.promise
+            sync.commits[sync.commits.length - 1].promise == this.top.promise
     }
     return sync
 }
@@ -717,12 +717,12 @@ Paxos.prototype.request = function (now, request) {
 
     var message, committed = null
     if (
-        Monotonic.compare(request.sync.committed, this.log.head.body.promise) < 0
+        Monotonic.compare(request.sync.committed, this.top.promise) < 0
     ) {
         return {
             message: {
                 method: 'reject',
-                promise: this.log.head.body.promise,
+                promise: this.top.promise,
             },
             government: null,
             sync: {
@@ -759,7 +759,7 @@ Paxos.prototype.request = function (now, request) {
         }
 
         message = request.synchronize
-                ? { method: 'synchronized', promise: this.log.head.body.promise }
+                ? { method: 'synchronized', promise: this.top.promise }
                 : this._recorder.request(now, request.message)
     }
     return {
@@ -914,7 +914,7 @@ Paxos.prototype.response = function (now, cookie, responses) {
                 reduced: minimum.reduced
             }
 
-            var reduced = this.log.head.body.promise
+            var reduced = this.top.promise
 
             for (var j = 0, constituent; (constituent = this.constituency[j]) != null; j++) {
                 if (
@@ -981,7 +981,7 @@ Paxos.prototype.response = function (now, cookie, responses) {
         // already up to date.
         if (
             uncommunicative ||
-            this.log.head.body.promise == responses[message.to[0]].sync.committed
+            this.top.promise == responses[message.to[0]].sync.committed
         ) {
             delay = this.ping
         }
@@ -1031,13 +1031,13 @@ Paxos.prototype._register = function (now, register) {
     entries.reverse()
 
     for (var i = 0, entry; (entry = entries[i]) != null; i++) {
-        this._commit(now, entry, this.log.head.body.promise)
+        this._commit(now, entry, this.top.promise)
     }
 }
 
 Paxos.prototype._synchronize = function (now, entries) {
     for (var i = 0, entry; (entry = entries[i]) != null; i++) {
-        this._commit(now, entry, this.log.head.body.promise)
+        this._commit(now, entry, this.top.promise)
     }
 }
 
@@ -1152,7 +1152,7 @@ Paxos.prototype._commit = function (now, entry, top) {
         this._governments.push(government)
     }
 
-    this.log.push({
+    this.log.push(this.top = {
         module: 'paxos',
         government: government,
         method: isGovernment ? 'government' : 'entry',
@@ -1317,7 +1317,7 @@ Paxos.prototype.inspect = function () {
         id: this.id,
         writer: this._writer.inspect(),
         recorder: this._recorder.inspect(),
-        head: this.log.head.body
+        head: this.top
     }
 }
 

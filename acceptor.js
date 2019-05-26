@@ -3,10 +3,10 @@ var Monotonic = require('monotonic').asString
 
 function Acceptor (paxos) {
     this.register = paxos._writer.register || {
-        body: paxos.log.head.body,
+        body: paxos.top.body,
         previous: null
     }
-    this.promise = paxos.log.head.body.promise
+    this.promise = paxos.top.body.promise
     this._paxos = paxos
 }
 

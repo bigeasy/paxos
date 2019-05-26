@@ -6,12 +6,11 @@ var Monotonic = require('monotonic').asString
 // their structure.)
 
 function Recorder (paxos) {
-    var entry = paxos.log.head.body
     this.register = {
         body: {
-            promise: entry.promise,
-            body: entry.body,
-            previous: entry.previous
+            promise: paxos.top.promise,
+            body: paxos.top.body,
+            previous: paxos.top.previous
         },
         previous: null
     }

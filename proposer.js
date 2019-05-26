@@ -11,9 +11,9 @@ function Proposer (paxos, promise) {
     this.proposals = []
     this.register = {
         body: {
-            promise: paxos.log.head.body.promise,
-            body: paxos.log.head.body.body,
-            previous: paxos.log.head.body.previous
+            promise: paxos.top.promise,
+            body: paxos.top.body,
+            previous: paxos.top.previous
         },
         previous: null
     }

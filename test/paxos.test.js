@@ -231,8 +231,8 @@ describe('paxos', () => {
 
         network.send()
 
-        assert.equal(network.denizens[2].log.head.body.body, 3, 'enqueued')
-        assert.equal(network.denizens[2].log.head.body.promise, 'c/2', 'remapped')
+        assert.equal(network.denizens[2].top.body, 3, 'enqueued')
+        assert.equal(network.denizens[2].top.promise, 'c/2', 'remapped')
 
         assert.deepStrictEqual(network.denizens[0].government, {
             republic: 1,
