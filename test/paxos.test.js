@@ -206,7 +206,7 @@ describe('paxos', () => {
             }
         }, 'depart')
 
-        var shifter = network.denizens[0].log.shifter()
+        var shifter = network.denizens[0].log.shifter().sync
 
         network.denizens[0].enqueue(network.time, 1, 1)
         network.denizens[0].enqueue(network.time, 1, 2)
@@ -216,23 +216,22 @@ describe('paxos', () => {
 
         network.populate(1)
 
-        shifter.join(function (envelope) {
-            return envelope.government != null
-        }, function (error, envelope) {
-            if (error) throw error
-            assert.deepStrictEqual({
-                promise: envelope.body.promise,
-                map: envelope.body.map
-            }, {
-                promise: 'c/0',
-                map: { 'b/2': 'c/1', 'b/3': 'c/2' }
-            }, 'remap')
-        })
-
         network.send()
 
         assert.equal(network.denizens[2].top.body, 3, 'enqueued')
         assert.equal(network.denizens[2].top.promise, 'c/2', 'remapped')
+
+        for (const entry of shifter.iterator()) {
+            if (entry.promise == 'c/0') {
+                assert.deepStrictEqual({
+                    promise: entry.promise,
+                    map: entry.body.map
+                }, {
+                    promise: 'c/0',
+                    map: { 'b/2': 'c/1', 'b/3': 'c/2' }
+                }, 'remap')
+            }
+        }
 
         assert.deepStrictEqual(network.denizens[0].government, {
             republic: 1,

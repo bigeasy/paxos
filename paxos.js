@@ -20,9 +20,8 @@ var Monotonic = require('monotonic').asString
 // A timer with named, cancelable events.
 var Scheduler = require('happenstance').Scheduler
 
-// An evented message queue used for the atomic log.
+// An `async`/`aware` capable message queue used for the atomic log.
 var Avenue = require('avenue')
-var Procession = require('procession')
 
 // The participants in the Paxos strategy.
 var Proposer = require('./proposer')
@@ -50,8 +49,8 @@ function Paxos (now, id, options) {
     // garbage collector. We advance the head of the list when we are certain
     // that all participants have received a copy of the entry and added it to
     // their logs. Outstanding user iterators prevent garbage collection.
-    this.log = new Procession
-    this._tail = this.log.shifter()
+    this.log = new Avenue().sync
+    this._tail = this.log.shifter().sync
     this.pinged = new Avenue().sync
 
     // Implements a calendar for events that we can check during runtime or
@@ -508,7 +507,7 @@ Paxos.prototype._propose = function (now, retry) {
 
 //
 Paxos.prototype._findRound = function (sought) {
-    const shifter = this._tail.shifter()
+    const shifter = this._tail.shifter().sync
     while (shifter.peek().promise != sought) {
         shifter.shift()
     }
@@ -578,7 +577,7 @@ Paxos.prototype._send = function (message) {
 
         if (committed == '0/0') {
             var arrivals = []
-            var shifter = this._tail.shifter()
+            var shifter = this._tail.shifter().sync
             for (;;) {
                 if (shifter.peek() == null) {
                     break
