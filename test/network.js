@@ -1,7 +1,6 @@
 var Paxos = require('..')
 var coalesce = require('extant')
 var Monotonic = require('monotonic').asString
-var abend = require('abend')
 
 function subSubset (container, contained) {
     if (typeof contained != 'object') {
