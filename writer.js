@@ -1,5 +1,7 @@
 var assert = require('assert')
 
+var Monotonic = require('monotonic').asString
+
 function Writer (paxos, promise, proposals) {
     this._paxos = paxos
     this.collapsed = false

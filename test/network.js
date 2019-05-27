@@ -1,6 +1,6 @@
 var Paxos = require('..')
 var coalesce = require('extant')
-var Promise = require('../promise')
+var Monotonic = require('monotonic').asString
 var abend = require('abend')
 
 function subSubset (container, contained) {
@@ -160,7 +160,7 @@ Network.prototype.embark = function (i) {
     var leader = this.denizens.map(function (denizen) {
         return denizen.government
     }).sort(function (left, right) {
-        return Promise.compare(left.promise, right.promise)
+        return Monotonic.compare(left.promise, right.promise)
     }).pop().majority[0]
     denizen.join(1, this.time)
     this.denizens[leader].embark(this.time, 1, denizen.id, denizen.cookie, { location: denizen.id }, true)

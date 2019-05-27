@@ -15,7 +15,7 @@ var assert = require('assert')
 var coalesce = require('extant')
 
 // Ever increasing serial value with no maximum value.
-var Promise = require('./promise')
+var Monotonic = require('monotonic').asString
 
 // A timer with named, cancelable events.
 var Scheduler = require('happenstance').Scheduler
@@ -182,7 +182,7 @@ Paxos.prototype.newGovernment = function (now, promise, quorum, government) {
         this._writer.proposals = this._writer.proposals.splice(0, this._writer.proposals.length).map(function (proposal) {
             proposal.was = proposal.promise
             proposal.route = government.majority
-            proposal.promise = remapped = Promise.nextIndex(remapped)
+            proposal.promise = remapped = Monotonic.increment(remapped, 1)
             map[proposal.was] = proposal.promise
             return proposal
         })
@@ -191,7 +191,7 @@ Paxos.prototype.newGovernment = function (now, promise, quorum, government) {
 
     government.map = map
 
-    assert(this._writer.proposals.length == 0 || !Promise.isGovernment(this._writer.proposals[0].promise))
+    assert(this._writer.proposals.length == 0 || !Monotonic.isBoundary(this._writer.proposals[0].promise, 0))
 
     this._writer.unshift({ promise: promise, quorum: quorum, body: government })
     this._writer.nudge()
@@ -270,7 +270,7 @@ Paxos.prototype._enqueuable = function (republic) {
 Paxos.prototype.enqueue = function (now, republic, message) {
     var response = this._enqueuable(republic)
     if (response == null) {
-        var promise = this._promised = Promise.nextIndex(this._promised)
+        var promise = this._promised = Monotonic.increment(this._promised, 1)
         this._writer.push({
             promise: promise,
             quorum: this.government.majority,
@@ -525,8 +525,8 @@ Paxos.prototype._sync = function (committed) {
     if (committed == null) {
         sync.synced = false
     } else {
-        assert(Promise.compare(committed, this._minimum.propagated) >= 0, 'minimum breached')
-        assert(Promise.compare(committed, this.top.promise) <= 0, 'maximum breached')
+        assert(Monotonic.compare(committed, this._minimum.propagated) >= 0, 'minimum breached')
+        assert(Monotonic.compare(committed, this.top.promise) <= 0, 'maximum breached')
         const shifter = this._findRound(committed)
         shifter.shift()
 
@@ -580,7 +580,7 @@ Paxos.prototype._send = function (message) {
                     break
                 }
                 const iterator = shifter.shift()
-                if (Promise.isGovernment(iterator.promise)) {
+                if (Monotonic.isBoundary(iterator.promise, 0)) {
                     var arrive = iterator.body.arrive
                     if (arrive && arrive.id == to) {
                         arrivals.push(iterator)
@@ -690,7 +690,7 @@ Paxos.prototype.request = function (now, request) {
                 }
             }
             if (
-                !Promise.isGovernment(request.sync.commits[0].promise) ||
+                !Monotonic.isBoundary(request.sync.commits[0].promise, 0) ||
                 request.sync.commits[0].body.arrive == null ||
                 request.sync.commits[0].body.arrive.id != this.id ||
                 request.sync.commits[0].body.arrive.cookie != this.cookie
@@ -704,13 +704,13 @@ Paxos.prototype.request = function (now, request) {
         }
     }
 
-    if (Promise.compare(this._minimum.propagated, request.sync.minimum.propagated) < 0) {
+    if (Monotonic.compare(this._minimum.propagated, request.sync.minimum.propagated) < 0) {
         this._minimum.propagated = request.sync.minimum.propagated
     }
 
     var message, committed = null
     if (
-        Promise.compare(request.sync.committed, this.top.promise) < 0
+        Monotonic.compare(request.sync.committed, this.top.promise) < 0
     ) {
         return {
             message: {
@@ -728,7 +728,7 @@ Paxos.prototype.request = function (now, request) {
     } else {
         this._synchronize(now, request.sync.commits)
 
-        while (Promise.compare(this._tail.peek().promise, this._minimum.propagated) < 0) {
+        while (Monotonic.compare(this._tail.peek().promise, this._minimum.propagated) < 0) {
             var entry = this._tail.shift()
             if (entry.government != null) {
                 assert(entry.promise == this._governments[1].promise, 'wrong government at shift time')
@@ -918,7 +918,7 @@ Paxos.prototype.response = function (now, cookie, responses) {
                     reduced = '0/0'
                     break
                 }
-                if (Promise.compare(this._minimums[constituent].reduced, reduced) < 0) {
+                if (Monotonic.compare(this._minimums[constituent].reduced, reduced) < 0) {
                     reduced = this._minimums[constituent].reduced
                 }
             }
@@ -1036,7 +1036,7 @@ Paxos.prototype._synchronize = function (now, entries) {
 
 Paxos.prototype._reshape = function (now, shape) {
     if (shape != null) {
-        var promise = Promise.nextGovernment(this.government.promise, 0)
+        var promise = Monotonic.increment(this.government.promise, 0)
         this.newGovernment(now, promise, shape.quorum, shape.government)
     }
 }
@@ -1048,7 +1048,7 @@ Paxos.prototype._commit = function (now, entry, top) {
     // that the given value matches the one we have.
 
     //
-    if (Promise.compare(entry.promise, top) <= 0) {
+    if (Monotonic.compare(entry.promise, top) <= 0) {
         const shifter = this._findRound(entry.promise)
         assert.deepStrictEqual(shifter.shift().body, entry.body)
         shifter.destroy()
@@ -1058,13 +1058,13 @@ Paxos.prototype._commit = function (now, entry, top) {
     // Otherwise, we assert that entry has a correct previous promise.
     assert(top == entry.previous, 'incorrect previous')
 
-    var isGovernment = Promise.isGovernment(entry.promise)
-    assert(isGovernment || Promise.nextIndex(top) == entry.promise)
+    var isGovernment = Monotonic.isBoundary(entry.promise, 0)
+    assert(isGovernment || Monotonic.increment(top, 1) == entry.promise)
 
     var government = null
 
     if (isGovernment) {
-        assert(Promise.compare(this.government.promise, entry.promise) < 0, 'governments out of order')
+        assert(Monotonic.compare(this.government.promise, entry.promise) < 0, 'governments out of order')
         this.government.promise = entry.promise
         this.government.majority = entry.body.majority
         this.government.minority = entry.body.minority

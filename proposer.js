@@ -1,4 +1,4 @@
-var Promise = require('./promise')
+var Monotonic = require('monotonic').asString
 
 var Writer = require('./writer')
 
@@ -7,7 +7,7 @@ var Writer = require('./writer')
 function Proposer (paxos, promise) {
     this._paxos = paxos
     this.collapsed = true
-    this.promise = Promise.nextGovernment(promise)
+    this.promise = Monotonic.increment(promise, 0)
     this.proposals = []
     this.register = {
         body: {
@@ -42,11 +42,11 @@ Proposer.prototype.collapse = function (now, request, responses) {
     var promised = request.promise
     for (var i = 0, I = request.to.length; i < I; i++) {
         var response = responses[request.to[i]]
-        if (Promise.compare(promised, response.message.promise) < 0) {
+        if (Monotonic.compare(promised, response.message.promise) < 0) {
             promised = response.message.promise
         }
     }
-    this.promise = Promise.nextGovernment(promised)
+    this.promise = Monotonic.increment(promised, 0)
     this._paxos._propose(now, true)
 }
 
@@ -55,7 +55,7 @@ Proposer.prototype.response = function (now, request, responses) {
     case 'prepare':
         for (var id in responses) {
             if (
-                Promise.compare(this.register.body.promise, responses[id].message.register.body.promise) < 0
+                Monotonic.compare(this.register.body.promise, responses[id].message.register.body.promise) < 0
             ) {
                 this.register = responses[id].message.register
             }

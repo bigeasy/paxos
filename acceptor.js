@@ -1,5 +1,5 @@
 var Recorder = require('./recorder')
-var Promise = require('./promise')
+var Monotonic = require('monotonic').asString
 
 function Acceptor (paxos) {
     this.register = paxos._writer.register || {
@@ -13,7 +13,7 @@ function Acceptor (paxos) {
 Acceptor.prototype.request = function (now, message) {
     switch (message.method) {
     case 'prepare':
-        if (Promise.compare(this.promise, message.promise) < 0) {
+        if (Monotonic.compare(this.promise, message.promise) < 0) {
             this.promise = message.promise
             return {
                 method: 'promise',
@@ -23,7 +23,7 @@ Acceptor.prototype.request = function (now, message) {
         }
         break
     case 'accept':
-        if (Promise.compare(this.promise, message.body.promise) == 0) {
+        if (Monotonic.compare(this.promise, message.body.promise) == 0) {
             var register = {
                 body: message.body,
                 previous: message.previous
