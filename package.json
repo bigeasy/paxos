@@ -36,7 +36,6 @@
     },
     "devDependencies":
     {
-                            "abend":                        "1.0.x"
     },
     "main":                 "paxos",
     "scripts":
