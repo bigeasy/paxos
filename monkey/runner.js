@@ -1,4 +1,5 @@
 const Paxos = require('..')
+const abend = require('abend')
 
 class Runner {
   constructor(options) {
@@ -8,22 +9,23 @@ class Runner {
     this.checks = []
     this.jobs = []
     this.denizens = new Array(options.denizens)
+    this.acclimated = []
     for (let i = 0; i < options.denizens; i++) {
-      this.denizens[i] = new Paxos(this.time, `denizen_${i}`, {
+      const denizen = new Paxos(this.time, `denizen_${i}`, {
         parliamentSize: 5,
         ping: 1,
         timeout: 3
       })
-      this.denizens[i].shifter = this.denizens[i].outbox.shifter()
+      denizen.scheduler.events.pump(function(envelope) {
+        denizen.event(envelope)
+      }).run(abend)
+      denizen.shifter = denizen.outbox.shifter()
+      this.denizens[i] = denizen
     }
 
     this.leader = this.denizens[0]
 
     this.schedule({ bootstrap: true, in: 0 })
-    this.schedule({ join: 'denizen_1', in: 2 })
-    this.schedule({ embark: 'denizen_1', in: 4 })
-    // this.schedule({ join: 'denizen_2', in: 6 })
-    // this.schedule({ embark: 'denizen_2', in: 8 })
   }
 
   log(item) {
@@ -38,12 +40,15 @@ class Runner {
       this.time,
       { location: '0' }
     )
+    this.leader.joined = true
   }
 
   join(denizen) {
     let result = denizen.join('republic_1', this.time)
     this.log({ joined: denizen.id })
     this.addCheck({ arrived: denizen.id })
+    this.addCheck({ acclimated: denizen.id })
+    denizen.joined = true
   }
 
   embark(denizen) {
@@ -59,29 +64,36 @@ class Runner {
   }
 
   send() {
-    for (let denizen of this.denizens) {
-      denizen.scheduler.check(this.time)
-      let communique
-      while (communique = denizen.shifter.shift()) {
-        if (communique != null) {
-          let sender = this.denizen(communique.from)
-          for (let envelope of communique.envelopes) {
-            const item = {
-              from: communique.from,
-              to: envelope.to,
-              message: envelope.request.message.method,
-              synced: envelope.request.sync.synced
+    let sent = true
+    while (sent) {
+      sent = false
+      for (let denizen of this.denizens) {
+        denizen.scheduler.check(this.time)
+        let communique
+        while (communique = denizen.shifter.shift()) {
+          if (communique != null) {
+            sent = true
+            let sender = this.denizen(communique.from)
+            for (let envelope of communique.envelopes) {
+              const item = {
+                from: communique.from,
+                to: envelope.to,
+                message: envelope.request.message.method,
+                synced: envelope.request.sync.synced
+              }
+              if (item.message !== 'synchronize') {
+                this.log({ envelope: item })
+              }
+              let recipient = this.denizen(envelope.to)
+              if (recipient === null) {
+                console.log('null recipient')
+                envelope.responses[envelope.to] = null
+              } else {
+                envelope.responses[envelope.to] = recipient.request(this.time, JSON.parse(JSON.stringify(envelope.request)))
+              }
             }
-            this.log({ envelope: item })
-            let recipient = this.denizen(envelope.to)
-            if (recipient === null) {
-              console.log('null recipient')
-              envelope.responses[envelope.to] = null
-            } else {
-              envelope.responses[envelope.to] = recipient.request(this.time, JSON.parse(JSON.stringify(envelope.request)))
-            }
+            sender.response(this.time, communique.cookie, communique.responses)
           }
-          sender.response(this.time, communique.cookie, communique.responses)
         }
       }
     }
@@ -93,6 +105,14 @@ class Runner {
       let shifter = this.leader.log.shifter()
 
       this.runJobs()
+
+      if (this.time % 5 === 0) {
+        const denizen = this.denizens.find(denizen => !denizen.joined)
+        if (denizen) {
+          this.join(denizen)
+          this.schedule({ embark: denizen.id, in: 2 })
+        }
+      }
 
       this.send()
 
@@ -143,8 +163,22 @@ class Runner {
       // console.log('entry.government.arrived', entry.government.arrived)
       if (entry.government.arrived) {
         let arrived = this.denizen(entry.government.arrived.id[entry.government.promise])
-        this.log({ arrived: arrived.id })
-        arrived.acclimate()
+        if (arrived) {
+          this.log({ arrived: arrived.id })
+          const res = arrived.acclimate()
+          if (arrived._acclimating[arrived.government.arrived.promise[arrived.id]]) {
+            this.log({ acclimating: arrived.id })
+          }
+        }
+      }
+
+      if (entry.government.acclimated) {
+        const newlyAcclimated = entry.government.acclimated.filter(function(acclimated) {
+          if (!~this.acclimated.indexOf(acclimated)) {
+            this.log({ acclimated: acclimated })
+          }
+        }, this)
+        this.acclimated = entry.government.acclimated
       }
     }
   }
@@ -169,7 +203,7 @@ class Runner {
     for (const check of this.checks) {
       if (check.passed) {
         // console.log(`${check.id} passed, returning`)
-        return
+        continue
       }
 
       if (check.arrived) {
@@ -178,6 +212,16 @@ class Runner {
             check.passed = true
             // console.log('check passed', { time: this.time }, check)
             this.log({ check: { passed: check.id, arrived: check.arrived } })
+          }
+        }
+      }
+
+      if (check.acclimated) {
+        for (const item of this._log[this.time]) {
+          if (check.acclimated === item.acclimated) {
+            check.passed = true
+            // console.log('check passed', { time: this.time }, check)
+            this.log({ check: { passed: check.id, acclimated: check.acclimated } })
           }
         }
       }
@@ -209,7 +253,7 @@ class Runner {
     console.log('Checks:')
     console.log('')
     for (const check of this.checks) {
-      console.log(check)
+      console.log(JSON.stringify(check))
     }
     console.log('')
 
