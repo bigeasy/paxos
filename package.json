@@ -33,7 +33,8 @@
                             "extant":                       "1.0.x",
                             "happenstance":                 "11.0.x",
                             "monotonic":                    "3.0.x",
-                            "procession":                   "4.0.x"
+                            "procession":                   "4.0.x",
+                            "seedrandom":                   "3.0.x"
     },
     "devDependencies":
     {
