@@ -1,5 +1,4 @@
 const Paxos = require('..')
-const abend = require('abend')
 const seedrandom = require('seedrandom')
 
 class Runner {
@@ -20,10 +19,8 @@ class Runner {
                 ping: 1,
                 timeout: 3
             })
-            denizen.scheduler.events.pump(function(envelope) {
-                denizen.event(envelope)
-            }).run(abend)
-            denizen.shifter = denizen.outbox.shifter()
+            denizen.scheduler.on('data', (event) => denizen.event(event))
+            denizen.shifter = denizen.outbox.shifter().sync
             this.denizens[i] = denizen
         }
 
@@ -81,6 +78,7 @@ class Runner {
                 denizen.scheduler.check(this.time)
                 let communique
                 while (communique = denizen.shifter.shift()) {
+                    console.log(communique)
                     if (communique != null) {
                         sent = true
                         let sender = this.denizen(communique.from)
@@ -113,7 +111,7 @@ class Runner {
         console.log(`Running chaos monkey with ${this.options.denizens} denizens...`)
         console.log(`Random number seed: ${this.options.seed}`)
         while(true) {
-            let shifter = this.leader.log.shifter()
+            let shifter = this.leader.log.shifter().sync
 
             this.runJobs()
 
@@ -150,6 +148,7 @@ class Runner {
     runJobs() {
         for (const index in this.jobs) {
             const job = this.jobs[index]
+            // Will exit `for..in` loop the first time this is true.
             if (this.time >= job.at) {
                 this.jobs.splice(index, 1)
                 this.runJob(job)
