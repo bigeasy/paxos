@@ -181,10 +181,9 @@ class Runner {
                 let arrived = this.denizen(entry.government.arrived.id[entry.government.promise])
                 if (arrived) {
                     this.log({ arrived: arrived.id })
-                    const res = arrived.acclimate()
-                    if (arrived._acclimating[arrived.government.arrived.promise[arrived.id]]) {
-                        this.log({ acclimating: arrived.id })
-                    }
+                    arrived.acclimate()
+                    const promise = arrived.government.arrived.promise[arrived.id] || null
+                    this.log({ acclimating: arrived.id, promise: promise })
                 }
             }
 
