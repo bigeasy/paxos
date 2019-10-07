@@ -146,9 +146,8 @@ class Runner {
     }
 
     runJobs() {
-        for (const index in this.jobs) {
+        for (let index = this.jobs.length - 1; index >= 0; index--) {
             const job = this.jobs[index]
-            // Will exit `for..in` loop the first time this is true.
             if (this.time >= job.at) {
                 this.jobs.splice(index, 1)
                 this.runJob(job)
