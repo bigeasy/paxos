@@ -10,6 +10,7 @@ class Runner {
         this.jobs = []
         this.denizens = new Array(options.denizens)
         this.acclimated = []
+        this.arrived = []
 
         seedrandom(options.seed, { global: true })
 
@@ -52,7 +53,7 @@ class Runner {
 
     join(denizen) {
         let result = denizen.join('republic_1', this.time)
-        this.log({ joined: denizen.id })
+        this.log({ joined: denizen.id, government: denizen.government.promise })
         this.addCheck({ arrived: denizen.id })
         this.addCheck({ acclimated: denizen.id })
         denizen.joined = true
@@ -67,7 +68,13 @@ class Runner {
             { location: '1' },
             false // acclimated
         )
-        this.log({ embarked: denizen.id, ...response })
+        this.log({ embarked: denizen.id, government: this.leader.government.promise, ...response })
+    }
+
+    acclimate(denizen) {
+        denizen.acclimate()
+        const promise = denizen.government.arrived.promise[denizen.id] || null
+        this.log({ acclimating: denizen.id, promise: promise, government: denizen.government.promise })
     }
 
     send() {
@@ -174,22 +181,39 @@ class Runner {
 
     inspect(shifter) {
         let entry
+
+        if (this.time > 17) {
+            const acclimating = this.arrived.filter(id => !this.acclimated.includes(id))
+            acclimating.forEach((acclimating) => {
+                this.acclimate(this.denizen(acclimating))
+            })
+            /*
+            const denizen = this.denizen('denizen_4')
+            if (!~this.acclimated.indexOf(denizen.id)) {
+                this.log({ arrived: denizen.id, government: denizen.government.promise })
+                denizen.acclimate()
+                const promise = denizen.government.arrived.promise[denizen.id] || null
+                this.log({ acclimating: denizen.id, promise: promise, government: denizen.government.promise })
+            }
+            */
+        }
+
         while (entry = shifter.shift()) {
             // console.log('entry.government.arrived', entry.government.arrived)
             if (entry.government.arrived) {
                 let arrived = this.denizen(entry.government.arrived.id[entry.government.promise])
                 if (arrived) {
-                    this.log({ arrived: arrived.id })
-                    arrived.acclimate()
-                    const promise = arrived.government.arrived.promise[arrived.id] || null
-                    this.log({ acclimating: arrived.id, promise: promise })
+                    this.log({ arrived: arrived.id, government: arrived.government.promise })
+                    this.acclimate(arrived)
                 }
+                this.arrived = Object.keys(entry.government.arrived.promise)
             }
 
             if (entry.government.acclimated) {
-                const newlyAcclimated = entry.government.acclimated.filter(function(acclimated) {
-                    if (!~this.acclimated.indexOf(acclimated)) {
-                        this.log({ acclimated: acclimated })
+                const newlyAcclimated = entry.government.acclimated.filter(function(id) {
+                    const acclimated = this.denizen(id)
+                    if (!~this.acclimated.indexOf(acclimated.id)) {
+                        this.log({ acclimated: acclimated.id, government: acclimated.government.promise })
                     }
                 }, this)
                 this.acclimated = entry.government.acclimated
