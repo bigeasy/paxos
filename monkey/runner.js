@@ -118,7 +118,7 @@ class Runner {
         console.log(`Running chaos monkey with ${this.options.denizens} denizens...`)
         console.log(`Random number seed: ${this.options.seed}`)
         while(true) {
-            let shifter = this.leader.log.shifter().sync
+            let shifters = this.denizens.map((denizen) => denizen.log.shifter().sync)
 
             this.runJobs()
 
@@ -132,7 +132,7 @@ class Runner {
 
             this.send()
 
-            this.inspect(shifter)
+            this.denizens.forEach((denizen, index) => this.inspect(shifters[index], denizen))
 
             try {
                 this.check()
@@ -179,28 +179,11 @@ class Runner {
         }
     }
 
-    inspect(shifter) {
+    inspect(shifter, denizen) {
         let entry
-
-        if (this.time > 17) {
-            const acclimating = this.arrived.filter(id => !this.acclimated.includes(id))
-            acclimating.forEach((acclimating) => {
-                this.acclimate(this.denizen(acclimating))
-            })
-            /*
-            const denizen = this.denizen('denizen_4')
-            if (!~this.acclimated.indexOf(denizen.id)) {
-                this.log({ arrived: denizen.id, government: denizen.government.promise })
-                denizen.acclimate()
-                const promise = denizen.government.arrived.promise[denizen.id] || null
-                this.log({ acclimating: denizen.id, promise: promise, government: denizen.government.promise })
-            }
-            */
-        }
-
         while (entry = shifter.shift()) {
-            // console.log('entry.government.arrived', entry.government.arrived)
-            if (entry.government.arrived) {
+            if (denizen.id === entry.government.arrived.id[entry.government.promise]) {
+                this.log({ denizen: denizen.id, label: 'entry.government.arrived', arrived: entry.government.arrived })
                 let arrived = this.denizen(entry.government.arrived.id[entry.government.promise])
                 if (arrived) {
                     this.log({ arrived: arrived.id, government: arrived.government.promise })
