@@ -1,6 +1,6 @@
 var assert = require('assert')
 
-var Monotonic = require('monotonic').asString
+var Monotonic = require('./monotonic')
 
 function Writer (paxos, promise, proposals) {
     this._paxos = paxos

@@ -1,4 +1,4 @@
-var Monotonic = require('monotonic').asString
+var Monotonic = require('./monotonic')
 
 var Writer = require('./writer')
 

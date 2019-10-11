@@ -10,12 +10,13 @@ var assert = require('assert')
 // we are accounting for disappearance, so we do not reset
 // disappearance.
 
-
 // Return the first not null-like value.
 var coalesce = require('extant')
 
 // Ever increasing serial value with no maximum value.
-var Monotonic = require('monotonic').asString
+const Monotonic = require('./monotonic')
+
+Paxos.compare = Monotonic.compare
 
 // A timer with named, cancelable events.
 var Scheduler = require('happenstance').Scheduler
@@ -191,7 +192,7 @@ Paxos.prototype.newGovernment = function (now, promise, quorum, government) {
 
     government.map = map
 
-    assert(this._writer.proposals.length == 0 || !Monotonic.isBoundary(this._writer.proposals[0].promise, 0))
+    assert(this._writer.proposals.length == 0 || !Monotonic.isGovernment(this._writer.proposals[0].promise))
 
     this._writer.unshift({ promise: promise, quorum: quorum, body: government })
     this._writer.nudge()
@@ -580,7 +581,7 @@ Paxos.prototype._send = function (message) {
                     break
                 }
                 const iterator = shifter.shift()
-                if (Monotonic.isBoundary(iterator.promise, 0)) {
+                if (Monotonic.isGovernment(iterator.promise)) {
                     var arrive = iterator.body.arrive
                     if (arrive && arrive.id == to) {
                         arrivals.push(iterator)
@@ -671,6 +672,9 @@ Paxos.prototype._send = function (message) {
     })
 }
 
+Paxos.compare = Monotonic.compare
+Paxos.isGovernment = Monotonic.isGovernment
+
 // TODO Note that minimum only ever goes up so a delayed minimum is not going to
 // ever be invalid. We don't want to run it in case it rejects our start.
 
@@ -690,7 +694,7 @@ Paxos.prototype.request = function (now, request) {
                 }
             }
             if (
-                !Monotonic.isBoundary(request.sync.commits[0].promise, 0) ||
+                !Monotonic.isGovernment(request.sync.commits[0].promise) ||
                 request.sync.commits[0].body.arrive == null ||
                 request.sync.commits[0].body.arrive.id != this.id ||
                 request.sync.commits[0].body.arrive.cookie != this.cookie
@@ -1058,7 +1062,7 @@ Paxos.prototype._commit = function (now, entry, top) {
     // Otherwise, we assert that entry has a correct previous promise.
     assert(top == entry.previous, 'incorrect previous')
 
-    var isGovernment = Monotonic.isBoundary(entry.promise, 0)
+    var isGovernment = Monotonic.isGovernment(entry.promise)
     assert(isGovernment || Monotonic.increment(top, 1) == entry.promise)
 
     var government = null
