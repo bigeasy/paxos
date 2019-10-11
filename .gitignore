@@ -1,6 +1,6 @@
-/.wiseguy
-/docs
 /.dots
-/node_modules
-/coverage
 /.nyc_output
+/.wiseguy
+/coverage
+/docs
+/node_modules
