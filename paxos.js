@@ -674,6 +674,7 @@ Paxos.prototype._send = function (message) {
 
 Paxos.compare = Monotonic.compare
 Paxos.isGovernment = Monotonic.isGovernment
+Paxos.increment = Monotonic.increment
 
 // TODO Note that minimum only ever goes up so a delayed minimum is not going to
 // ever be invalid. We don't want to run it in case it rejects our start.
