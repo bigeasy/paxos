@@ -2,6 +2,5 @@
 /docs
 /.dots
 /node_modules
-/.proof.out
 /coverage
 /.nyc_output
