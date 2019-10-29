@@ -11,6 +11,7 @@ class Runner {
         this.denizens = new Array(options.denizens)
         this.acclimated = []
         this.arrived = []
+        this.embarked = []
 
         seedrandom(options.seed, { global: true })
 
@@ -56,19 +57,30 @@ class Runner {
         this.log({ joined: denizen.id, government: denizen.government.promise })
         this.addCheck({ arrived: denizen.id })
         this.addCheck({ acclimated: denizen.id })
+        // this.addCheck({ embarked: denizen.id, timeout: 50 })
         denizen.joined = true
     }
 
     embark(denizen) {
-        let response = this.leader.embark(
-            this.time,
-            'republic_1',
-            denizen.id,
-            denizen.cookie,
-            { location: '1' },
-            false // acclimated
-        )
-        this.log({ embarked: denizen.id, government: this.leader.government.promise, ...response })
+        this.log({ embarked_array: this.embarked })
+        if (~this.embarked.indexOf(denizen.id)) {
+            this.log({ already_embarked: denizen.id })
+            return
+        }
+        if (false) {
+            this.log({ chaos: 'monkey', ates: { embark: denizen.id } })
+        } else {
+            let response = this.leader.embark(
+                this.time,
+                'republic_1',
+                denizen.id,
+                denizen.cookie,
+                { location: '1' },
+                false // acclimated
+            )
+            this.log({ embarking: denizen.id, government: this.leader.government.promise, ...response })
+        }
+        this.schedule({ embark: denizen.id, in: 2 })
     }
 
     acclimate(denizen) {
@@ -85,7 +97,6 @@ class Runner {
                 denizen.scheduler.check(this.time)
                 let communique
                 while (communique = denizen.shifter.shift()) {
-                    console.log(communique)
                     if (communique != null) {
                         sent = true
                         let sender = this.denizen(communique.from)
@@ -96,7 +107,12 @@ class Runner {
                                 message: envelope.request.message.method,
                                 synced: envelope.request.sync.synced
                             }
-                            if (item.message !== 'synchronize') {
+                            if (item.message === 'synchronize') {
+                                if (!~this.embarked.indexOf(denizen.id)) {
+                                    this.log({ embarked: denizen.id })
+                                    this.embarked.push(denizen.id)
+                                }
+                            } else {
                                 this.log({ envelope: item })
                             }
                             let recipient = this.denizen(envelope.to)
@@ -215,7 +231,7 @@ class Runner {
 
     addCheck(check) {
         check.passed = false
-        check.timeout = this.time + (check.timeout || 10)
+        check.timeout = this.time + (check.timeout || 15)
         check.id = `check_${this.checks.length}`
         this.checks.push(check)
         this.log({ _check: check })
@@ -224,7 +240,6 @@ class Runner {
     check() {
         for (const check of this.checks) {
             if (check.passed) {
-                // console.log(`${check.id} passed, returning`)
                 continue
             }
 
@@ -232,7 +247,6 @@ class Runner {
                 for (const item of this._log[this.time]) {
                     if (check.arrived === item.arrived) {
                         check.passed = true
-                        // console.log('check passed', { time: this.time }, check)
                         this.log({ check: { passed: check.id, arrived: check.arrived } })
                     }
                 }
@@ -242,8 +256,16 @@ class Runner {
                 for (const item of this._log[this.time]) {
                     if (check.acclimated === item.acclimated) {
                         check.passed = true
-                        // console.log('check passed', { time: this.time }, check)
                         this.log({ check: { passed: check.id, acclimated: check.acclimated } })
+                    }
+                }
+            }
+
+            if (check.embarked) {
+                for (const item of this._log[this.time]) {
+                    if (check.embarked === item.embarked) {
+                        check.passed = true
+                        this.log({ check: { passed: check.id, embarked: check.embarked } })
                     }
                 }
             }
@@ -274,14 +296,16 @@ class Runner {
 
         console.log('Checks:')
         console.log('')
+        let pass = true
         for (const check of this.checks) {
+            pass = pass && check.passed
             console.log(JSON.stringify(check))
         }
         console.log('')
 
         console.log('Government:')
         console.log('')
-        console.log(this.leader.government)
+        console.log('Pass: ' + pass)
     }
 
     random(max) {
