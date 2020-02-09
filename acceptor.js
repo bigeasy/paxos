@@ -1,5 +1,5 @@
-var Recorder = require('./recorder')
-var Monotonic = require('./monotonic')
+const Recorder = require('./recorder')
+const Monotonic = require('./monotonic')
 
 class Acceptor {
     constructor (paxos) {
@@ -25,7 +25,7 @@ class Acceptor {
             break
         case 'accept':
             if (Monotonic.compare(this.promise, message.body.promise) == 0) {
-                var register = {
+                const register = {
                     body: message.body,
                     previous: message.previous
                 }
@@ -39,7 +39,8 @@ class Acceptor {
     }
 
     createRecorder (promise) {
-        var entries = [], register = this.register
+        const entries = []
+        let register = this.register
         while (register) {
             entries.push(register.body)
             register = register.previous
@@ -47,7 +48,7 @@ class Acceptor {
 
         entries.reverse()
 
-        for (var i = 1, I = entries.length - 1; i < I; i++) {
+        for (let i = 1, I = entries.length - 1; i < I; i++) {
             if (entries[i].promise == promise) {
                 return this
             }
