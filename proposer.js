@@ -1,6 +1,6 @@
-var Monotonic = require('./monotonic')
+const Monotonic = require('./monotonic')
 
-var Writer = require('./writer')
+const Writer = require('./writer')
 
 // TODO Convert from a government structure.
 // TODO Really need to have the value for previous, which is the writer register.
@@ -40,9 +40,9 @@ class Proposer {
     }
 
     collapse (now, request, responses) {
-        var promised = request.promise
-        for (var i = 0, I = request.to.length; i < I; i++) {
-            var response = responses[request.to[i]]
+        let promised = request.promise
+        for (let i = 0, I = request.to.length; i < I; i++) {
+            const response = responses[request.to[i]]
             if (Monotonic.compare(promised, response.message.promise) < 0) {
                 promised = response.message.promise
             }
@@ -54,7 +54,7 @@ class Proposer {
     response (now, request, responses) {
         switch (request.method) {
         case 'prepare':
-            for (var id in responses) {
+            for (const id in responses) {
                 if (
                     Monotonic.compare(this.register.body.promise, responses[id].message.register.body.promise) < 0
                 ) {
