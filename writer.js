@@ -1,6 +1,6 @@
-var assert = require('assert')
+const assert = require('assert')
 
-var Monotonic = require('./monotonic')
+const Monotonic = require('./monotonic')
 
 class Writer {
     constructor (paxos, promise, proposals) {
@@ -56,7 +56,7 @@ class Writer {
     }
 
     _send () {
-        var proposal = this.proposals.shift()
+        const proposal = this.proposals.shift()
         this._writing = true
         this._paxos._send({
             method: 'register',
