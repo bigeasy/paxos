@@ -1,4 +1,4 @@
-var assert = require('assert')
+const assert = require('assert')
 
 // Monitor the reachability of islanders in order to suggest the shape of a new
 // government. The `Shaper.update` method is invoked with a islander id and a
@@ -95,10 +95,10 @@ class Shaper {
             this._government.promise != '0/0' &&
             this._government.majority.length + this._government.minority.length != this._parliamentSize
         ) {
-            var majority = this._government.majority.slice()
-            var minority = this._government.minority.slice()
+            const majority = this._government.majority.slice()
+            const minority = this._government.minority.slice()
             minority.unshift(majority.pop())
-            var demote = minority.pop()
+            const demote = minority.pop()
             this._governments.push({
                 quorum: this._government.majority,
                 government: {
@@ -115,7 +115,7 @@ class Shaper {
             return null
         }
 
-        var id = this._government.arrived.id[unreachable]
+        const id = this._government.arrived.id[unreachable]
         assert(id != null, 'unable to determine unreachable id')
 
         // Depart any unreachable islanders.
@@ -134,9 +134,9 @@ class Shaper {
             return null
         }
 
-        var government = this._government
+        const government = this._government
 
-        var id = government.arrived.id[promise]
+        const id = government.arrived.id[promise]
         assert(id != null, 'unable to determine acclimate id')
 
 
@@ -176,9 +176,9 @@ class Shaper {
             if (this._expandable.length == 2) {
                 // We should expand and we have islanders who can be appointed to
                 // the government so let's grow the government.
-                var majority = this._government.majority.slice()
-                var minority = this._government.minority.slice()
-                var promote = [ this._expandable.shift(), this._expandable.shift() ]
+                const majority = this._government.majority.slice()
+                const minority = this._government.minority.slice()
+                const promote = [ this._expandable.shift(), this._expandable.shift() ]
                 minority.push.apply(minority, promote)
                 majority.push(minority.shift())
                 return {
@@ -231,7 +231,8 @@ class Shaper {
         //
         // We can make it a general case that if the cookies mismatch
         // every one is very disappointed. Thus, we can catch this on sync.
-        for (var i = 0, I = this._arriving.length; i < I; i++) {
+        let i, I
+        for (i = 0, I = this._arriving.length; i < I; i++) {
             if (this._arriving[i].id == arrival.id) {
                 break
             }
@@ -253,7 +254,7 @@ class Shaper {
     //
     _arrival () {
         if (this._arriving.length) {
-            var arrival = this._arriving[0]
+            const arrival = this._arriving[0]
             return {
                 quorum: this._government.majority,
                 government: {
