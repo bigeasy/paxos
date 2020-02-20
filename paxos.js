@@ -1,5 +1,5 @@
 // Common utilities.
-var assert = require('assert')
+const assert = require('assert')
 
 // Updated upstream Paxos for a fix to a bug where it would add a member
 // to the government as part of expansion that it just rejected because
@@ -11,25 +11,25 @@ var assert = require('assert')
 // disappearance.
 
 // Return the first not null-like value.
-var coalesce = require('extant')
+const coalesce = require('extant')
 
 // Ever increasing serial value with no maximum value.
 const Monotonic = require('./monotonic')
 
 // A timer with named, cancelable events.
-var Scheduler = require('happenstance').Scheduler
+const Scheduler = require('happenstance').Scheduler
 
 // An `async`/`aware` capable message queue used for the atomic log.
-var Avenue = require('avenue')
+const Avenue = require('avenue')
 
 // The participants in the Paxos strategy.
-var Proposer = require('./proposer')
-var Acceptor = require('./acceptor')
+const Proposer = require('./proposer')
+const Acceptor = require('./acceptor')
 
 // The participants in the two-phase commit strategy.
-var Shaper = require('./shaper')
-var Writer = require('./writer')
-var Recorder = require('./recorder')
+const Shaper = require('./shaper')
+const Writer = require('./writer')
+const Recorder = require('./recorder')
 
 // ### Constructor
 class Paxos {
@@ -159,7 +159,7 @@ class Paxos {
                 properties: this.government.properties[government.departed],
                 index: {}
             }
-            var index = this.government.constituents.indexOf(government.departed.id)
+            let index = this.government.constituents.indexOf(government.departed.id)
             if (~index) {
                 government.departed.index.constituents = index
             }
@@ -168,7 +168,7 @@ class Paxos {
                 government.departed.index.acclimated = index
             }
         } else if (government.promote != null) {
-            for (var i = 0, id; (id = government.promote[i]) != null; i++) {
+            for (let i = 0, id; (id = government.promote[i]) != null; i++) {
                 government.promote[i] = { id: id, index: this.government.constituents.indexOf(id) }
             }
             government.promote.sort(function (left, right) { return right.index - left.index })
@@ -176,7 +176,7 @@ class Paxos {
 
         // If we are doing a two-phase commit, remap the proposals so that they have
         // a promise value in the new government.
-        var remapped = government.promise = promise, map = null
+        let remapped = government.promise = promise, map = null
         if (!this._writer.collapsed) {
             map = {}
             this._writer.proposals = this._writer.proposals.splice(0, this._writer.proposals.length).map(function (proposal) {
@@ -205,7 +205,7 @@ class Paxos {
     bootstrap (republic, now, properties) {
         this.government.republic = republic
 
-        var government = {
+        const government = {
             republic: republic,
             promise: '1/0',
             majority: [],
@@ -268,9 +268,9 @@ class Paxos {
     // Note that a client will have to treat a network failure on submission as a
     // failure requiring boundary detection.
     enqueue (now, republic, message) {
-        var response = this._enqueuable(republic)
+        let response = this._enqueuable(republic)
         if (response == null) {
-            var promise = this._promised = Monotonic.increment(this._promised, 1)
+            const promise = this._promised = Monotonic.increment(this._promised, 1)
             this._writer.push({
                 promise: promise,
                 quorum: this.government.majority,
@@ -336,7 +336,7 @@ class Paxos {
 
     //
     embark (now, republic, id, cookie, properties, acclimated) {
-        var response = this._enqueuable(republic)
+        let response = this._enqueuable(republic)
         if (response == null) {
             // Do not allow the user to embark an id that already exists. This will
             // happen if an islander crash restarts and tries to rejoin before Paxos
@@ -375,7 +375,7 @@ class Paxos {
     //
     event (envelope) {
         // Other envelope times are related to timer maintenance.
-        var now = envelope.now
+        const now = envelope.now
         switch (envelope.body.method) {
 
         // Send a synchronization message to one or more fellow islanders. Note that
@@ -412,13 +412,13 @@ class Paxos {
         case 'propose':
             for (;;) {
                 // If we win, we are the leader.
-                var majority = [ this.id ]
-                var minority = []
+                const majority = [ this.id ]
+                const minority = []
 
                 // Try to find a majority of legislators.
-                var parliament = this.government.majority.concat(this.government.minority)
+                const parliament = this.government.majority.concat(this.government.minority)
                 while (parliament.length != 0) {
-                    var id = parliament.shift()
+                    const id = parliament.shift()
                     if (id != this.id) {
                         if (
                             majority.length == this.government.majority.length ||
@@ -483,7 +483,7 @@ class Paxos {
 
     //
     _propose (now, retry) {
-        var delay = 0
+        let delay = 0
         if (retry) {
             delay += 1
             if (this.id != this.government.majority[0]) {
@@ -512,7 +512,7 @@ class Paxos {
     }
 
     _sync (committed) {
-        var sync = {
+        const sync = {
             republic: this.government.republic,
             promise: this.government.arrived.promise[this.id],
             from: this.id,
@@ -530,7 +530,7 @@ class Paxos {
             const shifter = this._findRound(committed)
             shifter.shift()
 
-            var count = 24
+            let count = 24
             while (--count && shifter.peek() != null) {
                 const iterator = shifter.shift()
                 sync.commits.push({
@@ -559,29 +559,30 @@ class Paxos {
 
     //
     _send (message) {
-        var envelopes = [], responses = {}, syncs = {}, synchronize = false, government = null
-        var cookie = {
+        const envelopes = [], responses = {}, syncs = {}
+        let government = null
+        const cookie = {
             message: message,
             synchronize: false,
             government: this.government.promise,
             collapsed: this._writer.collapsed
         }
-        for (var i = 0, to; (to = message.to[i]) != null; i++) {
+        for (let i = 0, to; (to = message.to[i]) != null; i++) {
             this.scheduler.unschedule(to)
 
-            var promise = this.government.arrived.promise[to]
-            var committed = coalesce(this._committed[promise])
+            const promise = this.government.arrived.promise[to]
+            let committed = coalesce(this._committed[promise])
 
             if (committed == '0/0') {
-                var arrivals = []
-                var shifter = this._tail.shifter().sync
+                const arrivals = []
+                const shifter = this._tail.shifter().sync
                 for (;;) {
                     if (shifter.peek() == null) {
                         break
                     }
                     const iterator = shifter.shift()
                     if (Monotonic.isGovernment(iterator.promise)) {
-                        var arrive = iterator.body.arrive
+                        const arrive = iterator.body.arrive
                         if (arrive && arrive.id == to) {
                             arrivals.push(iterator)
                         }
@@ -606,10 +607,10 @@ class Paxos {
                 //
                 assert(arrivals.length != 0, 'no arrival found')
 
-                var arrival = arrivals.pop()
+                const arrival = arrivals.pop()
                 committed = arrival.previous
 
-                for (var j = 1, J = this._governments.length; j < J; j++) {
+                for (let j = 1, J = this._governments.length; j < J; j++) {
                     if (this._governments[j].promise == arrival.promise) {
                         government = this._governments[j - 1]
                         break
@@ -644,7 +645,7 @@ class Paxos {
         // though the messages array?
         // TODO I don't like how if one target needs to sync then everyone needs to
         // sync and I'm not sure how that state arises.
-        for (var i = 0, to; (to = message.to[i]) != null; i++) {
+        for (let i = 0, to; (to = message.to[i]) != null; i++) {
             envelopes.push({
                 from: this.id,
                 to: to,
@@ -712,7 +713,7 @@ class Paxos {
             this._minimum.propagated = request.sync.minimum.propagated
         }
 
-        var message, committed = null
+        let message
         if (
             Monotonic.compare(request.sync.committed, this.top.promise) < 0
         ) {
@@ -733,7 +734,7 @@ class Paxos {
             this._synchronize(now, request.sync.commits)
 
             while (Monotonic.compare(this._tail.peek().promise, this._minimum.propagated) < 0) {
-                var entry = this._tail.shift()
+                const entry = this._tail.shift()
                 if (entry.government != null) {
                     assert(entry.promise == this._governments[1].promise, 'wrong government at shift time')
                     this._governments.shift()
@@ -761,7 +762,7 @@ class Paxos {
         }
         return {
             message: message,
-            sync: this._sync(committed),
+            sync: this._sync(null),
             government: this.government.promise,
             minimum: this._minimum,
             acclimating: this._acclimating,
@@ -777,12 +778,12 @@ class Paxos {
         // successful network connection, which we use to delete a disappeared flag.
 
         //
-        var message = cookie.message
-        for (var i = 0, I = message.to.length; i < I; i++) {
+        const message = cookie.message
+        for (let i = 0, I = message.to.length; i < I; i++) {
             // Deduce recipient properties.
-            var id = message.to[i]
-            var response = responses[id]
-            var promise = this.government.arrived.promise[id]
+            const id = message.to[i]
+            const promise = this.government.arrived.promise[id]
+            let response = responses[id]
             // If the islander is unreachable we create a dummy record that uses our
             // current government for the government promise and a bunch of defaults
             // so that it will pass through the logic.
@@ -817,16 +818,16 @@ class Paxos {
             return
         }
 
-        var uncommunicative = false
+        let uncommunicative = false
 
         // Perform housekeeping for each recipient of the message.
 
         //
-        for (var i = 0, I = message.to.length; i < I; i++) {
+        for (let i = 0, I = message.to.length; i < I; i++) {
             // Deduce recipient properties.
-            var id = message.to[i]
-            var response = responses[id]
-            var promise = this.government.arrived.promise[id]
+            const id = message.to[i]
+            const promise = this.government.arrived.promise[id]
+            const response = responses[id]
 
             // Go through responses converting network errors to "unreachable"
             // messages with appropriate defaults.
@@ -878,14 +879,14 @@ class Paxos {
             }
 
             // Update set of unreachable islanders.
-            for (var unreachable in response.unreachable) {
+            for (const unreachable in response.unreachable) {
                 if (!this._unreachable[unreachable]) {
                     this._unreachable[unreachable] = true
                     this._reshape(now, this._shaper.unreachable(unreachable))
                 }
             }
 
-            for (var acclimating in response.acclimating) {
+            for (const acclimating in response.acclimating) {
                 if (!this._acclimating[acclimating]) {
                     this._acclimating[acclimating] = true
                     this._reshape(now, this._shaper.acclimate(acclimating))
@@ -895,7 +896,7 @@ class Paxos {
             // Reduce our least committed promise. Would switch to using promises as
             // the key in the minimum map, but out of date minimum records are never
             // able to do any damage. They will get updated eventually.
-            var minimum = response.minimum
+            const minimum = response.minimum
             if (
                 message.constituent &&
                 minimum &&
@@ -911,9 +912,9 @@ class Paxos {
                     reduced: minimum.reduced
                 }
 
-                var reduced = this.top.promise
+                let reduced = this.top.promise
 
-                for (var j = 0, constituent; (constituent = this.constituency[j]) != null; j++) {
+                for (let j = 0, constituent; (constituent = this.constituency[j]) != null; j++) {
                     if (
                         this._minimums[constituent] == null ||
                         this._minimums[constituent].version != this.government.promise ||
@@ -972,7 +973,7 @@ class Paxos {
         //
         if (message.method == 'synchronize' && !cookie.synchronize) {
             // How long to wait before our next ping.
-            var delay = 0
+            let delay = 0
 
             // Use the ping interval if the islander is unreachable or if it is
             // already up to date.
@@ -1019,7 +1020,7 @@ class Paxos {
     // ### Commit
 
     _register (now, register) {
-        var entries = []
+        const entries = []
         while (register) {
             entries.push(register.body)
             register = register.previous
@@ -1027,20 +1028,20 @@ class Paxos {
 
         entries.reverse()
 
-        for (var i = 0, entry; (entry = entries[i]) != null; i++) {
+        for (let i = 0, entry; (entry = entries[i]) != null; i++) {
             this._commit(now, entry, this.top.promise)
         }
     }
 
     _synchronize (now, entries) {
-        for (var i = 0, entry; (entry = entries[i]) != null; i++) {
+        for (let i = 0, entry; (entry = entries[i]) != null; i++) {
             this._commit(now, entry, this.top.promise)
         }
     }
 
     _reshape (now, shape) {
         if (shape != null) {
-            var promise = Monotonic.increment(this.government.promise, 0)
+            const promise = Monotonic.increment(this.government.promise, 0)
             this.newGovernment(now, promise, shape.quorum, shape.government)
         }
     }
@@ -1062,10 +1063,10 @@ class Paxos {
         // Otherwise, we assert that entry has a correct previous promise.
         assert(top == entry.previous, 'incorrect previous')
 
-        var isGovernment = Monotonic.isGovernment(entry.promise)
+        const isGovernment = Monotonic.isGovernment(entry.promise)
         assert(isGovernment || Monotonic.increment(top, 1) == entry.promise)
 
-        var government = null
+        let government = null
 
         if (isGovernment) {
             assert(Monotonic.compare(this.government.promise, entry.promise) < 0, 'governments out of order')
@@ -1093,7 +1094,8 @@ class Paxos {
                     this.government.acclimated.splice(entry.body.departed.index.acclimated, 1)
                 }
             } else if (entry.body.promote != null) {
-                for (var i = 0, promotion; (promotion = entry.body.promote[i]) != null; i++) {
+                // TODO Replace these with `of`.
+                for (let i = 0, promotion; (promotion = entry.body.promote[i]) != null; i++) {
                     this.government.constituents.splice(promotion.index, 1)
                 }
             } else if (entry.body.demote != null) {
@@ -1103,7 +1105,7 @@ class Paxos {
                 this.government.acclimated.push(entry.body.acclimate)
             }
 
-            var parliament = this.government.majority.concat(this.government.minority), index
+            const parliament = this.government.majority.concat(this.government.minority)
             if (parliament.length == 1) {
                 if (this.id == this.government.majority[0]) {
                     this.constituency = this.government.constituents
@@ -1116,29 +1118,26 @@ class Paxos {
                 this.constituency = this.government.majority.slice(1)
                 this.representative = null
             } else {
-                var majority = this.government.majority.slice(1)
-                var index = majority.indexOf(this.id)
+                const majority = this.government.majority.slice(1)
+                let index = majority.indexOf(this.id)
                 if (~index) {
-                    var length = majority.length
-                    var population = this.government.minority.length == 0 ? this.government.constituents : this.government.minority
+                    const length = majority.length
+                    const population = this.government.minority.length == 0 ? this.government.constituents : this.government.minority
                     this.constituency = population.filter(function (id, i) { return i % length == index })
                     this.representative = this.government.majority[0]
                 } else if (~(index = this.government.minority.indexOf(this.id))) {
-                    var length = this.government.minority.length
-                    this.constituency = this.government.constituents.filter(function (id, i) {
-                        return i % length == index
+                    this.constituency = this.government.constituents.filter((id, i) => {
+                        return i % this.government.minority.length == index
                     })
-                    var length = majority.length
-                    this.representative = this.government.majority.slice(1).filter(function (id, i) {
-                        return index % length == i
+                    this.representative = this.government.majority.slice(1).filter((id, i) => {
+                        return index % majority.length == i
                     }).shift()
                 } else {
-                    var index = this.government.constituents.indexOf(this.id)
-                    var representatives = this.government.minority.length == 0 ? majority : this.government.minority
-                    var length = representatives.length
+                    const index = this.government.constituents.indexOf(this.id)
+                    const representatives = this.government.minority.length == 0 ? majority : this.government.minority
                     this.constituency = []
-                    this.representative = representatives.filter(function (id, i) {
-                        return index % length == i
+                    this.representative = representatives.filter((id, i) => {
+                        return index % representatives.length == i
                     }).shift()
                 }
             }
@@ -1179,18 +1178,18 @@ class Paxos {
             // reachability so we delete it here in case we happened to make
             // progress in spite of it.
             if (entry.body.map == null) {
-                for (var i = 0, id; (id = this.government.majority[i]) != null; i++) {
+                for (const id of this.government.majority) {
                     // TODO Probably okay to track by id. The worst that you can do
                     // is delete reachable information that exists for a subsequent
                     // version, well, the worse you can do is get rid of information
                     // that will once again materialize.
                     delete this._unreachable[this.government.arrived.promise[id]]
                 }
-                for (var i = 0, id; (id = this.government.minority[i]) != null; i++) {
+                for (const id of this.government.minority) {
                     delete this._unreachable[this.government.arrived.promise[id]]
                 }
             } else {
-                for (var unreachable in this._unreachable) {
+                for (const unreachable in this._unreachable) {
                     if (!(unreachable in this.government.arrived.id)) {
                         delete this._unreachable[unreachable]
                         delete this._disappeared[unreachable]
@@ -1198,8 +1197,8 @@ class Paxos {
                 }
             }
 
-            for (var acclimating in this._acclimating) {
-                var id = this.government.arrived.id[acclimating]
+            for (const acclimating in this._acclimating) {
+                const id = this.government.arrived.id[acclimating]
                 if (!~this.population.indexOf(id) || ~this.government.acclimated.indexOf(id)) {
                     delete this._acclimating[acclimating]
                 }
@@ -1212,25 +1211,25 @@ class Paxos {
             if (this.id == this.government.majority[0]) {
                 // If we are the leader, we are going to want to look for
                 // opportunities to change the shape of the government.
-                var shaper = new Shaper(this.parliamentSize, this.government, entry.body.map == null)
-                for (var i = 0, arrival; (arrival = this._shaper._arriving[i]) != null; i++) {
+                const shaper = new Shaper(this.parliamentSize, this.government, entry.body.map == null)
+                for (const arrival of this._shaper._arriving) {
                     shaper.embark(arrival)
                 }
                 this._shaper = shaper
                 if (entry.body.arrive) {
                     shaper.arrived(entry.body.arrive.id)
                 }
-                for (var promise in this._unreachable) {
+                for (const promise in this._unreachable) {
                     this._reshape(now, shaper.unreachable(promise))
                 }
-                for (var promise in this._acclimating) {
+                for (const promise in this._acclimating) {
                     this._reshape(now, shaper.acclimate(promise))
                 }
-                this.government.acclimated.forEach(function (id) {
+                for (const id of this.government.acclimated) {
                     if (this._disappeared[this.government.arrived.promise[id]] == null) {
                         this._reshape(now, shaper.acclimated(id))
                     }
-                }, this)
+                }
             } else {
                 this._shaper = Shaper.null
             }
@@ -1253,9 +1252,9 @@ class Paxos {
             }
             this._minimums = {}
 
-            var committed = {}
-            for (var i = 0, id; (id = this.constituency[i]) != null; i++) {
-                var promise = this.government.arrived.promise[id]
+            const committed = {}
+            for (const id of this.constituency) {
+                const promise = this.government.arrived.promise[id]
                 committed[promise] = this._committed[promise]
             }
             this._committed = committed
@@ -1297,7 +1296,7 @@ class Paxos {
         // We count on our writer to set the final synchronize when we are the
         // leader of a government that is not a dictatorship.
         if (this.id != this.government.majority[0] || this.government.majority.length == 1) {
-            for (var i = 0, id; (id = this.constituency[i]) != null; i++) {
+            for (const id of this.constituency) {
                 this.scheduler.schedule(now, id, { method: 'synchronize', to: [ id ], collapsible: false })
             }
         }
