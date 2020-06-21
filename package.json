@@ -36,7 +36,7 @@
     },
     "devDependencies":
     {
-                            "proof":                        "^8.0.0-alpha.7",
+                            "proof":                        "^9.0.2",
                             "seedrandom":                   "3.0.5"
     },
     "main":                 "paxos",
