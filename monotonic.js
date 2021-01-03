@@ -1,9 +1,10 @@
 const ascension = require('ascension')
+const whittle = require('whittle')
 
 const Monotonic = {
     toBigInt: promise => promise.split('/').map(part => BigInt(`0x${part}`)),
-    compare: ascension([ BigInt, BigInt ], (promise) => Monotonic.toBigInt(promise)),
-    isGovernment: (promise) => promise.endsWith('/0'),
+    compare: whittle(ascension([ BigInt, BigInt ]), promise => Monotonic.toBigInt(promise)),
+    isGovernment: promise => promise.endsWith('/0'),
     increment: (promise, index) => {
         const split = Monotonic.toBigInt(promise)
         split[index] += 1n
