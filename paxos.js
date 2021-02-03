@@ -11,7 +11,7 @@ const assert = require('assert')
 // disappearance.
 
 // Return the first not null-like value.
-const coalesce = require('extant')
+const { coalesce } = require('extant')
 
 // Ever increasing serial value with no maximum value.
 const Monotonic = require('./monotonic')

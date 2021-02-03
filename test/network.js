@@ -1,5 +1,5 @@
 var Paxos = require('..')
-var coalesce = require('extant')
+var { coalesce } = require('extant')
 var Monotonic = require('../monotonic')
 
 function subSubset (container, contained) {
