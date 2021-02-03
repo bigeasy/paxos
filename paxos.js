@@ -20,7 +20,7 @@ const Monotonic = require('./monotonic')
 const Scheduler = require('happenstance').Scheduler
 
 // An `async`/`aware` capable message queue used for the atomic log.
-const Avenue = require('avenue')
+const { Queue } = require('avenue')
 
 // The participants in the Paxos strategy.
 const Proposer = require('./proposer')
@@ -49,9 +49,9 @@ class Paxos {
         // garbage collector. We advance the head of the list when we are certain
         // that all participants have received a copy of the entry and added it to
         // their logs. Outstanding user iterators prevent garbage collection.
-        this.log = new Avenue().sync
+        this.log = new Queue().sync
         this._tail = this.log.shifter().sync
-        this.pinged = new Avenue().sync
+        this.pinged = new Queue().sync
 
         // Implements a calendar for events that we can check during runtime or
         // ignore during debugging playback.
@@ -97,7 +97,7 @@ class Paxos {
         this._acclimating = {}
 
         // Network message queue.
-        this.outbox = new Avenue().sync
+        this.outbox = new Queue().sync
 
         // Push the null government onto the atomic log.
         this.log.push(this.top = {
