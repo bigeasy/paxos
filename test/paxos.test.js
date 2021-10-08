@@ -176,7 +176,7 @@ require('proof')(27, (okay) => {
 
     okay(network.denizens[0].government, {
         republic: 1,
-        promise: 'b/0',
+        promise: '11/0',
         majority: [ '0', '2' ],
         minority: [ '3' ],
         acclimated: [ '0', '2', '3' ],
@@ -205,30 +205,30 @@ require('proof')(27, (okay) => {
     network.send()
 
     okay(network.denizens[2].top.body, 3, 'enqueued')
-    okay(network.denizens[2].top.promise, 'c/2', 'remapped')
+    okay(network.denizens[2].top.promise, '12/2', 'remapped')
 
     for (const entry of shifter.iterator()) {
-        if (entry.promise == 'c/0') {
+        if (entry.promise == '12/0') {
             okay({
                 promise: entry.promise,
                 map: entry.body.map
             }, {
-                promise: 'c/0',
-                map: { 'b/2': 'c/1', 'b/3': 'c/2' }
+                promise: '12/0',
+                map: { '11/2': '12/1', '11/3': '12/2' }
             }, 'remap')
         }
     }
 
     okay(network.denizens[0].government, {
         republic: 1,
-        promise: 'c/0',
+        promise: '12/0',
         majority: [ '0', '2' ],
         minority: [ '3' ],
         acclimated: [ '0', '2', '3', '4' ],
         constituents: [ '4' ],
         arrived: {
-            id: { '1/0': '0', '3/0': '2', '6/0': '3', 'c/0': '4' },
-            promise: { '0': '1/0', '2': '3/0', '3': '6/0', '4': 'c/0' }
+            id: { '1/0': '0', '3/0': '2', '6/0': '3', '12/0': '4' },
+            promise: { '0': '1/0', '2': '3/0', '3': '6/0', '4': '12/0' }
         },
         properties: {
             '0': { location: '0' },
@@ -275,14 +275,14 @@ require('proof')(27, (okay) => {
 
     okay(network.denizens[0].government, {
         republic: 1,
-        promise: '14/0',
+        promise: '20/0',
         majority: [ '0', '2', '3' ],
         minority: [ '6', '7' ],
         acclimated: [ '0', '2', '3', '6', '7' ],
         constituents: [],
         arrived: {
-            id: { '1/0': '0', '3/0': '2', '6/0': '3', 'e/0': '6', 'f/0': '7' },
-            promise: { '0': '1/0', '2': '3/0', '3': '6/0', '6': 'e/0', '7': 'f/0' }
+            id: { '1/0': '0', '3/0': '2', '6/0': '3', '14/0': '6', '15/0': '7' },
+            promise: { '0': '1/0', '2': '3/0', '3': '6/0', '6': '14/0', '7': '15/0' }
         },
         properties: {
             '0': { location: '0' },
@@ -341,14 +341,14 @@ require('proof')(27, (okay) => {
 
     okay(network.denizens[3].government, {
         republic: 1,
-        promise: '1a/0',
+        promise: '26/0',
         majority: [ '3', '0', '2' ],
         minority: [ '6', '7' ],
         acclimated: [ '0', '2', '3', '6', '7' ],
         constituents: [],
         arrived: {
-            id: { '1/0': '0', '3/0': '2', '6/0': '3', 'e/0': '6', 'f/0': '7' },
-            promise: { '0': '1/0', '2': '3/0', '3': '6/0', '6': 'e/0', '7': 'f/0' }
+            id: { '1/0': '0', '3/0': '2', '6/0': '3', '14/0': '6', '15/0': '7' },
+            promise: { '0': '1/0', '2': '3/0', '3': '6/0', '6': '14/0', '7': '15/0' }
         },
         properties: {
             '0': { location: '0' },
@@ -370,9 +370,9 @@ require('proof')(27, (okay) => {
     network.send([ '7' ])
 
     okay(network.denizens[3]._minimums, {
-        '0': { version: '1a/0', propagated: '15/0', reduced: '1a/1' },
-        '2': { version: '1a/0', propagated: '15/0', reduced: '0/0' },
-        '3': { version: '1a/0', propagated: '0/0', reduced: '0/0' },
+        '0': { version: '26/0', propagated: '21/0', reduced: '26/1' },
+        '2': { version: '26/0', propagated: '21/0', reduced: '0/0' },
+        '3': { version: '26/0', propagated: '0/0', reduced: '0/0' },
     }, 'minimum unreduced')
 
     network.send()
@@ -390,14 +390,14 @@ require('proof')(27, (okay) => {
 
     okay(network.denizens[3].government, {
         republic: 1,
-        promise: '1c/0',
+        promise: '28/0',
         majority: [ '3', '0', '2' ],
         minority: [ '6', '7' ],
         acclimated: [ '0', '2', '3', '6', '7' ],
         constituents: [ '9', '10' ],
         arrived: {
-            id: { '1/0': '0', '3/0': '2', '6/0': '3', 'e/0': '6', 'f/0': '7', '1b/0': '9', '1c/0': '10' },
-            promise: { '0': '1/0', '2': '3/0', '3': '6/0', '6': 'e/0', '7': 'f/0', '9': '1b/0', '10': '1c/0' }
+            id: { '1/0': '0', '3/0': '2', '6/0': '3', '14/0': '6', '15/0': '7', '27/0': '9', '28/0': '10' },
+            promise: { '0': '1/0', '2': '3/0', '3': '6/0', '6': '14/0', '7': '15/0', '9': '27/0', '10': '28/0' }
         },
         properties: {
             '0': { location: '0' },
@@ -426,14 +426,14 @@ require('proof')(27, (okay) => {
 
     okay(network.denizens[3].government, {
         republic: 1,
-        promise: '1e/0',
+        promise: '30/0',
         majority: [ '3', '0', '2' ],
         minority: [ '6', '7' ],
         acclimated: [ '0', '2', '3', '6', '7', '9', '10' ],
         constituents: [ '9', '10' ],
         arrived: {
-            id: { '1/0': '0', '3/0': '2', '6/0': '3', 'e/0': '6', 'f/0': '7', '1b/0': '9', '1c/0': '10' },
-            promise: { '0': '1/0', '2': '3/0', '3': '6/0', '6': 'e/0', '7': 'f/0', '9': '1b/0', '10': '1c/0' }
+            id: { '1/0': '0', '3/0': '2', '6/0': '3', '14/0': '6', '15/0': '7', '27/0': '9', '28/0': '10' },
+            promise: { '0': '1/0', '2': '3/0', '3': '6/0', '6': '14/0', '7': '15/0', '9': '27/0', '10': '28/0' }
         },
         properties: {
             '0': { location: '0' },
@@ -454,14 +454,14 @@ require('proof')(27, (okay) => {
 
     okay(network.denizens[3].government, {
         republic: 1,
-        promise: '1f/0',
+        promise: '31/0',
         majority: [ '3', '0', '2' ],
         minority: [ '6', '7' ],
         acclimated: [ '0', '2', '3', '6', '7', '9', '10' ],
         constituents: [ '9', '10', '11' ],
         arrived: {
-            id: { '1/0': '0', '3/0': '2', '6/0': '3', 'e/0': '6', 'f/0': '7', '1b/0': '9', '1c/0': '10', '1f/0': '11' },
-            promise: { '0': '1/0', '2': '3/0', '3': '6/0', '6': 'e/0', '7': 'f/0', '9': '1b/0', '10': '1c/0', '11': '1f/0' }
+            id: { '1/0': '0', '3/0': '2', '6/0': '3', '14/0': '6', '15/0': '7', '27/0': '9', '28/0': '10', '31/0': '11' },
+            promise: { '0': '1/0', '2': '3/0', '3': '6/0', '6': '14/0', '7': '15/0', '9': '27/0', '10': '28/0', '11': '31/0' }
         },
         properties: {
             '0': { location: '0' },
@@ -493,14 +493,14 @@ require('proof')(27, (okay) => {
 
     okay(network.denizens[3].government, {
         republic: 1,
-        promise: '20/0',
+        promise: '32/0',
         majority: [ '3', '0', '2' ],
         minority: [ '6', '7' ],
         acclimated: [ '0', '2', '3', '6', '7', '9', '10' ],
         constituents: [ '9', '10' ],
         arrived: {
-            id: { '1/0': '0', '3/0': '2', '6/0': '3', 'e/0': '6', 'f/0': '7', '1b/0': '9', '1c/0': '10' },
-            promise: { '0': '1/0', '2': '3/0', '3': '6/0', '6': 'e/0', '7': 'f/0', '9': '1b/0', '10': '1c/0' }
+            id: { '1/0': '0', '3/0': '2', '6/0': '3', '14/0': '6', '15/0': '7', '27/0': '9', '28/0': '10' },
+            promise: { '0': '1/0', '2': '3/0', '3': '6/0', '6': '14/0', '7': '15/0', '9': '27/0', '10': '28/0' }
         },
         properties: {
             '0': { location: '0' },
@@ -539,14 +539,14 @@ require('proof')(27, (okay) => {
 
     okay(network.denizens[12].government, {
         republic: 1,
-        promise: '23/0',
+        promise: '35/0',
         majority: [ '3', '0', '2' ],
         minority: [ '6', '7' ],
         acclimated: [ '0', '2', '3', '6', '7', '9', '10', '12' ],
         constituents: [ '9', '10', '12' ],
         arrived: {
-            id: { '1/0': '0', '3/0': '2', '6/0': '3', 'e/0': '6', 'f/0': '7', '1b/0': '9', '1c/0': '10', '23/0': '12' },
-            promise: { '0': '1/0', '2': '3/0', '3': '6/0', '6': 'e/0', '7': 'f/0', '9': '1b/0', '10': '1c/0', '12': '23/0' }
+            id: { '1/0': '0', '3/0': '2', '6/0': '3', '14/0': '6', '15/0': '7', '27/0': '9', '28/0': '10', '35/0': '12' },
+            promise: { '0': '1/0', '2': '3/0', '3': '6/0', '6': '14/0', '7': '15/0', '9': '27/0', '10': '28/0', '12': '35/0' }
         },
         properties: {
             '0': { location: '0' },
@@ -637,14 +637,14 @@ require('proof')(27, (okay) => {
 
     okay(network.denizens[2].government, {
         republic: 1,
-        promise: '29/0',
+        promise: '41/0',
         majority: [ '2', '6', '7' ],
         minority: [ '3', '0' ],
         acclimated: [ '0', '2', '3', '6', '7', '9', '10', '12' ],
         constituents: [ '9', '10', '12' ],
         arrived: {
-            id: { '1/0': '0', '3/0': '2', '6/0': '3', 'e/0': '6', 'f/0': '7', '1b/0': '9', '1c/0': '10', '23/0': '12' },
-            promise: { '0': '1/0', '2': '3/0', '3': '6/0', '6': 'e/0', '7': 'f/0', '9': '1b/0', '10': '1c/0', '12': '23/0' }
+            id: { '1/0': '0', '3/0': '2', '6/0': '3', '14/0': '6', '15/0': '7', '27/0': '9', '28/0': '10', '35/0': '12' },
+            promise: { '0': '1/0', '2': '3/0', '3': '6/0', '6': '14/0', '7': '15/0', '9': '27/0', '10': '28/0', '12': '35/0' }
         },
         properties: {
             '0': { location: '0' },
@@ -666,7 +666,7 @@ require('proof')(27, (okay) => {
 
     network.send()
 
-    okay(network.denizens[2].government.arrived.promise['13'], '2a/0', 'arrived')
+    okay(network.denizens[2].government.arrived.promise['13'], '42/0', 'arrived')
 
     network.time++
     network.send()

@@ -1,7 +1,7 @@
 const whittle = require('whittle')
 
 const Monotonic = {
-    toBigInt: promise => promise.split('/').map(part => BigInt(`0x${part}`)),
+    toBigInt: promise => promise.split('/').map(part => BigInt(part)),
     compare: whittle(function (left, right) {
         for (let i = 0, I = Math.min(left.length, right.length); i < I; i++) {
             const compare = (left[i] > right[i]) - (left[i] < right[i])
@@ -15,12 +15,12 @@ const Monotonic = {
     incrementr: (promise, index) => {
         const split = Monotonic.toBigInt(promise).reverse()
         split[index] += 1n
-        return split.map(part => part.toString(16)).join('/')
+        return split.map(part => part.toString(10)).join('/')
     },
     increment: (promise, index) => {
         const split = Monotonic.toBigInt(promise)
         split[index] += 1n
-        return split.map(part => part.toString(16)).join('/')
+        return split.map(part => part.toString(10)).join('/')
     }
 }
 
