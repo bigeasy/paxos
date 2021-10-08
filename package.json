@@ -28,7 +28,7 @@
     },
     "dependencies":
     {
-                            "ascension":                    "^3.0.0-alpha.6",
+                            "ascension":                    "^3.0.0-alpha.7",
                             "avenue":                       "0.6.16",
                             "bintrees":                     "1.0.2",
                             "extant":                       "^2.0.0-alpha.2",
