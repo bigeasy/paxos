@@ -90,7 +90,7 @@ class Writer {
         this._paxos._register(now, request.register)
         this._writing = false
         if (this.proposals.length == 0) {
-            this._paxos.scheduler.schedule(now, this._paxos.id, {
+            this._paxos.calendar.schedule(now, this._paxos.id, {
                 method: 'synchronize',
                 to: this._paxos.government.majority,
                 collapsible: true

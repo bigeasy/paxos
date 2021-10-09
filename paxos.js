@@ -17,7 +17,7 @@ const { coalesce } = require('extant')
 const Monotonic = require('./monotonic')
 
 // A timer with named, cancelable events.
-const Scheduler = require('happenstance').Scheduler
+const { Calendar } = require('happenstance')
 
 // An `async`/`aware` capable message queue used for the atomic log.
 const { Queue } = require('avenue')
@@ -55,7 +55,7 @@ class Paxos {
 
         // Implements a calendar for events that we can check during runtime or
         // ignore during debugging playback.
-        this.scheduler = new Scheduler
+        this.calendar = new Calendar
 
         // Initial government. A null government.
         this.government = {
@@ -462,7 +462,7 @@ class Paxos {
 
     //
     _collapse (now) {
-        this.scheduler.clear()
+        this.calendar.clear()
 
         // TODO Really need to have the value for previous, which is the writer register.
         this._writer = new Proposer(this, this.government.promise)
@@ -492,7 +492,7 @@ class Paxos {
             // PRNG: https://gist.github.com/blixt/f17b47c62508be59987b
             delay += (this._seed = this._seed * 16807 % 2147483647) % this.ping
         }
-        this.scheduler.schedule(now + delay, this.id, { method: 'propose', body: null })
+        this.calendar.schedule(now + delay, this.id, { method: 'propose', body: null })
     }
 
     // ### Requests and Responses
@@ -568,7 +568,7 @@ class Paxos {
             collapsed: this._writer.collapsed
         }
         for (let i = 0, to; (to = message.to[i]) != null; i++) {
-            this.scheduler.unschedule(to)
+            this.calendar.unschedule(to)
 
             const promise = this.government.arrived.promise[to]
             let committed = coalesce(this._committed[promise])
@@ -745,7 +745,7 @@ class Paxos {
                 ~this.government.majority.slice(1).indexOf(this.id) &&
                 ! this._writer.collapsed
             ) {
-                this.scheduler.schedule(now + this.timeout, this.id, {
+                this.calendar.schedule(now + this.timeout, this.id, {
                     module: 'paxos',
                     method: 'collapse',
                     body: null
@@ -994,7 +994,7 @@ class Paxos {
 
             // A keep alive might collapse the government, but it would then take
             // the last exit of this function before rescheduling itself.
-            this.scheduler.schedule(now + delay, message.key, {
+            this.calendar.schedule(now + delay, message.key, {
                 method: 'synchronize', to: message.to, collapsible: message.collapsible
             })
         } else if (!uncommunicative) {
@@ -1171,7 +1171,7 @@ class Paxos {
         this._committed[this.government.arrived.promise[this.id]] = entry.promise
 
         if (isGovernment) {
-            this.scheduler.clear()
+            this.calendar.clear()
 
             // If we collapsed and ran Paxos we would have carried on regardless of
             // reachability until we made progress. During Paxos we ignore
@@ -1235,7 +1235,7 @@ class Paxos {
             }
 
             if (~this.government.majority.indexOf(this.id)) {
-                this.scheduler.schedule(now + this.timeout, this.id, {
+                this.calendar.schedule(now + this.timeout, this.id, {
                     module: 'paxos',
                     method: 'collapse',
                     body: null
@@ -1297,12 +1297,12 @@ class Paxos {
         // leader of a government that is not a dictatorship.
         if (this.id != this.government.majority[0] || this.government.majority.length == 1) {
             for (const id of this.constituency) {
-                this.scheduler.schedule(now, id, { method: 'synchronize', to: [ id ], collapsible: false })
+                this.calendar.schedule(now, id, { method: 'synchronize', to: [ id ], collapsible: false })
             }
         }
 
         if (this.id == this.government.majority[0]) {
-            this.scheduler.schedule(now, this.id, {
+            this.calendar.schedule(now, this.id, {
                 method: 'synchronize',
                 to: this.government.majority,
                 collapsible: true

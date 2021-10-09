@@ -86,7 +86,7 @@ Network.prototype.send = function () {
             if (denizens.length != 0 && !~denizens.indexOf(denizen.id)) {
                 continue
             }
-            denizen.scheduler.check(this.time)
+            denizen.calendar.check(this.time)
             var communique
             while ((communique = denizen.shifter.shift()) != null) {
                 sent = true
@@ -125,7 +125,7 @@ function createDenizen (id) {
     })
     denizen.intercept = []
     denizen.events = []
-    denizen.scheduler.on('data', (event) => {
+    denizen.calendar.on('data', (event) => {
         if (
             event.body.method == 'synchronize' &&
             event.body.to.filter(function (to) {
