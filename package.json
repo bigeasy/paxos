@@ -28,7 +28,7 @@
     },
     "dependencies":
     {
-                            "avenue":                       "0.6.17",
+                            "avenue":                       "0.6.18",
                             "bintrees":                     "1.0.2",
                             "extant":                       "^2.0.0-alpha.2",
                             "happenstance":                 "^13.0.0-alpha.0",
