@@ -32,7 +32,7 @@
                             "bintrees":                     "1.0.2",
                             "extant":                       "^2.0.0-alpha.2",
                             "happenstance":                 "^13.0.0-alpha.0",
-                            "whittle":                      "0.0.5"
+                            "whittle":                      "0.0.6"
     },
     "devDependencies":
     {
